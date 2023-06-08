@@ -1,7 +1,7 @@
 from rest_framework import viewsets 
-from ai_imagetranslation.serializer import ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer
+from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,BackgroundRemovelSerializer)
 from rest_framework.response import Response
-from ai_imagetranslation.models import Imageload ,ImageTranslate,ImageInpaintCreation
+from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -101,3 +101,31 @@ class ImageInpaintCreationListView(ListAPIView):
 #     lookup_field = 'id'
 
 
+class BackgroundRemovelViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    
+    def get_object(self, pk):
+        try:
+            return BackgroundRemovel.objects.get(id=pk)
+        except BackgroundRemovel.DoesNotExist:
+            raise Http404
+
+    def get(self, request):
+        query_set = BackgroundRemovel.objects.filter(user=request.user.id).order_by('id')
+        serializer = BackgroundRemovelSerializer(query_set ,many =True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        query_set = BackgroundRemovel.objects.get(id = pk)
+        serializer = BackgroundRemovelSerializer(query_set )
+        return Response(serializer.data)
+        
+    def create(self,request):
+        print("request.POST.dict()",request.POST.dict())
+        serializer = BackgroundRemovelSerializer(data=request.POST.dict(),context={'request':request})  
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)

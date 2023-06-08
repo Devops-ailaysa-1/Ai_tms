@@ -88,6 +88,19 @@ class ImageInpaintCreation(models.Model):
 
     
 
+def user_directory_path_image_background_removel(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid,"background_removel",filename)
 
 
+class BackgroundRemovel(models.Model):
+    user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    image_json_id=models.CharField(max_length=100,blank=True,null=True)
+    image_url=models.URLField(blank=True,null=True)
+    image=models.FileField(upload_to=user_directory_path_image_background_removel,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
+
+    def __str__(self) -> str:
+        return self.image_json_id+'----'+self.image_url
+    

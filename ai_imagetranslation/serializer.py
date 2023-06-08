@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -306,3 +306,25 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
 # class ImageloadRetrieveLSerializer(serializers.ModelSerializer):
 #     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
+
+from ai_canvas.utils import convert_image_url_to_file
+from ai_imagetranslation.utils import background_remove
+class BackgroundRemovelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=BackgroundRemovel
+        fields=('id','image_json_id','image_url','image')
+        extra_kwargs={'image_url':{'write_only':True}}
+
+    def create(self, validated_data):
+        user=self.context['request'].user
+        data={**validated_data ,'user':user}
+        instance=BackgroundRemovel.objects.create(**data)
+        image_path_create=convert_image_url_to_file(instance.image_url)
+        instance.image=image_path_create
+        instance.save()
+        print("convert_image_url_to_file done")
+        back_ground_create=background_remove(instance.image.path)
+        print("back_ground_create",type(back_ground_create))
+        instance.image=back_ground_create
+        instance.save()
+        return instance

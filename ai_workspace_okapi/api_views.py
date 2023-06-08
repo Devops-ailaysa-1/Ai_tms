@@ -2822,14 +2822,14 @@ def segment_difference(sender, instance, *args, **kwargs):
         else:target_segment=''
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
- 
-    print('edited_segment',edited_segment,'target_segment',target_segment )
     if edited_segment and target_segment:
         print('edited_segment',edited_segment , 'target_segment',target_segment )
         edited_segment=remove_tags(edited_segment)
         target_segment=remove_tags(target_segment)
+        print("target_segment----------->>>>>",target_segment,"edited_segment---------->>>",edited_segment)
         if edited_segment != target_segment:
             diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+            print("diff_sentense",diff_sentense)
             if diff_sentense:
                 result_sen,save_type=diff_sentense
                 if result_sen.strip()!=edited_segment.strip():
