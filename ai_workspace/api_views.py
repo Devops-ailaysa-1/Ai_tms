@@ -659,6 +659,8 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
 
         return queryset
 
+
+
 from ai_exportpdf.models import Ai_PdfUpload
 
 class ProjectFilter(django_filters.FilterSet):
@@ -681,9 +683,6 @@ class ProjectFilter(django_filters.FilterSet):
     
 
     def filter_not_empty(self,queryset, name, value):
-        user = self.request.user
-        project_managers = user.team.get_project_manager if user.team else []
-        owner = user.team.owner if user.team  else user
         if value == "assets":
             queryset = queryset.filter(Q(glossary_project__isnull=False))
         elif value == "voice":
@@ -694,15 +693,12 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
         elif value == "Translation":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
-        elif value == "toolkit":
-            new_queryset = Project.objects.none()
-            queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-            queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
-                            .filter(task_id=None).order_by('-id')
-            merged_queryset = list(chain(queryset1,queryset2))
-            new_queryset= merged_queryset.union(queryset)
-            queryset=new_queryset
-        print("QR-->",queryset)
+        # elif value == "toolkit":
+        #     queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        #     queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+        #                     .filter(task_id=None).order_by('-id')
+        #     queryset = list(chain(queryset1,queryset2))
+        print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
         # elif value == "assigned":
@@ -4120,118 +4116,6 @@ def stop_task(request):
         return HttpResponse('Task is already running or has completed.')
 
 
-
-
-# from rest_framework.pagination import PageNumberPagination
-# from rest_framework.response import Response
-# from rest_framework.decorators import api_view
-
-# class CustomPagination(PageNumberPagination):
-#     page_size = 10
-#     page_size_query_param = 'page_size'
-#     max_page_size = 100
-
-# @api_view(['GET'])
-# def combined_paginated_response(request):
-
-#     full_path = request.get_full_path()
-
-#     # Create a QueryDict object from the query string
-    
-#     query_params = QueryDict(full_path)
-#     # Apply filters for each view
-#     filter1 = ProjectFilter(query_params, queryset=QuickProjectSetupView.queryset)
-
-#     # Paginate the filtered lists
-#     pagination = CustomPagination()
-#     paginated_queryset1 = pagination.paginate_queryset(filter1.qs, request)
-
-#     view2_request = request._request if hasattr(request, '_request') else request
-#     queryset2 = MyDocumentsView.get_queryset(view2_request)
-
-#     # Paginate the queryset from View2
-#     paginated_queryset2 = pagination.paginate_queryset(queryset2, view2_request)
-
-#     # Combine paginated lists into a single response
-#     response = list(paginated_queryset1) + list(paginated_queryset2)
-
-#     return pagination.get_paginated_response(response)
-
-# from operator import itemgetter
-# from django.core.paginator import Paginator
-# from rest_framework.renderers import JSONRenderer
-
-
-# def combined_paginated_response(request):
-#     # Serialize data using Serializer1
-
-#     view_instance_1 = QuickProjectSetupView()
-
-#     view_instance_1.request = request
-#     view_instance_1.request.GET = request.GET
-
-#     queryset1 = view_instance_1.get_queryset()
-    
-#     serializer1 = ProjectQuickSetupSerializer(queryset1, many=True,context={'request': request})
-#     serialized_data1 = serializer1.data
-
-#     # Serialize data using Serializer2
-#     view_instance_2 = MyDocumentsView()
-
-#     view_instance_2.request = request
-#     view_instance_2.request.GET = request.GET
-
-#     queryset2 = view_instance_2.get_queryset_new()
-
-#     serializer2 = MyDocumentSerializerNew(queryset2, many=True)
-#     serialized_data2 = serializer2.data
-
-#     # Combine the serialized data into a single list or queryset
-#     combined_data = serialized_data1 + serialized_data2
-
-#     # Search by name
-#     name = request.GET.get('search')
-#     if name:
-#         combined_data = [item for item in combined_data if name.lower() in item.get('project_name', '').lower() or name.lower() in item.get('doc_name', '').lower()]
-
-#     # Order by name or ID
-#     order_by = request.GET.get('order_by')
-#     if order_by:
-#         reverse = False
-#         if order_by.startswith('-'):
-#             order_by = order_by[1:]
-#             reverse = True
-
-#         if order_by == 'name':
-#             combined_data.sort(key=lambda item: (item.get('project_name', ''), item.get('doc_name', '')), reverse=reverse)
-#         elif order_by == 'created_at':
-#             combined_data.sort(key=lambda item: item.get('created_at', ''), reverse=reverse)
-#         elif order_by == 'id':
-#             combined_data.sort(key=lambda item: item.get('id', ''), reverse=reverse)
-#     # Sort the combined data by date field
-#         else:
-#             combined_data.sort(key=itemgetter('created_at'))
-    
-
-#     page_size = 10
-#     paginator = Paginator(combined_data, page_size)
-#     page_number = request.GET.get('page', 1)
-#     current_page = paginator.get_page(page_number)
-#     serialized_current_page = current_page.object_list
-
-#     response_data = {
-#         'count': paginator.count,
-#         'current_page': current_page.number,
-#         'total_pages': paginator.num_pages,
-#         'results': serialized_current_page
-#     }
-
-#     # Render the response using the JSONRenderer
-#     renderer = JSONRenderer()
-#     rendered_response = renderer.render(response_data)
-
-#     # Return the rendered response
-#     return HttpResponse(rendered_response, content_type='application/json')
         
     # @integrity_error
     # def create(self,request):
@@ -4306,7 +4190,6 @@ class CombinedProjectListView(viewsets.ModelViewSet):
                             .filter(task_id=None).order_by('-id')
          
         search_query = request.GET.get('search')
-
         if search_query:
             queryset1 = queryset1.filter(project_name__icontains=search_query)
             queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
@@ -4314,7 +4197,17 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         print("Qu------->",queryset2)
         print("Q3--------->",queryset3)
         merged_queryset = list(chain(queryset1,queryset2,queryset3))
-        ordered_queryset = sorted(merged_queryset, key=lambda obj: obj['created_at'] if isinstance(obj, dict) else obj.created_at, reverse=True)
+        ordering_param = request.GET.get('ordering', '-created_at')  
+
+        if ordering_param.startswith('-'):
+            field_name = ordering_param[1:]  
+            reverse_order = True
+        else:
+            field_name = ordering_param
+            reverse_order = False
+        print("FieldName-------->",field_name)
+        print("ReverseOrder---------->",reverse_order)
+        ordered_queryset = sorted(merged_queryset, key=lambda obj: obj[field_name] if isinstance(obj, dict) else getattr(obj, field_name), reverse=reverse_order)
 
         # final_queryset = self.filter_queryset(merged_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
@@ -4370,3 +4263,62 @@ class CombinedProjectListView(viewsets.ModelViewSet):
                # print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+
+
+
+from .serializers import ToolkitSerializer
+class ToolkitList(viewsets.ModelViewSet):
+
+    serializer_class = ToolkitSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    # https://www.django-rest-framework.org/api-guide/filtering/
+
+
+    def list(self,request):
+        user = request.user
+        project_managers = user.team.get_project_manager if user.team else []
+        owner = user.team.owner if user.team  else user
+        query = request.GET.get('name')
+        ordering = request.GET.get('ordering')
+
+        view_instance_1 = QuickProjectSetupView()
+
+        view_instance_1.request = request
+        view_instance_1.request.GET = request.GET
+
+        queryset = view_instance_1.get_queryset()
+
+        queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+                        .filter(task_id=None).order_by('-id')
+
+        search_query = request.GET.get('search')
+
+        if search_query:
+            queryset1 = queryset1.filter(project_name__icontains=search_query)
+            queryset2 = queryset2.filter(pdf_file_name__icontains=search_query)
+        merged_queryset = list(chain(queryset1,queryset2))
+        print("MQ-------------->",merged_queryset)
+        ordering_param = request.GET.get('ordering', '-created_at')  
+
+        if ordering_param.startswith('-'):
+            field_name = ordering_param[1:]  
+            reverse_order = True
+        else:
+            field_name = ordering_param
+            reverse_order = False
+        print("FieldName-------->",field_name)
+        print("ReverseOrder---------->",reverse_order)
+        if field_name == 'created_at':
+            ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
+        else:
+            print("Inside else")
+            ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
+        print("Or---------->",ordered_queryset)
+        pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
+        response = self.get_paginated_response(ser.data)
+        return response
