@@ -383,13 +383,13 @@ def send_campaign_welcome_mail(user):
     # )
 
     msg = EmailMessage(
-        "Translate your first book free",
+        "Translate your book free",
          msg_html,
         settings.DEFAULT_FROM_EMAIL,
         [email]
     )
-    file = open('mediafiles/email/Translate your first book.pdf', 'rb')
-    msg.attach('Translate your first book.pdf',file.read(),'application/pdf')
+    file = open('mediafiles/email/Translate your book.pdf', 'rb')
+    msg.attach('Translate your book.pdf',file.read(),'application/pdf')
     msg.content_subtype = "html"
     sent=msg.send()
     file.close()

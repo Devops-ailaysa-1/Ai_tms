@@ -587,42 +587,47 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
-		user = self.context.get("request").user if self.context.get("request")!=None else self\
-			.context.get("ai_user", None)
+		if type(instance) is Project:
+			user = self.context.get("request").user if self.context.get("request")!=None else self\
+				.context.get("ai_user", None)
 
-		user_1 = user.team.owner if user.team else user
+			user_1 = user.team.owner if user.team else user
 
-		if instance.ai_user == user:
-			tasks = instance.get_tasks
-		elif instance.team:
-			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+			if instance.ai_user == user:
 				tasks = instance.get_tasks
+			elif instance.team:
+				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+					tasks = instance.get_tasks
+				else:
+					tasks = [task for job in instance.project_jobs_set.all() for task \
+							in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
+			res = instance.project_analysis(tasks)
+			return res
 		else:
-			tasks = [task for job in instance.project_jobs_set.all() for task \
-					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
-
-		res = instance.project_analysis(tasks)
-		return res
+			return None
 
 	def check_role(self, instance):
-		if self.context.get("request")!=None:
-			user = self.context.get("request").user
-		else:user = self.context.get("ai_user", None)
-		if instance.team :
-			return True if ((instance.team.owner == user)\
-				or(instance.team.internal_member_team_info.all().\
-				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-				or(instance.team.owner.user_info.all()\
-				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+		if type(instance) is Project:
+			if self.context.get("request")!=None:
+				user = self.context.get("request").user
+			else:user = self.context.get("ai_user", None)
+			if instance.team :
+				return True if ((instance.team.owner == user)\
+					or(instance.team.internal_member_team_info.all().\
+					filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+					or(instance.team.owner.user_info.all()\
+					.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+					else False
+			else:
+				return True if ((instance.ai_user == user) or\
+				(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 				else False
-		else:
-			return True if ((instance.ai_user == user) or\
-			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-			else False
+		else:return None
 
 
 	def create(self, validated_data):
@@ -1810,3 +1815,32 @@ class MyDocumentSerializerNew(serializers.Serializer):
 	open_as = serializers.CharField(read_only=True)
 	document_type__type = serializers.CharField(read_only=True)
 	created_at = serializers.DateTimeField(read_only=True)
+
+
+# class CombinedSerializer(ProjectQuickSetupSerializer, MyDocumentSerializerNew):
+#     pass
+
+class CombinedSerializer(ProjectQuickSetupSerializer):
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        my_doc_data = MyDocumentSerializerNew(instance).data
+        from ai_exportpdf.serializer import PdfFileSerializer
+        from ai_exportpdf.models import Ai_PdfUpload
+        if type(instance) is Ai_PdfUpload:
+            pdf_data = PdfFileSerializer(instance).data
+            data.update(pdf_data)
+        data.update(my_doc_data)
+        return data
+
+
+class ToolkitSerializer(ProjectQuickSetupSerializer):
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from ai_exportpdf.serializer import PdfFileSerializer
+        from ai_exportpdf.models import Ai_PdfUpload
+        if type(instance) is Ai_PdfUpload:
+            pdf_data = PdfFileSerializer(instance).data
+            data.update(pdf_data)
+        return data

@@ -659,6 +659,10 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
 
         return queryset
 
+
+
+from ai_exportpdf.models import Ai_PdfUpload
+
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -676,23 +680,31 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
+    
+
     def filter_not_empty(self,queryset, name, value):
-        if value == "glossary":
+        if value == "assets":
             queryset = queryset.filter(Q(glossary_project__isnull=False))
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
-        elif value == "speech_to_text":
+        elif value == "transcription":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 1))
-        elif value == "text_to_speech":
+        elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
-        elif value == "files":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text").exclude(project_type_id = 5)
-        elif value == "text":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        elif value == "assigned":
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
-        elif value == "express":
-            queryset = queryset.filter(project_type_id=5)
+        elif value == "Translation":
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+        # elif value == "toolkit":
+        #     queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        #     queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+        #                     .filter(task_id=None).order_by('-id')
+        #     queryset = list(chain(queryset1,queryset2))
+        print("QRF-->",queryset)
+            #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
+        #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        # elif value == "assigned":
+        #     queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
+        # elif value == "express":
+        #     queryset = queryset.filter(project_type_id=5)
         return queryset
 
 
@@ -726,31 +738,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        print(self.request.user)
+        #print(self.request.user)
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        print("Mnagers----------->",pr_managers)
+        #print("Mnagers----------->",pr_managers)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        print("User------------------>111----->",user)
-        # user = self.request.user.team.owner if self.request.user.team else self.request.user
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        # parent_queryset = queryset.annotate(
-        #                     sorted_datetime=ExpressionWrapper(Coalesce(
-        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
-        #                     Case(
-        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
-        #                         default=F('created_at'),
-        #                         output_field=DateTimeField(),
-        #                     ),
-        #                     Value(datetime.min),),
-        #                     output_field=DateTimeField(),)
-        #                     )#.order_by('-sorted_datetime')
-
-        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset #parent_queryset
 
 
@@ -3496,10 +3492,9 @@ class MyDocumentsView(viewsets.ModelViewSet):
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
-
     def get_queryset_new(self):
-        query = self.request.query_params.get('doc_name')
-        ordering = self.request.query_params.get('ordering')
+        query = self.request.GET.get('doc_name')
+        ordering = self.request.GET.get('ordering')
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
@@ -3522,7 +3517,19 @@ class MyDocumentsView(viewsets.ModelViewSet):
         
         return final_queryset
         
-    
+    def get_queryset_for_combined(self):
+        user = self.request.user
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
+        q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField()),doc_name=F('user_title')).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q3 = list(chain(q1, q2))
+        return q3
+
+
+
     def get_queryset(self):
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -4111,22 +4118,6 @@ def stop_task(request):
     return HttpResponse('Task is already running or has completed.')
 
 
-
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def project_list(request):
-#         print(self.request.user)
-#         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-#         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-#         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
-#                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
-#                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-#                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-#                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-#         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
-#         queryset2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
-
-#         queryset3 = 
         
     # @integrity_error
     # def create(self,request):
@@ -4167,3 +4158,169 @@ def stop_task(request):
     #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
     #     return Response({"msg":"Task Assigned"})
     #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+from itertools import chain
+from .serializers import CombinedSerializer
+
+
+
+class CombinedProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CombinedSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def list(self,request):
+        view_instance_1 = QuickProjectSetupView()
+
+        view_instance_1.request = request
+        view_instance_1.request.GET = request.GET
+
+        queryset1 = view_instance_1.get_queryset()
+
+
+        view_instance_2 = MyDocumentsView()
+
+        view_instance_2.request = request
+        view_instance_2.request.GET = request.GET
+
+        queryset2 = view_instance_2.get_queryset_for_combined()
+        print("Queryset@------------>",queryset2)
+
+        project_managers = request.user.team.get_project_manager if request.user.team else []
+        owner = request.user.team.owner if request.user.team  else request.user
+        queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
+                            .filter(task_id=None).order_by('-id')
+         
+        search_query = request.GET.get('search')
+        if search_query:
+            queryset1 = queryset1.filter(project_name__icontains=search_query)
+            queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
+            queryset3 = queryset3.filter(pdf_file_name__icontains=search_query)
+        print("Qu------->",queryset2)
+        print("Q3--------->",queryset3)
+        merged_queryset = list(chain(queryset1,queryset2,queryset3))
+        ordering_param = request.GET.get('ordering', '-created_at')  
+
+        if ordering_param.startswith('-'):
+            field_name = ordering_param[1:]  
+            reverse_order = True
+        else:
+            field_name = ordering_param
+            reverse_order = False
+        print("FieldName-------->",field_name)
+        print("ReverseOrder---------->",reverse_order)
+        ordered_queryset = sorted(merged_queryset, key=lambda obj: obj[field_name] if isinstance(obj, dict) else getattr(obj, field_name), reverse=reverse_order)
+
+        # final_queryset = self.filter_queryset(merged_queryset)
+        pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request})
+        response = self.get_paginated_response(ser.data)
+        return response
+
+
+
+
+# @api_view(['GET'])
+# def combined_paginated_response(request):
+#     view_instance_1 = QuickProjectSetupView()
+
+#     view_instance_1.request = request
+#     view_instance_1.request.GET = request.GET
+
+#     queryset1 = view_instance_1.get_queryset()
+
+
+#     view_instance_2 = MyDocumentsView()
+
+#     view_instance_2.request = request
+#     view_instance_2.request.GET = request.GET
+
+#     queryset2 = view_instance_2.get_queryset_new()
+
+#     search_query = request.GET.get('search')
+
+#     if search_query:
+#         queryset1 = queryset1.filter(project_name__icontains=search_query)
+#         queryset2 = queryset2.filter(doc_name__icontains=search_query)
+
+#     merged_queryset = list(chain(queryset1,queryset2))
+#     ser = CombinedSerializer(merged_queryset,many=True,context={'request': request})
+#     return Response(ser.data)
+    
+
+
+            # parent_queryset = queryset.annotate(
+        #                     sorted_datetime=ExpressionWrapper(Coalesce(
+        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
+        #                     Case(
+        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
+        #                         default=F('created_at'),
+        #                         output_field=DateTimeField(),
+        #                     ),
+        #                     Value(datetime.min),),
+        #                     output_field=DateTimeField(),)
+        #                     )#.order_by('-sorted_datetime')
+
+        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
+               # print("User------------------>111----->",user)
+        # user = self.request.user.team.owner if self.request.user.team else self.request.user
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+
+
+
+from .serializers import ToolkitSerializer
+class ToolkitList(viewsets.ModelViewSet):
+
+    serializer_class = ToolkitSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    # https://www.django-rest-framework.org/api-guide/filtering/
+
+
+    def list(self,request):
+        user = request.user
+        project_managers = user.team.get_project_manager if user.team else []
+        owner = user.team.owner if user.team  else user
+        query = request.GET.get('name')
+        ordering = request.GET.get('ordering')
+
+        view_instance_1 = QuickProjectSetupView()
+
+        view_instance_1.request = request
+        view_instance_1.request.GET = request.GET
+
+        queryset = view_instance_1.get_queryset()
+
+        queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+                        .filter(task_id=None).order_by('-id')
+
+        search_query = request.GET.get('search')
+
+        if search_query:
+            queryset1 = queryset1.filter(project_name__icontains=search_query)
+            queryset2 = queryset2.filter(pdf_file_name__icontains=search_query)
+        merged_queryset = list(chain(queryset1,queryset2))
+        print("MQ-------------->",merged_queryset)
+        ordering_param = request.GET.get('ordering', '-created_at')  
+
+        if ordering_param.startswith('-'):
+            field_name = ordering_param[1:]  
+            reverse_order = True
+        else:
+            field_name = ordering_param
+            reverse_order = False
+        print("FieldName-------->",field_name)
+        print("ReverseOrder---------->",reverse_order)
+        if field_name == 'created_at':
+            ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
+        else:
+            print("Inside else")
+            ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
+        print("Or---------->",ordered_queryset)
+        pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
+        response = self.get_paginated_response(ser.data)
+        return response
