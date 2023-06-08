@@ -316,7 +316,7 @@ def po_generate_pdf(po):
     html_string = render_to_string('po_pdf.html', context)
 
     html = HTML(string=html_string)
-    po_res = html.write_pdf(stylesheets=[CSS(f"{settings.STATIC_ROOT}/css/po.css")])
+    po_res = html.write_pdf()
     # print('po_res',po_res)
     po.po_file = SimpleUploadedFile( po.poid +'.pdf', po_res, content_type='application/pdf')
     po.save()
