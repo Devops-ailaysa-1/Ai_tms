@@ -1824,13 +1824,12 @@ class CombinedSerializer(ProjectQuickSetupSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if type(instance) is MyDocuments:
-            my_doc_data = MyDocumentSerializerNew(instance).data
-            data.update(my_doc_data)		
+        my_doc_data = MyDocumentSerializerNew(instance).data
         from ai_exportpdf.serializer import PdfFileSerializer
         from ai_exportpdf.models import Ai_PdfUpload
         if type(instance) is Ai_PdfUpload:
             pdf_data = PdfFileSerializer(instance).data
             data.update(pdf_data)
+        data.update(my_doc_data)
         return data
 
