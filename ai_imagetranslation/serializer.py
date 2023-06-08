@@ -319,16 +319,14 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user=self.context['request'].user
-        # print("validated_data",validated_data)
-        
-        data={'image_url':validated_data['canvas_json']['src'],'image_json_id':validated_data['canvas_json']['name'] ,'user':user}
-        instance=BackgroundRemovel.objects.create(**data)
-        image_path_create=convert_image_url_to_file(instance.image_url)
-        instance.image=image_path_create
-        instance.save()
-        print("convert_image_url_to_file done")
-        back_ground_create=background_remove(instance.image.path)
-        print("back_ground_create",type(back_ground_create))
-        instance.image=back_ground_create
-        instance.save()
-        return instance
+        canvas_json=validated_data.get('canvas_json',None)
+        if canvas_json:
+            data={'image_url':validated_data['canvas_json']['src'],'image_json_id':validated_data['canvas_json']['name'] ,'user':user}
+            instance=BackgroundRemovel.objects.create(**data)
+            image_path_create=convert_image_url_to_file(instance.image_url)
+            instance.image=image_path_create
+            instance.save()
+            back_ground_create=background_remove(instance.image.path)
+            instance.image=back_ground_create
+            instance.save()
+            return instance

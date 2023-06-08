@@ -229,14 +229,15 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
             return ValidationError(output)
 
 def background_merge(u2net_result,original_img):
-    print("background_ merge fun")
     newdata=[]
     original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
     u2net_result=cv2.subtract(u2net_result,original_img)
+    # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
     original_img=Image.fromarray(original_img).convert("RGBA")
     u2net_data=u2net_result.getdata()
     original_img=original_img.getdata()
+
     for i in range(u2net_data.size[0]*u2net_data.size[1]):
         if u2net_data[i][0]==0 and u2net_data[i][1]==0 and u2net_data[i][2]==0:
             newdata.append((255,255,255,0))
@@ -245,15 +246,15 @@ def background_merge(u2net_result,original_img):
     u2net_result.putdata(newdata)
     img_io = io.BytesIO()
     u2net_result.save(img_io, format='PNG')
+    u2net_result.save('d.png',format='PNG')
+
     img_byte_arr = img_io.getvalue()
-    print("u2net_result")
     print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
  
 
 
 def background_remove(image_path):
-    print("background_remove fun")
     headers={}
     data={}
     files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
@@ -261,12 +262,13 @@ def background_remove(image_path):
     arr = np.frombuffer(response.content, dtype=np.uint8)
     res=np.reshape(arr,(320,320,3))
     user_image=cv2.imread(image_path)
-    im = Image.fromarray(res * 255).convert('RGB')
-    im=np.asarray(im)
+    # im = Image.fromarray(res * 255).convert('RGB')
+    # im.save("afternath.png")
+    # im=np.asarray(im)
     image_h, image_w, _ = user_image.shape
-    y0=cv2.resize(im, (image_w, image_h))
+    y0=cv2.resize(res, (image_w, image_h))
+    print("shape",y0.shape)
     bck_gur_res=background_merge(y0,user_image)
-    print("background_remove fun2")
     return bck_gur_res
 
     # else:
