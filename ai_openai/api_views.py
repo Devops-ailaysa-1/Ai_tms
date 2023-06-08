@@ -820,13 +820,25 @@ import tiktoken
 import os
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
-
+from ai_openai.models import MyDocuments
 
 def num_tokens_from_string(string) -> int:
     print("openai____",string)
     num_tokens = len(encoding.encode(string))
     token_usage=get_consumable_credits_for_openai_text_generator(num_tokens)
     return token_usage
+
+@api_view(['GET'])
+def blog_crt(request):
+    instance=request.query_params.get('blog_creation_instance')
+    title = instance.blog_creation.user_title
+    detected_lang = lang_detector(title)
+    if detected_lang!='en':
+        title = instance.blog_creation.user_title_mt
+    article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+    tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+    instance.document = tt
+    return Response({'id':tt.id})
 
 @api_view(["GET"])
 def generate_article(request):
@@ -899,11 +911,16 @@ def generate_article(request):
                             if title:
                                 content=title+'\n'+content
                                 title=''
+                            word=content+' '
                             str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":content})
+                            yield '\ndata: {}\n\n'.format({"t":word})
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+                        # instance.document = tt
+                        # instance.save()
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
@@ -927,7 +944,6 @@ def generate_article(request):
                                     text=" ".join(arr)
                                     consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                     token_usage=num_tokens_from_string(str_cont)
-                                    print("token_usage------->>",token_usage)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                     if initial_credit >= consumable_credits_for_article_gen:
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
@@ -950,7 +966,6 @@ def generate_article(request):
                                         sente=sente+'.'
                                         consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                         token_usage=num_tokens_from_string(str_cont)
-                                        print("token_usage------->>",token_usage)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                         if initial_credit >= consumable_credits_for_article_gen:
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
@@ -970,6 +985,10 @@ def generate_article(request):
                                 arr.append(word)
                     else:
                         print("finished")
+                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+                        # instance.document = tt
+                        # instance.save()
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 

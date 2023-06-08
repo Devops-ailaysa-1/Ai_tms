@@ -310,14 +310,18 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
+    canvas_json=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
-        fields=('id','image_json_id','image_url','image')
-        extra_kwargs={'image_url':{'write_only':True}}
+        fields=('id','image_json_id','image_url','image','canvas_json')
+        extra_kwargs={'image_url':{'write_only':True},
+                      'canvas_json':{'write_only':True}}
 
     def create(self, validated_data):
         user=self.context['request'].user
-        data={**validated_data ,'user':user}
+        # print("validated_data",validated_data)
+        
+        data={'image_url':validated_data['canvas_json']['src'],'image_json_id':validated_data['canvas_json']['name'] ,'user':user}
         instance=BackgroundRemovel.objects.create(**data)
         image_path_create=convert_image_url_to_file(instance.image_url)
         instance.image=image_path_create
