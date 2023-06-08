@@ -2354,7 +2354,7 @@ def get_segment_history(request):
         if split_check(seg_id):
             obj = Segment.objects.get(id=seg_id)
         else:
-            obj = SplitSegment.objects.filter(id=seg).first().segment
+            obj = SplitSegment.objects.filter(id=seg_id).first().segment
         #obj = Segment.objects.get(id=seg_id)
         print("Obj-------->",obj)
         history = obj.segment_history.all().order_by('-id') 
