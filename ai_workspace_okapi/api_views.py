@@ -808,21 +808,19 @@ class SegmentsUpdateView(viewsets.ViewSet):
         if status:
             status_obj = TranslationStatus.objects.filter(status_id=status).first()
             segment.status = status_obj
-        content = request_data['target'] if "target" in request_data else request_data['temp_target']
-        if status:
             if status not in [109,110]:step = 1
             else:step=2
-        else: step = None
+        else: 
+            step = None
+            status_obj = segment.status
+        content = request_data['target'] if "target" in request_data else request_data['temp_target']
         existing_step = 1 if segment.status_id not in [109,110] else 2 
         seg_his_create = True if segment.temp_target!=content or existing_step != step else False
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
-        else:
-            segment.temp_target = request_data["temp_target"]
+        else:segment.temp_target = request_data["temp_target"]
         segment.save()
-        if not status:
-            status_obj = segment.status
         print("Seg His Create--------------->",seg_his_create)
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
