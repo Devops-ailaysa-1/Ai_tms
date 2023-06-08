@@ -742,31 +742,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        print(self.request.user)
+        #print(self.request.user)
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        print("Mnagers----------->",pr_managers)
+        #print("Mnagers----------->",pr_managers)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        print("User------------------>111----->",user)
-        # user = self.request.user.team.owner if self.request.user.team else self.request.user
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        # parent_queryset = queryset.annotate(
-        #                     sorted_datetime=ExpressionWrapper(Coalesce(
-        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
-        #                     Case(
-        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
-        #                         default=F('created_at'),
-        #                         output_field=DateTimeField(),
-        #                     ),
-        #                     Value(datetime.min),),
-        #                     output_field=DateTimeField(),)
-        #                     )#.order_by('-sorted_datetime')
-
-        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset #parent_queryset
 
 
@@ -4314,10 +4298,10 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_2.request.GET = request.GET
 
         queryset2 = view_instance_2.get_queryset_for_combined()
-        print("Queryset@",queryset2)
+        print("Queryset@------------>",queryset2)
 
         project_managers = request.user.team.get_project_manager if request.user.team else []
-        owner = request.user.team.owner if request.user.team  else user
+        owner = request.user.team.owner if request.user.team  else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                             .filter(task_id=None).order_by('-id')
          
@@ -4368,3 +4352,21 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 #     ser = CombinedSerializer(merged_queryset,many=True,context={'request': request})
 #     return Response(ser.data)
     
+
+
+            # parent_queryset = queryset.annotate(
+        #                     sorted_datetime=ExpressionWrapper(Coalesce(
+        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
+        #                     Case(
+        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
+        #                         default=F('created_at'),
+        #                         output_field=DateTimeField(),
+        #                     ),
+        #                     Value(datetime.min),),
+        #                     output_field=DateTimeField(),)
+        #                     )#.order_by('-sorted_datetime')
+
+        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
+               # print("User------------------>111----->",user)
+        # user = self.request.user.team.owner if self.request.user.team else self.request.user
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
