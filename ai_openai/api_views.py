@@ -588,67 +588,16 @@ class BlogArticleViewset(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-
-
-
-
-
-
-# def stream_article_response():
-#     for chunk in range(40):
-#         time.sleep(0.2)
-#         print(chunk)
-#         yield '%s' % chunk
-
-# from django.http import StreamingHttpResponse,JsonResponse
-# import time
- 
-# def generate_article(request):
-#     if request.method == 'GET':
-#         response=StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
-#         print("streaming")
-#         return response
-    # return JsonResponse({'error': 'Method not allowed.'}, status=405)
-
- 
-
-
-# @api_view(["GET"])
-# def generate_article(request):
-#     if request.method=='GET':
-#         blog_available_langs=[17]
-#         sub_categories=59#63#64
-#         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
-#         outline_list=request.query_params.get('outline_section_list')
-#         blog_creation=request.query_params.get('blog_creation')
-#         blog_creation=BlogCreation.objects.get(id=blog_creation)
-#         outline_section_list=list(map(int,outline_list.split(',')))
-#         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
-#         if blog_creation.user_language_id not in blog_available_langs:
-#             title=blog_creation.user_title_mt
-#             keyword=blog_creation.keywords_mt
-#             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
-#         else:
-#             title=blog_creation.user_title
-#             keyword=blog_creation.keywords
-#             outlines=list(outline_section_list.values_list('blog_outline',flat=True))
-#         joined_list = "', '".join(outlines)
-#         tone=blog_creation.tone.tone
-#         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-#         print("pmpt---->",prompt)
-#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
-#                                                 messages=[{"role":"user","content":prompt}],stream=True)
-#         def stream_article_response():
-#             for chunk in completion:
-#                 ins=chunk['choices'][0]
-#                 if ins["finish_reason"]!='stop':
-#                     delta=ins['delta']
-#                     if 'content' in delta.keys():
-#                         content=delta['content']
-#                         t=content+" "
-#                         yield '\ndata: {}\n\n'.format(t)
-#         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
-#     return JsonResponse({'error':'Method not allowed.'},status=405)
+    
+    def update(self,request, pk):
+        doc = request.POST.get('document')
+        print("Doc------>",doc)
+        query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
+        serializer=BlogArticleSerializer(query_set,data = {'document':doc},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
 
     # def list(self, request):

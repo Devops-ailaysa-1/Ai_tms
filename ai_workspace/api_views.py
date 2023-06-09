@@ -691,13 +691,8 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 1))
         elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
-        elif value == "Translation":
+        elif value == "translation":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
-        # elif value == "toolkit":
-        #     queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        #     queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
-        #                     .filter(task_id=None).order_by('-id')
-        #     queryset = list(chain(queryset1,queryset2))
         print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
@@ -4312,12 +4307,9 @@ class ToolkitList(viewsets.ModelViewSet):
         else:
             field_name = ordering_param
             reverse_order = False
-        print("FieldName-------->",field_name)
-        print("ReverseOrder---------->",reverse_order)
         if field_name == 'created_at':
             ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
         else:
-            print("Inside else")
             ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
         print("Or---------->",ordered_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
