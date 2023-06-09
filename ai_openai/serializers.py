@@ -374,7 +374,9 @@ class BlogArticleSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data): #prompt, Blog Title, keywords, outline 
         blog_available_langs =[17]
-        outline_section_list = validated_data.pop('outline_section_list')
+        if 'outline_section_list' in validated_data:
+            outline_section_list = validated_data.pop('outline_section_list')
+        else:outline_section_list = None
         instance = BlogArticle.objects.create(**validated_data)
         initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
         if instance.blog_creation.user_language_code != 'en':
