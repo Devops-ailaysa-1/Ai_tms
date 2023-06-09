@@ -610,8 +610,8 @@ class SelflearningAsset(models.Model):
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word
     
-# from ai_workspace_okapi.api_views import update_self_learning
-# post_save.connect(update_self_learning, sender=SegmentHistory)
+from ai_workspace_okapi.api_views import update_self_learning
+post_save.connect(update_self_learning, sender=SegmentHistory)
 
 
 class SegmentDiff(models.Model):
