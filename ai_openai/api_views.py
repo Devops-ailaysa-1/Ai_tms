@@ -861,8 +861,11 @@ def generate_article(request):
                                 content=title+'\n'+content
                                 title=''
                             word=content+' '
-                            str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":word})
+                            # str_con+=content
+                            # str_con=str_con.replace("#","# ")
+                            
+                            yield '\ndata: {}\n\n'.format({"t":str_con})
+                            
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
