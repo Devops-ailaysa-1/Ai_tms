@@ -580,22 +580,24 @@ class BlogArticleViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        sub_categories = 64
-        outline_list = request.POST.get('outline_section_list')
-        blog_creation = request.POST.get('blog_creation')
-        outline_section_list = list(map(int, outline_list.split(',')))
-        print("outline_section_list------------>",outline_section_list)
-        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+        pass
+        # sub_categories = 64
+        # outline_list = request.POST.get('outline_section_list')
+        # blog_creation = request.POST.get('blog_creation')
+        # outline_section_list = list(map(int, outline_list.split(',')))
+        # print("outline_section_list------------>",outline_section_list)
+        # serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors)
     
     def update(self,request, pk):
         doc = request.POST.get('document')
+        sub_categories = 64
         print("Doc------>",doc)
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
-        serializer=BlogArticleSerializer(query_set,data = {'document':doc},partial=True)
+        serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -869,9 +871,10 @@ def generate_article(request):
                             if title:
                                 content=title+'\n'+content
                                 title=''
-                            word=content+' '
+                            #word=content+' '
                             str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":word})
+                            "# "+str_con[1:] if str_con[0]=='#' else str_con
+                            yield '\ndata: {}\n\n'.format({"t":str_con})
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
