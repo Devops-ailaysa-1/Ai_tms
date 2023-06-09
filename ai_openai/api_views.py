@@ -871,10 +871,10 @@ def generate_article(request):
                             if title:
                                 content=title+'\n'+content
                                 title=''
-                            #word=content+' '
+                            word=content+' '
                             str_con+=content
-                            "# "+str_con[1:] if str_con[0]=='#' else str_con
-                            yield '\ndata: {}\n\n'.format({"t":str_con})
+                            # "# "+str_con[1:] if str_con[0]=='#' else str_con
+                            yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
