@@ -857,7 +857,7 @@ def generate_article(request):
 
         print("prompt____article--->>>>",prompt)
         
-        title='# '+title
+        #title='# '+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
@@ -868,9 +868,9 @@ def generate_article(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            if title:
-                                content=title+'\n'+content
-                                title=''
+                            # if title:
+                            #     content=title+'\n'+content
+                            #     title=''
                             word=content+' '
                             str_con+=content
                             # "# "+str_con[1:] if str_con[0]=='#' else str_con
@@ -907,9 +907,9 @@ def generate_article(request):
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     # blog_article_trans=text
-                                    if title:
-                                        blog_article_trans=title+'\n'+blog_article_trans
-                                        title=''
+                                    # if title:
+                                    #     blog_article_trans=title+'\n'+blog_article_trans
+                                    #     title=''
                                     if blog_article_trans.startswith("#"):
                                         # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
@@ -931,9 +931,9 @@ def generate_article(request):
                                             AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         # blog_article_trans=sente
-                                        if title:
-                                            blog_article_trans=title+'\n'+blog_article_trans
-                                            title=''
+                                        # if title:
+                                        #     blog_article_trans=title+'\n'+blog_article_trans
+                                        #     title=''
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
