@@ -1,7 +1,6 @@
 import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
-from ai_openai.models import AiPrompt
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates

@@ -522,8 +522,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
                     instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
                     instance.save()
 
+<<<<<<< HEAD
         return instance
 
+=======
+>>>>>>> origin/v4-merged-production
     def create(self, validated_data):
 
         segment = validated_data["segment"]
@@ -541,7 +544,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
         print("mt_raw------>>",validated_data["mt_raw"])
         print("inside ____mt--------------------------------")
         instance = MT_RawTranslation.objects.create(**validated_data)
+<<<<<<< HEAD
         instance=self.slf_learning_word_update(instance,doc)
+=======
+        #instance=self.slf_learning_word_update(instance,doc)
+>>>>>>> origin/v4-merged-production
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
