@@ -703,7 +703,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
                     blog_keyword_trans = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
                     print("BKT---------->",blog_keyword_trans)
                 else:
-                    print("Inide False")
+                    print("Inside False")
                     blog_keyword_trans = None
                 BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword, selected_field= False , 
                                     blog_keyword_mt=blog_keyword_trans,token_usage=token_usage)
