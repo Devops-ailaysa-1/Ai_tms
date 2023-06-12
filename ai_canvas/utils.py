@@ -76,6 +76,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     height=canvas_json_copy['height']
     width=canvas_json_copy['width']
     canvas_result = {}
+    print("canvas_json------------->>>",canvas_json)
     for lang in languages:
         if 'template_json' in  canvas_json_copy.keys():
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
