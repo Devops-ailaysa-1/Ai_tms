@@ -580,22 +580,24 @@ class BlogArticleViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        sub_categories = 64
-        outline_list = request.POST.get('outline_section_list')
-        blog_creation = request.POST.get('blog_creation')
-        outline_section_list = list(map(int, outline_list.split(',')))
-        print("outline_section_list------------>",outline_section_list)
-        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+        pass
+        # sub_categories = 64
+        # outline_list = request.POST.get('outline_section_list')
+        # blog_creation = request.POST.get('blog_creation')
+        # outline_section_list = list(map(int, outline_list.split(',')))
+        # print("outline_section_list------------>",outline_section_list)
+        # serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors)
     
     def update(self,request, pk):
         doc = request.POST.get('document')
+        sub_categories = 64
         print("Doc------>",doc)
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
-        serializer=BlogArticleSerializer(query_set,data = {'document':doc},partial=True)
+        serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -855,7 +857,7 @@ def generate_article(request):
 
         print("prompt____article--->>>>",prompt)
         
-        title='# '+title
+        #title='# '+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
@@ -866,12 +868,13 @@ def generate_article(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            if title:
-                                content=title+'\n'+content
-                                title=''
+                            # if title:
+                            #     content=title+'\n'+content
+                            #     title=''
                             word=content+' '
                             str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":word})
+                            # "# "+str_con[1:] if str_con[0]=='#' else str_con
+                            yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
@@ -901,17 +904,19 @@ def generate_article(request):
                                     print("token_usage------->>",token_usage)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                     if initial_credit >= consumable_credits_for_article_gen:
+                                        print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                    yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     # blog_article_trans=text
-                                    if title:
-                                        blog_article_trans=title+'\n'+blog_article_trans
-                                        title=''
-                                    if blog_article_trans.startswith("#"):
-                                        # blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
-                                    else:
-                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
+                                    # if title:
+                                    #     blog_article_trans=title+'\n'+blog_article_trans
+                                    #     title=''
+                                    # if blog_article_trans.startswith("#"):
+                                    #     # blog_article_trans=markdowner.convert(blog_article_trans)
+                                    #     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
+                                    # else:
+                                    
                                     arr=[]
                                     str_cont='' #####
                                     arr.append(new_line_split[-1])
@@ -924,13 +929,14 @@ def generate_article(request):
                                         print("token_usage------->>",token_usage)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                         if initial_credit >= consumable_credits_for_article_gen:
+                                            print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                             AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
-                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
+                                        #blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         # blog_article_trans=sente
-                                        if title:
-                                            blog_article_trans=title+'\n'+blog_article_trans
-                                            title=''
+                                        # if title:
+                                        #     blog_article_trans=title+'\n'+blog_article_trans
+                                        #     title=''
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
