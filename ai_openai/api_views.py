@@ -578,18 +578,6 @@ class BlogArticleViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-<<<<<<< HEAD
-        sub_categories = 64
-        outline_list = request.POST.get('outline_section_list')
-        blog_creation = request.POST.get('blog_creation')
-        outline_section_list = list(map(int, outline_list.split(',')))
-        print("outline_section_list------------>",outline_section_list)
-        serializer=BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-=======
         pass
         # sub_categories = 64
         # outline_list = request.POST.get('outline_section_list')
@@ -601,7 +589,6 @@ class BlogArticleViewset(viewsets.ViewSet):
         #     serializer.save()
         #     return Response(serializer.data)
         # return Response(serializer.errors)
->>>>>>> origin/v4-merged-production
     
     def update(self,request, pk):
         doc = request.POST.get('document')
@@ -876,17 +863,9 @@ def generate_article(request):
                             #     content=title+'\n'+content
                             #     title=''
                             word=content+' '
-<<<<<<< HEAD
-                            # str_con+=content
-                            # str_con=str_con.replace("#","# ")
-                            
-                            yield '\ndata: {}\n\n'.format({"t":str_con})
-                            
-=======
                             str_con+=content
                             # "# "+str_con[1:] if str_con[0]=='#' else str_con
                             yield '\ndata: {}\n\n'.format({"t":content})
->>>>>>> origin/v4-merged-production
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
