@@ -5381,8 +5381,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-<<<<<<< HEAD
-content-hash = "b4d55717f8b9c13646ef86b9a4b63221ec5c59c3bd3bfc2908c8d837a85cd382"
-=======
 content-hash = "3cf3281684103323e61429e83d28c18a3988ddf51fe5d570fa6051ad546b3783"
->>>>>>> origin/v4-merged-production

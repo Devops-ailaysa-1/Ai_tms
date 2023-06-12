@@ -2711,12 +2711,12 @@ def get_tags(seg):
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
 
-# from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
+from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
 from ai_workspace_okapi.utils import do_compare_sentence
-from django.db.models.signals import post_save 
+from django.db.models.signals import post_save ,pre_save
 
 class SelflearningAssetViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -2794,7 +2794,15 @@ def update_self_learning(sender, instance, *args, **kwargs):
 
 
 # post_save.connect(update_self_learning, sender=SegmentHistory)
- 
+
+
+def prev_seg_his(instance):
+    seg_his_ins=SegmentHistory.objects.filter(segment_id=instance.segment_id)
+    for i in seg_his_ins:
+        print(i.segment_difference.all())
+
+    seg_diff=segment_difference(sender=None, instance=instance)
+
 
 def segment_difference(sender, instance, *args, **kwargs):
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
@@ -2802,27 +2810,33 @@ def segment_difference(sender, instance, *args, **kwargs):
     edited_segment=''
     target_segment=''
     if len(seg_his)>=2:
+        print("seg___dif contain 2 inst")
         edited_segment=seg_his.last().target
         target_segment=seg_his[len(seg_his)-2].target
     elif len(seg_his)==1:
-        if hasattr(instance.segment,'seg_mt_raw'):
-            target_segment =instance.segment.seg_mt_raw.mt_raw  
-        else:target_segment=''
-        # target_segment=instance.segment.seg_mt_raw.mt_raw
+        print("seg___dif contain 1 inst",seg_his)
+        if hasattr(instance.segment,'seg_mt_raw') :
+            print("seg___dif contain 1 seg_mt_raw")
+            target_segment =instance.segment.seg_mt_raw.mt_raw
+        else:
+            print("instance.segment not a seg_mt_raw ins")
+            # target_segment=''
+            target_segment =instance.segment.tagged_source
         edited_segment=instance.target
-    if edited_segment and target_segment:
-        print('edited_segment',edited_segment , 'target_segment',target_segment )
+ 
+         
+
+    if (edited_segment and target_segment) :
+        print("seg___dif inside edit and tar")
         edited_segment=remove_tags(edited_segment)
         target_segment=remove_tags(target_segment)
         print("target_segment----------->>>>>",target_segment,"edited_segment---------->>>",edited_segment)
-        if edited_segment != target_segment:
+        if edited_segment != target_segment: 
             diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
-            print("diff_sentense",diff_sentense)
+            print("seg___dif inside edit not equl tar")
             if diff_sentense:
                 result_sen,save_type=diff_sentense
-                
                 if result_sen.strip()!=edited_segment.strip():
-                     
                     SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
                     print("seg_diff_created")
 

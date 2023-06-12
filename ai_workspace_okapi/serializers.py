@@ -711,6 +711,8 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
         model=SegmentDiff
         fields=('id','sentense_diff_result','save_type')
 
+import time
+ 
 class SegmentHistorySerializer(serializers.ModelSerializer):
     segment_difference=SegmentDiffSerializer(many=True)
     step_name=serializers.SerializerMethodField()
@@ -724,9 +726,13 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
 
 
     def to_representation(self, instance):
-        from ai_workspace_okapi.api_views import segment_difference
+        from ai_workspace_okapi.api_views import segment_difference ,prev_seg_his
+        print("instance",instance)
         s=SegmentDiff.objects.filter(seg_history=instance)
+        print("S----------->",s)
         if not s:
+            time.sleep(3)
+            # prev_seg_his(instance)
             seg_diff=segment_difference(sender=None, instance=instance)
         return super().to_representation(instance)
 
@@ -746,41 +752,41 @@ class VerbSerializer(serializers.Serializer):
 
 
 
-from ai_workspace_okapi.models import SegmentDiff
+# from ai_workspace_okapi.models import SegmentDiff
 
-class SegmentDiffSerializer(serializers.ModelSerializer):
-    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
-    class Meta:
-        model=SegmentDiff
-        fields=('id','sentense_diff_result','save_type')
+# class SegmentDiffSerializer(serializers.ModelSerializer):
+#     # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+#     class Meta:
+#         model=SegmentDiff
+#         fields=('id','sentense_diff_result','save_type')
 
-class SegmentHistorySerializer(serializers.ModelSerializer):
-    segment_difference=SegmentDiffSerializer(many=True)
-    step_name=serializers.SerializerMethodField()
-    status_id=serializers.ReadOnlyField(source='status.status_id')
-    user_name=serializers.ReadOnlyField(source='user.fullname')
-    class Meta:
-        model = SegmentHistory
-        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
-        # extra_kwargs = {
-        #     "status": {"write_only": True}}
+# class SegmentHistorySerializer(serializers.ModelSerializer):
+#     segment_difference=SegmentDiffSerializer(many=True)
+#     step_name=serializers.SerializerMethodField()
+#     status_id=serializers.ReadOnlyField(source='status.status_id')
+#     user_name=serializers.ReadOnlyField(source='user.fullname')
+#     class Meta:
+#         model = SegmentHistory
+#         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
+#         # extra_kwargs = {
+#         #     "status": {"write_only": True}}
 
 
-    def to_representation(self, instance):
-        from ai_workspace_okapi.api_views import segment_difference
-        s=SegmentDiff.objects.filter(seg_history=instance)
-        if not s:
-            seg_diff=segment_difference(sender=None, instance=instance)
-        return super().to_representation(instance)
+#     def to_representation(self, instance):
+#         from ai_workspace_okapi.api_views import segment_difference
+#         s=SegmentDiff.objects.filter(seg_history=instance)
+#         if not s:
+#             seg_diff=segment_difference(sender=None, instance=instance)
+#         return super().to_representation(instance)
 
-    def get_step_name(self,obj):
-        try:
-            step = TaskAssign.objects.filter(
-                Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
-                Q(assign_to = obj.user)).first().step
-            return step.name
-        except:
-            return None
+#     def get_step_name(self,obj):
+#         try:
+#             step = TaskAssign.objects.filter(
+#                 Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
+#                 Q(assign_to = obj.user)).first().step
+#             return step.name
+#         except:
+#             return None
 
 
 from ai_workspace_okapi.models import SelflearningAsset
