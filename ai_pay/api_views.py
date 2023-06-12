@@ -422,6 +422,7 @@ def update_task_po(task_assign,po_task):
     task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
     po = po_task.po
     po.po_file=None
+    po.po_total_amount=tot_amount
     po.save()
     po_generate_pdf(po)
 
