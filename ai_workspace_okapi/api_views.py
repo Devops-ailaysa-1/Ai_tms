@@ -441,7 +441,7 @@ class DocumentViewByDocumentId(views.APIView):
                 else:edit_allowed = True
             else:
                 print("Inside else")
-                if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:
+                if query.count() == 1 and query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:
                     print("Inside else if")
                     edit_allowed =True
                 else:
