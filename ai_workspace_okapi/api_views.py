@@ -440,8 +440,12 @@ class DocumentViewByDocumentId(views.APIView):
                 if editor.status == 3 and query.first().task_assign.status in [1,2]:edit_allowed = False
                 else:edit_allowed = True
             else:
-                if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:edit_allowed =True
+                print("Inside else")
+                if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:
+                    print("Inside else if")
+                    edit_allowed =True
                 else:
+                    print("Inside else Else")
                     status = [i.task_assign.status for i in query]
                     print("st------>",status)
                     if all(i == 3 or i == 4 for i in status):edit_allowed =True
