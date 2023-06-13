@@ -763,12 +763,12 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
         #     "status": {"write_only": True}}
 
 
-    def to_representation(self, instance):
-        from ai_workspace_okapi.api_views import segment_difference
-        s=SegmentDiff.objects.filter(seg_history=instance)
-        if not s:
-            seg_diff=segment_difference(sender=None, instance=instance)
-        return super().to_representation(instance)
+    # def to_representation(self, instance):
+    #     from ai_workspace_okapi.api_views import segment_difference
+    #     s=SegmentDiff.objects.filter(seg_history=instance)
+    #     if not s:
+    #         seg_diff=segment_difference(sender=None, instance=instance)
+    #     return super().to_representation(instance)
 
     def get_step_name(self,obj):
         try:
