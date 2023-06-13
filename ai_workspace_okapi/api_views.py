@@ -2814,14 +2814,10 @@ def segment_difference(sender, instance, *args, **kwargs):
         edited_segment=seg_his.last().target
         target_segment=seg_his[len(seg_his)-2].target
     elif len(seg_his)==1:
-        print("seg___dif contain 1 inst",seg_his)
-        if hasattr(instance.segment,'seg_mt_raw') :
-            print("seg___dif contain 1 seg_mt_raw")
-            target_segment =instance.segment.seg_mt_raw.mt_raw
-        else:
-            print("instance.segment not a seg_mt_raw ins")
-            # target_segment=''
-            target_segment =instance.segment.tagged_source
+        if hasattr(instance.segment,'seg_mt_raw'):
+            target_segment =instance.segment.seg_mt_raw.mt_raw  
+        else:target_segment=instance.temp_target
+        # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  
          
