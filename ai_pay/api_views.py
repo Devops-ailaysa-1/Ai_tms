@@ -300,6 +300,7 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
     tasks = po.po_task.all()
+    print("inside gen po",po.poid)
     ## Need to remove added for old po support
     if tasks.count() <1:
         pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
@@ -549,7 +550,7 @@ def po_modify(task_assign_info_id,po_update):
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
-    if ('accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
+    if ('accepted_rate' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
