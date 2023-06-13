@@ -149,19 +149,26 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
-        print("St---------->>>",validated_data.get('status').id)
+        status = validated_data.get('status',None)
+        print("St---------->>>",validated_data.get('status'))
         if validated_data.get('target'):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
             validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
-        status_id = validated_data.get('status').id
+        status_id = status.id if status else None 
+        if status_id:
+            if status_id not in [109,110]:step = 1
+            else:step=2
+        else: step = None
+        existing_step = 1 if instance.status_id not in [109,110] else 2 
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
+        print("Seg-His-Create--------------->",seg_his_create)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -183,10 +190,10 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.save()
             self.update_task_assign(task_obj,user_1,status_id)
             if seg_his_create:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
             return res
         if seg_his_create:
-            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
         return super().update(instance, validated_data)
 
@@ -502,6 +509,18 @@ class MT_RawSerializer(serializers.ModelSerializer):
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
         return super().to_internal_value(data=data)
 
+    def slf_learning_word_update(self,instance,doc):
+        from ai_workspace_okapi.models import SelflearningAsset
+        slf_lrn_inst=SelflearningAsset.objects.filter(user=doc.owner_pk,target_language=doc.target_language_id)
+        if slf_lrn_inst:
+            word_list=list(slf_lrn_inst.values_list('source_word',flat=True))
+            mt_raw_lists=instance.mt_raw.split(' ')
+            for mt_raw_list in mt_raw_lists:
+                if mt_raw_list in word_list:
+                    edited_word=slf_lrn_inst.filter(source_word=mt_raw_list).last().edited_word
+                    instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
+                    instance.save()
+
     def create(self, validated_data):
 
         segment = validated_data["segment"]
@@ -517,6 +536,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
+        #instance=self.slf_learning_word_update(instance,doc)
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
@@ -680,41 +700,41 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         return text_unit
 
 
-from ai_workspace_okapi.models import SegmentDiff
+# from ai_workspace_okapi.models import SegmentDiff
 
-class SegmentDiffSerializer(serializers.ModelSerializer):
-    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
-    class Meta:
-        model=SegmentDiff
-        fields=('id','sentense_diff_result','save_type')
+# class SegmentDiffSerializer(serializers.ModelSerializer):
+#     # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+#     class Meta:
+#         model=SegmentDiff
+#         fields=('id','sentense_diff_result','save_type')
 
-class SegmentHistorySerializer(serializers.ModelSerializer):
-    segment_difference=SegmentDiffSerializer(many=True)
-    step_name=serializers.SerializerMethodField()
-    status_id=serializers.ReadOnlyField(source='status.status_id')
-    user_name=serializers.ReadOnlyField(source='user.fullname')
-    class Meta:
-        model = SegmentHistory
-        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
-        # extra_kwargs = {
-        #     "status": {"write_only": True}}
+# class SegmentHistorySerializer(serializers.ModelSerializer):
+#     segment_difference=SegmentDiffSerializer(many=True)
+#     step_name=serializers.SerializerMethodField()
+#     status_id=serializers.ReadOnlyField(source='status.status_id')
+#     user_name=serializers.ReadOnlyField(source='user.fullname')
+#     class Meta:
+#         model = SegmentHistory
+#         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
+#         # extra_kwargs = {
+#         #     "status": {"write_only": True}}
 
 
-    def to_representation(self, instance):
-        from ai_workspace_okapi.api_views import segment_difference
-        s=SegmentDiff.objects.filter(seg_history=instance)
-        if not s:
-            seg_diff=segment_difference(sender=None, instance=instance)
-        return super().to_representation(instance)
+#     def to_representation(self, instance):
+#         from ai_workspace_okapi.api_views import segment_difference
+#         s=SegmentDiff.objects.filter(seg_history=instance)
+#         if not s:
+#             seg_diff=segment_difference(sender=None, instance=instance)
+#         return super().to_representation(instance)
 
-    def get_step_name(self,obj):
-        try:
-            step = TaskAssign.objects.filter(
-                Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
-                Q(assign_to = obj.user)).first().step
-            return step.name
-        except:
-            return None
+#     def get_step_name(self,obj):
+#         try:
+#             step = TaskAssign.objects.filter(
+#                 Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
+#                 Q(assign_to = obj.user)).first().step
+#             return step.name
+#         except:
+#             return None
         
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()

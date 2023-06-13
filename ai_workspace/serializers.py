@@ -587,42 +587,47 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
-		user = self.context.get("request").user if self.context.get("request")!=None else self\
-			.context.get("ai_user", None)
+		if type(instance) is Project:
+			user = self.context.get("request").user if self.context.get("request")!=None else self\
+				.context.get("ai_user", None)
 
-		user_1 = user.team.owner if user.team else user
+			user_1 = user.team.owner if user.team else user
 
-		if instance.ai_user == user:
-			tasks = instance.get_tasks
-		elif instance.team:
-			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+			if instance.ai_user == user:
 				tasks = instance.get_tasks
+			elif instance.team:
+				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+					tasks = instance.get_tasks
+				else:
+					tasks = [task for job in instance.project_jobs_set.all() for task \
+							in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
+			res = instance.project_analysis(tasks)
+			return res
 		else:
-			tasks = [task for job in instance.project_jobs_set.all() for task \
-					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
-
-		res = instance.project_analysis(tasks)
-		return res
+			return None
 
 	def check_role(self, instance):
-		if self.context.get("request")!=None:
-			user = self.context.get("request").user
-		else:user = self.context.get("ai_user", None)
-		if instance.team :
-			return True if ((instance.team.owner == user)\
-				or(instance.team.internal_member_team_info.all().\
-				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-				or(instance.team.owner.user_info.all()\
-				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+		if type(instance) is Project:
+			if self.context.get("request")!=None:
+				user = self.context.get("request").user
+			else:user = self.context.get("ai_user", None)
+			if instance.team :
+				return True if ((instance.team.owner == user)\
+					or(instance.team.internal_member_team_info.all().\
+					filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+					or(instance.team.owner.user_info.all()\
+					.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+					else False
+			else:
+				return True if ((instance.ai_user == user) or\
+				(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 				else False
-		else:
-			return True if ((instance.ai_user == user) or\
-			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-			else False
+		else:return None
 
 
 	def create(self, validated_data):
@@ -1138,9 +1143,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		user = self.context.get('request').user
+		request_user = self.context.get('request').user
+		print("RequestUser----------->",request_user)
+		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency else request_user
+		print("User-------->",user)
 		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
-		if task_assign:task_assign_final= task_assign
+		print("TaskAssign----------->",task_assign)
+		if task_assign:
+			task_assign_final= task_assign
 		else:
 			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
@@ -1441,19 +1451,19 @@ class GetAssignToSerializer(serializers.Serializer):
 	def get_external_editors(self,obj):
 		request = self.context['request']
 		job_id= request.query_params.get('job',None)
-		if job_id:
-			job_obj = Job.objects.get(id=job_id)
-			task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
-			print("TaskassignedInfo------->",task_assigned_info)
-			assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
-			print("Assigners----------->",assigners)
-		else:assigners=[]
+		# if job_id:
+		# 	job_obj = Job.objects.get(id=job_id)
+		# 	task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
+		# 	print("TaskassignedInfo------->",task_assigned_info)
+		# 	assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
+		# 	print("Assigners----------->",assigners)
+		# else:assigners=[]
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
 		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
-			if i.get("vendor_lang_pair")!=[] and i.get('id') not in assigners:
+			if i.get("vendor_lang_pair")!=[]:# and i.get('id') not in assigners:
 				tt.append(i)
 		return tt
 
@@ -1805,3 +1815,32 @@ class MyDocumentSerializerNew(serializers.Serializer):
 	open_as = serializers.CharField(read_only=True)
 	document_type__type = serializers.CharField(read_only=True)
 	created_at = serializers.DateTimeField(read_only=True)
+
+
+# class CombinedSerializer(ProjectQuickSetupSerializer, MyDocumentSerializerNew):
+#     pass
+
+class CombinedSerializer(ProjectQuickSetupSerializer):
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        my_doc_data = MyDocumentSerializerNew(instance).data
+        from ai_exportpdf.serializer import PdfFileSerializer
+        from ai_exportpdf.models import Ai_PdfUpload
+        if type(instance) is Ai_PdfUpload:
+            pdf_data = PdfFileSerializer(instance).data
+            data.update(pdf_data)
+        data.update(my_doc_data)
+        return data
+
+
+class ToolkitSerializer(ProjectQuickSetupSerializer):
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from ai_exportpdf.serializer import PdfFileSerializer
+        from ai_exportpdf.models import Ai_PdfUpload
+        if type(instance) is Ai_PdfUpload:
+            pdf_data = PdfFileSerializer(instance).data
+            data.update(pdf_data)
+        return data

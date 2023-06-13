@@ -1,7 +1,6 @@
 import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
-from ai_openai.models import AiPrompt
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
@@ -25,7 +24,7 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework import generics
 from ai_pay.models import POTaskDetails,POAssignment,PurchaseOrder
 from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssignmentSerializer, PoAssignDetailsSerializer, 
-                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer)
+                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer, PurchaseOrderTaskListSerializer)
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
@@ -316,7 +315,7 @@ def po_generate_pdf(po):
     html_string = render_to_string('po_pdf.html', context)
 
     html = HTML(string=html_string)
-    po_res = html.write_pdf(stylesheets=[CSS(f"{settings.STATIC_ROOT}/css/po.css")])
+    po_res = html.write_pdf()
     # print('po_res',po_res)
     po.po_file = SimpleUploadedFile( po.poid +'.pdf', po_res, content_type='application/pdf')
     po.save()
@@ -419,11 +418,13 @@ def get_task_total_amt(instance):
 def update_task_po(task_assign,po_task):
     tot_amount = get_task_total_amt(task_assign)
     insert={'word_count':task_assign.billable_word_count,'char_count':task_assign.billable_char_count,'unit_price':task_assign.mtpe_rate,'unit_type':task_assign.mtpe_count_unit,
-    'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount}
+    'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount,'tsk_accepted':False,'assign_status':None}
     task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
     po = po_task.po
     po.po_file=None
+    po.po_total_amount=tot_amount
     po.save()
+    po_generate_pdf(po)
 
     
 
@@ -481,6 +482,7 @@ def generate_client_po(task_assign_info):
             po_total_amt+=float(tot_amount)
             po.po_total_amount=po_total_amt
             po.save()
+            po_generate_pdf(po)
             msg_send_po(po,"po_created")
         # print("po2",po)
     return po
@@ -509,7 +511,7 @@ def po_modify_weigted_count(task_assign_info_ls):
     po.po_total_amount=po_total
     po.po_file=None
     po.save()
-    msg_send_po(po,"po_updated") 
+    # msg_send_po(po,"po_updated") 
 
 
 def po_modify(task_assign_info_id,po_update):
@@ -869,17 +871,24 @@ class PurchaseOrderView(viewsets.ViewSet):
 
         queryset = PurchaseOrder.objects.all()
         participant = self.request.query_params.get('participant')
+        task = self.request.query_params.get('task')
+        step = self.request.query_params.get('step')
         if participant == "seller":
             queryset = queryset.filter(seller=self.request.user)
         elif participant == "buyer":
             queryset = queryset.filter(client=self.request.user)
+        else:
+            queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
+        queryset = queryset.filter(po_task__task_id =task)
+        # queryset= queryset.filter(assignment__step_id=step)
+        queryset = queryset.filter(po_status__in=['issued','open'])
 
         return queryset
     
 
     def list(self, request):
         queryset = self.get_queryset()
-        serializer = PurchaseOrderSerializer(queryset, many=True)
+        serializer = PurchaseOrderTaskListSerializer(queryset,context=request)
         return Response(serializer.data)
 
 
