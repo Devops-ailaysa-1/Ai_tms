@@ -877,6 +877,7 @@ def generate_article(request):
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con)
+                        print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
