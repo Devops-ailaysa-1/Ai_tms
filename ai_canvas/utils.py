@@ -64,8 +64,7 @@ import tkinter as tk
 from tkinter.font import Font
 
 def text_size(text, font_size):
-    root = tk.Tk()
-    root.withdraw()
+ 
 
     font = Font(family="Arial", size=font_size)  # Customize the font family if needed
     text_width = font.measure(text)
