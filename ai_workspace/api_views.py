@@ -3538,7 +3538,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         paginate = request.GET.get('pagination',True)
         queryset = self.get_queryset_new() #self.filter_queryset(self.get_queryset())
         if paginate == 'False':
-            serializer = MyDocumentSerializerNew(queryset, many=True)
+            serializer = MyDocumentSerializer(self.get_queryset(), many=True)
             return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = MyDocumentSerializerNew(pagin_tc, many=True)
