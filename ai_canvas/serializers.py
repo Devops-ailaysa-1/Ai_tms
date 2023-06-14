@@ -4,7 +4,7 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
-from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
+from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
 from django import core
 from ai_imagetranslation.utils import image_content
 
@@ -236,17 +236,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             #     os.remove(thumbnail_page_path)
  
         # for source json file and thumbnail update
+        # if source_json_file:
+        #     source_json_file=json_sr_url_change(source_json_file,instance)
+        #     instance.s
+
         if source_json_file and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
             if '' not in source_json_file:
-        
-                
-                source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,
-                                               "projectType": "design"}
-            source_json_file = json_src_change(source_json_file,req_host,instance)
+                source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+            # source_json_file = json_src_change(source_json_file,req_host,instance)
+            source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
- 
+            print("inside----->>> src json and src page")
             canva_source.thumbnail = thumbnail_src
             canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
             canva_source.save()
@@ -506,7 +508,6 @@ class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
 
 
 class TemplateKeywordSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = TemplateKeyword
         fields = ('id' ,'text_template', 'text_keywords', )

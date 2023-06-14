@@ -5,6 +5,7 @@ from ai_workspace_okapi.utils import get_translation
 import os
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
+HOST_NAME=os.getenv("HOST_NAME")
 import json ,base64
 from fontTools.ttLib import TTFont
 import os
@@ -43,23 +44,44 @@ def json_src_change(json_src ,req_host,instance):
             image_extention ="."+image_url.split('.')[-1]
             if req_host_url not in image_url:
                 req=requests.get(image_url).content
-                src_img_assets_can =  SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance)
+                src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance)
                 src_file=core.files.File(core.files.base.ContentFile(req),"file"+image_extention)
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
+                print("src_url",i['src'])
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         else:
             break
     return json_src
 
+ 
+
+def json_sr_url_change(json,instance):
+    for i in json['objects']:
+        if ('type' in i.keys()) and (i['type'] =='image') and ('src' in i.keys()) and ("ailaysa" not in  i['src']):
+                third_party_url=i['src']
+                image_name=third_party_url.split("/")[-1]
+                image=Image.open(requests.get(third_party_url,stream=True).raw)
+                src_file=core.files.File(core.files.base.ContentFile(image),image_name)
+                src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance)
+                src_img_assets_can.img =src_file
+                src_img_assets_can.save()
+                i['src']=HOST_NAME+src_img_assets_can.img.url
+        if 'objects' in i.keys():
+            json_sr_url_change(i,instance)
+    print("inside____json_src")
+    print(json)
+    return json
+
+
+
 
 def canva_group(_dict,src_lang ,lang):
     for count , grp_data in enumerate(_dict):
         if grp_data['type']== 'textbox':
-            grp_data['text'] = get_translation(1,source_string = grp_data['text'],
-                                               source_lang_code=src_lang ,target_lang_code = lang.strip())
+            grp_data['text'] = get_translation(1,source_string = grp_data['text'],source_lang_code=src_lang ,target_lang_code = lang.strip())
         if grp_data['type'] == 'group':
             canva_group(grp_data['objects'])
 
