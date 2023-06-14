@@ -153,8 +153,6 @@ class TemplateKeyword(models.Model):
     text_template=models.ForeignKey(TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
     text_keywords=models.CharField(max_length=100)
 
-
-
 def user_directory_path_font_file(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/font_file/fonts/",filename)
 

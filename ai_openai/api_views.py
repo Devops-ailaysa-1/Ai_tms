@@ -869,6 +869,7 @@ def generate_article(request):
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                        print("token_usage---------->>",token_usage)
                         # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
                         # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
                         # instance.document = tt
