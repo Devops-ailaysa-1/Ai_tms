@@ -64,7 +64,8 @@ import tkinter as tk
 from tkinter.font import Font
 
 def text_size(text, font_size):
- 
+    root = tk.Tk()
+    root.withdraw()
 
     font = Font(family="Arial", size=font_size)  # Customize the font family if needed
     text_width = font.measure(text)
@@ -72,6 +73,17 @@ def text_size(text, font_size):
 
     return text_width, text_height
 
+
+import pygame
+
+def calculate_textbox_dimensions(text, font_size ):
+    pygame.init()
+    font = pygame.font.SysFont("Arial", font_size)
+    text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
+    textbox_width = text_surface.get_width()
+    textbox_height = text_surface.get_height()
+    pygame.quit()
+    return textbox_width, textbox_height
 
 def calculate_font_size(box_width, box_height, text, font_size):
     while True:
@@ -113,7 +125,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
-                    text_width, text_height=text_size(text,fontSize)
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
                 if i['type'] == 'group':
@@ -126,7 +138,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
                     
-                    text_width, text_height=text_size(text,fontSize)
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
                     # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
