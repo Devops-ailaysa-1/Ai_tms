@@ -591,7 +591,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = user.team.owner if user.team and user.team.owner.is_agency else user
+			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_tasks
