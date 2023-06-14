@@ -93,6 +93,8 @@ def canva_group(_dict,src_lang ,lang):
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
+    print("canvas_json")
+    print(canvas_json)
     false = False
     null = 'null'
     true = True
