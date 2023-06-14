@@ -868,6 +868,7 @@ def generate_article(request):
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con)
+                        print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("token_usage---------->>",token_usage)
                         # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article

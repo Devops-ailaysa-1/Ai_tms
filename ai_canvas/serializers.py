@@ -482,16 +482,19 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 my_template_export=can_trans_ins.export_file
                 my_template_json=can_trans_ins.json
                 page_no=can_trans_ins.page_no
-                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
+                print("can_trans_ins---->",can_trans_ins.thumbnail.path)
+                print("my_temp_ins---->",my_temp_ins.my_template_thumbnail.path)
             else:
                 canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
                 my_template_thumbnail = canvas_source_json_inst.thumbnail
                 my_template_export=canvas_source_json_inst.export_file
                 my_template_json=canvas_source_json_inst.json
                 page_no=canvas_source_json_inst.page_no
-                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                my_temp_ins_else=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
+                print("my_temp_ins_else---->",my_temp_ins_else.my_template_thumbnail.path)
                 
         return my_temp_design
 
