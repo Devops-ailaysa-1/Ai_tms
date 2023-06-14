@@ -56,7 +56,8 @@ def json_src_change(json_src ,req_host,instance):
             break
     return json_src
 
-
+import matplotlib
+matplotlib.use('Agg')
 
 
 import tkinter as tk
