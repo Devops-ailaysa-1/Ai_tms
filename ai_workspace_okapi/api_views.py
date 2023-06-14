@@ -787,12 +787,12 @@ class SegmentsUpdateView(viewsets.ViewSet):
             try:
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
-                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=True).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign.status
+                    task_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(
+                    ~Q(task_assign__assign_to=user)).first().task_assign
                 else:
-                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=False).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign.status
-                edit_allowed = False if task_assign_status == 2 else True
+                    task_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(
+                    ~Q(task_assign__assign_to=user)).first().task_assign
+                edit_allowed = True if task_assign.step_id == 2 and task_assign.status == 2 else False
             except:
                 edit_allowed = True
         return edit_allowed
