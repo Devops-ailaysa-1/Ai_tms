@@ -132,6 +132,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     canvas_json_copy['objects'][count]['fontSize']=font_size
                     print("text",tar_word,"text",text)
                     print("font_size",font_size)
+                    print("text_width, text_height",text_width, text_height)
                 if i['type'] == 'group':
                     canva_group(i['objects'])
         else:
