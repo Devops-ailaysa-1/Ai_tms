@@ -120,9 +120,10 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
+                    fontSize=canvas_json_copy['template_json']['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
-
+                    
                     text_width, text_height=text_size(text,fontSize)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['fontSize']=font_size
