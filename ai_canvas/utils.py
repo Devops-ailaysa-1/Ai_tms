@@ -56,10 +56,31 @@ def json_src_change(json_src ,req_host,instance):
             break
     return json_src
 
- 
 
 
 
+import tkinter as tk
+from tkinter.font import Font
+
+def text_size(text, font_size):
+    root = tk.Tk()
+    root.withdraw()
+
+    font = Font(family="Arial", size=font_size)  # Customize the font family if needed
+    text_width = font.measure(text)
+    text_height = font.metrics("linespace")
+
+    return text_width, text_height
+
+
+def calculate_font_size(box_width, box_height, text, font_size):
+    while True:
+        font = ImageFont.truetype(r"NotoSans-Regular.ttf",font_size)
+        text_width, text_height = font.getbbox(text)[2:]
+        if text_width <= box_width and text_height <= box_height:
+            break
+        font_size -= 1
+    return font_size
 
 
 
@@ -80,7 +101,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     #canvas_json_copy = ast.literal_eval(canvas_json_2)
     # print(type(canvas_json_copy))
     # print("canvas_json------------->>>",canvas_json)
-    # fontSize=canvas_json_copy['fontSize']
+    fontSize=canvas_json_copy['fontSize']
     # height=canvas_json_copy['height']
     # width=canvas_json_copy['width']
     canvas_result = {}
@@ -92,8 +113,9 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     text = i['text'] 
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['template_json']['objects'][count]['text']=tar_word
-                    # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
-                    # canvas_json_copy['fontSize']=fontSize
+                    text_width, text_height=text_size(text,fontSize)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    canvas_json_copy['fontSize']=font_size
                 if i['type'] == 'group':
                     canva_group(i['objects'])
         else:
@@ -102,6 +124,10 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     text = i['text'] 
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
+
+                    text_width, text_height=text_size(text,fontSize)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    canvas_json_copy['fontSize']=font_size
                     # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
                     # canvas_json_copy['fontSize']=fontSize
                     if i['type'] == 'group':
@@ -186,6 +212,6 @@ def json_sr_url_change(json,instance):
                 i['src']=HOST_NAME+src_img_assets_can.img.url
         if 'objects' in i.keys():
             json_sr_url_change(i,instance)
-    print("inside____json_src")
-    print(json)
     return json
+
+

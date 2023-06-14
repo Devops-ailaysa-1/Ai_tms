@@ -246,8 +246,6 @@ def background_merge(u2net_result,original_img):
     u2net_result.putdata(newdata)
     img_io = io.BytesIO()
     u2net_result.save(img_io, format='PNG')
-    u2net_result.save('d.png',format='PNG')
-
     img_byte_arr = img_io.getvalue()
     print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
@@ -267,7 +265,7 @@ def background_remove(image_path):
     # im=np.asarray(im)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
-    print("shape",y0.shape)
+ 
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
 
