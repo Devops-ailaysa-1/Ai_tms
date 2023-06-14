@@ -76,16 +76,18 @@ def text_size(text, font_size):
 
 import pygame
 
-def calculate_textbox_dimensions(text, font_size ):
+def calculate_textbox_dimensions(text,font_size):
+    font_size=int(font_size)
     pygame.init()
-    font = pygame.font.SysFont("Arial", font_size)
+    font = pygame.font.SysFont("Arial",font_size)
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
     pygame.quit()
     return textbox_width, textbox_height
 
-def calculate_font_size(box_width, box_height, text, font_size):
+def calculate_font_size(box_width, box_height, text,font_size):
+    font_size=int(font_size)
     while True:
         font = ImageFont.truetype(r"NotoSans-Regular.ttf",font_size)
         text_width, text_height = font.getbbox(text)[2:]
