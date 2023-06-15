@@ -491,3 +491,33 @@ def seq_match_seg_diff(words1,words2):
     if save_type:
         save_type=list(set(save_type))
     return (" ".join(data)," ".join(save_type))
+
+
+
+def get_prompt(sent):
+    if len(sent)>200:
+        prompt = '''
+
+                As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
+
+
+                1. Split the given sentence into multiple sentences.
+                2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+                3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer words, without altering the meaning or tone.
+
+                If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
+
+                Text: '''+sent
+    else:
+        prompt = '''
+
+                As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks:
+
+                1. Rewrite the provided text in a manner that is comprehensible to non-native English speakers or language learners while retaining technical terms when possible.
+                2. In addition, rewrite each sentence in a simpler style by replacing any idioms, phrases, or phrasal verbs with more straightforward words, without changing the meaning or tone.
+
+                Please proceed with the above instructions.
+
+                Text: '''+sent
+    
+    return prompt

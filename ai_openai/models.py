@@ -226,6 +226,13 @@ class ImageGenerationPromptResponse(models.Model):
     generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
     image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt,on_delete= models.CASCADE,related_name='gen_img')
 
+class CustomizationSettings(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,default=1, \
+        on_delete=models.CASCADE, related_name="customization_mt_engine_setting")
+    append = models.BooleanField(default=True)
+    new_line = models.BooleanField(default=True)
+    
 
 
 # class InstantTranslation(models.Model):

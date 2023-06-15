@@ -2369,6 +2369,55 @@ def get_segment_history(request):
         return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
+
+
+
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from .utils import get_prompt
+from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+
+@api_view(['POST',])############### only available for english ###################
+def paraphrasing_for_non_english(request):
+    from ai_staff.models import Languages
+    from ai_workspace.api_views import get_consumable_credits_for_text
+    from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
+    sentence = request.POST.get('source_sent')
+    target_lang_id = request.POST.get('target_lang_id')
+    target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
+    user = request.user
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    
+    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    clean_sentence = re.sub('<[^<]+?>', '', sentence)
+    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+    if initial_credit >= consumable_credits_user_text:
+        prompt = get_prompt(clean_sentence)
+        print("Pr--------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
+        if initial_credit >= consumable_credits_to_translate:
+            rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+        prompt_usage = result_prompt['usage']
+        total_token = prompt_usage['completion_tokens']
+        consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+        if any(tag_names):
+            for i in range(len(list(tag_names))):
+                tag_names[i] = '<'+tag_names[i]+'>'
+        print("tag-->",tag_names)
+        return Response({'paraphrase':[rewrited] ,'tag':tag_names})
+    else:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
 ####################################################### Hemanth #########################################################
 
 # @api_view(['POST',])############### only available for english ###################
