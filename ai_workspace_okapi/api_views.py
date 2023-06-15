@@ -2413,6 +2413,7 @@ def paraphrasing_for_non_english(request):
         total_token = prompt_usage['total_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+        print("Tsg------->",tag_names)
         if any(tag_names):
             for i in range(len(list(tag_names))):
                 tag_names[i] = '<'+tag_names[i]+'>'
