@@ -495,7 +495,10 @@ def seq_match_seg_diff(words1,words2):
 
 
 def get_prompt(sent,subs,cont):
-    if len(sent)>200:
+    if len(sent)<=20:
+        prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+
+    elif len(sent)>200:
         prompt = '''As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
                 1. Split the given sentence into multiple sentences.
                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
