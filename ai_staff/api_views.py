@@ -920,16 +920,11 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         return Response(serializer.data) 
 
  
-
-
 class FontLanguageViewset(viewsets.ViewSet):
     def list(self, request):
         queryset = FontLanguage.objects.all()
         serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
-
-
-
     
 class FontDataViewset(viewsets.ViewSet):
     def list(self, request):

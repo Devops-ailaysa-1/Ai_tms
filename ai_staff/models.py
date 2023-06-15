@@ -634,8 +634,8 @@ class SocialMediaSize(models.Model):
     width=models.CharField(max_length=200,blank=True ,null=True)
     height=models.CharField(max_length=200,blank=True ,null=True)
     src=models.FileField(upload_to='socialmediasize',blank=True ,null=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    # updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
 class ImageCategories(models.Model):
