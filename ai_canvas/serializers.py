@@ -78,6 +78,7 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
         return data
 import copy
 from ai_canvas.template_json import basic_json
+from ai_staff.models import SocialMediaSize
 class CanvasDesignSerializer(serializers.ModelSerializer):
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
@@ -99,7 +100,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     target_canvas_json=serializers.JSONField(required=False,write_only=True)
     next_page=serializers.BooleanField(required=False,write_only=True)
     duplicate=serializers.BooleanField(required=False,write_only=True)
-    social_media_create=serializers.PrimaryKeyRelatedField(queryset=MyTemplateDesign.objects.all(),required=False)
+    social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
