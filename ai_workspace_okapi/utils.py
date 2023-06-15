@@ -495,29 +495,28 @@ def seq_match_seg_diff(words1,words2):
 
 
 def get_prompt(sent,subs,cont):
+    if subs == []:subs_str = 'English language'
+    else: subs_str =  ', '.join(subs)
+    if cont == []:cont_str = 'easy-to-understand content'
+    else: cont_str = ', '.join(cont)
     if len(sent)<=20:
         prompt = '''Rewrite the given text. Text: {} '''.format(sent)
 
     elif len(sent)>200:
-        prompt = '''As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
+        
+        prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
                 1. Split the given sentence into multiple sentences.
                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-                Text: {}
-                Subject Fields: {}
-                Content Types: {} 
-                Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
+                Text: {} '''.format(subs_str,cont_str,sent) 
     else:
-        prompt = '''As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
+        prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
                 1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
                 2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-                Text: {}
-                Subject Fields: {} 
-                Content Types: {} 
-                Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
-
+                Text: {} '''.format(subs_str,cont_str,sent) 
+                
     return prompt
 
     # if subs == []:
@@ -538,6 +537,7 @@ def get_prompt(sent,subs,cont):
     #                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
 
     #                 Text: '''+sent 
+                       # Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.
     #     else:
     #         prompt = '''
 
@@ -548,5 +548,8 @@ def get_prompt(sent,subs,cont):
 
     #                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
 
-    #                 Text: '''+sent
+    # #                 Text: '''+sent
+    #                   Subject Fields: {} 
+    #             Content Types: {} 
+    #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
     # else:
