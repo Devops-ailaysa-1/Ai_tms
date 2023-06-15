@@ -29,7 +29,8 @@ urlpatterns += [
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
     path('images/',api_views.pixabay_api,name='pixabayapi'),
     path('canvas-export',api_views.canvas_export_download,name='canvas_export_download'),
-    path('image-list-category',api_views.image_list,name='image_list')
+    path('image-list-category',api_views.image_list,name='image_list'),
+    path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'),
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

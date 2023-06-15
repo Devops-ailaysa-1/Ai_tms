@@ -919,15 +919,10 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         serializer = PromptSubCategoriesSerializer(query_set,many=True)
 #         return Response(serializer.data) 
 
-class SocialMediaSizeViewset(viewsets.ViewSet):
-    def list(self,request):
-        queryset = SocialMediaSize.objects.all()
-        serializer = SocialMediaSizeSerializer(queryset,many=True)
-        return Response(serializer.data)
+ 
 
 
 class FontLanguageViewset(viewsets.ViewSet):
-
     def list(self, request):
         queryset = FontLanguage.objects.all()
         serializer = FontLanguageSerializer(queryset,many=True)
