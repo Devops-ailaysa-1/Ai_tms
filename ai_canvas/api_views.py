@@ -644,7 +644,7 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().exclude(social_media_name='Full HD')
+        queryset = SocialMediaSize.objects.all()
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)

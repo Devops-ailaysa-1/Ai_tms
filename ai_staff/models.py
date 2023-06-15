@@ -637,6 +637,8 @@ class SocialMediaSize(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+    def __str__(self) -> str:
+        return self.social_media_name
 
 class ImageCategories(models.Model):
     category= models.CharField(max_length=50,blank=True ,null=True)
