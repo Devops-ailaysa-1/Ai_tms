@@ -949,3 +949,12 @@ class ImageGeneratorResolutionViewset(viewsets.ViewSet):
         queryset=ImageGeneratorResolution.objects.all()
         serializer=ImageGeneratorResolutionSerializer(queryset,many=True)
         return Response(serializer.data)
+
+
+
+class SocialMediaSizeViewset_ser(viewsets.ViewSet):
+ 
+    def list(self,request):
+        queryset = SocialMediaSize.objects.all()
+        serializer = SocialMediaSizeSerializer(queryset,many=True)
+        return Response(serializer.data)
