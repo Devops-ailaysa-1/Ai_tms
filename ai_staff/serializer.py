@@ -440,7 +440,6 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
-        print(instance.src)
         if 'src' in data.keys() and instance.src:
             if instance.src:
                 data['src'] = instance.src.url
