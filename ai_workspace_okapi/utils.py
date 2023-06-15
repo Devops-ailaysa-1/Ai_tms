@@ -509,13 +509,15 @@ def get_prompt(sent,subs,cont):
                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-                Text: {} '''.format(subs_str,cont_str,sent) 
+                Text: {} 
+                [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
     else:
         prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
                 1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
                 2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-                Text: {} '''.format(subs_str,cont_str,sent) 
+                Text: {} 
+                [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
                 
     return prompt
 
