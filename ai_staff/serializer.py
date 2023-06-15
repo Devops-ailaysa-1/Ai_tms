@@ -470,3 +470,6 @@ class DesignShapeSerializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShape
         fields='__all__'
+
+    def to_representation(self, instance):
+        return super().to_representation(instance)
