@@ -7,7 +7,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,ImageGeneratorResolution)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,ImageGeneratorResolution,DesignShape)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -463,3 +463,10 @@ class ImageGeneratorResolutionSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageGeneratorResolution
         fields=('id','image_resolution')
+
+
+
+class DesignShapeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=DesignShape
+        fields='__all__'

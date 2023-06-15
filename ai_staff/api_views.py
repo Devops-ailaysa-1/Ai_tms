@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -24,7 +24,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
-                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer)
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -957,4 +957,11 @@ class SocialMediaSizeViewset_ser(viewsets.ViewSet):
     def list(self,request):
         queryset = SocialMediaSize.objects.all()
         serializer = SocialMediaSizeSerializer(queryset,many=True)
+        return Response(serializer.data)
+    
+
+class DesignShapeViewset(viewsets.ViewSet):
+     def list(self,request):
+        queryset = DesignShape.objects.all()
+        serializer = DesignShapeSerializer(queryset,many=True)
         return Response(serializer.data)
