@@ -775,27 +775,27 @@ class SegmentsUpdateView(viewsets.ViewSet):
             logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
-    def edit_allowed_check(self, instance):
-        from ai_workspace.models import Task, TaskAssignInfo
-        user = self.request.user
-        task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
-        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
-        assigners = [i.task_assign.assign_to for i in task_assigned_info]
-        if user not in assigners:
-            edit_allowed = True
-        else:
-            try:
-                task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
-                if task_reassign:
-                    task_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign
-                else:
-                    task_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign
-                edit_allowed = True if task_assign.step_id == 2 and task_assign.status == 2 else False
-            except:
-                edit_allowed = True
-        return edit_allowed
+    # def edit_allowed_check(self, instance):
+    #     from ai_workspace.models import Task, TaskAssignInfo
+    #     user = self.request.user
+    #     task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
+    #     task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+    #     assigners = [i.task_assign.assign_to for i in task_assigned_info]
+    #     if user not in assigners:
+    #         edit_allowed = True
+    #     else:
+    #         try:
+    #             task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
+    #             if task_reassign:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             else:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             edit_allowed = True if task_assign.step_id == 2 and task_assign.status == 2 else False
+    #         except:
+    #             edit_allowed = True
+    #     return edit_allowed
 
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
@@ -851,9 +851,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 else:
                     data={}
                 authorize(request, resource=segment, actor=request.user, action="read")
-                edit_allow = self.edit_allowed_check(segment)
-                if edit_allow == False:
-                    return Response({"msg": "Someone is working already.."}, status=400)
+                # edit_allow = self.edit_allowed_check(segment)
+                # if edit_allow == False:
+                #     return Response({"msg": "Someone is working already.."}, status=400)
 
                 # Segment update for a Split segment
                 if segment.is_split == True:
@@ -881,9 +881,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
         authorize(request, resource=segment, actor=request.user, action="read")
-        edit_allow = self.edit_allowed_check(segment)
-        if edit_allow == False:
-            return Response({"msg": "Someone is working already.."}, status=400)
+        # edit_allow = self.edit_allowed_check(segment)
+        # if edit_allow == False:
+        #     return Response({"msg": "Someone is working already.."}, status=400)
 
         # Segment update for a Split segment
         if segment.is_split == True:
