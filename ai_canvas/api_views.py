@@ -644,7 +644,7 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     def list(self,request):
-        queryset = SocialMediaSize.objects.all()
+        queryset = SocialMediaSize.objects.all().exclude(social_media_name='Full HD')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -653,7 +653,25 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
+    
+    def create(self,request):
+        src=request.FILES.get('src',None)
+        serializer=SocialMediaSizeSerializer(data={**request.POST.dict(),'src':src})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 
+    def update(self,request,pk):
+        src=request.FILES.get('src',None)
+        query_set=SocialMediaSize.objects.get(id=pk)
+        serializer=SocialMediaSizeSerializer(query_set,data={**request.POST.dict(),'src':src},partial=True)                           
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 # import asyncio
 # async def one_iteration(pixa_json):
 #     preview_image=convert_image_url_to_file(pixa_json['previewURL'])

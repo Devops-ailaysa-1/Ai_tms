@@ -1,10 +1,8 @@
 from django.db import models
 
 # Create your models here.
-from ai_staff.models import Languages ,LanguagesLocale
+from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
-
-
 
 class CanvasCatagories(models.Model):
     catagory_name = models.CharField(max_length=50,null=True,blank=True)
@@ -120,6 +118,7 @@ def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
 
 class MyTemplateDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)

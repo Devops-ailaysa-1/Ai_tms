@@ -265,7 +265,6 @@ def background_remove(image_path):
     # im=np.asarray(im)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
- 
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
 
