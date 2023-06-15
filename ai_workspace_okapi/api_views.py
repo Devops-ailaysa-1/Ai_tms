@@ -2387,10 +2387,11 @@ def paraphrasing_for_non_english(request):
     doc_id = request.POST.get('doc_id')
     doc_obj = Document.objects.get(id=doc_id)
     project = doc_obj.job.project
+    user = doc_obj.doc_credit_debit_user
     subj_fields =  [i.subject.name for i in project.proj_subject.all()]
     content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
-    user = request.user
+    
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
@@ -2414,11 +2415,13 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("Tsg------->",tag_names)
+        output_list = []
         if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
+            for item in tag_names:
+                output_list.append(f"<{item}>")
+                output_list.append(f"</{item}>")
         print("tag-->",tag_names)
-        return Response({'paraphrase':[rewrited] ,'tag':tag_names})
+        return Response({'paraphrase':[rewrited] ,'tag':output_list})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2439,7 +2442,7 @@ def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
-    user = request.user
+    user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
@@ -2457,11 +2460,13 @@ def paraphrasing(request):
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         # for i in range(len(para_sentence)):
         #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
+        output_list = []
         if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
+            for item in tag_names:
+                output_list.append(f"<{item}>")
+                output_list.append(f"</{item}>")
         print("tag-->",tag_names)
-        return Response({'paraphrase':[para_sentence] ,'tag':tag_names})
+        return Response({'paraphrase':[para_sentence] ,'tag':output_list})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
