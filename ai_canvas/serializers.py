@@ -77,7 +77,7 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
             data['export_file'] = "media/"+instance.export_file.name
         return data
 import copy
-from .template_json import basic_json
+from ai_canvas.template_json import basic_json
 class CanvasDesignSerializer(serializers.ModelSerializer):
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
