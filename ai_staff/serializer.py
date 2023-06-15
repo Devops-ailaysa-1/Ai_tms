@@ -438,6 +438,14 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
         model=SocialMediaSize
         fields='__all__'
 
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        print(instance.src)
+        if 'src' in data.keys() and instance.src:
+            if instance.src:
+                data['src'] = instance.src.url
+        return data
+
     def create(self, validated_data):
         instance= SocialMediaSize.objects.create(**validated_data)
         return instance
@@ -448,7 +456,7 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
             instance.src = src
         instance.social_media_name=validated_data.get('social_media_name',instance.social_media_name)
         instance.width=validated_data.get('width',instance.width)
-        instance.heigth=validated_data.get('heigth',instance.heigth)
+        instance.height=validated_data.get('height',instance.height)
         instance.save()
         return instance
 

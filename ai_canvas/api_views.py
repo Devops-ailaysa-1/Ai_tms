@@ -657,6 +657,7 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         src=request.FILES.get('src',None)
         serializer=SocialMediaSizeSerializer(data={**request.POST.dict(),'src':src})
+        print("serializer",src)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
