@@ -145,8 +145,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if social_media_create:
             basic_jsn=copy.copy(basic_json)
-            basic_jsn['backgroundImage']['width']=social_media_create.width
-            basic_jsn['backgroundImage']['height']=social_media_create.height
+            basic_jsn['backgroundImage']['width']=int(social_media_create.width)
+            basic_jsn['backgroundImage']['height']=int(social_media_create.height)
             thumbnail_src=self.thumb_create(json_str=basic_jsn,formats='png',multiplierValue=1) 
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
