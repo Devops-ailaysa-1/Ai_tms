@@ -29,7 +29,7 @@ from ai_workspace_okapi.utils import get_translation
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
-pixa_bay_url='https://pixabay.com/api/'
+pixa_bay_url='https://pixabay.com/api/'  
 pixa_bay_headers={
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
     'Content-Type': 'application/json',
@@ -459,8 +459,8 @@ def free_pix_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pixabay_api(request):
-    params = {**request.GET.dict(),'key':pixa_bay_api_key}
-    response = requests.get(url, params=params,headers=headers)
+    params = {**request.GET.dict(),'key':pixa_bay_api_key} 
+    response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if response.status_code == 200:
         return Response(response.json(),status=200)
     else:

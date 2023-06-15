@@ -3465,12 +3465,11 @@ def translate_from_pdf(request,task_id):
 
 
 
-# class MyDocFilter(django_filters.FilterSet):
-#     #proj_name = django_filters.CharFilter(lookup_expr='icontains')
-#     doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
-#     class Meta:
-#         model = MyDocuments
-#         fields = ['doc_name']#proj_name
+class MyDocFilter(django_filters.FilterSet):
+    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
+    class Meta:
+        model = MyDocuments
+        fields = ['doc_name']#proj_name
 
 from django.db.models import Value, CharField, IntegerField
 from ai_openai.models import BlogCreation
@@ -3478,11 +3477,12 @@ from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
 
-    serializer_class = MyDocumentSerializerNew
+    serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']#'proj_name',
-    #filterset_class = MyDocFilter
+    search_fields = ['doc_name']
+    filterset_class = MyDocFilter
     paginator = PageNumberPagination()
     ordering = ('-created_at')
     paginator.page_size = 20
@@ -3538,7 +3538,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         paginate = request.GET.get('pagination',True)
         queryset = self.get_queryset_new() #self.filter_queryset(self.get_queryset())
         if paginate == 'False':
-            serializer = MyDocumentSerializerNew(queryset, many=True)
+            serializer = MyDocumentSerializer(self.filter_queryset(self.get_queryset()), many=True)
             return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = MyDocumentSerializerNew(pagin_tc, many=True)

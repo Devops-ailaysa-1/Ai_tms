@@ -61,6 +61,7 @@ urlpatterns+=[
     path('synonyms/',api_views.get_word_api, name ='synonyms'),
     path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
     path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
+    path('seg_rewrite/',api_views.paraphrasing_for_non_english),
     path('download_audio_file/',api_views.download_audio_output_file),
     path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),

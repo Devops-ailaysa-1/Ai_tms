@@ -774,27 +774,27 @@ class SegmentsUpdateView(viewsets.ViewSet):
             logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
-    def edit_allowed_check(self, instance):
-        from ai_workspace.models import Task, TaskAssignInfo
-        user = self.request.user
-        task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
-        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
-        assigners = [i.task_assign.assign_to for i in task_assigned_info]
-        if user not in assigners:
-            edit_allowed = True
-        else:
-            try:
-                task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
-                if task_reassign:
-                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=True).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign.status
-                else:
-                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=False).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign.status
-                edit_allowed = False if task_assign_status == 2 else True
-            except:
-                edit_allowed = True
-        return edit_allowed
+    # def edit_allowed_check(self, instance):
+    #     from ai_workspace.models import Task, TaskAssignInfo
+    #     user = self.request.user
+    #     task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
+    #     task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+    #     assigners = [i.task_assign.assign_to for i in task_assigned_info]
+    #     if user not in assigners:
+    #         edit_allowed = True
+    #     else:
+    #         try:
+    #             task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
+    #             if task_reassign:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             else:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             edit_allowed = True if task_assign.step_id == 2 and task_assign.status == 2 else False
+    #         except:
+    #             edit_allowed = True
+    #     return edit_allowed
 
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
@@ -850,9 +850,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 else:
                     data={}
                 authorize(request, resource=segment, actor=request.user, action="read")
-                edit_allow = self.edit_allowed_check(segment)
-                if edit_allow == False:
-                    return Response({"msg": "Someone is working already.."}, status=400)
+                # edit_allow = self.edit_allowed_check(segment)
+                # if edit_allow == False:
+                #     return Response({"msg": "Someone is working already.."}, status=400)
 
                 # Segment update for a Split segment
                 if segment.is_split == True:
@@ -880,9 +880,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
         authorize(request, resource=segment, actor=request.user, action="read")
-        edit_allow = self.edit_allowed_check(segment)
-        if edit_allow == False:
-            return Response({"msg": "Someone is working already.."}, status=400)
+        # edit_allow = self.edit_allowed_check(segment)
+        # if edit_allow == False:
+        #     return Response({"msg": "Someone is working already.."}, status=400)
 
         # Segment update for a Split segment
         if segment.is_split == True:
@@ -2368,6 +2368,55 @@ def get_segment_history(request):
         return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
+
+
+
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from .utils import get_prompt
+from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+
+@api_view(['POST',])############### only available for english ###################
+def paraphrasing_for_non_english(request):
+    from ai_staff.models import Languages
+    from ai_workspace.api_views import get_consumable_credits_for_text
+    from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
+    sentence = request.POST.get('source_sent')
+    target_lang_id = request.POST.get('target_lang_id')
+    target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
+    user = request.user
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    
+    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    clean_sentence = re.sub('<[^<]+?>', '', sentence)
+    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+    if initial_credit >= consumable_credits_user_text:
+        prompt = get_prompt(clean_sentence)
+        print("Pr--------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
+        if initial_credit >= consumable_credits_to_translate:
+            rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+        prompt_usage = result_prompt['usage']
+        total_token = prompt_usage['completion_tokens']
+        consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+        if any(tag_names):
+            for i in range(len(list(tag_names))):
+                tag_names[i] = '<'+tag_names[i]+'>'
+        print("tag-->",tag_names)
+        return Response({'paraphrase':[rewrited] ,'tag':tag_names})
+    else:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
 ####################################################### Hemanth #########################################################
 
 # @api_view(['POST',])############### only available for english ###################

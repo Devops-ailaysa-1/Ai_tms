@@ -859,15 +859,11 @@ def generate_article(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            # if title:
-                            #     content=title+'\n'+content
-                            #     title=''
                             word=content+' '
                             str_con+=content
-                            # "# "+str_con[1:] if str_con[0]=='#' else str_con
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
-                        token_usage=num_tokens_from_string(str_con)
+                        token_usage=num_tokens_from_string(str_con+" "+prompt)
                         print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("token_usage---------->>",token_usage)
@@ -903,16 +899,7 @@ def generate_article(request):
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
-                                    yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
-                                    # blog_article_trans=text
-                                    # if title:
-                                    #     blog_article_trans=title+'\n'+blog_article_trans
-                                    #     title=''
-                                    # if blog_article_trans.startswith("#"):
-                                    #     # blog_article_trans=markdowner.convert(blog_article_trans)
-                                    #     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
-                                    # else:
-                                    
+                                    yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' #####
                                     arr.append(new_line_split[-1])
@@ -927,11 +914,6 @@ def generate_article(request):
                                             print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                             AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
-                                        #blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
-                                        # blog_article_trans=sente
-                                        # if title:
-                                        #     blog_article_trans=title+'\n'+blog_article_trans
-                                        #     title=''
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
@@ -941,6 +923,8 @@ def generate_article(request):
                             else:
                                 arr.append(word)
                     else:
+                        token_usage=num_tokens_from_string(prompt)
+                        AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("finished")
                         # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
                         # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
