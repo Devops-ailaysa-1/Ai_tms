@@ -1145,7 +1145,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	def get_task_assign_info(self, obj):
 		request_user = self.context.get('request').user
 		print("RequestUser----------->",request_user)
-		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency else request_user
+		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and (request_user in request_user.team.get_project_manager) else request_user
 		print("User-------->",user)
 		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
 		print("TaskAssign----------->",task_assign)
