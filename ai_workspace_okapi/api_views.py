@@ -2372,6 +2372,22 @@ def get_segment_history(request):
 
 
 
+
+
+
+def get_src_tags(sent):
+    opening_tags = re.findall(r"<(\d+)>", sent)
+    closing_tags = re.findall(r"</(\d+)>", sent)
+
+    opening_result = ''.join([f"<{tag}>" for tag in opening_tags])
+    closing_result = ''.join([f"</{tag}>" for tag in closing_tags])
+
+    result = opening_result + closing_result
+
+    print("Combined result:", result)
+
+    return result
+
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt
@@ -2396,7 +2412,7 @@ def paraphrasing_for_non_english(request):
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     
-    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    tags = get_src_tags(sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
@@ -2414,14 +2430,8 @@ def paraphrasing_for_non_english(request):
         total_token = prompt_usage['total_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        print("Tsg------->",tag_names)
-        output_list = []
-        if any(tag_names):
-            for item in tag_names:
-                output_list.append(f"<{item}>")
-                output_list.append(f"</{item}>")
-        print("tag-->",tag_names)
-        return Response({'paraphrase':[rewrited] ,'tag':output_list})
+        print("Tsg------->",tags)
+        return Response({'paraphrase':[rewrited] ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2437,6 +2447,7 @@ from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
+
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2447,7 +2458,7 @@ def paraphrasing(request):
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     
-    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
@@ -2460,13 +2471,8 @@ def paraphrasing(request):
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         # for i in range(len(para_sentence)):
         #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
-        output_list = []
-        if any(tag_names):
-            for item in tag_names:
-                output_list.append(f"<{item}>")
-                output_list.append(f"</{item}>")
-        print("tag-->",tag_names)
-        return Response({'paraphrase':[para_sentence] ,'tag':output_list})
+        print("tag-->",tags)
+        return Response({'paraphrase':[para_sentence] ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
