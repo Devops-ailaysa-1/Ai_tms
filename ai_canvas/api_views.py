@@ -731,7 +731,6 @@ def image_list(request):
         params['catagory']=image_cat['category']
         
         pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-        print('image_cat',image_cat)
         img_urls=[]
         for hit in pixa_bay['hits']:
             img_urls.append({'preview_img':hit['previewURL'],'id':hit['id'] })

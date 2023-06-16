@@ -56,21 +56,6 @@ def json_src_change(json_src ,req_host,instance):
             break
     return json_src
 
- 
-# import tkinter as tk
-# from tkinter.font import Font
-
-# def text_size(text, font_size):
-#     root = tk.Tk()
-#     root.withdraw()
-
-#     font = Font(family="Arial", size=font_size)  # Customize the font family if needed
-#     text_width = font.measure(text)
-#     text_height = font.metrics("linespace")
-
-#     return text_width, text_height
-
-
 import pygame
 
 def calculate_textbox_dimensions(text,font_size):

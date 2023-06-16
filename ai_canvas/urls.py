@@ -32,7 +32,7 @@ urlpatterns += [
     path('images/',api_views.pixabay_api,name='pixabayapi'),
     path('canvas-export',api_views.canvas_export_download,name='canvas_export_download'),
     path('image-list-category',api_views.image_list,name='image_list'),
-    path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'),
+    path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'), ##old 
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

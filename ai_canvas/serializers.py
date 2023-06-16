@@ -101,6 +101,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     next_page=serializers.BooleanField(required=False,write_only=True)
     duplicate=serializers.BooleanField(required=False,write_only=True)
     social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
+    update_new_textbox=serializers.BooleanField(required=False,write_only=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
@@ -139,7 +140,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         duplicate=validated_data.pop('duplicate',None)
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
-
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
 
@@ -156,7 +156,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
            
-
         if source_json_file:
             source_json_file=json_src_change(source_json_file,req_host,instance)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
@@ -184,6 +183,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         next_page=validated_data.get('next_page',None)
         duplicate=validated_data.get('duplicate',None)
+        update_new_textbox=validated_data.get('update_new_textbox',None)
         if next_page:
             src_json_page=instance.canvas_json_src.last().json
             src_json_page['objects'].clear()

@@ -28,7 +28,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
-
+from rest_framework.pagination import PageNumberPagination 
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
@@ -960,11 +960,24 @@ class SocialMediaSizeViewset_ser(viewsets.ViewSet):
         return Response(serializer.data)
     
 
-class DesignShapeViewset(viewsets.ViewSet):
+
+class DesignShapePagination(PageNumberPagination):
+    page_size = 20 
+    page_size_query_param = 'page_size'
+
+class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
+    page_size = 20
+    pagination_class = DesignShapePagination
     def list(self,request):
         queryset = DesignShape.objects.all()
-        serializer = DesignShapeSerializer(queryset,many=True)
-        return Response(serializer.data)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = DesignShapeSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
         
     def update(self,request,pk):
         shape=request.FILES.get('shape')
