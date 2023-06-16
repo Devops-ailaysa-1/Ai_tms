@@ -123,7 +123,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'src_lang':{'write_only':True},
             'next_page':{'write_only':True},
             'duplicate':{'write_only':True},
-            'social_media_create':{'write_only':True}
+            'social_media_create':{'write_only':True},
+            'update_new_textbox':{'write_only':True},
         }
 
 
