@@ -85,7 +85,7 @@ def user_directory_path_image_gen_result(instance, filename):
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='blog_doc')
+    document = models.ForeignKey(to= MyDocuments, on_delete = models.CASCADE, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
     keywords = models.CharField(max_length=1000,null=True,blank=True)
@@ -159,7 +159,7 @@ class BlogArticle(models.Model):
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_article_sub_categories')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc_blog')
+    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, null=True, blank=True,related_name = 'ai_doc_blog')
     # blog_intro = models.TextField(null=True, blank=True)
     # blog_intro_mt = models.TextField(null=True, blank=True)
     # blog_conclusion = models.TextField(null=True, blank=True)
@@ -227,7 +227,7 @@ class ImageGenerationPromptResponse(models.Model):
     image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt,on_delete= models.CASCADE,related_name='gen_img')
 
 class CustomizationSettings(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name = 'custom_setting')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,default=1, \
         on_delete=models.CASCADE, related_name="customization_mt_engine_setting")
     append = models.BooleanField(default=True)
