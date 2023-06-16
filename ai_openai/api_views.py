@@ -92,7 +92,7 @@ class AiPromptResultViewset(generics.ListAPIView):
     filterset_class = PromptFilter
     search_fields = ['description','catagories__category','sub_catagories__sub_category',]
     pagination_class = NoPagination
-    page_size = None
+     
 
     def get_queryset(self):
         prmp_id = self.request.query_params.get('prompt_id')
@@ -105,9 +105,10 @@ class AiPromptResultViewset(generics.ListAPIView):
             queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
+            
+        
         return queryset
-
-
+ 
 
 def instant_customize_response(customize ,user_text,used_tokens):
     print("Initial----------->",used_tokens)
@@ -351,6 +352,10 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))
         return queryset
 
+ 
+
+
+ 
     
 class AiImageHistoryViewset(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -358,10 +363,12 @@ class AiImageHistoryViewset(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
     ordering_fields = ['id']
     ordering = ('-id')
+    # pagination_class = AiImageHistoryPagination
     #filterset_class = PromptFilter
     search_fields = ['prompt',]
-    pagination_class = NoPagination
-    page_size = None
+    # pagination_class = NoPagination
+    # page_size = None
+    paginate_by=20
 
     def get_queryset(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
