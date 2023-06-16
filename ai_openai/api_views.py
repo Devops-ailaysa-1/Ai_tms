@@ -657,7 +657,7 @@ class BlogArticleViewset(viewsets.ViewSet):
         sub_categories = 64
         print("Doc------>",doc)
         bc_obj = BlogCreation.objects.get(id = pk)
-        bc_obj.document = doc
+        bc_obj.document_id = doc
         bc_obj.save()
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
         print("Qr--------->",query_set)
