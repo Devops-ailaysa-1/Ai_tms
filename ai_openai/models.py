@@ -85,7 +85,7 @@ def user_directory_path_image_gen_result(instance, filename):
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    document = models.ForeignKey(to= MyDocuments, on_delete = models.CASCADE, blank=True, null=True,related_name='blog_doc')
+    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
     keywords = models.CharField(max_length=1000,null=True,blank=True)
