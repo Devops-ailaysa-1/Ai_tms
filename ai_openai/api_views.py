@@ -657,7 +657,7 @@ class BlogArticleViewset(viewsets.ViewSet):
         sub_categories = 64
         print("Doc------>",doc)
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
-        print("Qr--------->",queryset)
+        print("Qr--------->",query_set)
         serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
         if serializer.is_valid():
             serializer.save()
