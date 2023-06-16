@@ -352,11 +352,7 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))
         return queryset
 
- 
 
-
- 
-    
 class AiImageHistoryViewset(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ImageGeneratorPromptSerializer

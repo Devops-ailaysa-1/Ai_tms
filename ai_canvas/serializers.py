@@ -142,6 +142,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         social_media_create=validated_data.pop('social_media_create',None)
         next_page=validated_data.pop('next_page',None)
         duplicate=validated_data.pop('duplicate',None)
+        update_new_textbox=validated_data.pop('update_new_textbox')
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
         instance=CanvasDesign.objects.create(**data)
