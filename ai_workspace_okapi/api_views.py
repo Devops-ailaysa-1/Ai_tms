@@ -2420,7 +2420,7 @@ def paraphrasing_for_non_english(request):
         print("Pr--------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         print("Resp--------->",result_prompt)
-        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        para_sentence = result_prompt["choices"][0]["message"]["content"]
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
@@ -2431,7 +2431,7 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("Tsg------->",tags)
-        return Response({'paraphrase':[rewrited] ,'tag':tags})
+        return Response({'paraphrase':rewrited ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2453,7 +2453,10 @@ def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
-    user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
+    doc_id = request.POST.get('doc_id')
+    doc_obj = Document.objects.get(id=doc_id)
+    user = doc_obj.doc_credit_debit_user
+    #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
@@ -2466,13 +2469,10 @@ def paraphrasing(request):
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
-        # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        # for i in range(len(para_sentence)):
-        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
         print("tag-->",tags)
-        return Response({'paraphrase':[para_sentence] ,'tag':tags})
+        return Response({'paraphrase':para_sentence ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 

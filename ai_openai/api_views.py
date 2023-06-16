@@ -1,14 +1,17 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
+                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,
+                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
 from django.core import serializers
 import logging ,os ,json
+from rest_framework import status
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
                           AiPromptGetSerializer,AiPromptCustomizeSerializer,
                         ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
                         BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
-                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer)
+                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,
+                        CustomizationSettingsSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -208,7 +211,7 @@ def customize_text_openai(request):
     language =  request.POST.get('language',None)
     customize = AiCustomize.objects.get(id =customize_id)
     target_langs = request.POST.getlist('target_lang')
-    mt_engine = request.POST.get('mt_engine')
+    mt_engine = request.POST.get('mt_engine',None)
     detector = Translator()
 
     if task != None:
@@ -239,6 +242,8 @@ def customize_text_openai(request):
            return  Response({'msg':'Insufficient Credits'},status=400) 
         data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_lang':language}
+        try:mt_engine = user.custom_setting.mt_engine_id 
+        except:mt_engine = 1
         ser = AiPromptCustomizeSerializer(data=data)
         if ser.is_valid():
             ser.save()
@@ -316,6 +321,61 @@ def image_gen(request):
         return Response({'gen_image_url': res_url},status=200) 
     else:
         return Response({'gen_image_url':res}, status=400 )
+
+
+
+
+
+class AiCustomizeSettingViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        query_1 = CustomizationSettings.objects.filter(user = user)
+        if query_1:
+            ser = CustomizationSettingsSerializer(query_1.last(),context={'request':request})
+            data = ser.data
+        else: 
+            queryset = TranslateCustomizeDetails.objects.filter(customization__user = request.user)   
+            if queryset:
+                target = queryset.last().target_language_id
+                source = queryset.last().customization.user_text_lang_id
+                mt_engine = queryset.last().mt_engine_id
+                data = {'src':source,'tar':target,'mt_engine':mt_engine}
+            else:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(data)
+                #data = {'user':user.id,'mt_engine':1,'append':True,'new_line':True}  
+            #return Response({'user':None,'mt_engine':None,'append':None,'new_line':None,'src':None,'tar':None,'mt_engine':None})
+
+    def create(self,request):
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = CustomizationSettingsSerializer(data={**request.POST.dict(),'user':user.id})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        user = request.user.team.owner if request.user.team else request.user
+        obj = CustomizationSettings.objects.get(id = pk, user=user)
+        if not obj:
+            return Response({"msg":"No detail"})
+        serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict()},partial=True)
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        obj = CustomizationSettings.objects.filter(id = pk, user=user)
+        if not obj:
+            return Response({"msg":"No detail"})
+        obj.delete()
+        return Response(status=204)
+
+
 
 
 
@@ -597,6 +657,7 @@ class BlogArticleViewset(viewsets.ViewSet):
         sub_categories = 64
         print("Doc------>",doc)
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
+        print("Qr--------->",queryset)
         serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
         if serializer.is_valid():
             serializer.save()
