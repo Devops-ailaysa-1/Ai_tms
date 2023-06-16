@@ -656,6 +656,9 @@ class BlogArticleViewset(viewsets.ViewSet):
         doc = request.POST.get('document')
         sub_categories = 64
         print("Doc------>",doc)
+        bc_obj = BlogCreation.objects.get(id = pk)
+        bc_obj.document = doc
+        bc_obj.save()
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
         print("Qr--------->",query_set)
         serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
