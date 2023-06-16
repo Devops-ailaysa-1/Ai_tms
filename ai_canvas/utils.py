@@ -71,17 +71,17 @@ def json_src_change(json_src ,req_host,instance):
 #     return text_width, text_height
 
 
-# import pygame
+import pygame
 
-# def calculate_textbox_dimensions(text,font_size):
-#     font_size=int(font_size)
-#     pygame.init()
-#     font = pygame.font.SysFont(r"", font_size)
-#     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
-#     textbox_width = text_surface.get_width()
-#     textbox_height = text_surface.get_height()
-#     pygame.quit()
-#     return textbox_width, textbox_height
+def calculate_textbox_dimensions(text,font_size):
+    font_size=int(font_size)
+    pygame.init()
+    font = pygame.font.SysFont(r"", font_size)
+    text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
+    textbox_width = text_surface.get_width()
+    textbox_height = text_surface.get_height()
+    pygame.quit()
+    return textbox_width, textbox_height
 
 def calculate_font_size(box_width, box_height, text,font_size):
     font_size=int(font_size)
