@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,TranslateCustomizeDetails, 
+                    ImageGeneratorResolution,TranslateCustomizeDetails, CustomizationSettings,
                     BlogArticle,BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle,BlogOutlineSession)
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
@@ -367,6 +367,31 @@ class BlogArticleSerializer(serializers.ModelSerializer):
     
 
 
+class CustomizationSettingsSerializer(serializers.ModelSerializer):
+    src = serializers.SerializerMethodField()
+    tar = serializers.SerializerMethodField()
+    class Meta:
+        model=CustomizationSettings
+        fields=('id','user','append','new_line','src','tar','mt_engine',)
+
+    def get_src(self,obj):
+        user = self.context.get('request').user
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if queryset:
+            source = queryset.last().customization.user_text_lang_id
+            return source
+        return None
+
+    def get_tar(self,obj):
+        user = self.context.get('request').user
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if queryset:
+            target = queryset.last().target_language_id
+            return target
+        return None
+
+
+
 class BlogOutlineSessionSerializer(serializers.ModelSerializer):
     blog_title = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False) 
     blog_outline_gen = serializers.PrimaryKeyRelatedField(queryset=BlogOutline.objects.all(),many=False) 
@@ -607,7 +632,8 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
         print("User Title----->",title)
         print("Keywords-------->",keywords)
-        prompt+=' with keywords '+ keywords
+        if keywords:
+            prompt+=' with keywords '+ keywords 
         prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
 
