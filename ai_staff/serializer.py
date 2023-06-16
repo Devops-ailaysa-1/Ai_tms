@@ -464,8 +464,6 @@ class ImageGeneratorResolutionSerializer(serializers.ModelSerializer):
         model=ImageGeneratorResolution
         fields=('id','image_resolution')
 
-
-
 class DesignShapeSerializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShape
@@ -474,6 +472,11 @@ class DesignShapeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         return super().to_representation(instance)
     
+
+    def create(self, validated_data):
+        instance= DesignShape.objects.create(**validated_data)
+        return instance
+        
 
     def update(self, instance, validated_data):
         shape=validated_data.get('shape',None)

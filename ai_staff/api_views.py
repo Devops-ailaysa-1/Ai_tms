@@ -974,3 +974,11 @@ class DesignShapeViewset(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
+    
+    def create(self,request):
+        shape=request.FILES.get('shape')
+        serializer = DesignShapeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
