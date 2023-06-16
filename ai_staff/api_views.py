@@ -961,7 +961,16 @@ class SocialMediaSizeViewset_ser(viewsets.ViewSet):
     
 
 class DesignShapeViewset(viewsets.ViewSet):
-     def list(self,request):
+    def list(self,request):
         queryset = DesignShape.objects.all()
         serializer = DesignShapeSerializer(queryset,many=True)
         return Response(serializer.data)
+        
+    def update(self,request,pk):
+        shape=request.FILES.get('shape')
+        queryset = DesignShape.objects.get(id=pk)
+        serializer = DesignShapeSerializer(queryset ,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)

@@ -473,3 +473,12 @@ class DesignShapeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return super().to_representation(instance)
+    
+
+    def update(self, instance, validated_data):
+        shape=validated_data.get('shape',None)
+        if shape:
+            instance.shape = shape
+        instance.shape_name=validated_data.get('shape_name',instance.shape_name)
+        instance.save()
+        return instance
