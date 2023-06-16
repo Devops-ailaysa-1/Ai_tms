@@ -508,7 +508,7 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
     
     def update(self,request,pk):
-        query_set=self.model.objects.get(id = pk)
+        query_set=TextTemplate.objects.get(id = pk)
         text_thumbnail=request.FILES.get('text_thumbnail',None)
         text_keywords=request.POST.getlist('text_keywords',None)
         serializer=TextTemplateSerializer(query_set, data=request.data ,partial = True)
@@ -521,7 +521,7 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
             
     def delete(self,request,pk):
-        query_set=self.model.objects.get(id = pk)
+        query_set=TextTemplate.objects.get(id = pk)
         query_set.delete()
         return Response(status=204)
         

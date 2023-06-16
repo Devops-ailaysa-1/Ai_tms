@@ -101,7 +101,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     next_page=serializers.BooleanField(required=False,write_only=True)
     duplicate=serializers.BooleanField(required=False,write_only=True)
     social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
-    update_new_textbox=serializers.BooleanField(required=False,write_only=True)
+    # update_new_textbox=serializers.BooleanField(required=False,write_only=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
