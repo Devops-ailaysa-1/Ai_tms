@@ -7,6 +7,11 @@ from ai_canvas.utils import install_font
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
 from django import core
 from ai_imagetranslation.utils import image_content
+from ai_workspace_okapi.utils import get_translation
+import copy
+from ai_canvas.template_json import basic_json
+from ai_staff.models import SocialMediaSize
+
 
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,9 +81,7 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
         if instance.export_file:
             data['export_file'] = "media/"+instance.export_file.name
         return data
-import copy
-from ai_canvas.template_json import basic_json
-from ai_staff.models import SocialMediaSize
+
 class CanvasDesignSerializer(serializers.ModelSerializer):
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
@@ -101,14 +104,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     next_page=serializers.BooleanField(required=False,write_only=True)
     duplicate=serializers.BooleanField(required=False,write_only=True)
     social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
-    # update_new_textbox=serializers.BooleanField(required=False,write_only=True)
+    update_new_textbox=serializers.BooleanField(required=False,write_only=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create')
+                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -184,6 +187,42 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         next_page=validated_data.get('next_page',None)
         duplicate=validated_data.get('duplicate',None)
         update_new_textbox=validated_data.get('update_new_textbox',None)
+
+
+        if update_new_textbox:
+            canvas_src_pages=instance.canvas_json_src.last()
+            # source_lang_code=instance.source_locale.locale.first().locale_code
+            # target_lang_code=instance.target.locale.first().locale_code
+            print("inside update 1")
+            text_box=""
+            json=canvas_src_pages.json
+            print("inside update 2")
+            for i in json['objects']:
+                print("inside update 4")
+                if (i['type']=='textbox') and ("is_translate" in i.keys()) and (i['is_translate'] == False):
+                    text_box=i
+                print("inside update 5")
+            if text_box and ("text" in text_box.keys()):
+                print("inside update 6")
+                text=text_box['text']
+                canvas_tar_lang=instance.canvas_translate.all()
+                for tar_json in canvas_tar_lang:
+                    src=tar_json.source_locale.locale.first().locale_code
+                    tar=tar_json.target.locale.first().locale_code
+                    print("src__lang--->",src)
+                    print("tar_lang--->",tar)
+                    for i in tar_json.canvas_json_tar.all():
+                        json=i.json
+                        copy_txt_box=copy.copy(text_box)
+                        trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                        copy_txt_box['text']=trans_text
+                        print("inside updatingg",trans_text)
+                        copy_txt_box['is_translate']=True
+                        obj_list=json['objects']
+                        obj_list.append(copy_txt_box)
+                        i.save()
+            return instance
+
         if next_page:
             src_json_page=instance.canvas_json_src.last().json
             src_json_page['objects'].clear()
