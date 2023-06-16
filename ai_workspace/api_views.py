@@ -3596,6 +3596,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def destroy(self, request, pk):
         ins = MyDocuments.objects.get(id=pk)
+        ins.blog_doc.all().delete()
+        ins.ai_doc_blog.all().delete()
         if ins.file:
             os.remove(ins.file.path)
         ins.delete()

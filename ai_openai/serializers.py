@@ -703,6 +703,12 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         new_inst = Blogtitle.objects.get(id=instance.id)
         return new_inst
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        titles = instance.blogoutline_title.order_by('-id')
+        representation['blogoutline_title'] = BlogOutlineSerializer(titles, many=True).data
+        return representation
+
 
 
 def keyword_process(keyword_start_phrase,user_title,instance,trans):
@@ -795,6 +801,12 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     titles = instance.blogoutline_title.order_by('-id')
+    #     representation['blogoutline_title'] = BlogOutlineSerializer(titles, many=True).data
+    #     return representation
+    
 class BlogCreationSerializer(serializers.ModelSerializer):
     blog_title_create=BlogtitleSerializer(many=True,required=False)
     blog_key_create = BlogKeywordGenerateSerializer(many=True,required=False)
@@ -874,6 +886,14 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             instance.save()
 
         return super().update(instance, validated_data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        keywords = instance.blog_key_create.order_by('-id')
+        representation['blog_key_create'] = BlogKeywordGenerateSerializer(keywords, many=True).data
+        titles = instance.blog_title_create.order_by('-id')
+        representation['blog_title_create'] = BlogtitleSerializer(titles, many=True).data
+        return representation
 
 
 
