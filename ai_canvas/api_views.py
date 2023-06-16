@@ -484,12 +484,19 @@ def instant_canvas_translation(request):
 ##################################
 
 
-class TextTemplateViewset(viewsets.ViewSet):
+class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    page_size = 20
     def get(self, request):
-        query_set=TextTemplate.objects.all()
-        serializer=TextTemplateSerializer(query_set ,many =True)
-        return Response(serializer.data)
+        queryset=TextTemplate.objects.all()
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer=TextTemplateSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
 
     def retrieve(self,request,pk):
         query_set=TextTemplate.objects.get(id = pk)
