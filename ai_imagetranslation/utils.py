@@ -48,12 +48,8 @@ import copy
 import uuid,math
 def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
-<<<<<<< HEAD
-    pillow_image_to_extract_color=Image.open(image_path) 
-=======
     # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
     pillow_image_to_extract_color=Image.fromarray(color_find_image_diff)
->>>>>>> origin/canvas_staging
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
     text_and_bounding_results={}
     no_of_segments=0
@@ -181,13 +177,6 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 # from celery import shared_task
 # @shared_task(serializer='json')
 from rest_framework import serializers
-<<<<<<< HEAD
-def inpaint_image_creation(image_details,dynamic):
-    if dynamic:
-        img_path=image_details.inpaint_creation.source_image.image.path
-    else:
-        img_path=image_details.image.path
-=======
 def inpaint_image_creation(image_details,inpaintparallel=False):
     # if hasattr(image_details,'image'):
     #     img_path=image_details.image.path
@@ -199,7 +188,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
     else:
         img_path=image_details.image.path
 
->>>>>>> origin/canvas_staging
     mask_path=image_details.mask.path
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
@@ -209,15 +197,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
-<<<<<<< HEAD
-        # if dynamic:
-        #     image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-        # else:
-        image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-=======
         # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
->>>>>>> origin/canvas_staging
-
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
             if output['result'].shape[0]==np.prod(img.shape):

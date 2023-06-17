@@ -104,7 +104,8 @@ def thumbnail_create(json_str,formats):
     else:
         return ValidationError("error in node server")
 
-
+import io
+from PIL import Image
 
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
@@ -137,3 +138,7 @@ def install_font(font_path):
     os.system("fc-cache -f -v")
     print(f"Font '{family_name}' installed successfully!")
     return family_name
+
+
+def convert_image_url_to_file(image_url):
+    return Image.open(requests.get(image_url, stream=True).raw)

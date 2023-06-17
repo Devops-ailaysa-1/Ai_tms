@@ -568,7 +568,14 @@ class FontFileSerializer(serializers.ModelSerializer):
 
 
 
-class ImageListMediumSerializer(serializers.Serializer):
+class ImageListMediumSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageListMedium
         fields='__all__'
+
+    
+    def create(self, validated_data):
+
+
+        # instance=ImageListMedium.objects.create()
+        return super().create(validated_data)

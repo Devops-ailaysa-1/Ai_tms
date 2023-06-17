@@ -26,6 +26,15 @@ from ai_workspace_okapi.utils import get_translation
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
+
+pixa_bay_url = 'https://pixabay.com/api/'
+pixa_bay_headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    }
+
+
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
@@ -449,14 +458,8 @@ def free_pix_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pixabay_api(request):
-    url = 'https://pixabay.com/api/'
-    headers = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    }
     params = {**request.GET.dict(),'key':pixa_bay_api_key}
-    response = requests.get(url, params=params,headers=headers)
+    response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if response.status_code == 200:
         return Response(response.json(),status=200)
     else:
@@ -586,7 +589,7 @@ class FontFamilyFilter(django_filters.FilterSet):
         return queryset
  
  
-class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
+class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
 
@@ -629,7 +632,32 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
 
+from ai_canvas.utils import convert_image_url_to_file
+
+
+
 class ImageListMediumViewset(viewsets.ViewSet):
 
     def list(self,request):
-        pass
+        image_search=request.query_params.get('image_search',None)
+        if image_search:
+            
+            params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
+            response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+            if response and 'hits' in response and response['hits']:
+                data=[]
+                for i in response['hits']:
+                    print("i['previewURL']",i['previewURL'])
+                    # preview_image=convert_image_url_to_file(i['previewURL'])
+                    data.append({'image_url' : i['webformatURL'],'tags':i['tags'],'image_name':i['type']
+                                 })
+                print(data)
+                serializer=ImageListMediumSerializer(data=data,many=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response(serializer.errors)
+        else:
+            return Response({'image_search':'fill image search field'},status=200)
+
