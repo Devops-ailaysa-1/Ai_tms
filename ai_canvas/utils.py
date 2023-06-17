@@ -58,15 +58,20 @@ def json_src_change(json_src ,req_host,instance):
 
 import pygame
 
-def calculate_textbox_dimensions(text,font_size):
+def calculate_textbox_dimensions(text,font_size,bold,italic):
     font_size=int(font_size)
     pygame.init()
-    font = pygame.font.SysFont(r"", font_size)
+    font = pygame.font.SysFont(r"Arial.ttf", font_size,bold=bold,italic=italic)
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
     pygame.quit()
     return textbox_width, textbox_height
+
+
+
+
+
 
 def calculate_font_size(box_width, box_height, text,font_size):
     font_size=int(font_size)
@@ -109,7 +114,11 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
+                    # if ("styles" in canvas_json_copy['objects'][count].keys())   # ("style" in canvas_json_copy['objects'][count]['styles']):
+                    #     if canvas_json_copy['objects'][count]['styles']['style']
+                    #     blod=canvas_json_copy['objects'][count]['styles']['style']
+                    #     italic=canvas_json_copy['objects'][count]['styles']['style']
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  

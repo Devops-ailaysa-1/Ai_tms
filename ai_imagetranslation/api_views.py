@@ -41,9 +41,10 @@ class ImageloadViewset(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ###image upload for inpaint process
-class ImageTranslateViewset(viewsets.ViewSet):
+from rest_framework.pagination import PageNumberPagination
+class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    
+    page_size=20
     def get_object(self, pk):
         try:
             return ImageTranslate.objects.get(id=pk)
@@ -51,9 +52,11 @@ class ImageTranslateViewset(viewsets.ViewSet):
             raise Http404
 
     def get(self, request):
-        query_set = ImageTranslate.objects.filter(user=request.user.id).order_by('id')
-        serializer = ImageTranslateSerializer(query_set ,many =True)
-        return Response(serializer.data)
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageTranslateSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
