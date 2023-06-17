@@ -969,7 +969,7 @@ class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     page_size = 20
     pagination_class = DesignShapePagination
     def list(self,request):
-        queryset = DesignShape.objects.all()
+        queryset = DesignShape.objects.all().order_by('id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignShapeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
