@@ -198,7 +198,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
         # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
             if output['result'].shape[0]==np.prod(img.shape):

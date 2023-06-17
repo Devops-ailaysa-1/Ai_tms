@@ -157,9 +157,9 @@ def thumbnail_create(json_str,formats):
     else:
         return ValidationError("error in node server")
 
-
 import io
 from PIL import Image
+
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
     data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}

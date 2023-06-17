@@ -598,7 +598,7 @@ class FontFamilyFilter(django_filters.FilterSet):
         return queryset
  
  
-class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
+class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
 

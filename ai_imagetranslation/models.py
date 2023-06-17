@@ -60,6 +60,8 @@ def user_directory_path_image_translate_process_target(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/image_upload/image_translate/mask",filename)
 
 
+
+
 class ImageInpaintCreation(models.Model):
     source_image=models.ForeignKey(to=ImageTranslate,blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
     target_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,related_name='t_lang')
