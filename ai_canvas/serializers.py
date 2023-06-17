@@ -160,7 +160,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.file_name=social_media_create.social_media_name
             instance.save()
             return instance
-           
+          
         if source_json_file:
             source_json_file=json_src_change(source_json_file,req_host,instance)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
@@ -193,8 +193,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if update_new_textbox:
             canvas_src_pages=instance.canvas_json_src.last()
-            # source_lang_code=instance.source_locale.locale.first().locale_code
-            # target_lang_code=instance.target.locale.first().locale_code
             print("inside update 1")
             text_box=""
             json=canvas_src_pages.json
@@ -242,8 +240,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if duplicate and src_page:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,
-                                                 page_no=len(instance.canvas_json_src.all())+1)
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
             
             
         if tar_page and canvas_translation and target_canvas_json:

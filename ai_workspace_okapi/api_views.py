@@ -2371,6 +2371,22 @@ def get_segment_history(request):
 
 
 
+
+
+
+def get_src_tags(sent):
+    opening_tags = re.findall(r"<(\d+)>", sent)
+    closing_tags = re.findall(r"</(\d+)>", sent)
+
+    opening_result = ''.join([f"<{tag}>" for tag in opening_tags])
+    closing_result = ''.join([f"</{tag}>" for tag in closing_tags])
+
+    result = opening_result + closing_result
+
+    print("Combined result:", result)
+
+    return result
+
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt
@@ -2383,34 +2399,38 @@ def paraphrasing_for_non_english(request):
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
+    doc_id = request.POST.get('doc_id')
+    doc_obj = Document.objects.get(id=doc_id)
+    project = doc_obj.job.project
+    user = doc_obj.doc_credit_debit_user
+    subj_fields =  [i.subject.name for i in project.proj_subject.all()]
+    content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
-    user = request.user
+    
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     
-    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    tags = get_src_tags(sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt(clean_sentence)
+        prompt = get_prompt(clean_sentence,subj_fields,content_fields)
         print("Pr--------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
-        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        print("Resp--------->",result_prompt)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         prompt_usage = result_prompt['usage']
-        total_token = prompt_usage['completion_tokens']
+        total_token = prompt_usage['total_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
-        print("tag-->",tag_names)
-        return Response({'paraphrase':[rewrited] ,'tag':tag_names})
+        print("Tsg------->",tags)
+        return Response({'paraphrase':rewrited ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2426,17 +2446,21 @@ from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
+
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
-    user = request.user
+    doc_id = request.POST.get('doc_id')
+    doc_obj = Document.objects.get(id=doc_id)
+    user = doc_obj.doc_credit_debit_user
+    #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     
-    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
@@ -2444,16 +2468,10 @@ def paraphrasing(request):
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
-        # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        # for i in range(len(para_sentence)):
-        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
-        if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
-        print("tag-->",tag_names)
-        return Response({'paraphrase':[para_sentence] ,'tag':tag_names})
+        print("tag-->",tags)
+        return Response({'paraphrase':para_sentence ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 

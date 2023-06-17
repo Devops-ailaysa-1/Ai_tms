@@ -4,16 +4,16 @@ from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
 
-class CanvasCatagories(models.Model):
-    catagory_name = models.CharField(max_length=50,null=True,blank=True)
-    def __str__(self) -> str:
-        return self.catagory_name
+# class CanvasCatagories(models.Model):
+#     catagory_name = models.CharField(max_length=50,null=True,blank=True)
+#     def __str__(self) -> str:
+#         return self.catagory_name
 
 
 class CanvasTemplates(models.Model):
     file_name =  models.CharField(max_length=50,null=True,blank=True) 
     template_json = models.JSONField()
-    thumbnail=models.FileField(upload_to='canva_templates/thumbnails/',blank=True,null=True)
+    thumbnail=models.FileField(upload_to='aidesign_templates/thumbnails/',blank=True,null=True)
     width = models.IntegerField(null=True,blank=True)
     height = models.IntegerField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
@@ -21,19 +21,19 @@ class CanvasTemplates(models.Model):
 
 
 def user_directory_path_canvas_source_json_thumbnails(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "canvas/design/canvas_templates_source/thumbnails/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "aidesign/design/aidesign_templates_source/thumbnails/",filename)
 
 def user_directory_path_canvas_source_json_exports(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "canvas/design/canvas_exports_source/exports/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "aidesign/design/aidesign_exports_source/exports/",filename)
 
 def user_directory_path_canvas_image_assets(instance, filename): ###
-    return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/assets/canva_assets/images/",filename)
+    return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/assets/aidesign_assets/images/",filename)
 
 def user_directory_path_canvas_target_json_thumbnails(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "canvas/design/canvas_exports_target/thumbnails/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "aidesign/design/aidesign_exports_target/thumbnails/",filename)
 
 def user_directory_path_canvas_target_json_exports(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "canvas/design/canvas_exports_target/exports/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "aidesign/design/aidesign_exports_target/exports/",filename)
 
 class CanvasUserImageAssets(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -48,7 +48,8 @@ class CanvasDesign(models.Model):
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True)
 
     class Meta:
         ordering = ('updated_at',)
@@ -111,10 +112,10 @@ class TemplatePage(models.Model):
 
 
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canvas_thumbnails_target/thumbnails/",filename)
+    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "aidesign/mytemplatedesign/aidesign_thumbnails_target/thumbnails/",filename)
 
 def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canvas_exports_target/exports/",filename)
+    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "aidesign/mytemplatedesign/aidesign_exports_target/exports/",filename)
 
 class MyTemplateDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -137,11 +138,11 @@ class MyTemplateDesignPage(models.Model):
         ]
 
 def user_directory_path_canvas_source_image_assets(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "canvas/assets/sourceimage/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "aidesign/assets/sourceimage/",filename)
 
 
 class SourceImageAssetsCanvasTranslate(models.Model):
-    canvas_design_img=models.ForeignKey(CanvasDesign , related_name='canvas_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
+    canvas_design_img=models.ForeignKey(CanvasDesign , related_name='aidesign_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
     img = models.FileField(upload_to=user_directory_path_canvas_source_image_assets,blank=True,null=True)
 
 class TextTemplate(models.Model):
@@ -153,7 +154,7 @@ class TemplateKeyword(models.Model):
     text_keywords=models.CharField(max_length=100)
 
 def user_directory_path_font_file(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/font_file/fonts/",filename)
+    return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/font_file/fonts/",filename)
 
 class FontFile(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)

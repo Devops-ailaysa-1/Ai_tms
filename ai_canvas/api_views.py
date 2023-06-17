@@ -679,6 +679,8 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+
 # import asyncio
 # async def one_iteration(pixa_json):
 #     preview_image=convert_image_url_to_file(pixa_json['previewURL'])
@@ -711,9 +713,6 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 #                     return Response(serializer.errors)
 #         else:
 #             return Response({'image_search':'fill image search field'},status=200)
-
-
-
 
 params = {
             'key':pixa_bay_api_key,

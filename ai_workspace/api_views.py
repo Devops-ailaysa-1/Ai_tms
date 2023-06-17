@@ -3596,6 +3596,12 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def destroy(self, request, pk):
         ins = MyDocuments.objects.get(id=pk)
+        print("BF cre Del--------->",ins.blog_doc.all())
+        ins.blog_doc.all().delete()
+        print("Af cre Del--------->",ins.blog_doc.all())
+        print("Bf art Del------------->",ins.ai_doc_blog.all())
+        ins.ai_doc_blog.all().delete()
+        print("Af art Del------------->",ins.ai_doc_blog.all())
         if ins.file:
             os.remove(ins.file.path)
         ins.delete()
@@ -4318,3 +4324,5 @@ class ToolkitList(viewsets.ModelViewSet):
         ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
         response = self.get_paginated_response(ser.data)
         return response
+
+

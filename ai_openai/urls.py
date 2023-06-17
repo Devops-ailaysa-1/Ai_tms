@@ -10,6 +10,7 @@ router.register(r'blogtitle',api_views.BlogtitleViewset ,basename='ai_title_gen'
 router.register(r'blogoutline',api_views.BlogOutlineViewset ,basename='ai_outline_gen')
 router.register(r'blogoutlinesession',api_views.BlogOutlineSessionViewset ,basename='ai_outline_session_gen')
 router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_article_gen')
+router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
 urlpatterns = router.urls
 
  
