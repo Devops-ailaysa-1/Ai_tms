@@ -6,9 +6,11 @@ from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
 ###image_upload
+from rest_framework.pagination import PageNumberPagination
 
-class ImageloadViewset(viewsets.ViewSet):
+class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    page_size=20
 
     def get_object(self, pk):
         try:
@@ -16,9 +18,11 @@ class ImageloadViewset(viewsets.ViewSet):
         except Imageload.DoesNotExist:
             raise Http404
     def get(self, request):
-        query_set = Imageload.objects.filter(user=request.user.id).order_by('id')
-        serializer = ImageloadSerializer(query_set ,many =True)
-        return Response(serializer.data)
+        queryset = Imageload.objects.filter(user=request.user.id).order_by('id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageloadSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
     
     def create(self,request):
         image = request.FILES.get('image')
@@ -40,8 +44,7 @@ class ImageloadViewset(viewsets.ViewSet):
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-###image upload for inpaint process
-from rest_framework.pagination import PageNumberPagination
+###image upload for inpaint processs
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20

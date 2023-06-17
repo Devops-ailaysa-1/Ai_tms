@@ -95,8 +95,9 @@ class CanvasTemplateViewset(viewsets.ViewSet):
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
         
-class CanvasUserImageAssetsViewset(viewsets.ViewSet):
+class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    page_size=20
     def get_object(self, pk):
         try:
             return CanvasUserImageAssets.objects.get(id=pk)
@@ -113,8 +114,10 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet):
     
     def list(self, request):
         queryset = CanvasUserImageAssets.objects.filter(user=request.user.id)
-        serializer = CanvasUserImageAssetsSerializer(queryset,many=True)
-        return Response(serializer.data)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)

@@ -69,10 +69,6 @@ def calculate_textbox_dimensions(text,font_size,bold,italic):
     return textbox_width, textbox_height
 
 
-
-
-
-
 def calculate_font_size(box_width, box_height, text,font_size):
     font_size=int(font_size)
     while True:
