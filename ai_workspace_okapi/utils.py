@@ -532,37 +532,3 @@ def get_prompt(sent,subs,cont):
                 
     return prompt
 
-    # if subs == []:
-    #     subs = 'English language'
-    # if cont == []:
-    #     cont = 'easy-to-understand content'
-    # if subs == [] or conts == []: 
-    #     if len(sent)>200:
-    #         prompt = '''
-
-    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
-
-
-    #                 1. Split the given sentence into multiple sentences.
-    #                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-    #                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-
-    #                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-
-    #                 Text: '''+sent 
-                       # Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.
-    #     else:
-    #         prompt = '''
-
-    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
-
-    #                 1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-    #                 2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-
-    #                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-
-    # #                 Text: '''+sent
-    #                   Subject Fields: {} 
-    #             Content Types: {} 
-    #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
-    # else:
