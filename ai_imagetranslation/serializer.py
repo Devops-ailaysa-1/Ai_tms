@@ -15,18 +15,18 @@ class ImageloadSerializer(serializers.ModelSerializer):
         model = Imageload
         fields = ('id','image','file_name','types','height','width')
         
-    def create(self,validated_data):
-        user=self.context['request'].user
-        data={**validated_data ,'user':user}
-        instance=Imageload.objects.create(**data)
-        file_name=instance.image.name.split('/')[-1]
-        types=file_name.split(".")[-1]
-        instance.file_name=file_name
-        instance.types=types
-        im=Image.open(instance.image.path)
-        width,height=im.size
-        instance.height=height
-        instance.width=width
+    def create(self, validated_data):
+        user =  self.context['request'].user
+        data = {**validated_data ,'user':user}
+        instance =  Imageload.objects.create(**data)
+        file_name = instance.image.name.split('/')[-1]
+        types = file_name.split(".")[-1]
+        instance.file_name = file_name
+        instance.types = types
+        im = Image.open(instance.image.path)
+        width, height = im.size
+        instance.height = height
+        instance.width = width
         instance.save()
         return instance
 
@@ -93,9 +93,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     source_language=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required= False)
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
-    mask_json_target=serializers.JSONField(required=False)
-
-    target_update_id=serializers.IntegerField(required=False)
+    
     class Meta:
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
@@ -103,7 +101,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id',
             'created_at','updated_at')
- 
+        #,'image_id')
         
     def to_representation(self, instance):
         representation=super().to_representation(instance)
@@ -291,7 +289,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             im_cre.save()
             
         if bounding_box_source_update:
-            instance.source_bounding_box=bounding_box_source_update
+            instance.source_bounding_box = bounding_box_source_update
             instance.save()
             
         if source_canvas_json:
@@ -299,8 +297,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
              instance.save()
              
         if target_canvas_json and target_update_id:
-            im_cre=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
-            im_cre.target_canvas_json=target_canvas_json
+            im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
+            im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
 
