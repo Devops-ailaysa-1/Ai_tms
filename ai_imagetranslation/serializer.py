@@ -101,7 +101,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
-            'target_language','target_canvas_json','target_update_id','thumbnail','export','image_to_translate_id','created_at','updated_at','mask_json_target')
+            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id',
+            'created_at','updated_at')
  
         
     def to_representation(self, instance):
