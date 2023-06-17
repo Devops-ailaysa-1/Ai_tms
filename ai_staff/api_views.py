@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -23,11 +23,12 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,SocialMediaSizeSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
-
+from rest_framework.pagination import PageNumberPagination 
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
@@ -918,22 +919,12 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         serializer = PromptSubCategoriesSerializer(query_set,many=True)
 #         return Response(serializer.data) 
 
-class SocialMediaSizeViewset(viewsets.ViewSet):
-    def list(self,request):
-        queryset = SocialMediaSize.objects.all()
-        serializer = SocialMediaSizeSerializer(queryset,many=True)
-        return Response(serializer.data)
-
-
+ 
 class FontLanguageViewset(viewsets.ViewSet):
-
     def list(self, request):
         queryset = FontLanguage.objects.all()
         serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
-
-
-
     
 class FontDataViewset(viewsets.ViewSet):
     def list(self, request):
@@ -951,3 +942,56 @@ class FontDataViewset(viewsets.ViewSet):
             queryset = FontData.objects.all()
             serializer = FontDataSerializer(queryset,many=True)
             return Response(serializer.data)
+        
+
+class ImageGeneratorResolutionViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset=ImageGeneratorResolution.objects.all()
+        serializer=ImageGeneratorResolutionSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+
+class SocialMediaSizeViewset_ser(viewsets.ViewSet):
+ 
+    def list(self,request):
+        queryset = SocialMediaSize.objects.all()
+        serializer = SocialMediaSizeSerializer(queryset,many=True)
+        return Response(serializer.data)
+    
+
+
+class DesignShapePagination(PageNumberPagination):
+    page_size = 20 
+    page_size_query_param = 'page_size'
+
+class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
+    page_size = 20
+    pagination_class = DesignShapePagination
+    def list(self,request):
+        queryset = DesignShape.objects.all()
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = DesignShapeSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+        
+    def update(self,request,pk):
+        shape=request.FILES.get('shape')
+        queryset = DesignShape.objects.get(id=pk)
+        serializer = DesignShapeSerializer(queryset ,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+    
+    def create(self,request):
+        shape=request.FILES.get('shape')
+        serializer = DesignShapeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)

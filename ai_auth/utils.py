@@ -155,7 +155,8 @@ company_members_list = [
 'kdinesh2911',
 'dinesh',
 'acilangoven',
-'ailaysag1'
+'ailaysag1',
+'azarutheen42'
 ]
 
 

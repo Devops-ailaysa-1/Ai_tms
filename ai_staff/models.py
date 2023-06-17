@@ -614,7 +614,6 @@ class ApiServiceList(models.Model):
     service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
 
 
-
 class FontFamily(models.Model):
     font_family_name = models.CharField(max_length=100 ,null=True , blank=True)
     name = models.CharField(max_length=100,null=True , blank=True)
@@ -631,6 +630,28 @@ class FontData(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
 class SocialMediaSize(models.Model):
-    social_media_name = models.CharField(max_length=200,blank=True ,null=True)
-    width = models.CharField(max_length=200,blank=True ,null=True)
+    social_media_name=models.CharField(max_length=200,blank=True ,null=True)
+    width=models.CharField(max_length=200,blank=True ,null=True)
     height=models.CharField(max_length=200,blank=True ,null=True)
+    src=models.FileField(upload_to='socialmediasize',blank=True ,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.social_media_name
+
+class ImageCategories(models.Model):
+    category= models.CharField(max_length=50,blank=True ,null=True)
+
+    def __str__(self):
+        return self.category
+    
+
+class DesignShape(models.Model):
+    shape_name=models.CharField(max_length=200,blank=True ,null=True)
+    shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.shape_name

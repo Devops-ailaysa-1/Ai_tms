@@ -1,10 +1,8 @@
 from django.db import models
 
 # Create your models here.
-from ai_staff.models import Languages ,LanguagesLocale
+from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
-
-
 
 class CanvasCatagories(models.Model):
     catagory_name = models.CharField(max_length=50,null=True,blank=True)
@@ -120,6 +118,7 @@ def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
 
 class MyTemplateDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
@@ -153,7 +152,6 @@ class TemplateKeyword(models.Model):
     text_template=models.ForeignKey(TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
     text_keywords=models.CharField(max_length=100)
 
-
 def user_directory_path_font_file(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/font_file/fonts/",filename)
 
@@ -167,14 +165,20 @@ class FontFile(models.Model):
     
 
 
-def user_directory_path_canvas_image_medium(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/assets/image_medium/",filename)
 
-class ImageListMedium(models.Model):
-    image_name=models.CharField(max_length=200,blank=True,null=True)
-    api_name=models.CharField(max_length=200,blank=True,null=True)
-    preview_image=models.FileField(upload_to=user_directory_path_canvas_image_medium,blank=True,null=True)
-    image_url=models.URLField()
-    tags=models.CharField(max_length=100,blank=True,null=True)
-    def __str__(self) -> str:
-        return self.image_name+" "+self.api_name
+
+
+def user_directory_path_canvas_image_medium(filename):
+    return "canvas/assets/image_medium/"+filename
+
+# class ImageListMedium(models.Model):
+    
+#     image_name=models.CharField(max_length=200,blank=True,null=True)
+#     api_name=models.CharField(max_length=200,blank=True,null=True)
+#     preview_image=models.FileField(upload_to="canvas/assets/image_medium/",blank=True,null=True)
+#     image_url=models.URLField()
+#     tags=models.CharField(max_length=100,blank=True,null=True)
+#     def __str__(self) -> str:
+#         return self.image_name+" "+self.api_name
+
+

@@ -79,6 +79,11 @@ pyspellchecker = "0.6.2"
 quickemailverification = "^1.0.3"
 extcolors = "^1.0.0"
 opencv-contrib-python = "4.7.0.72"
+tiktoken = "0.4.0"
+channels-redis = "^4.1.0"
+extcolors = "^1.0.0"
+opencv-contrib-python = "4.7.0.72"
+tiktoken = "0.4.0"
 
 [tool.poetry.dev-dependencies]
 
@@ -86,6 +91,7 @@ opencv-contrib-python = "4.7.0.72"
 pytest-django = "^4.5.2"
 ipython = "^8.7.0"
 django-debug-toolbar = "^3.8.1"
+ptvsd = "^4.3.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

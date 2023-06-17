@@ -24,6 +24,7 @@ urlpatterns += [
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
     path('article/',api_views.generate),
+ 
     # path('stream_article/',api_views.PostStreamView.as_view()),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]

@@ -90,22 +90,20 @@ class ImageInpaintCreation(models.Model):
 
     
 
+def user_directory_path_image_background_removel(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid,"background_removel",filename)
 
 
+class BackgroundRemovel(models.Model):
+    user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    image_json_id=models.CharField(max_length=100,blank=True,null=True)
+    image_url=models.URLField(blank=True,null=True)
+    canvas_json=models.JSONField(blank=True,null=True)
+    image=models.FileField(upload_to=user_directory_path_image_background_removel,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
-def image_translate_result_target(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.inpaint_creation.source_image.user.uid, "image_translate/image_upload/image_translate/inpaint_res",filename)
 
-
-def image_translate_thumbnail_target(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.inpaint_creation.source_image.user.uid,"image_translate/thumbnail",filename) 
-
-class TargetInpaintaImage(models.Model):
-    inpaint_creation=models.ForeignKey(ImageInpaintCreation,blank=True,null=True,on_delete=models.CASCADE,related_name='t_inpaint_creation')
-    mask=models.FileField(upload_to='image_translate/thumbnail',blank=True,null=True)
-    mask_json=models.JSONField(blank=True,null=True)
-    inpaint_image=models.FileField(upload_to='image_translate/thumbnail',blank=True,null=True)
-    target_canvas_json=models.JSONField(blank=True,null=True)
-    target_bounding_box=models.JSONField(blank=True,null=True)
-    thumbnail=models.FileField(upload_to='image_translate/thumbnail',blank=True,null=True)
-    create_inpaint_pixel_location=models.FileField(upload_to='image_translate/thumbnail',blank=True,null=True)
+    def __str__(self) -> str:
+        return self.image_json_id+'----'+self.image_url
+    

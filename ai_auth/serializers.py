@@ -29,6 +29,7 @@ except ImportError:
 import django.contrib.auth.password_validation as validators
 from django.core import exceptions
 from ai_auth.signals import update_billing_address2
+from allauth.socialaccount.models import SocialAccount
 
 def is_campaign_exist(value):
     try:
@@ -301,6 +302,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
     """
     User model w/o password
     """
+
     @staticmethod
     def validate_username(username):
         if 'allauth.account' not in settings.INSTALLED_APPS:
@@ -310,6 +312,8 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         from allauth.account.adapter import get_adapter
         username = get_adapter().clean_username(username)
         return username
+
+    is_social = serializers.SerializerMethodField(source="get_is_social",read_only=True)
     class Meta:
         extra_fields = []
         # see https://github.com/iMerica/dj-rest-auth/issues/181
@@ -330,10 +334,17 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             extra_fields.append('fullname')
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
+
+
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency',*extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','is_social',*extra_fields)
         read_only_fields = ('email',)
 
+    def get_is_social(self,obj):
+        if SocialAccount.objects.filter(user=obj).count()!=0:
+            return True
+        else :
+            return False
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:

@@ -7,7 +7,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,ImageGeneratorResolution,DesignShape)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -414,10 +414,18 @@ class FontLanguageSerializer(serializers.ModelSerializer):
         fields = ("id",'name')
 
 class FontFamilySerializer(serializers.ModelSerializer):
+    is_custom=serializers.SerializerMethodField()
     class Meta:
         model = FontFamily
-        fields = ('font_family_name',)
-
+        fields = ('font_family_name','is_custom')
+    
+    
+    def get_is_custom(self,instance):
+        if type(instance) is FontFamily or type(instance) is FontData:
+            return False
+        else:
+            return True
+    
 class FontDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontData
@@ -429,3 +437,49 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model=SocialMediaSize
         fields='__all__'
+
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        if 'src' in data.keys() and instance.src:
+            if instance.src:
+                data['src'] = instance.src.url
+        return data
+
+    def create(self, validated_data):
+        instance= SocialMediaSize.objects.create(**validated_data)
+        return instance
+    
+    def update(self, instance, validated_data):
+        src=validated_data.get('src',None)
+        if src:
+            instance.src = src
+        instance.social_media_name=validated_data.get('social_media_name',instance.social_media_name)
+        instance.width=validated_data.get('width',instance.width)
+        instance.height=validated_data.get('height',instance.height)
+        instance.save()
+        return instance
+
+class ImageGeneratorResolutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=ImageGeneratorResolution
+        fields=('id','image_resolution')
+
+class DesignShapeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=DesignShape
+        fields=('id','shape_name','shape')
+
+    def to_representation(self, instance):
+        return super().to_representation(instance)
+    
+    def create(self, validated_data):
+        instance= DesignShape.objects.create(**validated_data)
+        return instance
+    
+    def update(self, instance, validated_data):
+        shape=validated_data.get('shape',None)
+        if shape:
+            instance.shape = shape
+        instance.shape_name=validated_data.get('shape_name',instance.shape_name)
+        instance.save()
+        return instance

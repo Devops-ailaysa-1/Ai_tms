@@ -1,39 +1,40 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets  ,generics
 from rest_framework.response import Response
-from ai_staff.models import ( Languages,LanguagesLocale)
+from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile,ImageListMedium)
+                              TemplateKeyword,TextTemplate,FontFile)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,ImageListMediumSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
-from ai_staff.models import FontFamily
-from ai_staff.serializer import FontFamilySerializer
-from ai_staff.models import FontFamily,FontLanguage,FontData
+ 
+from ai_staff.serializer import FontFamilySerializer ,SocialMediaSizeSerializer
+ 
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation
+ 
+ 
+ 
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
-
-pixa_bay_url = 'https://pixabay.com/api/'
-pixa_bay_headers = {
+pixa_bay_url='https://pixabay.com/api/'  
+pixa_bay_headers={
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     }
-
 
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -458,7 +459,7 @@ def free_pix_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pixabay_api(request):
-    params = {**request.GET.dict(),'key':pixa_bay_api_key}
+    params = {**request.GET.dict(),'key':pixa_bay_api_key} 
     response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if response.status_code == 200:
         return Response(response.json(),status=200)
@@ -483,12 +484,19 @@ def instant_canvas_translation(request):
 ##################################
 
 
-class TextTemplateViewset(viewsets.ViewSet):
+class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    page_size = 20
     def get(self, request):
-        query_set=TextTemplate.objects.all()
-        serializer=TextTemplateSerializer(query_set ,many =True)
-        return Response(serializer.data)
+        queryset=TextTemplate.objects.all()
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer=TextTemplateSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
 
     def retrieve(self,request,pk):
         query_set=TextTemplate.objects.get(id = pk)
@@ -507,7 +515,7 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
     
     def update(self,request,pk):
-        query_set=self.model.objects.get(id = pk)
+        query_set=TextTemplate.objects.get(id = pk)
         text_thumbnail=request.FILES.get('text_thumbnail',None)
         text_keywords=request.POST.getlist('text_keywords',None)
         serializer=TextTemplateSerializer(query_set, data=request.data ,partial = True)
@@ -520,7 +528,7 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
             
     def delete(self,request,pk):
-        query_set=self.model.objects.get(id = pk)
+        query_set=TextTemplate.objects.get(id = pk)
         query_set.delete()
         return Response(status=204)
         
@@ -586,6 +594,7 @@ class FontFamilyFilter(django_filters.FilterSet):
             
     def filter_queryset(self,queryset):
         queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
+        print("queryset---->",queryset)
         return queryset
  
  
@@ -597,17 +606,18 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     def lang_fil(self,request):
         f_lang=FontLanguage.objects.get(id=request.GET['language'])
         f_d=FontData.objects.filter(font_lang=f_lang)
-        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name'))#.values("font_family_name")
         return queryset
     
     def list(self, request):
         font_search=request.query_params.get('font_search',None)
         language=request.query_params.get('language',None)
         queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
-
-        if font_search and language:            
-            filter = FontFamilyFilter(request.GET, queryset=queryset)
-            queryset = filter.qs
+        
+        if font_search and language:
+            queryset=self.lang_fil(request)            
+            filters = FontFamilyFilter(request.GET, queryset=queryset)
+            queryset = filters.qs
         
         elif font_search:
             queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
@@ -616,13 +626,18 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
             queryset=self.lang_fil(request)
         else:
             font_file=FontFile.objects.filter(user=request.user)
+            
+
             if font_file:
-                font_file=font_file.annotate(font_family_name=F("name")).values("font_family_name")
-                queryset=queryset.values("font_family_name")
+                font_file=font_file.annotate(font_family_name=F("name"))#.values("font_family_name")
+                # print([{**item, 'user': True} for item in font_file])
+                # queryset=queryset.values("font_family_name")
+                # print([{**item, 'user': True} for item in queryset])
                 queryset=list(chain(font_file, queryset))
- 
- 
+                
+
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        
         serializer = FontFamilySerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
@@ -632,32 +647,106 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
 
-from ai_canvas.utils import convert_image_url_to_file
 
-
-
-class ImageListMediumViewset(viewsets.ViewSet):
-
+class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
+    pagination_class = CustomPagination
     def list(self,request):
-        image_search=request.query_params.get('image_search',None)
-        if image_search:
-            
-            params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
-            response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-            if response and 'hits' in response and response['hits']:
-                data=[]
-                for i in response['hits']:
-                    print("i['previewURL']",i['previewURL'])
-                    # preview_image=convert_image_url_to_file(i['previewURL'])
-                    data.append({'image_url' : i['webformatURL'],'tags':i['tags'],'image_name':i['type']
-                                 })
-                print(data)
-                serializer=ImageListMediumSerializer(data=data,many=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data)
-                else:
-                    return Response(serializer.errors)
+        queryset = SocialMediaSize.objects.all().exclude(social_media_name="Full HD").order_by('social_media_name')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+    
+    def create(self,request):
+        src=request.FILES.get('src',None)
+        serializer=SocialMediaSizeSerializer(data={**request.POST.dict(),'src':src})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         else:
-            return Response({'image_search':'fill image search field'},status=200)
+            return Response(serializer.errors)
 
+    def update(self,request,pk):
+        src=request.FILES.get('src',None)
+        query_set=SocialMediaSize.objects.get(id=pk)
+        serializer=SocialMediaSizeSerializer(query_set,data={**request.POST.dict(),'src':src},partial=True)                           
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+# import asyncio
+# async def one_iteration(pixa_json):
+#     preview_image=convert_image_url_to_file(pixa_json['previewURL'])
+#     return {'image_url' :pixa_json['webformatURL'],'tags':pixa_json['tags'],'image_name':pixa_json['type'],
+#                                  'preview_image':preview_image}
+
+
+
+# async def generate_url(pixa_url_list):
+#     coroutines=[]
+#     for pixa_url_value in pixa_url_list:
+#         coroutines.append(one_iteration(pixa_url_value))
+#     return await asyncio.gather(*coroutines)
+
+# class ImageListMediumViewset(viewsets.ViewSet):
+
+#     def list(self,request):
+#         image_search=request.query_params.get('image_search',None)
+#         if image_search:
+            
+#             params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
+#             response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+#             if response and 'hits' in response and response['hits']:
+#                 data = asyncio.run(generate_url(response['hits']))
+#                 serializer=ImageListMediumSerializer(data=data,many=True)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                     return Response(serializer.data)
+#                 else:
+#                     return Response(serializer.errors)
+#         else:
+#             return Response({'image_search':'fill image search field'},status=200)
+
+
+
+
+params = {
+            'key':pixa_bay_api_key,
+            'order':'popular',
+            'image_type':'photo',
+            'orientation':'all',
+            'per_page':10,
+        }
+
+from ai_staff.models import ImageCategories
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def image_list(request):
+    image_category_id=request.query_params.get('image_category_id')
+    image_cats=list(ImageCategories.objects.all().values('category'))
+    data=[]
+    if image_category_id:
+        cat=ImageCategories.objects.get(id=image_category_id).category
+        
+    for image_cat in image_cats:
+        params['q']=image_cat['category']
+        params['catagory']=image_cat['category']
+        
+        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+        img_urls=[]
+        for hit in pixa_bay['hits']:
+            img_urls.append({'preview_img':hit['previewURL'],'id':hit['id'] })
+
+        image_cat['images']=img_urls
+        data.append(image_cat)
+    
+    return Response({'image_list':data},status=200)
+
+            
+            
+            
