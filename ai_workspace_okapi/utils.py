@@ -543,11 +543,6 @@ def get_prompt(sent,subs,cont):
     #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
 
 
-<<<<<<< HEAD
-                Text: '''+sent
-    
-    return prompt
-=======
     #                 1. Split the given sentence into multiple sentences.
     #                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
     #                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
@@ -571,4 +566,3 @@ def get_prompt(sent,subs,cont):
     #             Content Types: {} 
     #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
     # else:
->>>>>>> origin/v4-merged-production

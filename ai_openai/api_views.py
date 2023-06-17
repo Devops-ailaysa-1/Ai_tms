@@ -1,21 +1,11 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
- 
-import logging ,os  
-=======
->>>>>>> origin/canvas_staging
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
+                     BlogKeywordGenerate,Blogtitle,BlogOutline,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
+import logging ,os         
 from django.core import serializers
 import logging ,os ,json
 from rest_framework import status
-<<<<<<< HEAD
-=======
->>>>>>> origin/v4-merged-production
->>>>>>> origin/canvas_staging
+ 
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 

@@ -26,11 +26,7 @@ def user_directory_path_canvas_source_json_thumbnails(instance, filename):
 def user_directory_path_canvas_source_json_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "aidesign/design/aidesign_exports_source/exports/",filename)
 
-<<<<<<< HEAD
 def user_directory_path_canvas_image_assets(instance, filename): ###
-=======
-def user_directory_path_canvas_image_assets(instance, filename):  
->>>>>>> origin/canvas_staging
     return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/assets/aidesign_assets/images/",filename)
 
 def user_directory_path_canvas_target_json_thumbnails(instance, filename):
