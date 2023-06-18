@@ -58,10 +58,10 @@ def json_src_change(json_src ,req_host,instance):
 
 import pygame
 
-def calculate_textbox_dimensions(text,font_size,bold,italic):
+def calculate_textbox_dimensions(text,font_size,bold,italic): #
     font_size=int(font_size)
     pygame.init()
-    font = pygame.font.SysFont(r"Arial.ttf", font_size,bold=bold,italic=italic)
+    font = pygame.font.SysFont(r"Arial.ttf", font_size) #,bold=bold,italic=italic
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
@@ -128,7 +128,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
                     
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
