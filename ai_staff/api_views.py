@@ -24,7 +24,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
-                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer)
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,ImageCategoriesSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -991,6 +991,16 @@ class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         shape=request.FILES.get('shape')
         serializer = DesignShapeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+
+
+class ImageCategoriesViewset(viewsets.ViewSet):
+    def create(self,request):
+        serializer = ImageCategoriesSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

@@ -7,7 +7,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,ImageGeneratorResolution,DesignShape)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
+                    ImageGeneratorResolution,DesignShape,ImageCategories)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -483,3 +484,9 @@ class DesignShapeSerializer(serializers.ModelSerializer):
         instance.shape_name=validated_data.get('shape_name',instance.shape_name)
         instance.save()
         return instance
+    
+
+class ImageCategoriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageCategories
+        fields = '__all__'
