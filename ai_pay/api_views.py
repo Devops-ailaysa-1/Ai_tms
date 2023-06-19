@@ -550,7 +550,7 @@ def po_modify(task_assign_info_id,po_update):
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
-    if ('accepted_rate' in po_update) and ('assign_to' not in po_update):
+    if ('accepted_rate' in po_update or 'accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
