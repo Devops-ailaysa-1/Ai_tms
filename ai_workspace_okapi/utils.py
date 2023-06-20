@@ -448,5 +448,159 @@ def split_check(segment_id):
     else:
         return True
 
+import difflib
+
+def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
+    diff_words=[]
+    pair_words=[]
+    if sentense_diff:
+        diff=seq_match_seg_diff(source_segment,edited_segment)
+        return diff 
+    else:
+        difftool = difflib.Differ()
+        diff = difftool.compare(source_segment.split(),edited_segment.split())
+        for line in diff:
+            if not line.startswith(" "):
+                if line.startswith("-"):
+                    diff_words.append(line)
+                elif line.startswith("+"):
+                    diff_words.append(line)
+            for i in range(len(diff_words)-1):
+                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
+                    pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
+        return pair_words
+
+def seq_match_seg_diff(words1,words2):
+    s1=words1.split()
+    s2=words2.split()
+    matcher=difflib.SequenceMatcher(None,s1,s2 )
+    save_type=[]
+    data=[]
+    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+        if tag=='equal':
+            data.append(" ".join(s2[j1:j2]))
+        elif tag=='replace':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>'+'<del>'+" ".join(s1[i1:i2])+'</del>')
+            save_type.append('insert')
+        elif tag=='insert':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
+            save_type.append('insert')
+        elif tag=='delete':
+            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
+            save_type.append('delete')
+    if save_type:
+        save_type=list(set(save_type))
+    return (" ".join(data)," ".join(save_type))
+
+def get_general_prompt(opt,sent):
+
+    if opt == "Rewrite":
+        prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+
+    elif opt == "Simplify":
+        prompt = '''Simplify the given text. Text: {}'''.format(sent)
+
+    elif opt == "Shorten":
+        prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+
+    return prompt
 
 
+def get_prompt(opt,sent):
+
+    if opt == "Rewrite":
+        if len(sent)>200:
+            prompt = '''Split the following text into multiple simple sentences:
+                {}'''.format(sent)
+        else:
+            prompt = '''Paraphrase the given text: {} '''.format(sent)
+    elif opt == "Simplify":
+        prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
+
+    elif opt == "Shorten":
+        prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+    return prompt
+
+
+
+
+# def get_prompt(opt,sent):#,subs,cont):
+#     # subs,cont =[],[]
+#     # if subs == []:subs_str = 'English language'
+#     # else: subs_str =  ', '.join(subs)
+#     # if cont == []:cont_str = 'easy-to-understand content'
+#     # else: cont_str = ', '.join(cont)
+#     if opt == "Rewrite":
+#         # if len(sent)<=20:
+#         #     prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+
+#         if len(sent)>200:
+#             prompt = '''Split the following text into multiple simple sentences: 
+#                         {}'''.format(sent)
+
+#         else:
+#             prompt = '''Paraphrase the given text: {} '''.format(sent)
+
+    
+#     elif opt == "Simplify":
+#         prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
+
+#     elif opt == "Shorten":
+#         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+#     return prompt
+
+    # if subs == []:
+    #     subs = 'English language'
+    # if cont == []:
+    #     cont = 'easy-to-understand content'
+    # if subs == [] or conts == []: 
+    #     if len(sent)>200:
+    #         prompt = '''
+
+    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
+
+
+    #                 1. Split the given sentence into multiple sentences.
+    #                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+    #                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+
+    #                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
+
+    #                 Text: '''+sent 
+                       # Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.
+    #     else:
+    #         prompt = '''
+
+    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
+
+    #                 1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+    #                 2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+
+    #                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
+
+    # #                 Text: '''+sent
+    #                   Subject Fields: {} 
+    #             Content Types: {} 
+    #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
+    # else:
+
+
+            # prompt = '''Act as an English language expert, convert this lengthy complex or compound sentence into two or three simple sentences, without affecting the meaning or flow of the sentence. Also, if the sentences contain any idioms, phrases or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone. Please provide the final rewritten text without any prefix.
+            # Text: {} '''.format(sent)
+            
+            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
+            #         1. Split the given sentence into multiple sentences.
+            #         2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+            #         3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+            #         If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
+            #         Text: {} 
+            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
+
+                        # prompt = '''Act as an English language expert, check if the provided text contains any idioms, phrases or phrasal verbs. If so, rewrite it using more straightforward words without altering the meaning or tone, otherwise just rewrite it. Please provide the final rewritten text without any prefix.
+            # Text: {} '''.format(sent)
+            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
+            #         1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+            #         2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+            #         If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
+            #         Text: {} 
+            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 

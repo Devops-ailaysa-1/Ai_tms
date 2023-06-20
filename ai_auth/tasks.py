@@ -104,7 +104,7 @@ def sync_invoices_and_charges(days):
     
 @task
 def renewal_list():
-    today = timezone.now()
+    today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
     if last_day == today.day:
         cycle_dates = [x for x in range(today.day,32)]
@@ -316,7 +316,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                         else:
                             seg['temp_target'] = mt
                             seg['target'] = mt
-                        status_id = TranslationStatus.objects.get(status_id=104).id
+                        status_id = TranslationStatus.objects.get(status_id=103).id
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     except:
                         seg['target']=""
@@ -558,7 +558,7 @@ def pre_translate_update(task_id):
                     else:
                         seg.target = mt
                         seg.temp_target = mt
-                    seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                    seg.status_id = TranslationStatus.objects.get(status_id=103).id
                     #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append(seg)
@@ -624,6 +624,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
     proj = Project.objects.get(id=project_id)
+    print("tasks-------->",proj.get_tasks)
     task = proj.get_tasks[0]
     try:
         obj = MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
@@ -717,6 +718,7 @@ def mt_raw_update(task_id):
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
+    print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
     segments = task.document.segments_for_find_and_replace
@@ -746,6 +748,7 @@ def mt_raw_update(task_id):
             if seg.target == '' or seg.target==None:
                 print("**********************")
                 initial_credit = user.credit_balance.get("total_left")
+                print("Intial Credit------------->",initial_credit)
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
@@ -757,7 +760,7 @@ def mt_raw_update(task_id):
                         else:
                             seg.target = mt
                             seg.temp_target = mt
-                        seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                        seg.status_id = TranslationStatus.objects.get(status_id=103).id
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                         if type(seg) is SplitSegment:
                             mt_split_segments.append({'seg':seg,'mt':mt})
@@ -849,10 +852,14 @@ def weighted_count_update(receiver,sender,assignment_id):
         if receiver !=None and sender!=None:
             print("------------------POST-----------------------------------")
             Receiver = AiUser.objects.get(id = receiver)
+            receivers = []
+            receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) or Receiver.is_agency else []
+            receivers.append(Receiver)
             Sender = AiUser.objects.get(id = sender)
             hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
-            if Receiver in hired_editors:
-                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+            for i in [*set(receivers)]:
+                if i in hired_editors:
+                    ws_forms.task_assign_detail_mail(i,assignment_id)
         else:
             print("------------------------PUT------------------------------")
             assigns = task_assgn_objs[0].task_assign

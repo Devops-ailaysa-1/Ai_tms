@@ -29,6 +29,7 @@ except ImportError:
 import django.contrib.auth.password_validation as validators
 from django.core import exceptions
 from ai_auth.signals import update_billing_address2
+from allauth.socialaccount.models import SocialAccount
 
 def is_campaign_exist(value):
     try:
@@ -48,10 +49,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     target_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     cv_file = serializers.FileField(required=False,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
+    is_agency = serializers.NullBooleanField()
 
     class Meta:
         model = AiUser
-        fields = ['email','fullname','password','country','campaign','source_language','target_language','cv_file',]
+        fields = ['email','fullname','password','country','campaign','source_language','target_language','cv_file','is_agency']
         extra_kwargs = {
             'password': {'write_only':True},
             'campaign': {'write_only':True}
@@ -67,9 +69,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return super().run_validation(data)
 
 
+    def vendor_signup():
+        pass
+
+
     def save(self, request):
         from ai_vendor.models import VendorLanguagePair,VendorOnboardingInfo,VendorsInfo
-        from ai_auth.api_views import subscribe_vendor,check_campaign
+        from ai_auth.api_views import subscribe_vendor,check_campaign,subscribe_lsp
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
@@ -90,18 +96,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         source_language = self.validated_data.get('source_language',None)
         target_language = self.validated_data.get('target_language',None)
         cv_file = self.validated_data.get('cv_file',None)
+        is_agency = self.validated_data.get('is_agency',None)
+
 
         if source_language and target_language:
             VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
             user.is_vendor = True
             user.save()
-            sub = subscribe_vendor(user)
+            if is_agency:    
+                sub = subscribe_lsp(user)
+                user.is_agency = True
+                user.save()
+            else:
+                sub = subscribe_vendor(user)
             if not cv_file:
                 VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
-        if cv_file:
-            tt = VendorsInfo.objects.create(user=user,cv_file = cv_file)
-            VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
-            VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
+            else:
+                VendorsInfo.objects.create(user=user,cv_file = cv_file)
+                VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
+                VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
+            
         if campaign:
             ## users from campaign pages
             #AilaysaCampaigns.objects.get(campaign_name=campaign)
@@ -113,7 +127,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                     pass
                 else:
                     logger.error("campaign updation failed",user.uid)
+
         return user
+
+    # def create(self, validated_data):
+    #     pass
 
 
 class AiPasswordResetSerializer(PasswordResetSerializer):
@@ -284,6 +302,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
     """
     User model w/o password
     """
+
     @staticmethod
     def validate_username(username):
         if 'allauth.account' not in settings.INSTALLED_APPS:
@@ -293,6 +312,8 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         from allauth.account.adapter import get_adapter
         username = get_adapter().clean_username(username)
         return username
+
+    is_social = serializers.SerializerMethodField(source="get_is_social",read_only=True)
     class Meta:
         extra_fields = []
         # see https://github.com/iMerica/dj-rest-auth/issues/181
@@ -313,10 +334,17 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             extra_fields.append('fullname')
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
+
+
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', *extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','is_social',*extra_fields)
         read_only_fields = ('email',)
 
+    def get_is_social(self,obj):
+        if SocialAccount.objects.filter(user=obj).count()!=0:
+            return True
+        else :
+            return False
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:

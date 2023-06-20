@@ -4,7 +4,7 @@ from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
-from ai_workspace.models import TaskAssignInfo,AiRoleandStep
+from ai_workspace.models import Project, TaskAssignInfo,AiRoleandStep
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -13,7 +13,7 @@ from rest_framework.response import Response
 import stripe
 from django.http import JsonResponse
 from djstripe.models import Account,Customer,Invoice
-from weasyprint import HTML
+from weasyprint import HTML, CSS
 from django.template.loader import render_to_string
 from decimal import Decimal
 from django.db.models import Count
@@ -23,8 +23,8 @@ from django.db import transaction
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework import generics
 from ai_pay.models import POTaskDetails,POAssignment,PurchaseOrder
-from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssignmentSerializer, 
-                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer)
+from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssignmentSerializer, PoAssignDetailsSerializer, 
+                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer, PurchaseOrderTaskListSerializer)
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
@@ -34,6 +34,7 @@ import time
 from django.http import Http404
 from ai_auth.api_views import resync_instances
 from notifications.signals import notify
+from ai_auth.utils import get_assignment_role
 
 logger = logging.getLogger('django')
 
@@ -299,6 +300,7 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
     tasks = po.po_task.all()
+    print("inside gen po",po.poid)
     ## Need to remove added for old po support
     if tasks.count() <1:
         pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
@@ -417,11 +419,13 @@ def get_task_total_amt(instance):
 def update_task_po(task_assign,po_task):
     tot_amount = get_task_total_amt(task_assign)
     insert={'word_count':task_assign.billable_word_count,'char_count':task_assign.billable_char_count,'unit_price':task_assign.mtpe_rate,'unit_type':task_assign.mtpe_count_unit,
-    'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount}
+    'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount,'tsk_accepted':False,'assign_status':None}
     task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
     po = po_task.po
     po.po_file=None
+    po.po_total_amount=tot_amount
     po.save()
+    po_generate_pdf(po)
 
     
 
@@ -433,12 +437,31 @@ def generate_client_po(task_assign_info):
         po_total_amt=0.0
         instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
         assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
-        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
+        if instance.task_assign.reassigned:
+            if instance.assigned_by.team:
+                client = instance.assigned_by.team.owner
+            else:
+                client = instance.assigned_by
+
+        else:
+            client = instance.task_assign.task.job.project.ai_user
+
+
+        insert2={'client':client,'seller':instance.task_assign.assign_to,
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':0}
         # print("insert2",insert2)
 
-        po=PurchaseOrder.objects.create(**insert2)       
+        old_po = PurchaseOrder.objects.filter(Q(assignment=assign)&~Q(po_status="void")&Q(po_status="issued"))
+        if  old_po.count() != 0 :
+            if old_po.count() == 1:
+                po = old_po.last()
+            else:
+                logger.error("too many open po found")
+        else:
+            po = PurchaseOrder.objects.create(**insert2)
+            
+               
         for obj_id in task_assign_info:
             instance = TaskAssignInfo.objects.get(id=obj_id)
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
@@ -456,14 +479,15 @@ def generate_client_po(task_assign_info):
 
             tot_amount = get_task_total_amt(instance)
             insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
-                    'word_count':instance.billable_word_count,'char_count':instance.billable_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
-                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':task_tar_lang,'total_amount':tot_amount}
+                    'word_count':instance.billable_word_count,'char_count':instance.billable_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,'assign_status':instance.task_ven_status,
+                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':task_tar_lang,'total_amount':tot_amount,'reassigned':instance.task_assign.reassigned}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
             po.po_total_amount=po_total_amt
             po.save()
+            po_generate_pdf(po)
             msg_send_po(po,"po_created")
         # print("po2",po)
     return po
@@ -492,7 +516,7 @@ def po_modify_weigted_count(task_assign_info_ls):
     po.po_total_amount=po_total
     po.po_file=None
     po.save()
-    msg_send_po(po,"po_updated") 
+    # msg_send_po(po,"po_updated") 
 
 
 def po_modify(task_assign_info_id,po_update):
@@ -504,31 +528,44 @@ def po_modify(task_assign_info_id,po_update):
 
     if 'accepted' in po_update:
         #if instance.owner != instance.task_assign.task.job.project.project_manager:
-        role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
-        print("role>>",role)
+        #role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
+
         assign_object.send(
             sender=TaskAssignInfo,
             instance = instance,
             user=instance.task_assign.assign_to,
-            role = role
+            role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
         )
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
             po_task_obj.tsk_accepted=True
+            po_task_obj.assign_status="task_accepted"
             po_task_obj.save()
             return True
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
             
+    if 'change_request' in po_update:
+        try:
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj.assign_status="change_request"
+            po_task_obj.save()
+            return True
+        except BaseException as e:
+            logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
-    if 'accepted_rate_by_owner' in po_update:
+    if ('accepted_rate' in po_update or 'accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
                 if update_task_po(instance,po_task_obj)==False:
                     raise ValueError("updating task po failed")
             return True
-            
+            # if 'currency_change' in po_update:
+            #     pass
+            # else:
+            #     return True
+
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id} for accepted_rate_by_owner,ERROR:{str(e)}")
 
@@ -833,3 +870,62 @@ def msg_send_po(po,input):
 
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+
+
+class PurchaseOrderView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+
+
+    def get_queryset(self):
+
+        queryset = PurchaseOrder.objects.all()
+        participant = self.request.query_params.get('participant')
+        task = self.request.query_params.get('task')
+        step = self.request.query_params.get('step')
+        if participant == "seller":
+            queryset = queryset.filter(seller=self.request.user)
+        elif participant == "buyer":
+            queryset = queryset.filter(client=self.request.user)
+        else:
+            queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
+        queryset = queryset.filter(po_task__task_id =task)
+        # queryset= queryset.filter(assignment__step_id=step)
+        queryset = queryset.filter(po_status__in=['issued','open'])
+
+        return queryset
+    
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = PurchaseOrderTaskListSerializer(queryset,context=request)
+        return Response(serializer.data)
+
+
+
+class ProjectPOTaskView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+
+
+    def get_queryset(self):
+
+        project_id = self.request.query_params.get('project_id')
+        proj_queryset = Project.objects.filter(id=project_id)
+        
+        if self.request.user.is_internal_member:
+            req_user = self.request.user.team.owner
+        else:
+            req_user = self.request.user
+
+        queryset = POTaskDetails.objects.filter(Q(projectid__in=proj_queryset.values_list('ai_project_id',flat=True))&
+                                                Q(po__seller=req_user)&~Q(po__po_status="void"))
+        
+        return queryset
+    
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = PoAssignDetailsSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    # def list(self, request):
+    #     queryset = self.get_qu

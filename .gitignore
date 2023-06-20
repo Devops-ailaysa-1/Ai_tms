@@ -117,3 +117,12 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
+
+*.xlsx
+*.sh
+*.zip
+*.tbx
+*.mp3
+*.save*
+*.txt
+*.dockerignore

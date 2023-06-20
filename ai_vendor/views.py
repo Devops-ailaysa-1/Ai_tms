@@ -19,18 +19,18 @@ from django.http import Http404
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
-                     VendorMtpeEngines)#, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
+                     VendorMtpeEngines, SavedVendor)#, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
 from .serializers import (ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,VendorLanguagePairCloneSerializer,
                           VendorLanguagePairSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
-                          )
+                          SavedVendorSerializer)
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
 from ai_auth.models import AiUser, Professionalidentity,VendorOnboarding
 import json,requests
-from django.http import JsonResponse
+from django.http import JsonResponse,HttpResponse
 # from django.core.mail import EmailMessage
 # from django.template import Context
 # from django.template.loader import get_template
@@ -310,6 +310,183 @@ def vendor_subject_matter_list(request):
         out.append({"label":i.name,"value":i.id})
     return JsonResponse({"out":out},safe = False)
 
+class SavedVendorView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        glossary_selected = SavedVendor.objects.filter(customer=self.request.user).all()
+        serializer = SavedVendorSerializer(glossary_selected, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        vendor = request.POST.get('vendor')
+        user = request.user.team.owner if request.user.team else request.user 
+        serializer = SavedVendorSerializer(data={'customer':user.id,'vendor':vendor})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+        # data = request.POST.dict()
+        # serializer = SavedVendorSerializer(data=data,partial=True)
+        # if serializer.is_valid(raise_exception=True):
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        user = request.user.team.owner if request.user.team else request.user 
+        obj = SavedVendor.objects.get(Q(customer=user) & Q(vendor=pk))
+        print("Obj----->",obj)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+import pandas as pd
+from ai_staff.models import Currencies ,ServiceTypeunits ,ServiceTypes
+from io import BytesIO
+
+import xlsxwriter
+def vendor_lang_sheet():
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    
+    header = workbook.add_format({
+            'bold': True,
+            'bg_color': '#ffffcc',
+            'color': 'black',
+            'align': 'centre',
+            'valign': 'top',
+            'border': 1,
+            'locked': True
+        })
+    worksheet = workbook.add_worksheet('Vendor Language Pairs')
+
+    worksheet2 = workbook.add_worksheet('Languages')
+    languages=list(Languages.objects.all().values_list('language',flat=True))
+    worksheet2.write('A1','Languages')
+    for i in range(len(languages)):
+        a='A{}'.format(i+2)
+        worksheet2.write(a,languages[i])
+
+    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]} ) 
+ 
+
+    worksheet.write('A1', 'Source Language',header)
+    worksheet.write('B1', 'Target Language',header)
+    worksheet.write('C1', 'Currency',header)
+    worksheet.write('D1', 'Service',header)
+    worksheet.write('E1', 'Unit Type',header)
+    worksheet.write('F1', 'Unit Rate',header) 
+    worksheet.write('G1','Hourly Rate',header)
+    worksheet.write('H1','Reverse',header)
+    currency=['EUR','GBP','INR','USD']
+    service=['MTPE (MPE)','Human Translation (HUT)']
+    unit_type=['Word','Char']
+    boolean=['True','False']
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
+    worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
+    worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
+    worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
+    worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
+    worksheet.data_validation('H2:H1048576', {'validate': 'list','source':boolean})
+    worksheet2.hide()
+    workbook.close()
+    xlsx_data = output.getvalue()
+    return xlsx_data
+
+
+def check_null_rows(df):
+    fields_to_check = ['Source Language','Target Language']
+    check_fields_empty = df[fields_to_check].notnull().all(axis=1)
+    print("Check---->",check_fields_empty)
+    #check_row_empty=df.notnull().all(axis=1)
+    return all(check_fields_empty)
+
+def check_lang_pair(df):
+    return any(list(df['Source Language']==df['Target Language']))
+
+
+def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate):
+    if service.name=='MTPE (MPE)':
+        service=VendorServiceInfo.objects.create(lang_pair=vender_lang_pair,mtpe_rate=unit_rate,
+                                    mtpe_count_unit=unit_type,mtpe_hourly_rate=hourly_rate)
+        print("ser------>",service)
+    else:
+        service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
+                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+        print("ser--------->",service)
+    return service
+
+@api_view(['POST'])
+def vendor_language_pair(request):
+    user=request.user
+    language_pair_xl_file=request.FILES.get('language_pair_xl_file')
+    if not language_pair_xl_file:
+        return JsonResponse({'status':'file not uploaded'})
+    column_name=['Source Language','Target Language','Currency','Service','Unit Type','Unit Rate','Hourly Rate','Reverse']	
+    df=pd.read_excel(language_pair_xl_file)
+    # if not df.empty:
+    #     return JsonResponse({'status':'empty file upload'})
+    if df.columns.to_list() == column_name:
+        any_null=check_null_rows(df)
+        print("anyNull---->",any_null)
+        print("Df-------->",df)
+        #df=df.dropna()
+        lang_check=check_lang_pair(df)
+        if any_null and not lang_check:
+            df=df.drop_duplicates(keep="first", inplace=False)
+            print("Df-------->",df)
+            for _, row in df.iterrows():
+                try:
+                    print("Inside Try")
+                    src_lang=Languages.objects.get(language=row['Source Language'])
+                    tar_lang=Languages.objects.get(language=row['Target Language'])
+                    currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
+                    print("Cur------>",currency_code)
+                    currency=Currencies.objects.get(currency_code=currency_code)
+                    service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
+                    unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
+                    unit_rate=None if pd.isnull(row['Unit Rate']) else row['Unit Rate']
+                    hourly_rate=None if pd.isnull(row['Hourly Rate']) else row['Hourly Rate']
+                    reverse = None if pd.isnull(row['Reverse']) else row['Reverse']
+                    vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
+                                                                    target_lang=tar_lang,currency=currency)
+                    print("Vendor_lang----->",vender_lang_pair)
+                    if service and unit_type and unit_rate:
+                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                
+                    if reverse:
+                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
+                                                                    target_lang=src_lang,currency=currency)
+                        print("Vendor_lang----->",vender_lang_pair)
+                        if service and unit_type and unit_rate:
+                            ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                except IntegrityError as e:
+                    print("Exception--------->",e)
+                    pass
+                    # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
+        else:
+            return JsonResponse({'status':'some null present in rolls and might contain same lang pair'})
+    else:
+        return JsonResponse({'status':'column_name miss match'})
+    return JsonResponse({'status':'uploaded successfully'})
+
+#from rest_framework.permissions import AllowAny
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def vendor_lang_pair_template(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
+    xlsx_data = vendor_lang_sheet()
+    response.write(xlsx_data)
+    response['Access-Control-Expose-Headers']='Content-Disposition'
+    return response
 
 
 # @api_view(['POST',])
@@ -551,3 +728,5 @@ def vendor_subject_matter_list(request):
 #     except:
 #         result["MT-Engines"]=[]
 #     return JsonResponse({"out":result},safe=False)
+
+

@@ -3,7 +3,7 @@ from django.db import models
 from ai_auth.models import AiUser
 from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits,Countries
 from ai_workspace.models import Steps
-from ai_pay.signals import change_po_status
+from ai_pay.signals import change_po_status,_create_po_file
 from django.db.models.signals import post_save, pre_save
 
 class POAssignment(models.Model):
@@ -64,12 +64,17 @@ class PurchaseOrder(models.Model):
     @property
     def get_pdf(self):
         return self.po_file.url
+    
+post_save.connect(_create_po_file, sender=PurchaseOrder)
 
 class POTaskDetails(models.Model):
+    ACCEPT_STATUS =[("task_accepted","task_accepted"),
+                    ("change_request","change_request")]
+    
     task_id = models.CharField(max_length=191)
     po = models.ForeignKey(PurchaseOrder,related_name="po_task",on_delete=models.CASCADE,null=True)
     assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
-    #step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
+    # step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
     #        related_name="po_step")
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
         related_name="po_source_lang")
@@ -84,6 +89,8 @@ class POTaskDetails(models.Model):
     unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
     total_amount = models.DecimalField(max_digits=12, decimal_places=4)
     tsk_accepted = models.BooleanField(default=False)
+    assign_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
+    reassigned = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.total_amount:
@@ -100,6 +107,7 @@ class POTaskDetails(models.Model):
         return formatNumber(self.unit_price)
 
 post_save.connect(change_po_status, sender=POTaskDetails)
+# post_save.connect(update_po_file, sender=POTaskDetails)
 
 def invoice_dir_path(instance, filename):
     #return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)
