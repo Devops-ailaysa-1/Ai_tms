@@ -2422,6 +2422,7 @@ def paraphrasing_for_non_english(request):
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         print("Resp--------->",result_prompt)
         para_sentence = result_prompt["choices"][0]["message"]["content"]
+        #para_sentence = re.search(r'(?:.*:\s*)?(.*)$', result).group(1).strip()
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)

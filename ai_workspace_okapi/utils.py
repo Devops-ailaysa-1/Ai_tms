@@ -506,35 +506,22 @@ def get_general_prompt(opt,sent):
     return prompt
 
 def get_prompt(opt,sent):#,subs,cont):
+    # subs,cont =[],[]
     # if subs == []:subs_str = 'English language'
     # else: subs_str =  ', '.join(subs)
     # if cont == []:cont_str = 'easy-to-understand content'
     # else: cont_str = ', '.join(cont)
     if opt == "Rewrite":
-        if len(sent)<=20:
-            prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+        # if len(sent)<=20:
+        #     prompt = '''Rewrite the given text. Text: {} '''.format(sent)
 
-        elif len(sent)>200:
+        if len(sent)>200:
+            prompt = '''Split the following text into multiple simple sentences: 
+                        {}'''.format(sent)
 
-            prompt = '''Act as an English language expert, convert this lengthy complex or compound sentence into two or three simple sentences, without affecting the meaning or flow of the sentence. Also, if the sentences contain any idioms, phrases or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone. Text: {} 
-                        [FINAL RESULT] '''.format(sent)
-            
-            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
-            #         1. Split the given sentence into multiple sentences.
-            #         2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-            #         3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-            #         If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-            #         Text: {} 
-            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
         else:
-            prompt = '''Act as an English language expert, check if the provided text contains any idioms, phrases or phrasal verbs. If so, rewrite it using more straightforward words without altering the meaning or tone. Text: {} 
-                        [FINAL RESULT] '''.format(sent)
-            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
-            #         1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-            #         2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-            #         If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-            #         Text: {} 
-            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
+            prompt = '''Paraphrase the given text: {} '''.format(sent)
+
     
     elif opt == "Simplify":
         prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
@@ -577,3 +564,24 @@ def get_prompt(opt,sent):#,subs,cont):
     #             Content Types: {} 
     #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
     # else:
+
+
+            # prompt = '''Act as an English language expert, convert this lengthy complex or compound sentence into two or three simple sentences, without affecting the meaning or flow of the sentence. Also, if the sentences contain any idioms, phrases or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone. Please provide the final rewritten text without any prefix.
+            # Text: {} '''.format(sent)
+            
+            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
+            #         1. Split the given sentence into multiple sentences.
+            #         2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+            #         3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+            #         If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
+            #         Text: {} 
+            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
+
+                        # prompt = '''Act as an English language expert, check if the provided text contains any idioms, phrases or phrasal verbs. If so, rewrite it using more straightforward words without altering the meaning or tone, otherwise just rewrite it. Please provide the final rewritten text without any prefix.
+            # Text: {} '''.format(sent)
+            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
+            #         1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
+            #         2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
+            #         If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
+            #         Text: {} 
+            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
