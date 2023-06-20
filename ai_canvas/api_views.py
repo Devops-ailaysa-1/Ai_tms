@@ -727,7 +727,8 @@ params = {
 
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
-
+from django.core.paginator import Paginator
+from django.http import HttpResponse
 def req_thread(category):
     params['q']=category
     params['catagory']=category
@@ -738,12 +739,15 @@ def req_thread(category):
 @permission_classes([IsAuthenticated])
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
- 
+    page=request.query_params.get('page')
+     
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     data=[]
     if image_category_name:
         pass
-         
+    items_per_page = 6
+
+
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(req_thread,image_cats))
  
@@ -752,9 +756,13 @@ def image_list(request):
         for j in hit['hits']:
             img_urls.append({'preview_img':j['previewURL'],'id':j['id'] })
         data.append({'category':image_cat,'images':img_urls})
-    
-    return Response({'image_list':data},status=200)
+ 
+    paginate=Paginator(data,items_per_page) 
+    fin_dat=paginate.get_page(page)
+    return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': fin_dat.has_next(),
+                    'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
 
             
             
-            
+ 
+    
