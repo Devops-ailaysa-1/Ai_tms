@@ -1225,11 +1225,16 @@ class TaskView(APIView):
             elif task.file:
                 if os.path.splitext(task.file.filename)[1] == ".pdf":
                     task.file.delete()
-                task.delete()
-            else:
                 if task.document:
                     task.document.delete()
                 task.delete()
+            # else:
+            #     print("333333333333333")
+            #     if task.document:
+            #         print("Inside--------->",task.document)
+            #         task.document.delete()
+            #     print("Outside")
+            #     task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
