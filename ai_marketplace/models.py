@@ -239,7 +239,8 @@ class BidPropasalDetails(models.Model):
     @property
     def filename(self):
         if self.sample_file:
-            return  os.path.basename(self.sample_file.file.name)
+            try:return os.path.basename(self.sample_file.file.name)
+            except: return None
         else:
             return None
 
