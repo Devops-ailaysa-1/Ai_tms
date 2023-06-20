@@ -726,26 +726,32 @@ params = {
         }
 
 from ai_staff.models import ImageCategories
+from concurrent.futures import ThreadPoolExecutor
+
+def req_thread(category):
+    params['q']=category
+    params['catagory']=category
+    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+    return pixa_bay 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def image_list(request):
-    image_category_id=request.query_params.get('image_category_id')
-    image_cats=list(ImageCategories.objects.all().values('category'))
+    image_category_name=request.query_params.get('image_category_name')
+ 
+    image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     data=[]
-    if image_category_id:
-        cat=ImageCategories.objects.get(id=image_category_id).category
-        
-    for image_cat in image_cats:
-        params['q']=image_cat['category']
-        params['catagory']=image_cat['category']
-        
-        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+    if image_category_name:
+        pass
+         
+    with ThreadPoolExecutor() as executor:
+        results = list(executor.map(req_thread,image_cats))
+ 
+    for hit,image_cat in zip(results,image_cats):
         img_urls=[]
-        for hit in pixa_bay['hits']:
-            img_urls.append({'preview_img':hit['previewURL'],'id':hit['id'] })
-
-        image_cat['images']=img_urls
-        data.append(image_cat)
+        for j in hit['hits']:
+            img_urls.append({'preview_img':j['previewURL'],'id':j['id'] })
+        data.append({'category':image_cat,'images':img_urls})
     
     return Response({'image_list':data},status=200)
 
