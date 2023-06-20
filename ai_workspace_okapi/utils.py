@@ -505,30 +505,49 @@ def get_general_prompt(opt,sent):
 
     return prompt
 
-def get_prompt(opt,sent):#,subs,cont):
-    # subs,cont =[],[]
-    # if subs == []:subs_str = 'English language'
-    # else: subs_str =  ', '.join(subs)
-    # if cont == []:cont_str = 'easy-to-understand content'
-    # else: cont_str = ', '.join(cont)
+
+def get_prompt(opt,sent):
+
     if opt == "Rewrite":
-        # if len(sent)<=20:
-        #     prompt = '''Rewrite the given text. Text: {} '''.format(sent)
-
         if len(sent)>200:
-            prompt = '''Split the following text into multiple simple sentences: 
-                        {}'''.format(sent)
-
+            prompt = '''Split the following text into multiple simple sentences. Also, if the sentences contain any idioms or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone:
+                {}'''.format(sent)
         else:
             prompt = '''Paraphrase the given text: {} '''.format(sent)
-
-    
     elif opt == "Simplify":
         prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
 
     elif opt == "Shorten":
         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
     return prompt
+
+
+
+
+# def get_prompt(opt,sent):#,subs,cont):
+#     # subs,cont =[],[]
+#     # if subs == []:subs_str = 'English language'
+#     # else: subs_str =  ', '.join(subs)
+#     # if cont == []:cont_str = 'easy-to-understand content'
+#     # else: cont_str = ', '.join(cont)
+#     if opt == "Rewrite":
+#         # if len(sent)<=20:
+#         #     prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+
+#         if len(sent)>200:
+#             prompt = '''Split the following text into multiple simple sentences: 
+#                         {}'''.format(sent)
+
+#         else:
+#             prompt = '''Paraphrase the given text: {} '''.format(sent)
+
+    
+#     elif opt == "Simplify":
+#         prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
+
+#     elif opt == "Shorten":
+#         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+#     return prompt
 
     # if subs == []:
     #     subs = 'English language'
