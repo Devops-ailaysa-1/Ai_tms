@@ -1914,10 +1914,12 @@ class AssignToListView(viewsets.ModelViewSet):
         #authorize(request, resource=pro, actor=request.user, action="read")
         if reassign:
             user = self.request.user.team.owner if self.request.user.team else self.request.user
+            serializer = GetAssignToSerializer(user,context={'request':request,'pro_user':pro.ai_user})
         else:
             user =pro.ai_user   
+            serializer = GetAssignToSerializer(user,context={'request':request})
         print("User----------->",user) 
-        serializer = GetAssignToSerializer(user,context={'request':request})
+        #serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 
 # class IntegerationProject(viewsets.ViewSet):
