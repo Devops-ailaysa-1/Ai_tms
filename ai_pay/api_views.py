@@ -560,10 +560,11 @@ def po_modify(task_assign_info_id,po_update):
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
                 if update_task_po(instance,po_task_obj)==False:
                     raise ValueError("updating task po failed")
-            if 'currency_change' in po_update:
-                pass
-            else:
-                return True
+            return True
+            # if 'currency_change' in po_update:
+            #     pass
+            # else:
+            #     return True
 
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id} for accepted_rate_by_owner,ERROR:{str(e)}")
