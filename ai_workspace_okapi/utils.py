@@ -510,7 +510,7 @@ def get_prompt(opt,sent):
 
     if opt == "Rewrite":
         if len(sent)>200:
-            prompt = '''Split the following text into multiple simple sentences. Also, if the sentences contain any idioms or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone:
+            prompt = '''Split the following text into multiple simple sentences:
                 {}'''.format(sent)
         else:
             prompt = '''Paraphrase the given text: {} '''.format(sent)
