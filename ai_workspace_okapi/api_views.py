@@ -409,6 +409,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 else:
                     return Response(document,status=400)
 
+
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
     def get_object(document_id):
@@ -416,19 +417,122 @@ class DocumentViewByDocumentId(views.APIView):
         document = get_object_or_404(docs, id=document_id)
         return  document
 
+
+    def edit_allow_check(self, task_obj, given_step):
+        given_step = int(given_step) if given_step else None
+        print("GivenStep------>",given_step, type(given_step))
+        from ai_workspace.models import Task, TaskAssignInfo
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
+        #task_obj = Task.objects.get(document_id=instance.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+        print("TaskassignedInfo------->",task_assigned_info)
+        if not task_assigned_info:return True
+        assigners = [i.task_assign.assign_to for i in task_assigned_info]
+        print("Assigners----------->",assigners)
+        if user not in assigners:
+            print("Not in assigners")
+            query = task_assigned_info.filter(task_assign__reassigned=False)
+            reassigns = task_assigned_info.filter(task_assign__reassigned=True)
+            print("QR--------->",query.count(),query.first().task_assign.step_id,query.first().task_assign.status)
+            if query.count() == 1 and query.first().task_assign.step_id == 2:
+                editor = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                if editor.status == 3 and query.first().task_assign.status in [1,2]:edit_allowed = False
+                else:edit_allowed = True
+            else:
+                print("Inside else")
+                if query.count() == 1 and query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:
+                    print("Inside else if")
+                    edit_allowed =True
+                else:
+                    print("Inside else Else")
+                    status = [i.task_assign.status for i in query]
+                    print("st------>",status)
+                    if all(i == 3 or i == 4 for i in status):edit_allowed =True
+                    else:edit_allowed = False
+            print("ED-------->",edit_allowed)
+            return edit_allowed
+        else:
+            print("In assigners")
+            if user.is_agency:
+                task_assign_query = task_assigned_info.filter(Q(task_assign__assign_to=user)).filter(task_assign__reassigned=False)
+                tsq = task_assign_query.distinct('task_assign__step').count()
+                print("Tsq---------->",tsq)
+                if tsq == 2:
+                    task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+                    task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign if given_step != 1 else None
+                    reassigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj,task_assign__step_id = given_step,task_assign__reassigned=True)
+                    task_assign_reassigns = reassigns.first().task_assign if reassigns else None
+                else:
+                    task_assign_ins = task_assign_query.first().task_assign
+                    if task_assign_ins.step_id == 2:    
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                    else:
+                        task_assign_another_assign = None
+                    reassigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj,task_assign__step = task_assign_ins.step,task_assign__reassigned=True)
+                    task_assign_reassigns = reassigns.first().task_assign if reassigns else None
+            else:
+                task_assign_query = task_assigned_info.filter(Q(task_assign__assign_to=user))
+                task_assign_ins = task_assign_query.first().task_assign
+                task_assign_another_assign_query = task_assigned_info.filter(task_assign__reassigned=task_assign_ins.reassigned)\
+                                            .filter(~Q(task_assign__assign_to=user))
+                print("TASQ--------->",task_assign_another_assign_query)
+                if task_assign_another_assign_query:
+                    task_assign_another_assign = task_assign_another_assign_query.first().task_assign
+                    print("TAS------------>",task_assign_another_assign)
+                else:
+                    if task_assign_ins.step_id == 2:
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                    else:task_assign_another_assign = None
+                task_assign_reassigns = None 
+        task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
+        task_assign_another_assign_status = task_assign_another_assign.status if task_assign_another_assign else 0
+        print("TaskAssignIns------------->",task_assign_ins)
+        print("TaskAssignInsStep----------->",task_assign_ins.step)
+        print("TaskAssignInsStatus----------->",task_assign_ins.status)
+        print("TaskAssignAnotherAssignStatus--------->",task_assign_another_assign_status)
+        print("TaskReassignStatus------------>",task_assign_reassigns_status)
+        if task_assign_ins.step_id == 1 and task_assign_ins.status in [1,2]:
+            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or (user.is_agency and task_assign_another_assign_status in [1,2]):#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
+                edit_allowed = False
+            else:edit_allowed = True
+        elif task_assign_ins.step_id == 1 and task_assign_ins.status in [3,4]:
+            edit_allowed =False
+        elif task_assign_ins.step_id == 2 and ((task_assign_ins.status in [3,4]) or task_assign_another_assign_status in [2,1,4]):
+            edit_allowed = False
+        elif task_assign_ins.step_id == 2 and task_assign_ins.status in [1,2]:
+            if task_assign_reassigns and task_assign_reassigns_status in [1,2]:
+                edit_allowed = False
+            else:edit_allowed = True
+        else:edit_allowed = True
+        print("EditAllowed---------->",edit_allowed)
+        return edit_allowed  
+            
+
     def get(self, request, document_id):
+        if request.GET:
+            given_step = request.GET.get('step_id',None) 
+        else:
+            given_step = None
         document = self.get_object(document_id)
         mt_enable = document.job.project.mt_enable
+        task = Task.objects.get(document=document)
+        edit_allowed = self.edit_allow_check(task,given_step)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
+        assigned_users = [i.assign_to for i in Task.objects.get(document=document).task_info.all() if i.assign_to.is_agency]
+        assigned_users = [*set(assigned_users)]
+        assigned_users.extend([j.team.get_project_manager for j in assigned_users if j.team and j.team.get_project_manager]) 
+        print("Assigned---------->",assigned_users)
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
         except:managers =[]
+        assign_enable = True if (request.user == doc_user) or (request.user in managers) else False
         # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
-        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-        dict_2 = {'mt_enable':mt_enable}
+        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) or (request.user in assigned_users) else {'updated_download':'disable'}
+        dict_2 = {'mt_enable':mt_enable,'task_id':task.id,'assign_enable':assign_enable,'edit_allowed':edit_allowed}
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
@@ -671,22 +775,27 @@ class SegmentsUpdateView(viewsets.ViewSet):
             logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
-    def edit_allowed_check(self, instance):
-        from ai_workspace.models import Task, TaskAssignInfo
-        user = self.request.user
-        task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
-        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
-        assigners = [i.task_assign.assign_to for i in task_assigned_info]
-        if user not in assigners:
-            edit_allowed = True
-        else:
-            try:
-                task_assign_status = task_assigned_info.filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign.status
-                edit_allowed = False if task_assign_status == 2 else True
-            except:
-                edit_allowed = True
-        return edit_allowed
+    # def edit_allowed_check(self, instance):
+    #     from ai_workspace.models import Task, TaskAssignInfo
+    #     user = self.request.user
+    #     task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
+    #     task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+    #     assigners = [i.task_assign.assign_to for i in task_assigned_info]
+    #     if user not in assigners:
+    #         edit_allowed = True
+    #     else:
+    #         try:
+    #             task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
+    #             if task_reassign:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             else:
+    #                 task_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(
+    #                 ~Q(task_assign__assign_to=user)).first().task_assign
+    #             edit_allowed = True if task_assign.step_id == 2 and task_assign.status == 2 else False
+    #         except:
+    #             edit_allowed = True
+    #     return edit_allowed
 
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
@@ -697,16 +806,28 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def split_update(self, request_data, segment):
-
-        status_obj = TranslationStatus.objects.filter(status_id=request_data["status"]).first()
-        segment.status = status_obj
-
+        print("Seg---------->",segment)
+        org_segment = SplitSegment.objects.get(id=segment.id).segment_id
+        status = request_data.get("status",None)
+        if status:
+            status_obj = TranslationStatus.objects.filter(status_id=status).first()
+            segment.status = status_obj
+            if status not in [109,110]:step = 1
+            else:step=2
+        else: 
+            step = None
+            status_obj = segment.status
+        content = request_data['target'] if "target" in request_data else request_data['temp_target']
+        existing_step = 1 if segment.status_id not in [109,110] else 2 
+        seg_his_create = True if segment.temp_target!=content or existing_step != step else False
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
-        else:
-            segment.temp_target = request_data["temp_target"]
+        else:segment.temp_target = request_data["temp_target"]
         segment.save()
+        print("Seg His Create--------------->",seg_his_create)
+        if seg_his_create:
+            SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         return Response(SegmentSerializerV2(segment).data, status=201)
 
     def partial_update(self, request, *args, **kwargs):
@@ -730,9 +851,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 else:
                     data={}
                 authorize(request, resource=segment, actor=request.user, action="read")
-                edit_allow = self.edit_allowed_check(segment)
-                if edit_allow == False:
-                    return Response({"msg": "Someone is working already.."}, status=400)
+                # edit_allow = self.edit_allowed_check(segment)
+                # if edit_allow == False:
+                #     return Response({"msg": "Someone is working already.."}, status=400)
 
                 # Segment update for a Split segment
                 if segment.is_split == True:
@@ -760,9 +881,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
         authorize(request, resource=segment, actor=request.user, action="read")
-        edit_allow = self.edit_allowed_check(segment)
-        if edit_allow == False:
-            return Response({"msg": "Someone is working already.."}, status=400)
+        # edit_allow = self.edit_allowed_check(segment)
+        # if edit_allow == False:
+        #     return Response({"msg": "Someone is working already.."}, status=400)
 
         # Segment update for a Split segment
         if segment.is_split == True:
@@ -783,11 +904,11 @@ class MT_RawAndTM_View(views.APIView):
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-        if get_plan_name(debit_user) != "Business" or 'Pay-As-You-Go':
+        if get_plan_name(debit_user) not in settings.TEAM_PLANS:
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user) == "Business" or 'Pay-As-You-Go') and \
+            (get_plan_name(debit_user) in settings.TEAM_PLANS) and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             return {}, 424, "cannot_translate"
@@ -1446,6 +1567,8 @@ class DocumentToFile(views.APIView):
         res_paths = get_res_path(task_data["source_language"])
 
         print("data---------->",json.dumps(data))
+        with open("sample.json", "w") as outfile:
+            outfile.write(json.dumps(data))
         print("req_res_params--------->",json.dumps(res_paths))
         print('req_params------>',json.dumps(params_data))
 
@@ -2232,12 +2355,91 @@ def spellcheck(request):
 def get_segment_history(request):
     seg_id = request.GET.get('segment')
     try:
-        obj = Segment.objects.get(id=seg_id)
-        history = obj.segment_history.all().order_by('-id')
+        if split_check(seg_id):
+            obj = Segment.objects.get(id=seg_id)
+            history = obj.segment_history.all().order_by('-id') 
+        else:
+            obj = SplitSegment.objects.filter(id=seg_id).first()
+            history = obj.split_segment_history.all().order_by('-id') 
+        #obj = Segment.objects.get(id=seg_id)
+        #history = obj.segment_history.all().order_by('-id') 
         ser = SegmentHistorySerializer(history,many=True)
-        return Response(ser.data)
+        data_ser=ser.data
+        data=[i for i in data_ser if dict(i)['segment_difference']]
+        return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
+
+
+
+
+
+
+def get_src_tags(sent):
+    opening_tags = re.findall(r"<(\d+)>", sent)
+    closing_tags = re.findall(r"</(\d+)>", sent)
+
+    opening_result = ''.join([f"<{tag}>" for tag in opening_tags])
+    closing_result = ''.join([f"</{tag}>" for tag in closing_tags])
+
+    result = opening_result + closing_result
+
+    print("Combined result:", result)
+
+    return result
+
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from .utils import get_prompt
+from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+
+@api_view(['POST',])############### only available for english ###################
+def paraphrasing_for_non_english(request):
+    from ai_staff.models import Languages
+    from ai_workspace.api_views import get_consumable_credits_for_text
+    from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
+    sentence = request.POST.get('source_sent')
+    target_lang_id = request.POST.get('target_lang_id')
+    doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
+    doc_obj = Document.objects.get(id=doc_id)
+    project = doc_obj.job.project
+    user = doc_obj.doc_credit_debit_user
+    #subj_fields =  [i.subject.name for i in project.proj_subject.all()]
+    #content_fields = [i.content_type.name for i in project.proj_content_type.all()]
+    target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
+    
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    
+    tags = get_src_tags(sentence) 
+    clean_sentence = re.sub('<[^<]+?>', '', sentence)
+    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+    if initial_credit >= consumable_credits_user_text:
+        prompt = get_prompt(option,clean_sentence)#,subj_fields,content_fields) 
+        print("Pr--------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+        print("Resp--------->",result_prompt)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]
+        #para_sentence = re.search(r'(?:.*:\s*)?(.*)$', result).group(1).strip()
+        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
+        if initial_credit >= consumable_credits_to_translate:
+            rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+        prompt_usage = result_prompt['usage']
+        total_token = prompt_usage['total_tokens']
+        consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+        print("Tsg------->",tags)
+        return Response({'result':rewrited ,'tag':tags})
+    else:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
 ####################################################### Hemanth #########################################################
 
 # @api_view(['POST',])############### only available for english ###################
@@ -2246,35 +2448,36 @@ def get_segment_history(request):
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+from .utils import get_general_prompt
 
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
-    user = request.user
+    doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
+    doc_obj = Document.objects.get(id=doc_id)
+    user = doc_obj.doc_credit_debit_user
+    #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     
-    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
+        prompt = get_general_prompt(option,clean_sentence)
+        print("Prompt------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
-        # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        # for i in range(len(para_sentence)):
-        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
-        if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
-        print("tag-->",tag_names)
-        return Response({'paraphrase':[para_sentence] ,'tag':tag_names})
+        print("tag-->",tags)
+        return Response({'result':para_sentence ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2319,6 +2522,10 @@ def get_word_api(request):
     result = requests.post(end_pts , data )
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'})
+
+from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+
+
 
 # headers = {
 #     "X-RapidAPI-Key": os.getenv("X-RapidAPI-Key"),
@@ -2567,5 +2774,127 @@ def get_tags(seg):
     else:
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
+
+
+from ai_workspace_okapi.serializers import SegmentDiffSerializer
+from django.http import Http404
+from ai_staff.models import Languages
+from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+from ai_workspace_okapi.utils import do_compare_sentence
+from django.db.models.signals import post_save 
+
+class SelflearningAssetViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get_object(self, pk):
+        try:
+            return SelflearningAsset.objects.get(id=pk)
+        except SelflearningAsset.DoesNotExist:
+            raise Http404
+
+    def create(self,request):
+        serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def list(self, request):
+        target_language=request.query_params.get('target_language', None)
+        if target_language:
+            target_language=Languages.objects.get(id=target_language)
+            queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+        else:
+            queryset = SelflearningAsset.objects.filter(user=request.user.id)
+        serializer=SelflearningAssetSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj)
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+
+class SegmentDiffViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get_object(self, pk):
+        try:
+            return SegmentDiff.objects.get(id=pk)
+        except SegmentDiff.DoesNotExist:
+            raise Http404
+
+
+def update_self_learning(sender, instance, *args, **kwargs):
+    user=instance.user
+    language=instance.segment.text_unit.document.job.target_language
+    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+    if hasattr(instance.segment,'seg_mt_raw'):
+        target_segment =instance.segment.seg_mt_raw.mt_raw  
+    else:target_segment=''
+    
+    edited_segment=instance.target
+
+    # if instance.status.status_id==104:
+    if edited_segment and target_segment:
+        diff_words=do_compare_sentence(target_segment,edited_segment,sentense_diff=False)
+        if diff_words:
+            for diff_word in diff_words:
+                self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
+                if not self_learn_filter:
+                    SelflearningAsset.objects.create(user=user,source_word=diff_word[0],edited_word=diff_word[1],
+                                                    target_language=language)
+                if self_learn_filter:
+                    self_learn_filter.update(source_word=diff_word[0],edited_word=diff_word[1])
+            print("diff_words--->",diff_words)
+        else:
+            print("no_diff")
+    else:
+        print("no_seg and no_tar")
+
+
+# post_save.connect(update_self_learning, sender=SegmentHistory)
+
+
+
+def segment_difference(sender, instance, *args, **kwargs):
+    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+    #from current segment
+    edited_segment=''
+    target_segment=''
+    if len(seg_his)>=2:
+        edited_segment=seg_his.last().target
+        target_segment=seg_his[len(seg_his)-2].target
+    elif len(seg_his)==1:
+        if hasattr(instance.segment,'seg_mt_raw'):
+            target_segment =instance.segment.seg_mt_raw.mt_raw  
+        else:target_segment=instance.temp_target
+        # target_segment=instance.segment.seg_mt_raw.mt_raw
+        edited_segment=instance.target
+ 
+    print('edited_segment',edited_segment , 'target_segment',target_segment )
+    if edited_segment and target_segment:
+        print('edited_segment',edited_segment , 'target_segment',target_segment )
+        edited_segment=remove_tags(edited_segment)
+        target_segment=remove_tags(target_segment)
+        if edited_segment != target_segment:
+            diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+            if diff_sentense:
+                result_sen,save_type=diff_sentense
+                if result_sen.strip()!=edited_segment.strip():
+                    SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                    print("seg_diff_created")
+
+post_save.connect(segment_difference, sender=SegmentHistory)
+
+
+
+
+
 
 

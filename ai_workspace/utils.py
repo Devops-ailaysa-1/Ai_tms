@@ -87,11 +87,13 @@ def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum bill
 
 def task_assing_role_ls(task_assign_info_ls):
 	from ai_auth.signals import assign_object
+	from ai_auth.utils import get_assignment_role
 	from ai_workspace.models import TaskAssignInfo
 	from ai_workspace.models import AiRoleandStep
 	objs = TaskAssignInfo.objects.filter(id__in=task_assign_info_ls)
 	for instance in objs:
-		role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
+		role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned)
+		# role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
 		assign_object.send(
 			sender=TaskAssignInfo,
 			instance = instance,

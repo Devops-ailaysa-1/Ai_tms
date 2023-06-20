@@ -111,8 +111,9 @@ def task_assign_detail_mail(Receiver,assignment_id):
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"billable_char_count":billable_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
     print("FileDetail----------------->",file_detail)
+    work = 'Post Editing' if ins.task_assign.step.id == 1 else 'Reviewing' 
     context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
-    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y') if ins.deadline else None}
+    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y') if ins.deadline else None, 'work':work}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(
         "Regarding Assigned Task Detail Info",None,
@@ -125,7 +126,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
 
 
 def task_assign_ven_status_mail(task_assign,task_ven_status):
-    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project}
+    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'step':task_assign.step.name,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project}
     email = task_assign.task_assign_info.assigned_by.email
 
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
@@ -136,3 +137,6 @@ def task_assign_ven_status_mail(task_assign,task_ven_status):
         html_message=msg_html,
     )
     print("assign vendor status-->>>")
+
+
+

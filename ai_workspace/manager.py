@@ -239,7 +239,7 @@ class TaskAssignManager(models.Manager):
         copy_paste_enable = project.copy_paste_enable
         print("Inside Manager---------->",pre_translate)
         print("Inside---->",steps)
-        task_assign = [self.get_or_create(task=task,step=step,\
+        task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
                          "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
                         for task in tasks for step in steps]

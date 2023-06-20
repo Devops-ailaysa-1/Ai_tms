@@ -22,6 +22,7 @@ from datetime import datetime,date,timedelta
 from django.db.models.constraints import UniqueConstraint
 from simple_history.models import HistoricalRecords
 from ai_openai.signals import text_gen_credit_deduct
+from django.conf import settings
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -36,6 +37,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     from_mysql = models.BooleanField(default=False)
     deactivate = models.BooleanField(default=False)
     is_vendor = models.BooleanField(default=False)
+    is_agency = models.BooleanField(default=False)
     is_internal_member = models.BooleanField(default=False)
     currency_based_on_country = models.ForeignKey(Currencies,related_name='aiuser_country_based_currency',
         on_delete=models.CASCADE,blank=True, null=True)
@@ -59,6 +61,16 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
 
+    @property
+    def agency(self):
+        if self.is_agency == True:
+            return True
+        else:
+            if self.team and self.team.owner.is_agency == True and self in self.team.get_project_manager:
+                return True
+            else:
+                return False               
+
 
     @property
     def internal_member_team_detail(self):
@@ -66,7 +78,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             obj = InternalMember.objects.get(internal_member_id = self.id)
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
-            if plan == "Business" or 'Pay-As-You-Go':
+            if plan in settings.TEAM_PLANS:
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"True"}
             else:
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"False"}
@@ -77,12 +89,12 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
             plan = get_plan_name(obj.team.owner)
-            return obj.team if plan == "Business" or 'Pay-As-You-Go' else None
+            return obj.team if plan in settings.TEAM_PLANS else None
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
                 plan = get_plan_name(self)
-                return team if plan == "Business" or 'Pay-As-You-Go' else None
+                return team if plan in settings.TEAM_PLANS else None
             except:
                 return None
 

@@ -461,8 +461,6 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
 
-
-
 # DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
 # DOCX_URL = '/output_docx/'
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
@@ -472,6 +470,7 @@ OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
+TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
 
 
 

@@ -56,6 +56,7 @@ class Ai_PdfUpload(models.Model):
     docx_file_from_writer = models.FileField(upload_to=edited_file_path  , blank=True, null=True)
     html_data =  models.TextField(null=True,blank=True)
     translation_task_created = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'pdf_created_by')
 
     def save(self, *args, **kwargs):
