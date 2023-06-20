@@ -222,3 +222,4 @@ newrelic
 backoff==2.2.1
 quickemailverification
 tiktoken==0.4.0
+ptvsd

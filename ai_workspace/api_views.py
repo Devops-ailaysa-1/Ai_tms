@@ -4316,3 +4316,15 @@ class ToolkitList(viewsets.ModelViewSet):
         ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
         response = self.get_paginated_response(ser.data)
         return response
+    
+
+from nltk import word_tokenize
+from ai_workspace_okapi.models import SelflearningAsset,    Segment
+from ai_auth.models import AiUser 
+def token():
+  segment=get_object_or_404(Segment,id=1)
+  
+
+
+
+
