@@ -533,7 +533,7 @@ def find_taxrate(user,trial=False):
         if user.country.sortname == 'IN':
             addr=BillingAddress.objects.get(user=user)
             print(addr.state)
-            state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            state = IndianStates.objects.filter(Q(state_name__icontains=addr.state)|Q(state_code__contains=addr.state))
             if state.exists() and state.first().state_code == 'TN':
                 tax_rate=[TaxRate.objects.filter(display_name = 'CGST').last().id,TaxRate.objects.filter(display_name = 'SGST').last().id]
             elif state.exists():
