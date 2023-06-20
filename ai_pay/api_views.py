@@ -438,7 +438,7 @@ def generate_client_po(task_assign_info):
         instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
         assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
         if instance.task_assign.reassigned:
-            if instance.task_assign.team:
+            if instance.assigned_by.team:
                 client = instance.assigned_by.team.owner
             else:
                 client = instance.assigned_by

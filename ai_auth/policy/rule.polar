@@ -490,10 +490,7 @@ resource ai_workspace_okapi::Comment{
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
 
-    "read" if "Agency Editor";
-    "create" if "Agency Project owner";
-    "update" if "Agency Project owner";
-    "delete" if "Agency Project owner";
+    "Editor" if "Agency Editor";
     "Editor" if "Agency Project owner";
     "Editor" if "Agency Reviewer";
     "Agency Project owner" if "Agency Admin";
