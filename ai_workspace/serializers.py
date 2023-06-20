@@ -1452,8 +1452,25 @@ class GetAssignToSerializer(serializers.Serializer):
 		return tt
 
 	def get_external_editors(self,obj):
-		request = self.context['request']
+		request = self.context.get('request')
+		pro_user = self.context.get('pro_user',None)
 		job_id= request.query_params.get('job',None)
+		tt=[]
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		print("qs_--------------->",qs_)
+		print("pro_user-------------->",pro_user)
+		if pro_user:
+			qs_ = qs_.exclude(hired_editor = pro_user)
+		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:# and i.get('id') not in assigners:
+				tt.append(i)
+		return tt
+
+
+
+
 		# if job_id:
 		# 	job_obj = Job.objects.get(id=job_id)
 		# 	task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
@@ -1461,15 +1478,6 @@ class GetAssignToSerializer(serializers.Serializer):
 		# 	assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
 		# 	print("Assigners----------->",assigners)
 		# else:assigners=[]
-		tt=[]
-		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
-		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
-		for i in ser:
-			if i.get("vendor_lang_pair")!=[]:# and i.get('id') not in assigners:
-				tt.append(i)
-		return tt
-
 	# def get_suggestions(self,obj):
 	# 	try:
 	# 		default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
