@@ -3088,7 +3088,7 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
     lang_code = obj.job.source_language_code
     lang_list = ['hi','bn','or','ne','pa']
     lang_list_2 = ['zh-Hans','zh-Hant','ja']
-    exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
+    exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id)
     if not exp_src_obj:
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_text(src_text,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
@@ -3097,7 +3097,7 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         print("Created")
         return None
-    vers = exp_src_obj.version
+    vers = exp_src_obj.last().version
     for i,j  in enumerate(split_text):
         if lang_code in lang_list_2:
             sents = cust_split(j)
@@ -3493,8 +3493,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
         query = self.request.GET.get('doc_name')
         ordering = self.request.GET.get('ordering')
         user = self.request.user
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        project_managers = user.team.get_project_manager if user.team else []
+        owner = user.team.owner if (user.team and user in project_managers) else user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
@@ -3516,8 +3516,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
         
     def get_queryset_for_combined(self):
         user = self.request.user
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        project_managers = user.team.get_project_manager if user.team else []
+        owner = user.team.owner if (user.team and user in project_managers) else user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
