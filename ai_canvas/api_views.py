@@ -731,53 +731,63 @@ from django.core.paginator import Paginator
 import uuid
 import urllib.request
 from django import core 
-def req_thread(category):
+def req_thread(category,page):
     params['q']=category
     params['catagory']=category
+    if page:
+        params['page']=page
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
     return pixa_bay 
+
+def pixa_image_url(image_url):
+    opener=urllib.request.build_opener()
+    opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
+    urllib.request.install_opener(opener)
+    im =urllib.request.urlopen(image_url).read()
+    image_file =core.files.File(core.files.base.ContentFile(im),str(uuid.uuid1())+'.'+image_url.split('/')[-1].split('.')[-1])
+    return image_file
+
+
+def process_pixabay(results,image_cats):
+    data=[]
+    if image_cats:
+        for hit,image_cat in zip(results,image_cats):
+            img_urls=[]
+            for j in hit['hits']:
+                img_urls.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
+            data.append({'category':image_cat,'images':img_urls})
+    else:
+        for j in hit['hits']:
+            data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
+    return data
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
-     
     image_url=request.query_params.get('image_url')
-
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
-    data=[]
-    items_per_page = 6
-    if image_category_name:
-        pass
+
+ 
+    if image_category_name and page:
+        image_cat_see_all=req_thread(image_category_name,page)
+        res=process_pixabay(image_cat_see_all)
+        return Response({'image_category_name':image_category_name , 'image_list':res},status=200)
+
     if image_url:
-        opener=urllib.request.build_opener()
-        opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
-        urllib.request.install_opener(opener)
-        # retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
-        # x=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
-        im =urllib.request.urlopen(image_url)
-        image_data = im.read()
-        # pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
-        # image=convert_image_url_to_file(pixa_img_url)
-        image_name = uuid.uuid1()
-        image_file =core.files.File(core.files.base.ContentFile(image_data),str(image_name)+'.'+image_url.split('/')[-1].split('.')[-1])
+        image_file=pixa_image_url(image_url)
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(req_thread,image_cats))
- 
-    for hit,image_cat in zip(results,image_cats):
-        img_urls=[]
-        for j in hit['hits']:
-            img_urls.append({'preview_img':j['previewURL'],'id':j['id'],
-                                            'tags':j['tags'], 'type':j['type'],
-                                            'user':j['user'],'imageurl':j['fullHDURL']})
-        data.append({'category':image_cat,'images':img_urls})
- 
-    paginate=Paginator(data,items_per_page) 
+
+    data=process_pixabay(results=results,image_cats=image_cats)
+    paginate=Paginator(data,6)  ###no of item in single page
     fin_dat=paginate.get_page(page)
+
+
     return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': fin_dat.has_next(),
                     'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
 
