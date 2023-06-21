@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate)
+                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,ThirdpartyImageMedium)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
@@ -749,15 +749,12 @@ def image_list(request):
 
 
     if image_id:
- 
         retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
         pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
         image=convert_image_url_to_file(pixa_img_url)
-        src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=None,img=image)
+        src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image)
         return Response({'image_url':HOST_NAME+src_img_assets_can.img.url},status=200)
     
-
-
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(req_thread,image_cats))
  
