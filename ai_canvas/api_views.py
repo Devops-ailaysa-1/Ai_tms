@@ -761,7 +761,7 @@ def image_list(request):
         # pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
         # image=convert_image_url_to_file(pixa_img_url)
         image_name = uuid.uuid1()
-        image_file =core.files.File(core.files.base.ContentFile(image_data), image_name+'.'+image_url.split('/')[-1].split('.')[-1])
+        image_file =core.files.File(core.files.base.ContentFile(image_data),str(image_name)+'.'+image_url.split('/')[-1].split('.')[-1])
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
