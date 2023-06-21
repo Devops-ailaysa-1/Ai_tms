@@ -2400,11 +2400,12 @@ def paraphrasing_for_non_english(request):
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
     doc_obj = Document.objects.get(id=doc_id)
     project = doc_obj.job.project
     user = doc_obj.doc_credit_debit_user
-    subj_fields =  [i.subject.name for i in project.proj_subject.all()]
-    content_fields = [i.content_type.name for i in project.proj_content_type.all()]
+    #subj_fields =  [i.subject.name for i in project.proj_subject.all()]
+    #content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
     initial_credit = user.credit_balance.get("total_left")
@@ -2415,11 +2416,12 @@ def paraphrasing_for_non_english(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt(clean_sentence,subj_fields,content_fields)
+        prompt = get_prompt(option,clean_sentence)#,subj_fields,content_fields) 
         print("Pr--------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         print("Resp--------->",result_prompt)
         para_sentence = result_prompt["choices"][0]["message"]["content"]
+        #para_sentence = re.search(r'(?:.*:\s*)?(.*)$', result).group(1).strip()
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
@@ -2430,7 +2432,7 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("Tsg------->",tags)
-        return Response({'paraphrase':rewrited ,'tag':tags})
+        return Response({'result':rewrited ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2445,7 +2447,7 @@ def paraphrasing_for_non_english(request):
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
-
+from .utils import get_general_prompt
 
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
@@ -2453,6 +2455,7 @@ def paraphrasing(request):
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
     doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
     doc_obj = Document.objects.get(id=doc_id)
     user = doc_obj.doc_credit_debit_user
     #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
@@ -2464,14 +2467,16 @@ def paraphrasing(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
+        prompt = get_general_prompt(option,clean_sentence)
+        print("Prompt------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("tag-->",tags)
-        return Response({'paraphrase':para_sentence ,'tag':tags})
+        return Response({'result':para_sentence ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 

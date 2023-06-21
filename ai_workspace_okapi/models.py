@@ -332,6 +332,8 @@ class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
     mt_raw = models.TextField(null=True, blank=True)
+
+
 class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\

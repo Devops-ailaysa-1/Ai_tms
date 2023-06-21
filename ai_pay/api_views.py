@@ -438,7 +438,11 @@ def generate_client_po(task_assign_info):
         instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
         assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
         if instance.task_assign.reassigned:
-            client = instance.assigned_by.team.owner
+            if instance.assigned_by.team:
+                client = instance.assigned_by.team.owner
+            else:
+                client = instance.assigned_by
+
         else:
             client = instance.task_assign.task.job.project.ai_user
 
@@ -550,14 +554,18 @@ def po_modify(task_assign_info_id,po_update):
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
-    if ('accepted_rate' in po_update) and ('assign_to' not in po_update):
+    if ('accepted_rate' in po_update or 'accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
                 if update_task_po(instance,po_task_obj)==False:
                     raise ValueError("updating task po failed")
             return True
-            
+            # if 'currency_change' in po_update:
+            #     pass
+            # else:
+            #     return True
+
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id} for accepted_rate_by_owner,ERROR:{str(e)}")
 
