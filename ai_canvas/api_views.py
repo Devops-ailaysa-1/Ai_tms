@@ -738,9 +738,16 @@ def req_thread(category=None,page=None,search=None):
         params['catagory']=category
     if page:
         params['page']=page
+        params['per_page']=20
 
     if search:
         params['q']=search
+        
+    if category and search:
+        params['catagory']=category
+        params['q']=search
+       
+    
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
     return pixa_bay 
 
@@ -761,10 +768,12 @@ def process_pixabay(**kwargs):
             for j in hit['hits']:
                 img_urls.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
             data.append({'category':image_cat,'images':img_urls})
+        return data
     if 'image_cat_see_all' in kwargs.keys():
+        total_page=kwargs['total']//20
         for j in kwargs['image_cat_see_all']['hits']:
             data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
-    return data
+        return data,total_page
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -775,15 +784,20 @@ def image_list(request):
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     search_image=request.query_params.get('search_image')
 
+    # if image_category_name and search_image:
+    #      res=req_thread(category=image_category_name,search=search_image)
+    #      res=process_pixabay(image_cat_see_all=res)
+    #      return Response({'ressult_for':search_image , 'image_list':res},status=200)
+
     if search_image:
         res=req_thread(search=search_image)
-        res=process_pixabay(image_cat_see_all=res)
-        return Response({'ressult_for':search_image , 'image_list':res},status=200)
+        res,total_page=process_pixabay(image_cat_see_all=res)
+        return Response({'ressult_for':search_image , 'image_list':res,'total_page':total_page},status=200)
 
     if image_category_name and page:
         image_cat_see_all=req_thread(category=image_category_name,page=page)
-        res=process_pixabay(image_cat_see_all=image_cat_see_all)
-        return Response({'image_category_name':image_category_name , 'image_list':res},status=200)
+        res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        return Response({'image_category_name':image_category_name , 'image_list':res,'total_page':total_page},status=200)
 
     if image_url:
         image_file=pixa_image_url(image_url)
