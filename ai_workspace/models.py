@@ -334,9 +334,10 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    #@cached_property
-    @property
-    def progress(self):
+
+
+    # @property
+    def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
@@ -352,25 +353,27 @@ class Project(models.Model):
 
         elif self.project_type_id == 5:
             count=0
-            for i in self.get_tasks:
+            for i in tasks:
                 obj = ExpressProjectDetail.objects.filter(task=i)
                 if obj.exists():
                     if obj.first().target_text!=None:
                         count+=1
                 else:
                     return "Yet to start"
-            if len(self.get_tasks) == count:
+            if len(tasks) == count:
                 return "Completed"
             else:
                 return "In Progress"
 
         elif self.project_type_id == 4:
-            rr = voice_project_progress(self)
+            rr = voice_project_progress(self,tasks)
             return rr
 
         else:
-            docs = Document.objects.filter(job__project_id=self.id).all()
-            tasks = len(self.get_tasks)
+            assigned_jobs = [i.job.id for i in tasks]
+            docs = Document.objects.filter(job__in=assigned_jobs).all()
+            #docs = Document.objects.filter(job__project_id=self.id).all()
+            tasks = len(tasks)
             total_segments = 0
             if not docs:
                 return "Yet to start"
@@ -411,6 +414,84 @@ class Project(models.Model):
                 return "Completed"
             else:
                 return "In Progress"
+
+    #@cached_property
+    # @property
+    # def progress(self):
+    #     from ai_workspace.api_views import voice_project_progress
+    #     if self.project_type_id == 3:
+    #         terms = self.glossary_project.term.all()
+    #         if terms.count() == 0:
+    #             return "Yet to start"
+    #         elif terms.count() == terms.filter(Q(tl_term='') | Q(tl_term__isnull = True)).count():
+    #             return "Yet to start"
+    #         else:
+    #             if terms.count() == terms.filter(tl_term__isnull = False).exclude(tl_term='').count():
+    #                 return "Completed"
+    #             else:
+    #                 return "In Progress"
+
+    #     elif self.project_type_id == 5:
+    #         count=0
+    #         for i in self.get_tasks:
+    #             obj = ExpressProjectDetail.objects.filter(task=i)
+    #             if obj.exists():
+    #                 if obj.first().target_text!=None:
+    #                     count+=1
+    #             else:
+    #                 return "Yet to start"
+    #         if len(self.get_tasks) == count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
+
+    #     elif self.project_type_id == 4:
+    #         rr = voice_project_progress(self)
+    #         return rr
+
+    #     else:
+    #         docs = Document.objects.filter(job__project_id=self.id).all()
+    #         tasks = len(self.get_tasks)
+    #         total_segments = 0
+    #         if not docs:
+    #             return "Yet to start"
+    #         else:
+    #             if docs.count() == tasks:
+
+    #                 total_seg_count = 0
+    #                 confirm_count  = 0
+    #                 confirm_list = [102, 104, 106, 110, 107]
+
+    #                 segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
+    #                 for seg in segs:
+
+    #                     if (seg.is_merged == True and seg.is_merge_start != True):
+    #                         continue
+
+    #                     elif seg.is_split == True:
+    #                         total_seg_count += 2
+
+    #                     else:
+    #                         total_seg_count += 1
+
+    #                     seg_new = seg.get_active_object()
+
+    #                     if seg_new.is_split == True:
+    #                         for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+    #                             if split_seg.status_id in confirm_list:
+    #                                 confirm_count += 1
+
+    #                     elif seg_new.status_id in confirm_list:
+    #                         confirm_count += 1
+
+    #             else:
+    #                 return "In Progress"
+
+    #         if total_seg_count == confirm_count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
 
     @property
     def files_and_jobs_set(self):
