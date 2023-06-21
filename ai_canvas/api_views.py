@@ -742,8 +742,8 @@ def req_thread(category):
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
-    image_id=request.query_params.get('image_id')
-    image_url=request.query_params.get('image_id')
+     
+    image_url=request.query_params.get('image_url')
 
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     data=[]
@@ -756,7 +756,7 @@ def image_list(request):
         # urllib.request.install_opener(opener)
         # retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
         # x=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
-        im =urllib.request.urlopen(x)
+        im =urllib.request.urlopen(image_url)
         image_data = im.read()
         # pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
         # image=convert_image_url_to_file(pixa_img_url)
