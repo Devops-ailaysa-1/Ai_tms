@@ -743,19 +743,19 @@ def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
     image_id=request.query_params.get('image_id')
+    image_url=request.query_params.get('image_id')
+
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     data=[]
     items_per_page = 6
     if image_category_name:
         pass
-
-
-    if image_id:
-        opener=urllib.request.build_opener()
-        opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
-        urllib.request.install_opener(opener)
-        retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
-        x=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
+    if image_url:
+        # opener=urllib.request.build_opener()
+        # opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
+        # urllib.request.install_opener(opener)
+        # retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
+        # x=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
         im =urllib.request.urlopen(x)
         image_data = im.read()
         # pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
@@ -770,7 +770,9 @@ def image_list(request):
     for hit,image_cat in zip(results,image_cats):
         img_urls=[]
         for j in hit['hits']:
-            img_urls.append({'preview_img':j['previewURL'],'id':j['id'] })
+            img_urls.append({'preview_img':j['previewURL'],'id':j['id'],
+                                            'tags':j['tags'], 'type':j['type'],
+                                            'user':j['user'],'imageurl':j['fullHDURL']})
         data.append({'category':image_cat,'images':img_urls})
  
     paginate=Paginator(data,items_per_page) 
