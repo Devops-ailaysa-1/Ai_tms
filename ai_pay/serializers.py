@@ -235,7 +235,9 @@ class PoAssignDetailsSerializer(serializers.ModelSerializer):
     
     def get_file_name(self,obj):
         tsk = Task.objects.get(id=obj.task_id)
-        return tsk.file.filename
+        if tsk.file:
+            return tsk.file.filename
+        return None
     
     def get_job(self,obj):
         tsk = Task.objects.get(id=obj.task_id) 
