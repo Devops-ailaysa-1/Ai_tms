@@ -753,7 +753,7 @@ def image_list(request):
         pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
         image=convert_image_url_to_file(pixa_img_url)
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image)
-        return Response({'image_url':HOST_NAME+src_img_assets_can.img.url},status=200)
+        return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(req_thread,image_cats))
