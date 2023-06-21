@@ -777,7 +777,7 @@ def image_list(request):
 
     if search_image:
         res=req_thread(search=search_image)
-        res=process_pixabay(image_cat_see_all=image_cat_see_all)
+        res=process_pixabay(image_cat_see_all=res)
         return Response({'ressult_for':search_image , 'image_list':res},status=200)
 
     if image_category_name and page:
