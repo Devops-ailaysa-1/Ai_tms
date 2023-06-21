@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile)
+                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -21,9 +21,9 @@ from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
-from ai_workspace_okapi.utils import get_translation
- 
- 
+from ai_workspace_okapi.utils import get_translation 
+from ai_canvas.utils import convert_image_url_to_file
+HOST_NAME=os.getenv("HOST_NAME")
  
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -740,12 +740,22 @@ def req_thread(category):
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
-     
+    image_id=request.query_params.get('image_id')
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     data=[]
+    items_per_page = 6
     if image_category_name:
         pass
-    items_per_page = 6
+
+
+    if image_id:
+ 
+        retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
+        pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
+        image=convert_image_url_to_file(pixa_img_url)
+        src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=None,img=image)
+        return Response({'image_url':HOST_NAME+src_img_assets_can.img.url},status=200)
+    
 
 
     with ThreadPoolExecutor() as executor:
