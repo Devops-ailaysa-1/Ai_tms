@@ -731,7 +731,7 @@ from django.core.paginator import Paginator
 import uuid
 import urllib.request
 from django import core 
-def req_thread(category,page):
+def req_thread(category,page=None):
     params['q']=category
     params['catagory']=category
     if page:
