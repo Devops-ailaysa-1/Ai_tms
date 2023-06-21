@@ -341,7 +341,7 @@ class Comment(models.Model):
         "segment_comments_set")
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
                     related_name="split_segment_comments_set")
-    #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
+    commented_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL,null=True,blank=True, related_name = 'comment_user')
 
     @property
     def owner_pk(self):
