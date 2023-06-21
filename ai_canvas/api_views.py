@@ -728,7 +728,11 @@ params = {
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+ 
+import urllib.request
+ 
+import urllib.request
+from django.core.files.base import ContentFile
 def req_thread(category):
     params['q']=category
     params['catagory']=category
@@ -750,9 +754,13 @@ def image_list(request):
 
     if image_id:
         retrive_img_url={'key':pixa_bay_api_key,'id':image_id}
-        pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
-        image=convert_image_url_to_file(pixa_img_url)
-        src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image)
+        x=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
+        im =urllib.request.urlopen(x)
+        image_data = im.read()
+        # pixa_img_url=requests.get(pixa_bay_url, params=retrive_img_url,headers=pixa_bay_headers).json()['hits'][0]['fullHDURL']
+        # image=convert_image_url_to_file(pixa_img_url)
+        image_file = ContentFile(image_data)
+        src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
     with ThreadPoolExecutor() as executor:
