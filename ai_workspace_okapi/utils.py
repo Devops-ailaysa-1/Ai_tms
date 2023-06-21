@@ -516,8 +516,6 @@ def get_general_prompt(opt,sent):
 
     return prompt
 
-<<<<<<< HEAD
-=======
 
 def get_prompt(opt,sent):
 
@@ -617,4 +615,3 @@ def get_prompt(opt,sent):
             #         If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
             #         Text: {} 
             #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
->>>>>>> origin/v4-merged-production

@@ -735,7 +735,7 @@ def req_thread(category):
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
     return pixa_bay 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
