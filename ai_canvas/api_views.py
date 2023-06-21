@@ -731,11 +731,16 @@ from django.core.paginator import Paginator
 import uuid
 import urllib.request
 from django import core 
-def req_thread(category,page=None):
-    params['q']=category
-    params['catagory']=category
+def req_thread(category=None,page=None,search=None):
+
+    if category:
+        params['q']=category
+        params['catagory']=category
     if page:
         params['page']=page
+
+    if search:
+        params['q']=search
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
     return pixa_bay 
 
@@ -768,6 +773,12 @@ def image_list(request):
     page=request.query_params.get('page')
     image_url=request.query_params.get('image_url')
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
+    search_image=request.query_params.get('search_image')
+
+    if search_image:
+        res=req_thread(search=search_image)
+        res=process_pixabay(image_cat_see_all=image_cat_see_all)
+        return Response({'ressult_for':search_image , 'image_list':res},status=200)
 
     if image_category_name and page:
         image_cat_see_all=req_thread(category=image_category_name,page=page)
