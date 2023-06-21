@@ -494,6 +494,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+	progress = serializers.SerializerMethodField()
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
@@ -505,6 +506,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
+	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
 	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
 	class Meta:
@@ -513,7 +515,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -606,7 +608,34 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
+			print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
+			return res
+		else:
+			return None
+
+	
+	def get_progress(self,instance):
+		if type(instance) is Project:
+			user = self.context.get("request").user if self.context.get("request")!=None else self\
+				.context.get("ai_user", None)
+
+			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
+			if instance.ai_user == user:
+				tasks = instance.get_tasks
+			elif instance.team:
+				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+					tasks = instance.get_tasks
+				else:
+					tasks = [task for job in instance.project_jobs_set.all() for task \
+							in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+			else:
+				tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+			res = instance.pr_progress(tasks)
 			return res
 		else:
 			return None
@@ -1154,6 +1183,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:
 			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		print("TSF----------->",task_assign_final)
 		if task_assign_final:
 			task_assign_info=[]
 			for i in task_assign_final:
