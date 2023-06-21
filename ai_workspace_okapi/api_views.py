@@ -2000,10 +2000,10 @@ class CommentView(viewsets.ViewSet):
         seg = request.POST.get('segment')
         comment = request.POST.get('comment')
         if split_check(seg):
-            ser = CommentSerializer(data=request.POST.dict(), )
+            ser = CommentSerializer(data={**request.POST.dict(), "commented_by": request.user.id} )
         else:
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
-            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg})
+            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user})
         if ser.is_valid(raise_exception=True):
             with transaction.atomic():
                 ser.save()
@@ -2016,17 +2016,24 @@ class CommentView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
-        authorize(request, resource=obj, actor=request.user, action="update")
-        ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
-        if ser.is_valid(raise_exception=True):
-            ser.save()    
-            return Response(ser.data, status=202)
+        if obj.commented_by == request.user:
+            authorize(request, resource=obj, actor=request.user, action="update")
+            ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+            if ser.is_valid(raise_exception=True):
+                ser.save()    
+                return Response(ser.data, status=202)
+            return Response(ser.errors)
+        else:
+            return Response({'msg':'You do not have permission to edit'},status=403)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
         authorize(request, resource=obj, actor=request.user, action="delete")
-        obj.delete()
-        return  Response({},204)
+        if obj.commented_by == request.user:
+            obj.delete()
+            return  Response({},204)
+        else:
+            return Response({'msg':'You do not have permission to edit'},status=403)
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
