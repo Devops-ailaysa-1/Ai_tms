@@ -770,7 +770,7 @@ def process_pixabay(**kwargs):
             data.append({'category':image_cat,'images':img_urls})
         return data
     if 'image_cat_see_all' in kwargs.keys():
-        total_page=kwargs['total']//20
+        total_page=kwargs['image_cat_see_all']['total']//20
         for j in kwargs['image_cat_see_all']['hits']:
             data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
         return data,total_page
