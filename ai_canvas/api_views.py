@@ -748,16 +748,16 @@ def pixa_image_url(image_url):
     return image_file
 
 
-def process_pixabay(results,image_cats):
+def process_pixabay(**kwargs):
     data=[]
-    if image_cats:
-        for hit,image_cat in zip(results,image_cats):
+    if 'image_cats' in kwargs.keys() and 'results' in kwargs.keys():
+        for hit,image_cat in zip(kwargs['results'],kwargs['image_cats']):
             img_urls=[]
             for j in hit['hits']:
                 img_urls.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
             data.append({'category':image_cat,'images':img_urls})
-    else:
-        for j in hit['hits']:
+    if 'image_cat_see_all' in kwargs.keys():
+        for j in kwargs['image_cat_see_all']['hits']:
             data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
     return data
 
@@ -769,9 +769,8 @@ def image_list(request):
     image_url=request.query_params.get('image_url')
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
 
- 
     if image_category_name and page:
-        image_cat_see_all=req_thread(image_category_name,page)
+        image_cat_see_all=req_thread(category=image_category_name,page=page)
         res=process_pixabay(image_cat_see_all)
         return Response({'image_category_name':image_category_name , 'image_list':res},status=200)
 
