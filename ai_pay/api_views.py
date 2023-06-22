@@ -423,9 +423,9 @@ def update_task_po(task_assign,po_task):
     task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
     po = po_task.po
     po.po_file=None
-    po.po_total_amount=tot_amount
+    # po.po_total_amount=tot_amount
     po.save()
-    po_generate_pdf(po)
+    # po_generate_pdf(po)
 
     
 
@@ -558,9 +558,11 @@ def po_modify(task_assign_info_id,po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
-                if update_task_po(instance,po_task_obj)==False:
+                try:
+                    update_task_po(instance,po_task_obj)
+                except:
                     raise ValueError("updating task po failed")
-            return True
+            # return True
             # if 'currency_change' in po_update:
             #     pass
             # else:
@@ -892,6 +894,9 @@ class PurchaseOrderView(viewsets.ViewSet):
         # queryset= queryset.filter(assignment__step_id=step)
         queryset = queryset.filter(po_status__in=['issued','open'])
 
+        po_gen = queryset.filter(po_file='')
+        for po in po_gen:
+            po_generate_pdf(po)
         return queryset
     
 
