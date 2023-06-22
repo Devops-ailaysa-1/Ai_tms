@@ -2025,7 +2025,7 @@ class CommentView(viewsets.ViewSet):
                     return Response(ser.data, status=202)
                 return Response(ser.errors)
             else:
-                return Response({"detail": "You do not have permission to perform this action."},status=403)
+                return Response({'msg':'You do not have permission to edit'},status=403)
         else:
             ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
             if ser.is_valid(raise_exception=True):
@@ -2041,7 +2041,7 @@ class CommentView(viewsets.ViewSet):
                 obj.delete()
                 return  Response({},204)
             else:
-                return Response({"detail": "You do not have permission to perform this action."},status=403)
+                return Response({'msg':'You do not have permission to edit'},status=403)
         else:
             obj.delete()
             return  Response({},204)
@@ -2904,7 +2904,9 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        else:target_segment=instance.temp_target
+        elif instance.temp_target:
+            target_segment=instance.temp_target
+        else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  
