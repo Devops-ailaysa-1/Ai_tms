@@ -1583,13 +1583,20 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             serializer = TaskAssignInfoSerializer(data=final,context={'request':request},many=True)
             if serializer.is_valid():
                 serializer.save()
-                weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-                try:msg_send(sender,Receiver,tasks[0],step)
-                except:pass
-                # if Receiver in hired_editors:
-                #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-                # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
-                return Response({"msg":"Task Assigned"})
+            
+        task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+        if task_assgn_objs.count() >0 :
+            weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
+            # task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+            # print("task_assgn_objs assignment_id workspace --->>",assignment_id)
+            # print("task_assgn_objs workspace --->>",task_assgn_objs)
+            try:msg_send(sender,Receiver,tasks[0],step)
+            except:pass
+            # if Receiver in hired_editors:
+            #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+            # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
+            return Response({"msg":"Task Assigned"})
+        else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # def update(self, request,pk=None):
