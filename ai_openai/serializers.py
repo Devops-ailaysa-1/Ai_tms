@@ -113,8 +113,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
         total_tokens=token_usage['total_tokens']
-        completion_tokens=token_usage['completion_tokens']
-        print("CompletionTokens------->",completion_tokens)
+        completion_tokens=token_usage.get('completion_tokens',None)
+        #print("CompletionTokens------->",completion_tokens)
         no_of_outcome = instance.response_copies
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
