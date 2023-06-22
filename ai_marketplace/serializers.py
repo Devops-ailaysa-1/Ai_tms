@@ -617,7 +617,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                 else:
                     if res[0].get('service__mtpe_rate')!=None:
                         try:
-                            res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
+                            res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')},timeout=1)
                             print("Res1-------->",res1.json())
                             mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
                         except:
@@ -625,7 +625,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                     else:mtpe_rate = None
                     if res[0].get('service__mtpe_hourly_rate')!=None:
                         try:
-                            res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
+                            res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')},timeout=1)
                             print("Res2-------->",res2.json())
                             hourly_rate = round(res2.json().get('result'),2) if res2.json().get('success') == True else None
                         except:
