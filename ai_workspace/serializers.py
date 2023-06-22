@@ -1618,7 +1618,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
         if input == 'task_accepted':
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
         elif input == 'change_request':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request stated that "+reason+" and waiting for your response."
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request with the following message and waiting for your response.\n Message: "+reason
         print("Msg--------->",message)
     if thread_id:
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
