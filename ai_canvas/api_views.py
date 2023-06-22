@@ -801,10 +801,6 @@ def image_list(request):
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     search_image=request.query_params.get('search_image')
 
-    # if image_category_name and search_image:
-    #      res=req_thread(category=image_category_name,search=search_image)
-    #      res=process_pixabay(image_cat_see_all=res)
-    #      return Response({'ressult_for':search_image , 'image_list':res},status=200)
     if image_category_name and search_image:
         image_cat_see_all=req_thread(category=image_category_name,search=search_image)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
@@ -813,12 +809,14 @@ def image_list(request):
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
 
-
-
-    if search_image:
+    if search_image and page:
+        page=int(page)
         res=req_thread(search=search_image)
         res,total_page=process_pixabay(image_cat_see_all=res)
-        return Response({'ressult_for':search_image , 'image_list':res,'total_page':total_page},status=200)
+        has_next=False if int(total_page)==page else True
+        has_prev=False if page==1 else True
+        return Response({'has_next':has_next,'page':page,'has_prev':has_prev , 
+                         'result_for':search_image , 'image_list':res,'total_page':total_page},status=200)
 
     if image_category_name and page:
         page=int(page)
