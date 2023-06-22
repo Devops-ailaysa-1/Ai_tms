@@ -750,10 +750,10 @@ def req_thread(category=None,page=None,search=None):
         params['per_page']=20
         params['catagory']=str(category).lower()
         pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
-        print("pixa_bay_status",pixa_bay.status_code)
-        print("pixa_bay",pixa_bay)
-        print(pixa_bay.json())
-        return pixa_bay.json()
+        if pixa_bay.status_code==200:
+            return pixa_bay.json()
+        return []
+ 
 
     if category:
         params['q']=category
@@ -764,8 +764,7 @@ def req_thread(category=None,page=None,search=None):
 
     if search:
         params['q']=search
-        # params['page']=page
-        # params['per_page']=20
+ 
         
     if category and search:
         params['catagory']=category
@@ -773,10 +772,10 @@ def req_thread(category=None,page=None,search=None):
        
 
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
-    print("pixa_bay_status",pixa_bay.status_code)
-    print("pixa_bay",pixa_bay)
-    print(pixa_bay.json())
-    return pixa_bay.json()
+    if pixa_bay.status_code==200:
+        return pixa_bay.json()
+    else:
+        return []
 
 def pixa_image_url(image_url):
     opener=urllib.request.build_opener()
@@ -812,19 +811,24 @@ def image_list(request):
     search_image=request.query_params.get('search_image')
 
     if image_category_name and search_image and page:
-        print(image_category_name,search_image, page)
+ 
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,search=search_image,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        if not res:
+            return Response({'image_list':res,'has_next':False},status=200)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
+        
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
 
     if search_image and page:
-        print(search_image, page)
+ 
         page=int(page)
         res=req_thread(search=search_image,page=page)
+        if not res:
+            return Response({'image_list':res,'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=res)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
@@ -832,10 +836,12 @@ def image_list(request):
                          'result_for':search_image , 'image_list':res,'total_page':total_page},status=200)
 
     if image_category_name and page:
-        print(image_category_name, page)
+ 
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        if not res:
+            return Response({'image_list':res,'has_next':False},status=200)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
