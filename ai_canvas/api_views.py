@@ -23,6 +23,16 @@ import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
 from ai_canvas.utils import convert_image_url_to_file
+
+
+
+from ai_staff.models import ImageCategories
+from concurrent.futures import ThreadPoolExecutor
+from django.core.paginator import Paginator
+import uuid
+import urllib.request
+from django import core 
+
 HOST_NAME=os.getenv("HOST_NAME")
  
 
@@ -35,6 +45,16 @@ pixa_bay_headers={
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     }
+
+
+params = {
+            'key':pixa_bay_api_key,
+            'order':'popular',
+            'image_type':'photo',
+            'orientation':'all',
+            'per_page':10,
+        }
+
 
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -717,20 +737,7 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 #         else:
 #             return Response({'image_search':'fill image search field'},status=200)
 
-params = {
-            'key':pixa_bay_api_key,
-            'order':'popular',
-            'image_type':'photo',
-            'orientation':'all',
-            'per_page':10,
-        }
 
-from ai_staff.models import ImageCategories
-from concurrent.futures import ThreadPoolExecutor
-from django.core.paginator import Paginator
-import uuid
-import urllib.request
-from django import core 
 def req_thread(category=None,page=None,search=None):
 
     if category:
@@ -772,7 +779,7 @@ def process_pixabay(**kwargs):
     if 'image_cat_see_all' in kwargs.keys():
         total_page=kwargs['image_cat_see_all']['total']//20
         for j in kwargs['image_cat_see_all']['hits']:
-            data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'], 'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
+            data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'],'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
         return data,total_page
 
 @api_view(['GET'])
@@ -797,7 +804,16 @@ def image_list(request):
     if image_category_name and page:
         image_cat_see_all=req_thread(category=image_category_name,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
-        return Response({'image_category_name':image_category_name , 'image_list':res,'total_page':total_page},status=200)
+        # paginate=Paginator(res,20)  ###no of item in single page
+        # fin_dat=paginate.get_page(page)
+        has_next=True
+        has_prev=True
+        if total_page==page:
+            has_next=False
+        if page==1:
+            has_prev=False
+        return Response({ 'has_next':has_next,'has_prev':has_prev ,'image_category_name':image_category_name ,
+                         'image_list':res,'total_page':total_page},status=200)
 
     if image_url:
         image_file=pixa_image_url(image_url)

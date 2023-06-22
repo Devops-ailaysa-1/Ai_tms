@@ -193,30 +193,29 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if update_new_textbox:
             canvas_src_pages=instance.canvas_json_src.last()
-            print("inside update 1")
+ 
             text_box=""
             json=canvas_src_pages.json
-            print("inside update 2")
+ 
             for i in json['objects']:
-                print("inside update 4")
+          
                 if (i['type']=='textbox') and ("is_translate" in i.keys()) and (i['is_translate'] == False):
                     text_box=i
-                print("inside update 5")
+          
             if text_box and ("text" in text_box.keys()):
-                print("inside update 6")
+ 
                 text=text_box['text']
                 canvas_tar_lang=instance.canvas_translate.all()
                 for tar_json in canvas_tar_lang:
                     src=tar_json.source_locale.locale.first().locale_code
                     tar=tar_json.target.locale.first().locale_code
-                    print("src__lang--->",src)
-                    print("tar_lang--->",tar)
+ 
                     for i in tar_json.canvas_json_tar.all():
                         json=i.json
                         copy_txt_box=copy.copy(text_box)
                         trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
                         copy_txt_box['text']=trans_text
-                        print("inside updatingg",trans_text)
+                        
                         copy_txt_box['is_translate']=True
                         obj_list=json['objects']
                         obj_list.append(copy_txt_box)
@@ -303,9 +302,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
-            print("inside----->>> src json and src page")
+            # print("inside----->>> src json and src page")
+            # thumbnail_path=canva_source.thumbnail.path
+            # thumbnail_name=thumbnail_path.split("/")[-1]
             canva_source.thumbnail = thumbnail_src
-            canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
+            # canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
             canva_source.save()
  
 
@@ -541,8 +542,8 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 page_no=can_trans_ins.page_no
                 my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
-                print("can_trans_ins---->",can_trans_ins.thumbnail.path)
-                print("my_temp_ins---->",my_temp_ins.my_template_thumbnail.path)
+                # print("can_trans_ins---->",can_trans_ins.thumbnail.path)
+                # print("my_temp_ins---->",my_temp_ins.my_template_thumbnail.path)
             else:
                 canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
                 my_template_thumbnail = canvas_source_json_inst.thumbnail
@@ -551,7 +552,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 page_no=canvas_source_json_inst.page_no
                 my_temp_ins_else=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
-                print("my_temp_ins_else---->",my_temp_ins_else.my_template_thumbnail.path)
+                # print("my_temp_ins_else---->",my_temp_ins_else.my_template_thumbnail.path)
                 
         return my_temp_design
 
