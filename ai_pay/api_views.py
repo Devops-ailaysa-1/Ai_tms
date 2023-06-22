@@ -894,7 +894,7 @@ class PurchaseOrderView(viewsets.ViewSet):
         # queryset= queryset.filter(assignment__step_id=step)
         queryset = queryset.filter(po_status__in=['issued','open'])
 
-        po_gen = queryset.filter(po_file=None)
+        po_gen = queryset.filter(po_file='')
         for po in po_gen:
             po_generate_pdf(po)
         return queryset
