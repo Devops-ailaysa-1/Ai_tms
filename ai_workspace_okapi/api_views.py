@@ -2016,24 +2016,35 @@ class CommentView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
-        if obj.commented_by == request.user:
-            authorize(request, resource=obj, actor=request.user, action="update")
+        authorize(request, resource=obj, actor=request.user, action="update")
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+                if ser.is_valid(raise_exception=True):
+                    ser.save()    
+                    return Response(ser.data, status=202)
+                return Response(ser.errors)
+            else:
+                return Response({"detail": "You do not have permission to perform this action."},status=403)
+        else:
             ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
             if ser.is_valid(raise_exception=True):
                 ser.save()    
                 return Response(ser.data, status=202)
             return Response(ser.errors)
-        else:
-            return Response({'msg':'You do not have permission to edit'},status=403)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
         authorize(request, resource=obj, actor=request.user, action="delete")
-        if obj.commented_by == request.user:
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                obj.delete()
+                return  Response({},204)
+            else:
+                return Response({"detail": "You do not have permission to perform this action."},status=403)
+        else:
             obj.delete()
             return  Response({},204)
-        else:
-            return Response({'msg':'You do not have permission to edit'},status=403)
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
