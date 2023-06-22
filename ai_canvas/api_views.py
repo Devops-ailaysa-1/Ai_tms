@@ -741,6 +741,12 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 #         else:
 #             return Response({'image_search':'fill image search field'},status=200)
 
+def all_cat_req(category):
+    params['q']=category
+    params['catagory']=str(category).lower()
+    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+    return pixa_bay
+
 
 def req_thread(category=None,page=None,search=None):
 
@@ -807,7 +813,7 @@ def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
     image_url=request.query_params.get('image_url')
-    image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
+    
     search_image=request.query_params.get('search_image')
 
     if image_category_name and search_image and page:
@@ -855,14 +861,14 @@ def image_list(request):
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
+    image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     with ThreadPoolExecutor() as executor:
-        results = list(executor.map(req_thread,image_cats))
+        results = list(executor.map(all_cat_req,image_cats))
 
+    print("image_cats",image_cats)
     data=process_pixabay(results=results,image_cats=image_cats)
     paginate=Paginator(data,6)  ###no of item in single page
     fin_dat=paginate.get_page(page)
-
-
     return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': fin_dat.has_next(),
                     'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
 
