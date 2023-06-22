@@ -3395,11 +3395,11 @@ def express_project_detail(request,project_id):
                         'source_text':content})
 
 
-def voice_project_progress(pr):
+def voice_project_progress(pr,tasks):
     from ai_workspace_okapi.models import Document, Segment
     count=0
     progress = 0
-    source_tasks = pr.get_source_only_tasks
+    source_tasks = [i for i in tasks if i.job.target_language==None]
     if source_tasks:
         if pr.voice_proj_detail.project_type_sub_category_id==1:
             for i in source_tasks:
@@ -3411,12 +3411,15 @@ def voice_project_progress(pr):
                 if TaskTranscriptDetails.objects.filter(task_id = i).exists():
                     if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
                         count+=1
-    if pr.get_mtpe_tasks:
-        docs = Document.objects.filter(job__project_id=pr.id).all()
+    mtpe_tasks = [i for i in tasks if i.job.target_language != None]
+    if mtpe_tasks:
+        assigned_jobs = [i.job.id for i in mtpe_tasks]
+        docs = Document.objects.filter(job__in=assigned_jobs).all()
+        #docs = Document.objects.filter(job__project_id=pr.id).all()
         print(docs)
         if not docs:
             count+=0
-        if docs.count() == len(pr.get_mtpe_tasks):
+        if docs.count() == len(mtpe_tasks):
             total_seg_count = 0
             confirm_count  = 0
             confirm_list = [102, 104, 106, 110, 107]
@@ -3433,15 +3436,15 @@ def voice_project_progress(pr):
                         confirm_count += 1
 
             if total_seg_count == confirm_count:
-                count+=len(pr.get_mtpe_tasks)
+                count+=len(mtpe_tasks)
             else:
                 progress+=1
     #print("count------------>",count)
     if count == 0 and progress == 0:
         return "Yet to Start"
-    elif count == len(pr.get_tasks):
+    elif count == len(tasks):
         return "Completed"
-    elif count != len(pr.get_tasks) or progress != 0:
+    elif count != len(tasks) or progress != 0:
         return "In Progress"
 
 

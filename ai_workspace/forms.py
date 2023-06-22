@@ -105,7 +105,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         billable_char_count = i.billable_char_count if i.billable_char_count!=None else i.task_assign.task.task_char_count
         if i.task_assign.task.job.project.project_type_id == 3:
             out = []
-        elif i.mtpe_count_unit.unit == 'Word' or i.mtpe_count_unit.unit == 'Hour' or i.mtpe_count_unit.unit == 'Total':
+        elif i.mtpe_count_unit.unit == 'Word' or i.mtpe_count_unit.unit == 'Hour' or i.mtpe_count_unit.unit == 'Fixed':
             out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"billable_word_count":billable_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"billable_char_count":billable_char_count,"unit":i.mtpe_count_unit.unit}]
