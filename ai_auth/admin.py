@@ -190,6 +190,11 @@ class ApiUsageAdmin(admin.ModelAdmin):
     list_filter = ("email",)
 
 
+@admin.register(CampaignUsers)
+class ApiUsageAdmin(admin.ModelAdmin):
+    list_display = ("user","campaign_name")
+    list_filter = ("user__email",)
+
 # Custom Admin Page  #
 
 # Register your models here.
@@ -198,7 +203,7 @@ admin.site.register(UserAttribute)
 admin.site.register(Permission)
 admin.site.register(TempPricingPreference)
 admin.site.register(CreditPack)
-admin.site.register(CampaignUsers)
+# admin.site.register(CampaignUsers)
 admin.site.register(BillingAddress)
 admin.site.register(UserTaxInfo)
 admin.site.register(Team)
