@@ -1963,11 +1963,11 @@ class CommentView(viewsets.ViewSet):
             if split_check(id):
                 print("normal")
                 segment = get_object_or_404(Segment.objects.all(), id=id)                
-                return segment.segment_comments_set.all()
+                return segment.segment_comments_set.order_by('id')
             else:
                 print("split")
                 split_segment = SplitSegment.objects.get(id=id)
-                return split_segment.split_segment_comments_set.all()
+                return split_segment.split_segment_comments_set.order_by('id')
 
 
         if by=="document":
@@ -1975,11 +1975,11 @@ class CommentView(viewsets.ViewSet):
             comments_list=[]
             for segment in document.segments.all():
                 if segment.is_split!=True:
-                    comments_list.extend(segment.segment_comments_set.all())
+                    comments_list.extend(segment.segment_comments_set.order_by('id'))
                 else:
                     split_seg = SplitSegment.objects.filter(segment_id=segment.id)
                     for i in  split_seg:
-                        comments_list.extend(i.split_segment_comments_set.all())
+                        comments_list.extend(i.split_segment_comments_set.order_by('id'))
             return comments_list
 
             # return [ comment
