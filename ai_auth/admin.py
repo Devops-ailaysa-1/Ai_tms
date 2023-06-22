@@ -192,8 +192,11 @@ class ApiUsageAdmin(admin.ModelAdmin):
 
 @admin.register(CampaignUsers)
 class ApiUsageAdmin(admin.ModelAdmin):
-    list_display = ("user","campaign_name")
+    list_display = ("user","campaign_code")
     list_filter = ("user__email",)
+
+    def campaign_code(self,obj):
+        return obj.campaign_name.campaign_name
 
 # Custom Admin Page  #
 
