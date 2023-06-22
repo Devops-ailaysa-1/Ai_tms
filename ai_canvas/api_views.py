@@ -811,11 +811,11 @@ def image_list(request):
         # fin_dat=paginate.get_page(page)
         has_next=True
         has_prev=True
-        if total_page==page:
+        if int(total_page)==int(page):
             has_next=False
-        if page==1:
+        if int(page)==1:
             has_prev=False
-        return Response({ 'has_next':has_next,'has_prev':has_prev ,'image_category_name':image_category_name ,
+        return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
 
     if image_url:
