@@ -789,7 +789,7 @@ def process_pixabay(**kwargs):
 @permission_classes([IsAuthenticated])
 def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
-    page=request.query_params.get('page')
+    page=int(request.query_params.get('page'))
     image_url=request.query_params.get('image_url')
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     search_image=request.query_params.get('search_image')
@@ -811,9 +811,9 @@ def image_list(request):
         # fin_dat=paginate.get_page(page)
         has_next=True
         has_prev=True
-        if int(total_page)==int(page):
+        if int(total_page)==page:
             has_next=False
-        if int(page)==1:
+        if page==1:
             has_prev=False
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
