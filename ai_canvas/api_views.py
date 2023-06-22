@@ -761,6 +761,8 @@ def req_thread(category=None,page=None,search=None):
 
     if search:
         params['q']=search
+        params['page']=page
+        params['per_page']=20
         
     if category and search:
         params['catagory']=category
