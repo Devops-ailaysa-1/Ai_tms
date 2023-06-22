@@ -25,9 +25,10 @@
                   {% if task_ven_status == 'task_accepted' %}
                   <p>Task with task_id: {{task}} assigned to {{assign_to}} for {{step}} in <b>{{project}}</b>  has accepted your rates and started working.</p>
                   {% elif task_ven_status == 'change_request' %}
-                  <p>Task with task_id: {{task}} assigned to {{assign_to}} for {{step}} in <b>{{project}}</b>  has submitted change request stated that <b>{{reason}}</b> and waiting for your response.</p>
+                  <p>Task with task_id: {{task}} assigned to {{assign_to}} for {{step}} in <b>{{project}}</b>  has submitted change request with the following message and waiting for your response.</p>
+                  <p><b>Message</b>: {{reason}}</p>
                   {% endif %}
-                  <p>Log into Ailaysa to know more details</p>
+                  <p>Log in <a href="https://www.ailaysa.com/">Ailaysa</a> to know more details</p>
             </div>
         </td></tr></tbody>
 
