@@ -2003,7 +2003,7 @@ class CommentView(viewsets.ViewSet):
             ser = CommentSerializer(data={**request.POST.dict(), "commented_by": request.user.id} )
         else:
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
-            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user})
+            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             with transaction.atomic():
                 ser.save()
