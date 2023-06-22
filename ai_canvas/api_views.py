@@ -749,8 +749,10 @@ def req_thread(category=None,page=None,search=None):
         params['page']=page
         params['per_page']=20
         params['catagory']=str(category).lower()
-        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-        return pixa_bay 
+        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
+        print("pixa_bay_status",pixa_bay.status_code)
+        print("pixa_bay",pixa_bay)
+        return pixa_bay.json()
 
     if category:
         params['q']=category
@@ -761,8 +763,8 @@ def req_thread(category=None,page=None,search=None):
 
     if search:
         params['q']=search
-        params['page']=page
-        params['per_page']=20
+        # params['page']=page
+        # params['per_page']=20
         
     if category and search:
         params['catagory']=category
