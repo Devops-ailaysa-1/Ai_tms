@@ -53,6 +53,7 @@ params = {
             'image_type':'photo',
             'orientation':'all',
             'per_page':10,
+            'safesearch':True
         }
 
 
@@ -743,6 +744,12 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 
 def req_thread(category=None,page=None,search=None):
 
+    if category and search:
+        params['q']=search
+        params['catagory']=str(category).lower()
+        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+        return pixa_bay 
+
     if category:
         params['q']=category
         params['catagory']=category
@@ -798,6 +805,15 @@ def image_list(request):
     #      res=req_thread(category=image_category_name,search=search_image)
     #      res=process_pixabay(image_cat_see_all=res)
     #      return Response({'ressult_for':search_image , 'image_list':res},status=200)
+    if image_category_name and search_image:
+        image_cat_see_all=req_thread(category=image_category_name,search=search_image)
+        res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        has_next=False if int(total_page)==page else True
+        has_prev=False if page==1 else True
+        return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
+                         'image_list':res,'total_page':total_page},status=200)
+
+
 
     if search_image:
         res=req_thread(search=search_image)
@@ -808,14 +824,8 @@ def image_list(request):
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
-        # paginate=Paginator(res,20)  ###no of item in single page
-        # fin_dat=paginate.get_page(page)
-        has_next=True
-        has_prev=True
-        if int(total_page)==page:
-            has_next=False
-        if page==1:
-            has_prev=False
+        has_next=False if int(total_page)==page else True
+        has_prev=False if page==1 else True
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
 
