@@ -808,6 +808,7 @@ def image_list(request):
     search_image=request.query_params.get('search_image')
 
     if image_category_name and search_image and page:
+        print(image_category_name,search_image, page)
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,search=search_image,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
@@ -817,6 +818,7 @@ def image_list(request):
                          'image_list':res,'total_page':total_page},status=200)
 
     if search_image and page:
+        print(search_image, page)
         page=int(page)
         res=req_thread(search=search_image,page=page)
         res,total_page=process_pixabay(image_cat_see_all=res)
@@ -826,6 +828,7 @@ def image_list(request):
                          'result_for':search_image , 'image_list':res,'total_page':total_page},status=200)
 
     if image_category_name and page:
+        print(image_category_name, page)
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
