@@ -744,8 +744,10 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 
 def req_thread(category=None,page=None,search=None):
 
-    if category and search:
+    if category and search and page:
         params['q']=search
+        params['page']=page
+        params['per_page']=20
         params['catagory']=str(category).lower()
         pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
         return pixa_bay 
@@ -801,8 +803,9 @@ def image_list(request):
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     search_image=request.query_params.get('search_image')
 
-    if image_category_name and search_image:
-        image_cat_see_all=req_thread(category=image_category_name,search=search_image)
+    if image_category_name and search_image and page:
+        page=int(page)
+        image_cat_see_all=req_thread(category=image_category_name,search=search_image,page=page)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
