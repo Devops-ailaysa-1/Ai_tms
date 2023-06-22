@@ -770,9 +770,11 @@ def req_thread(category=None,page=None,search=None):
         params['catagory']=category
         params['q']=search
        
-    
-    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-    return pixa_bay 
+
+    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
+    print("pixa_bay_status",pixa_bay.status_code)
+    print("pixa_bay",pixa_bay)
+    return pixa_bay.json()
 
 def pixa_image_url(image_url):
     opener=urllib.request.build_opener()
