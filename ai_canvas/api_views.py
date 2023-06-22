@@ -814,9 +814,11 @@ def image_list(request):
  
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,search=search_image,page=page)
+
+        if not image_cat_see_all:
+            return Response({'image_list':[],'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
-        if not res:
-            return Response({'image_list':res,'has_next':False},status=200)
+
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
         
@@ -839,9 +841,10 @@ def image_list(request):
  
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,page=page)
+        if not image_cat_see_all:
+            return Response({'image_list':[],'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
-        if not res:
-            return Response({'image_list':res,'has_next':False},status=200)
+
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
