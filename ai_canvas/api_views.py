@@ -703,7 +703,10 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
         else:
             return Response(serializer.errors)
         
-
+    def delete(self,request,pk):
+        query_set=SocialMediaSize.objects.get(id=pk)
+        query_set.delete()
+        return Response(status=204)
 # import asyncio
 # async def one_iteration(pixa_json):
 #     preview_image=convert_image_url_to_file(pixa_json['previewURL'])
