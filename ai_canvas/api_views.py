@@ -816,7 +816,7 @@ def image_list(request):
 
     if search_image and page:
         page=int(page)
-        res=req_thread(search=search_image)
+        res=req_thread(search=search_image,page=page)
         res,total_page=process_pixabay(image_cat_see_all=res)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
