@@ -740,12 +740,18 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 #                     return Response(serializer.errors)
 #         else:
 #             return Response({'image_search':'fill image search field'},status=200)
-
+from rest_framework import serializers
 def all_cat_req(category):
     params['q']=category
     params['catagory']=str(category).lower()
-    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-    return pixa_bay
+    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
+
+    if pixa_bay.status_code==200:
+        return pixa_bay.json()
+    else:
+        return serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+
+     
 
 
 def req_thread(category=None,page=None,search=None):
@@ -813,7 +819,6 @@ def image_list(request):
     image_category_name=request.query_params.get('image_category_name')
     page=request.query_params.get('page')
     image_url=request.query_params.get('image_url')
-    
     search_image=request.query_params.get('search_image')
 
     if image_category_name and search_image and page:
