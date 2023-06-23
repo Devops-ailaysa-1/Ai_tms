@@ -2955,14 +2955,9 @@ class SelflearningApi(viewsets.ViewSet):
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
-
-        raw_mt="he buy some apples in the market "
-        mt_edited="they buy 10 more in apples in the supermarket"
-        
-        #input data
-        mt_raw=request.POST.get('source',None)
-        mt_edited=request.POST.get('edited',None)   
-        #   
+ 
+        asset=request.POST.get('asset',None)
+        # #   
         asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
         print("--------",mt_raw)
         for mt_raw in asset:
@@ -2972,17 +2967,17 @@ class SelflearningApi(viewsets.ViewSet):
                     occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw])
                     occuranc.occurance +=1
                     occuranc.save()
-                    # return Response(status=status.HTTP_201_CREATED)
+                   
             else:
                 if slf_lrn_list.count() <5:
                     slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    # return Response(status=status.HTTP_201_CREATED)
+                    
                 else:   
                     first_out=slf_lrn_list.first().delete()
                     slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    # return Response(status=status.HTTP_201_CREATED)
+                    
                 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(asset,status=status.HTTP_201_CREATED)
 
 
 def seq_match_seg_diff(words1,words2):
