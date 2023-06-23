@@ -115,7 +115,7 @@ def send_welcome_mail(current_site,user):
         "current_site": current_site,
     }
     email =user.email
-    msg_plain = render_to_string("account/email/welcome.txt", context)
+    msg_plain = render_to_string("account/email/welcome.txt", context)#ai_staff/templates/account
     msg_html = render_to_string("account/email/welcome.html", context)
     sent=send_mail(
         "Welcome to Ailaysa!",
