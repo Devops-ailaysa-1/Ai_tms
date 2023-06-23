@@ -9,6 +9,7 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
+router.register(r"selflearn",api_views.SelflearningApi,basename="self_learn")
 
 urlpatterns = router.urls
 
@@ -73,6 +74,5 @@ urlpatterns+=[
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
     path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file"),
 
-    path("selflearn/<int:segment_id>", api_views.SelflearningApi.as_view({'post': 'create',"get":'list'}), name="self_learn_add"),
 
 ]

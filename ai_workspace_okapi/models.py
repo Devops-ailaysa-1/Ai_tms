@@ -612,7 +612,7 @@ class SelflearningAsset(models.Model):
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
     occurance=models.IntegerField(default=0,null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True,blank=True)
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word
