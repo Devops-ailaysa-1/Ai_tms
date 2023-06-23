@@ -473,11 +473,6 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
-from .models import SelflearningAsset
-class SelflearningAssetSerializer (serializers.ModelSerializer):
-    class Meta():
-        model=SelflearningAsset
-        fields="__all__"
 
 
 
@@ -541,10 +536,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
-
-        #word update in mt_raw
-
-        instance=self.slf_learning_word_update(instance,doc)
+        #instance=self.slf_learning_word_update(instance,doc)
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
