@@ -56,12 +56,15 @@ class CanvasDesign(models.Model):
 
 
     def save(self,*args,**kwargs):
-        if not self.id:
+        print("(self.pk is None",(self.pk is None))
+        print(self.file_name)
+        if (self.pk is None) and (not self.file_name):
+            print()
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
             if can_obj:
                 self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
                 
-        super(CanvasDesign, self).save(*args, **kwargs)
+        return super(CanvasDesign, self).save(*args, **kwargs)
 
 
 
