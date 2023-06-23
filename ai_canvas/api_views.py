@@ -760,7 +760,6 @@ def all_cat_req(category):
 
 
 def req_thread(category=None,page=None,search=None):
-
     if category and search and page:
         params['q']=search
         params['page']=page
@@ -770,24 +769,17 @@ def req_thread(category=None,page=None,search=None):
         if pixa_bay.status_code==200:
             return pixa_bay.json()
         return []
- 
-
     if category:
         params['q']=category
         params['catagory']=category
     if page:
         params['page']=page
         params['per_page']=20
-
     if search:
         params['q']=search
- 
-        
     if category and search:
         params['catagory']=category
         params['q']=search
-       
-
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if pixa_bay.status_code==200:
         return pixa_bay.json()
