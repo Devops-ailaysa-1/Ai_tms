@@ -100,7 +100,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
         if source_language and target_language:
-            VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
+            VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language,primary_pair=True)
             user.is_vendor = True
             user.save()
             if is_agency:    

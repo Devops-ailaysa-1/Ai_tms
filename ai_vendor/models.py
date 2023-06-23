@@ -126,6 +126,7 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,related_name='vendor_target_lang', on_delete=models.CASCADE)
     currency = models.ForeignKey(Currencies,related_name='lang_pair_currency', on_delete=models.CASCADE,\
                 blank=True, null=True)
+    primary_pair = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
    # created_at = models.CharField(max_length=100, null=True, blank=True)
