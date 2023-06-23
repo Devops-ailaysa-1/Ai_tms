@@ -494,6 +494,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+	progress = serializers.SerializerMethodField()
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
@@ -505,6 +506,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
+	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
 	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
 	class Meta:
@@ -513,7 +515,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -591,7 +593,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = user.team.owner if user.team else user
+			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_tasks
@@ -606,7 +608,34 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
+			print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
+			return res
+		else:
+			return None
+
+	
+	def get_progress(self,instance):
+		if type(instance) is Project:
+			user = self.context.get("request").user if self.context.get("request")!=None else self\
+				.context.get("ai_user", None)
+
+			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
+			if instance.ai_user == user:
+				tasks = instance.get_tasks
+			elif instance.team:
+				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+					tasks = instance.get_tasks
+				else:
+					tasks = [task for job in instance.project_jobs_set.all() for task \
+							in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+			else:
+				tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+			res = instance.pr_progress(tasks)
 			return res
 		else:
 			return None
@@ -831,7 +860,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
 	class Meta:
 		model = TaskAssignInfo
-		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','mtpe_count_unit','total_word_count','currency',\
+		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','change_request_reason','mtpe_count_unit','total_word_count','currency',\
 				  'assigned_by','task_assign_info','task_ven_status','account_raw_count','billable_char_count','billable_word_count',)
 
 ####################Need to change################################
@@ -1040,6 +1069,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	converted = serializers.SerializerMethodField()
 	is_task_translated = serializers.SerializerMethodField()
 	mt_only_credit_check = serializers.SerializerMethodField()
+	converted_audio_file_exists = serializers.SerializerMethodField()
+	download_audio_output_file = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -1049,7 +1080,22 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
+			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
+			"converted_audio_file_exists","download_audio_output_file",)
+
+	def get_converted_audio_file_exists(self,obj):
+		if obj.document:
+			return obj.document.converted_audio_file_exists
+		else:
+			return None
+	
+
+	def get_download_audio_output_file(self,obj):
+		if obj.document:
+			return obj.document.download_audio_output_file
+		else:
+			return None
+
 
 	def get_converted(self,obj):
 		if obj.job.project.project_type_id == 4 :
@@ -1145,7 +1191,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	def get_task_assign_info(self, obj):
 		request_user = self.context.get('request').user
 		print("RequestUser----------->",request_user)
-		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency else request_user
+		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and (request_user in request_user.team.get_project_manager) else request_user
 		print("User-------->",user)
 		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
 		print("TaskAssign----------->",task_assign)
@@ -1154,6 +1200,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:
 			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		print("TSF----------->",task_assign_final)
 		if task_assign_final:
 			task_assign_info=[]
 			for i in task_assign_final:
@@ -1413,6 +1460,7 @@ class InternalEditorDetailSerializer(serializers.Serializer):
 
 
 class GetAssignToSerializer(serializers.Serializer):
+	
 	internal_editors = serializers.SerializerMethodField()
 	external_editors = serializers.SerializerMethodField()
 	#suggestions = serializers.SerializerMethodField()
@@ -1429,6 +1477,7 @@ class GetAssignToSerializer(serializers.Serializer):
 
 
 	def get_agencies(self,obj):
+		from ai_auth.utils import get_plan_name
 		try:
 			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
 			if self.context.get('request').user == default:
@@ -1442,6 +1491,7 @@ class GetAssignToSerializer(serializers.Serializer):
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
 		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		qs_ = [i for i in qs_ if get_plan_name(i.hired_editor) != None ]
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
 			if i.get("vendor_lang_pair")!=[]:
@@ -1449,8 +1499,25 @@ class GetAssignToSerializer(serializers.Serializer):
 		return tt
 
 	def get_external_editors(self,obj):
-		request = self.context['request']
+		request = self.context.get('request')
+		pro_user = self.context.get('pro_user',None)
 		job_id= request.query_params.get('job',None)
+		tt=[]
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		print("qs_--------------->",qs_)
+		print("pro_user-------------->",pro_user)
+		if pro_user:
+			qs_ = qs_.exclude(hired_editor = pro_user)
+		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:# and i.get('id') not in assigners:
+				tt.append(i)
+		return tt
+
+
+
+
 		# if job_id:
 		# 	job_obj = Job.objects.get(id=job_id)
 		# 	task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
@@ -1458,15 +1525,6 @@ class GetAssignToSerializer(serializers.Serializer):
 		# 	assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
 		# 	print("Assigners----------->",assigners)
 		# else:assigners=[]
-		tt=[]
-		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
-		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
-		for i in ser:
-			if i.get("vendor_lang_pair")!=[]:# and i.get('id') not in assigners:
-				tt.append(i)
-		return tt
-
 	# def get_suggestions(self,obj):
 	# 	try:
 	# 		default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
@@ -1535,7 +1593,7 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
 
 
 
-def msg_send_vendor_accept(task_assign,input):
+def msg_send_vendor_accept(task_assign,input,reason):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
@@ -1560,7 +1618,8 @@ def msg_send_vendor_accept(task_assign,input):
         if input == 'task_accepted':
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
         elif input == 'change_request':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request with the following message and waiting for your response.\n Message: "+reason
+        print("Msg--------->",message)
     if thread_id:
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
         notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
@@ -1763,6 +1822,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail) or ('mtpe_count_unit' in task_detail)):
+				if 'currency' in task_detail:
+					po_update.append('currency_change')
 				if instance.task_assign_info.task_ven_status == "change_request":
 					try:msg_send_customer_rate_change(instance)
 					except:pass
@@ -1775,12 +1836,14 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 
 			if 'task_ven_status' in data.get('task_assign_info'):
+				change_request_reason = data.get('task_assign_info').get('change_request_reason',None)
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
 				if data.get('task_assign_info').get('task_ven_status') == "change_request":
 					po_update.append('change_request')
-				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
-				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				task_ven_status = data.get('task_assign_info').get('task_ven_status')
+				ws_forms.task_assign_ven_status_mail(instance,task_ven_status,change_request_reason)
+				try:msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
 				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:

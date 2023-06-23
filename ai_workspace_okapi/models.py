@@ -333,13 +333,15 @@ class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
     mt_raw = models.TextField(null=True, blank=True)
+
+
 class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
         "segment_comments_set")
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
                     related_name="split_segment_comments_set")
-    #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
+    commented_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL,null=True,blank=True, related_name = 'comment_user')
 
     @property
     def owner_pk(self):
@@ -608,6 +610,7 @@ class SelflearningAsset(models.Model):
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
     occurance=models.IntegerField(default=0,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word

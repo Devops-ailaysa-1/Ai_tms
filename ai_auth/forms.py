@@ -115,7 +115,7 @@ def send_welcome_mail(current_site,user):
         "current_site": current_site,
     }
     email =user.email
-    msg_plain = render_to_string("account/email/welcome.txt", context)
+    msg_plain = render_to_string("account/email/welcome.txt", context)#ai_staff/templates/account
     msg_html = render_to_string("account/email/welcome.html", context)
     sent=send_mail(
         "Welcome to Ailaysa!",
@@ -388,8 +388,8 @@ def send_campaign_welcome_mail(user):
         settings.DEFAULT_FROM_EMAIL,
         [email]
     )
-    file = open('mediafiles/email/Translate your book.pdf', 'rb')
-    msg.attach('Translate your book.pdf',file.read(),'application/pdf')
+    file = open('mediafiles/email/Translate your book free.pdf', 'rb')
+    msg.attach('Translate your book free.pdf',file.read(),'application/pdf')
     msg.content_subtype = "html"
     sent=msg.send()
     file.close()
