@@ -129,3 +129,8 @@ ai_tms/settings/local_settings.py
 *.save*
 *.txt
 *.dockerignore
+ai_workspace/html2docx_custom.py
+express_try.py
+mydoc-project-try.py
+nupedia_small(en-ta).tmx
+price
