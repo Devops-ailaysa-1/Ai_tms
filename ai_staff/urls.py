@@ -73,7 +73,7 @@ urlpatterns += [
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
-     path('social-media-size/', api_views.SocialMediaSizeViewset_ser.as_view({'get': 'list'}), name='socialmediasize'),
+      
      path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
 #    path('design-shape/',api_views.DesignShapeViewset.as_view({'get':'list'})),
 ]

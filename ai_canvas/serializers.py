@@ -626,7 +626,10 @@ class FontFileSerializer(serializers.ModelSerializer):
             instance.save()
         return instance
 
-
+class SocialMediaSizeValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SocialMediaSize
+        fields=('id','social_media_name','width','height')
 
 # class ImageListMediumSerializer(serializers.ModelSerializer):
 #     class Meta:

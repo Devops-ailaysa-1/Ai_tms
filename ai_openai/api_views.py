@@ -860,6 +860,25 @@ def blog_crt(request):
     instance.document = tt
     return Response({'id':tt.id})
 
+
+
+@api_view(["GET"])
+def credit_check_blog(request):
+    if request.method=='GET':
+        blog_id=request.query_params.get('blog_id')
+        blog_creation=BlogCreation.objects.get(id=blog_id)
+        initial_credit = request.user.credit_balance.get("total_left")
+        if blog_creation.user_language_code != 'en':
+            credits_required = 2000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        else:
+            return Response({'msg':'sufficient Credits'},code=200)
+
+            
+
 @api_view(["GET"])
 def generate_article(request):
     if request.method=='GET':
@@ -868,8 +887,7 @@ def generate_article(request):
         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
         outline_list=request.query_params.get('outline_section_list')
         blog_creation=request.query_params.get('blog_creation')
-        print("outline_list",outline_list)
-        print("blog_creation",blog_creation)
+ 
         blog_creation=BlogCreation.objects.get(id=blog_creation)
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)

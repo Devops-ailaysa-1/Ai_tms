@@ -9,7 +9,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -671,11 +671,19 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
 
+class SocialMediaSizeValueViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset = SocialMediaSize.objects.all().order_by('social_media_name')
+        serializer=SocialMediaSizeValueSerializer(queryset,many=True)
+        return Response(serializer.data)
+ 
+     
+
 
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().exclude(social_media_name="Full HD").order_by('social_media_name')
+        queryset = SocialMediaSize.objects.all().order_by('social_media_name')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -745,11 +753,8 @@ def all_cat_req(category):
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
-
-    if pixa_bay.status_code==200:
-        return pixa_bay.json()
-    else:
-        return serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+    return pixa_bay.json()
+ 
 
      
 

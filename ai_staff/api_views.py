@@ -952,15 +952,6 @@ class ImageGeneratorResolutionViewset(viewsets.ViewSet):
 
 
 
-class SocialMediaSizeViewset_ser(viewsets.ViewSet):
- 
-    def list(self,request):
-        queryset = SocialMediaSize.objects.all()
-        serializer = SocialMediaSizeSerializer(queryset,many=True)
-        return Response(serializer.data)
-    
-
-
 class DesignShapePagination(PageNumberPagination):
     page_size = 20 
     page_size_query_param = 'page_size'

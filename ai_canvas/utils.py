@@ -10,10 +10,11 @@ import json ,base64
 from fontTools.ttLib import TTFont
 import os
 import shutil
+import io
+from PIL import Image ,ImageFont
 
 
-
-from PIL import ImageFont
+ 
 
 def calculate_font_size(box_width, box_height,text,font_size):
     while True:
@@ -162,8 +163,7 @@ def thumbnail_create(json_str,formats):
     else:
         return ValidationError("error in node server")
 
-import io
-from PIL import Image
+
 
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
