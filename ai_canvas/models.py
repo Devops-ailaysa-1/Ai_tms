@@ -55,12 +55,12 @@ class CanvasDesign(models.Model):
         ordering = ('updated_at',)
 
 
-        def save(self,*args,**kwargs):
-            if not self.id:
-                can_obj=CanvasDesign.objects.filter(file_name__icontain='Untitled project')
-                if can_obj:
-                    self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
-            return super().save(*args, **kwargs)
+    def save(self,*args,**kwargs):
+        if not self.id:
+            can_obj=CanvasDesign.objects.filter(file_name__icontain='Untitled project')
+            if can_obj:
+                self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
+        return super().save(*args, **kwargs)
 
 
 
