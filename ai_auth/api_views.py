@@ -1998,7 +1998,7 @@ def vendor_onboard_complete(request):#######while using social signups##########
     target_lang = request.POST.get('target_language')
     cv_file = request.FILES.get('cv_file')
     if source_lang and target_lang:
-        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang)
+        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
     if cv_file:
         VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
         VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
@@ -2350,7 +2350,7 @@ class UserDetailView(viewsets.ViewSet):
                         raise ValueError
 
                 if source_lang and target_lang:
-                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
+                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
                     user_obj.is_vendor=True
                     user_obj.save()
                     sub=subscribe_vendor(user_obj)

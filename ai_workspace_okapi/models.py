@@ -204,6 +204,7 @@ class Segment(BaseSegment):
     def get_parent_seg_id(self):
         return self.id
 
+
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
 # post_save.connect(create_segment_controller, sender=Segment)
@@ -342,6 +343,8 @@ class Comment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
                     related_name="split_segment_comments_set")
     commented_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL,null=True,blank=True, related_name = 'comment_user')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     @property
     def owner_pk(self):
