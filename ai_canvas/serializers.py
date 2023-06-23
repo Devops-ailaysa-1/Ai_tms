@@ -148,6 +148,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
 
+        if not instance.file_name:
+            can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
+            if can_obj:
+                instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
+                instance.save()
+
+
+
         if social_media_create:
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(social_media_create.width)

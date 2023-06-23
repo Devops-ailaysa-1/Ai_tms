@@ -4,10 +4,10 @@ from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
 
-# class CanvasCatagories(models.Model):
-#     catagory_name = models.CharField(max_length=50,null=True,blank=True)
-#     def __str__(self) -> str:
-#         return self.catagory_name
+class CanvasCatagories(models.Model):
+    catagory_name = models.CharField(max_length=50,null=True,blank=True)
+    def __str__(self) -> str:
+        return self.catagory_name
 
 
 class CanvasTemplates(models.Model):
@@ -17,7 +17,7 @@ class CanvasTemplates(models.Model):
     width = models.IntegerField(null=True,blank=True)
     height = models.IntegerField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 
 def user_directory_path_canvas_source_json_thumbnails(instance, filename):
@@ -55,16 +55,19 @@ class CanvasDesign(models.Model):
         ordering = ('updated_at',)
 
 
-    def save(self,*args,**kwargs):
-        print("(self.pk is None",(self.pk is None))
-        print(self.file_name)
-        if (self.pk is None) and (not self.file_name):
-            print()
-            can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
-            if can_obj:
-                self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
+
+
+
+    # def save(self,*args,**kwargs):
+    #     print("self.pk is None",(self.pk is None))
+    #     print(self.file_name)
+    #     if (self.pk is None) and (not self.file_name):
+    #         print("inside save")
+    #         can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
+    #         if can_obj:
+    #             self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
                 
-        return super(CanvasDesign, self).save(*args, **kwargs)
+    #     return super(CanvasDesign, self).save(*args, **kwargs)
 
 
 
