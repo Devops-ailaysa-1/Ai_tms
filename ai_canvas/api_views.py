@@ -673,10 +673,15 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
 
 class SocialMediaSizeValueViewset(viewsets.ViewSet):
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().order_by('social_media_name')
+        queryset = SocialMediaSize.objects.all().exclude(social_media_name__icontains='Custom Size').order_by('social_media_name')
         serializer=SocialMediaSizeValueSerializer(queryset,many=True)
         return Response(serializer.data)
- 
+
+class SocialMediaSizeCustom(viewsets.ViewSet):
+    def list(self,request):
+        queryset = SocialMediaSize.objects.filter(social_media_name='Custom Size')[0]
+        serializer=SocialMediaSizeValueSerializer(queryset)
+        return Response(serializer.data)
      
 
 
