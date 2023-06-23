@@ -361,7 +361,7 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         obj = CustomizationSettings.objects.get(id = pk, user=user)
         if not obj:
             return Response({"msg":"No detail"})
-        serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict()},partial=True)
+        serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict(),'user':user.id},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
