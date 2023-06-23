@@ -596,8 +596,7 @@ class FontSize(models.Model):
 
 class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
-# commented
-    # split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
+    split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
     target=models.TextField(null=True, blank=True)
     #step = models.ForeignKey(Steps, on_delete=models.CASCADE,null=True,blank=True,related_name="seg_save_step")
     status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
@@ -613,7 +612,7 @@ class SelflearningAsset(models.Model):
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
     occurance=models.IntegerField(default=0,null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True,blank=True)
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word
