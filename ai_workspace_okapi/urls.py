@@ -71,5 +71,8 @@ urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
-    path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file")
+    path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file"),
+
+    path("selflearn/<int:segment_id>", api_views.SelflearningApi.as_view({'post': 'create',"get":'list'}), name="self_learn_add"),
+
 ]

@@ -4385,3 +4385,30 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 #         return response
 
 
+        # if ordering_param.startswith('-'):
+        #     field_name = ordering_param[1:]  
+        #     reverse_order = True
+        # else:
+        #     field_name = ordering_param
+        #     reverse_order = False
+        # if field_name == 'created_at':
+        #     ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
+        # else:
+        #     ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
+        # print("Or---------->",ordered_queryset)
+        # pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        # ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
+        # response = self.get_paginated_response(ser.data)
+        # return response
+    
+
+from nltk import word_tokenize
+from ai_workspace_okapi.models import SelflearningAsset,    Segment
+from ai_auth.models import AiUser 
+def token():
+  segment=get_object_or_404(Segment,id=1)
+  
+
+
+
+
