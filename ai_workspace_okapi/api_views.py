@@ -329,8 +329,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = get_res_path(params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
-            print("doc_req_res_params",json.dumps(res_paths))
-
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
@@ -1026,8 +1024,6 @@ class MT_RawAndTM_View(views.APIView):
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
-        
-    
 
     @staticmethod
     def get_split_data(request, segment_id, mt_params):
@@ -1070,10 +1066,6 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                
-                print(translation)
-                # translation=MT_RawAndTM_View.asset_replace(translation)
-
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1083,12 +1075,8 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                
-                # translation=MT_RawAndTM_View.asset_replace(translation)
-
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
         else:
@@ -1172,34 +1160,9 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
-    @staticmethod   
-    def asset_replace(request,translation,segment_id):
-        seg=get_object_or_404(Segment,id=segment_id)
-        tar_lang=seg.text_unit.document.job.target_language_id
-        # tar_lang=doc
-        # tar_lang=77
-        word=word_tokenize(translation)
-        result={}
-        for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-occurance')
-            if assets:
-                coun=[i.occurance for i in assets if i.occurance>4]
-                print(coun)
-                rep=[i.edited_word for i in assets if i.occurance>4]
-                print(rep)
-                if rep:
-                    translation=translation.replace(word,rep[0]) 
-                    result[rep[0]]=[i.edited_word for i in assets if i.occurance>2 and i.edited_word != rep[0]]
-                    result[rep[0]].insert(0,word)
-             
-                else:
-                    result[word]=[i.edited_word for i in assets if i.occurance>2]         
-                                 
-        print(translation)
-        return translation,result
-
 
     def get(self, request, segment_id):
+
             tm_only = {
                         "segment": segment_id,
                         "mt_raw": "",
@@ -1234,17 +1197,6 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
-                # print('data normal=-----------',data['mt_raw'])
-                rep=data['mt_raw']
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
-
-        
-                # print('rep----------',asset_rep)
-
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
 
@@ -1259,42 +1211,9 @@ class MT_RawAndTM_View(views.APIView):
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
-                
-                rep=data['mt_raw']
-
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
-                # print('rep----------',asset_rep)
-
-
-
+                # tm_data = self.get_tm_data(request, segment_id)
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
-            
-"""
-
-
-
-def word_change():
-    # segment=request.POST.get('segment',None)
-    # tar_lang=request.POST.get('target_language',None)
-    segment="This apple size is small so he provide multiple apples"
-    tar_lang=17
-    word=word_tokenize(segment)
-    for word in word:
-        assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id =946) & Q(source_word__iexact = word))
-        if assets:
-            edited_word=assets.last().edited_word
-            # print(edited_word)
-            segment=segment.replace(word,edited_word)         
-    print(segment)
-"""
-        # return JsonResponse(result,status=status.HTTP_200_OK)
-
-
     # def get(self, request, segment_id):
     #
     #     # Getting MT params
@@ -2888,7 +2807,7 @@ def get_tags(seg):
     return tags
 
 
-from ai_workspace_okapi.serializers import SegmentDiffSerializer,SelflearningAssetSerializer
+from ai_workspace_okapi.serializers import SegmentDiffSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
@@ -3010,85 +2929,5 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 
 
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .serializers import SelflearningAssetSerializer
-from rest_framework.response import Response
-from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment
-from ai_staff.models import Languages
-from rest_framework import status
-from nltk import word_tokenize
-import difflib
-
-class SelflearningApi(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    
-    def list(self,request,segment_id):
-        seg = Segment.objects.get(id=segment_id)
-        if split_check(segment_id):
-                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt normal>>>>>>",raw_mt)
-        else:
-                split_seg = SplitSegment.objects.get(segment=seg)
-                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt split>>>>>>>",raw_mt)
-
-        # raw_mt="he buy some apples in the market "
-        # mt_edited="they buy 10 more in apples in the supermarket"
-
-        asset=seq_match_seg_diff(raw_mt,mt_edited)
-        print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-        if asset:
-            return Response(asset,status=status.HTTP_200_OK)
-        return Response({},status=status.HTTP_201_OK)
-
-
-    def create(self,request,segment_id): 
-        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
-        doc = TextUnit.objects.get(id=text_unit_id).document
-        lang=get_object_or_404(Languages,id=doc.target_language_id)
-        
-        user=self.request.user
- 
-        asset=request.POST.get('asset',None)
-        # #   
-        asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
-        print("--------",mt_raw)
-        for mt_raw in asset:
-            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
-            
-            if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw]):
-                    occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw])
-                    occuranc.occurance +=1
-                    occuranc.save()
-                   
-            else:
-                if slf_lrn_list.count() <5:
-                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    
-                else:   
-                    first_out=slf_lrn_list.first().delete()
-                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    
-                
-        return Response(asset,status=status.HTTP_201_CREATED)
-
-
-def seq_match_seg_diff(words1,words2):
-    s1=words1.split()
-    s2=words2.split()
-    assets={}
-    matcher=difflib.SequenceMatcher(None,s1,s2 )
-    print(matcher.get_opcodes())
-    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-        if tag=='replace':
-            assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
-    print("------------------",assets)  
-    for i in assets:
-        if len(assets[i].split())>3:
-            assets[i]=" ".join(assets[i].split()[0:3])
-    return assets
 
 
