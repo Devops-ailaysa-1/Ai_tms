@@ -765,7 +765,20 @@ class BlogArticleViewset(viewsets.ViewSet):
         
 
 
-
+@api_view(["GET"])
+def credit_check_blog(request):
+    blog_id=request.GET.get('blog_id')
+    blog_creation=BlogCreation.objects.get(id=blog_id)
+    initial_credit = blog_creation.user.credit_balance.get("total_left")
+    #initial_credit = user.credit_balance.get("total_left")
+    if blog_creation.user_language_code != 'en':
+        credits_required = 2000
+    else:
+        credits_required = 200
+    if initial_credit < credits_required:
+        raise Response({'msg':'Insufficient Credits'}, status=400)
+    else:
+        return Response({'msg':'Credits to generate articles are available'},status=200)
 
 
 
