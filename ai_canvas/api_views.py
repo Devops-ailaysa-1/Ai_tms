@@ -786,7 +786,7 @@ def pixa_image_url(image_url):
 
 
 def all_cat_req(category):
-    # params['q']=category
+    params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
     return pixa_bay.json()
