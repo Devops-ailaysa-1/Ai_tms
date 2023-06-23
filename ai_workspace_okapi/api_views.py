@@ -3022,7 +3022,7 @@ class SelflearningApi(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
     def list(self,request):
-        segment_id=request.POST.get('segment_id',None)
+        segment_id=request.GET.get('segment_id',None)
         seg = get_object_or_404(Segment,id=segment_id)
 
         if split_check(segment_id):
@@ -3043,7 +3043,7 @@ class SelflearningApi(viewsets.ViewSet):
 
 
     def create(self,request): 
-        doc_id=request.POST.get('document_id',None)
+        doc_id=request.GET.get('document_id',None)
         mt_raw=request.POST.get('source',None)
         edited=request.POST.get('edited',None)
 
