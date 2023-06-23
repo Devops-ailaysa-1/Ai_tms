@@ -105,13 +105,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     duplicate=serializers.BooleanField(required=False,write_only=True)
     social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     update_new_textbox=serializers.BooleanField(required=False,write_only=True)
+    project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox')
+                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox','project_category')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -125,8 +126,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'duplicate':{'write_only':True},
             'social_media_create':{'write_only':True},
             'update_new_textbox':{'write_only':True},
+
         }
 
+    
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
@@ -143,13 +146,17 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         next_page=validated_data.pop('next_page',None)
         duplicate=validated_data.pop('duplicate',None)
         update_new_textbox=validated_data.pop('update_new_textbox')
+        project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
 
+
+        print("instance.file_name",instance.file_name)
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
+            print("can_obj",can_obj)
             if can_obj:
                 instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
                 instance.save()
@@ -165,7 +172,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             instance.height=int(social_media_create.height)
             instance.width=int(social_media_create.width)
-            instance.file_name=social_media_create.social_media_name
+            # instance.file_name=social_media_create.social_media_name
             instance.save()
             return instance
           
@@ -371,6 +378,10 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
         if instance.canvas_translate.all():
             data['translate_available'] = True
+
+        # if not instance.project_category:
+            
+        #     data['project_category']
         return data
 
 class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
