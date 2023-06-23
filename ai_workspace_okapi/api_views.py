@@ -3042,7 +3042,7 @@ class SelflearningApi(viewsets.ViewSet):
         print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
         if asset:
             return Response(asset,status=status.HTTP_200_OK)
-        return Response({},status=status.HTTP_201_OK)
+        return Response({},status=status.HTTP_200_OK)
 
 
     def create(self,request,segment_id): 
@@ -3055,7 +3055,7 @@ class SelflearningApi(viewsets.ViewSet):
         asset=request.POST.get('asset',None)
         # #   
         asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
-        print("--------",mt_raw)
+        #print("--------",mt_raw)
         for mt_raw in asset:
             slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
             
