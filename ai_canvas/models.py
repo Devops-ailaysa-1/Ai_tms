@@ -60,7 +60,8 @@ class CanvasDesign(models.Model):
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
             if can_obj:
                 self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
-        return super().save(*args, **kwargs)
+                
+        super(CanvasDesign, self).save(*args, **kwargs)
 
 
 
