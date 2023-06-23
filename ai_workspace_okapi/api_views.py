@@ -329,6 +329,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = get_res_path(params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
+            print("doc_req_res_params",json.dumps(res_paths))
+
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
@@ -2916,80 +2918,86 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .serializers import SelflearningAssetSerializer
 from rest_framework.response import Response
-from ai_workspace_okapi.models import SelflearningAsset,Document
+from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment
 from ai_staff.models import Languages
 from rest_framework import status
 from nltk import word_tokenize
+import difflib
 
 class SelflearningApi(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
-    def list(self,request):
-        segment=request.POST.get('segment',None)
-        tar_lang=request.POST.get('target_language',None)
-        segment="This apple size is small so he provide multiple apples"
-        print(segment)
-        tar_lang=17
-        word=word_tokenize(segment)
-        result={}
-        for word in word:
-             assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id = self.request.user) & Q(source_word__iexact = word))
-             if assets:
-                result[word]=[i.edited_word for i in assets]
-                result[word][-1]=word
-        print(result)
-        return JsonResponse(result,status=status.HTTP_200_OK)
+    def list(self,request,segment_id):
+        seg = Segment.objects.get(id=segment_id)
+        if split_check(segment_id):
+                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt normal>>>>>>",raw_mt)
+        else:
+                split_seg = SplitSegment.objects.get(segment=seg)
+                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt split>>>>>>>",raw_mt)
+
+        # raw_mt="he buy some apples in the market "
+        # mt_edited="they buy 10 more in apples in the supermarket"
+
+        asset=seq_match_seg_diff(raw_mt,mt_edited)
+        print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+        if asset:
+            return Response(asset,status=status.HTTP_200_OK)
+        return Response({},status=status.HTTP_201_OK)
 
 
-    def create(self,request,document_id): 
-        doc=get_object_or_404(Document,id=document_id)
+    def create(self,request,segment_id): 
+        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
 
+        raw_mt="he buy some apples in the market "
+        mt_edited="they buy 10 more in apples in the supermarket"
+        
         #input data
-        in_word=request.POST.get('source',None)
-        edited_word=request.POST.get('edited',None)
+        mt_raw=request.POST.get('source',None)
+        mt_edited=request.POST.get('edited',None)   
+        #   
+        asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
+        print("--------",mt_raw)
+        for mt_raw in asset:
+            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
+            
+            if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw]):
+                    occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw])
+                    occuranc.occurance +=1
+                    occuranc.save()
+                    # return Response(status=status.HTTP_201_CREATED)
+            else:
+                if slf_lrn_list.count() <5:
+                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
+                    # return Response(status=status.HTTP_201_CREATED)
+                else:   
+                    first_out=slf_lrn_list.first().delete()
+                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
+                    # return Response(status=status.HTTP_201_CREATED)
+                
+        return Response(status=status.HTTP_201_CREATED)
 
-        
 
-        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=in_word)
-        
-        if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=in_word,edited_word=edited_word):
-                occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=in_word,edited_word=edited_word)
-                occuranc.occurance +=1
-                occuranc.save()
-                return Response(status=status.HTTP_201_CREATED)
-        else:
-            if slf_lrn_list.count() <5:
-                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word,occurance=1)
-                return Response(status=status.HTTP_201_CREATED)
-            else:   
-                first_out=slf_lrn_list.first().delete()
-                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word,occurance=1)
-                return Response(status=status.HTTP_201_CREATED)
+def seq_match_seg_diff(words1,words2):
+    s1=words1.split()
+    s2=words2.split()
+    assets={}
+    matcher=difflib.SequenceMatcher(None,s1,s2 )
+    print(matcher.get_opcodes())
+    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+        if tag=='replace':
+            assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+    print("------------------",assets)  
+    for i in assets:
+        if len(assets[i].split())>3:
+            assets[i]=" ".join(assets[i].split()[0:3])
+    return assets
 
 
-
-
-
-
-# word=word_tokenize(translation)
-#         result={}
-#         for word in word:
-#             assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-occurance')
-#             if assets:
-#                 coun=[i.occurance for i in assets if i.occurance>4]
-#                 print(coun)
-#                 rep=[i.edited_word for i in assets if i.occurance>4]
-#                 print(rep)
-#                 if rep:
-#                     translation=translation.replace(word,rep[0]) 
-#                     result[rep[0]]=[i.edited_word for i in assets if i.occurance>3 and i.edited_word != rep[0]]
-#                     result[rep[0]].insert(0,word)
-             
-#                 else:
-#                     result[word]=[i.edited_word for i in assets if i.occurance>2]         
-                                 
-#         print(translation)
-#         return translation,result

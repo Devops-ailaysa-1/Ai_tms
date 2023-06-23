@@ -108,41 +108,41 @@ class DownloadDocumentToFileView(views.View):
 
 
 
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .serializers import SelflearningAssetSerializer
-from rest_framework.response import Response
-from ai_workspace_okapi.models import SelflearningAsset,Document
-from ai_staff.models import Languages
-from rest_framework import status
+# from rest_framework import viewsets
+# from rest_framework.permissions import IsAuthenticated
+# from .serializers import SelflearningAssetSerializer
+# from rest_framework.response import Response
+# from ai_workspace_okapi.models import SelflearningAsset,Document
+# from ai_staff.models import Languages
+# from rest_framework import status
 
-#self learning segment
-class SelflearningApi(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    # lang=get_object_or_404(Languages,id=17)
+# #self learning segment
+# class SelflearningApi(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated,]
+#     # lang=get_object_or_404(Languages,id=17)
 
-    def list(self,request):
-        slf=SelflearningAsset.objects.filter(user=self.request.user).order_by('-id')
-        slf_learning_serializer=SelflearningAssetSerializer(slf,many=True)
-        return Response(slf_learning_serializer.data,status=status.HTTP_200_OK)
+#     def list(self,request):
+#         slf=SelflearningAsset.objects.filter(user=self.request.user).order_by('-id')
+#         slf_learning_serializer=SelflearningAssetSerializer(slf,many=True)
+#         return Response(slf_learning_serializer.data,status=status.HTTP_200_OK)
     
-    def create(self,request,document_id): 
-        doc=get_object_or_404(Document,id=document_id)
-        lang=get_object_or_404(Languages,id=doc.target_language_id)
-        user=self.request.user
-        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang)
-        # print(doc.target_language_id,'-----',doc.target_language)
+#     def create(self,request,document_id): 
+#         doc=get_object_or_404(Document,id=document_id)
+#         lang=get_object_or_404(Languages,id=doc.target_language_id)
+#         user=self.request.user
+#         slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang)
+#         # print(doc.target_language_id,'-----',doc.target_language)
         
-        #input data
-        in_word=request.POST.get('source',None)
-        edited_word=request.POST.get('edited',None)
+#         #input data
+#         in_word=request.POST.get('source',None)
+#         edited_word=request.POST.get('edited',None)
 
-        slf_lrn_list=slf_lrn_list.filter(source_word=in_word)
-        if slf_lrn_list.count() < 5:
-            slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word)
-            return Response(status=status.HTTP_201_CREATED)
+#         slf_lrn_list=slf_lrn_list.filter(source_word=in_word)
+#         if slf_lrn_list.count() < 5:
+#             slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word)
+#             return Response(status=status.HTTP_201_CREATED)
                         
-        else:
-            first_out=slf_lrn_list.first().delete()
-            slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word)
-            return Response(status=status.HTTP_201_CREATED)
+#         else:
+#             first_out=slf_lrn_list.first().delete()
+#             slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=in_word,edited_word=edited_word)
+#             return Response(status=status.HTTP_201_CREATED)
