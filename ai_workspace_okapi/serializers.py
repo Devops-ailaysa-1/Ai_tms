@@ -576,9 +576,10 @@ class SegmentPageSizeSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CommentSerializer(serializers.ModelSerializer):
+    commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
     class Meta:
         model = Comment
-        fields = "__all__"
+        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user',)
 
 class FilterSerializer(serializers.Serializer):
     status_list = serializers.JSONField(

@@ -1962,11 +1962,11 @@ class CommentView(viewsets.ViewSet):
             if split_check(id):
                 print("normal")
                 segment = get_object_or_404(Segment.objects.all(), id=id)                
-                return segment.segment_comments_set.all()
+                return segment.segment_comments_set.order_by('id')
             else:
                 print("split")
                 split_segment = SplitSegment.objects.get(id=id)
-                return split_segment.split_segment_comments_set.all()
+                return split_segment.split_segment_comments_set.order_by('id')
 
 
         if by=="document":
@@ -1974,11 +1974,11 @@ class CommentView(viewsets.ViewSet):
             comments_list=[]
             for segment in document.segments.all():
                 if segment.is_split!=True:
-                    comments_list.extend(segment.segment_comments_set.all())
+                    comments_list.extend(segment.segment_comments_set.order_by('id'))
                 else:
                     split_seg = SplitSegment.objects.filter(segment_id=segment.id)
                     for i in  split_seg:
-                        comments_list.extend(i.split_segment_comments_set.all())
+                        comments_list.extend(i.split_segment_comments_set.order_by('id'))
             return comments_list
 
             # return [ comment
@@ -2002,7 +2002,7 @@ class CommentView(viewsets.ViewSet):
             ser = CommentSerializer(data={**request.POST.dict(), "commented_by": request.user.id} )
         else:
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
-            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user})
+            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             with transaction.atomic():
                 ser.save()
@@ -2015,24 +2015,35 @@ class CommentView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
-        if obj.commented_by == request.user:
-            authorize(request, resource=obj, actor=request.user, action="update")
+        authorize(request, resource=obj, actor=request.user, action="update")
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+                if ser.is_valid(raise_exception=True):
+                    ser.save()    
+                    return Response(ser.data, status=202)
+                return Response(ser.errors)
+            else:
+                return Response({'msg':'You do not have permission to edit'},status=403)
+        else:
             ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
             if ser.is_valid(raise_exception=True):
                 ser.save()    
                 return Response(ser.data, status=202)
             return Response(ser.errors)
-        else:
-            return Response({'msg':'You do not have permission to edit'},status=403)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
         authorize(request, resource=obj, actor=request.user, action="delete")
-        if obj.commented_by == request.user:
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                obj.delete()
+                return  Response({},204)
+            else:
+                return Response({'msg':'You do not have permission to edit'},status=403)
+        else:
             obj.delete()
             return  Response({},204)
-        else:
-            return Response({'msg':'You do not have permission to edit'},status=403)
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
@@ -2899,7 +2910,9 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        else:target_segment=instance.temp_target
+        elif instance.temp_target:
+            target_segment=instance.temp_target
+        else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  

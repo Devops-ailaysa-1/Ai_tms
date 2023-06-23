@@ -860,7 +860,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
 	class Meta:
 		model = TaskAssignInfo
-		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','mtpe_count_unit','total_word_count','currency',\
+		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','change_request_reason','mtpe_count_unit','total_word_count','currency',\
 				  'assigned_by','task_assign_info','task_ven_status','account_raw_count','billable_char_count','billable_word_count',)
 
 ####################Need to change################################
@@ -1069,6 +1069,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	converted = serializers.SerializerMethodField()
 	is_task_translated = serializers.SerializerMethodField()
 	mt_only_credit_check = serializers.SerializerMethodField()
+	converted_audio_file_exists = serializers.SerializerMethodField()
+	download_audio_output_file = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -1078,7 +1080,22 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
+			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
+			"converted_audio_file_exists","download_audio_output_file",)
+
+	def get_converted_audio_file_exists(self,obj):
+		if obj.document:
+			return obj.document.converted_audio_file_exists
+		else:
+			return None
+	
+
+	def get_download_audio_output_file(self,obj):
+		if obj.document:
+			return obj.document.download_audio_output_file
+		else:
+			return None
+
 
 	def get_converted(self,obj):
 		if obj.job.project.project_type_id == 4 :
@@ -1576,7 +1593,7 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
 
 
 
-def msg_send_vendor_accept(task_assign,input):
+def msg_send_vendor_accept(task_assign,input,reason):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
@@ -1601,7 +1618,8 @@ def msg_send_vendor_accept(task_assign,input):
         if input == 'task_accepted':
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
         elif input == 'change_request':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request with the following message and waiting for your response.\n Message: "+reason
+        print("Msg--------->",message)
     if thread_id:
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
         notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
@@ -1818,12 +1836,14 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 
 			if 'task_ven_status' in data.get('task_assign_info'):
+				change_request_reason = data.get('task_assign_info').get('change_request_reason',None)
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
 				if data.get('task_assign_info').get('task_ven_status') == "change_request":
 					po_update.append('change_request')
-				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
-				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				task_ven_status = data.get('task_assign_info').get('task_ven_status')
+				ws_forms.task_assign_ven_status_mail(instance,task_ven_status,change_request_reason)
+				try:msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
 				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:

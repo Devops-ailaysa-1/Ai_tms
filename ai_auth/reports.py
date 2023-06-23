@@ -145,8 +145,10 @@ class AilaysaReport:
             #'Langpair Used',
             'Intial Credits',
             'Credits Left',
-            'Plan',
-            'Subscription status'])
+            'Previous plan',
+            'Previous plan status'
+            'Current Plan',
+            'Current Plan status'])
         for user in users:
 
             if proj_details:
@@ -161,6 +163,7 @@ class AilaysaReport:
                 try:
                     subs_details.get(customer__email=user.email).get('customer__email')
                     sub = Subscription.objects.get(customer__email=user.email,status__in=['trialing','active','past_due'])
+                    sub = Subscription.objects.filter(Q(customer__email=user.email)&~Q(status__in=['trialing','active','past_due']))
                     plan_name = sub.plan.product.name
                     status = sub.status
                 except:
@@ -174,7 +177,7 @@ class AilaysaReport:
                 country_name = user.country.name
 
             df2 = {'UID':user.uid,'Email':user.email, 'Country': country_name, 'Projects Created': proj_count,'Intial Credits':user_credi_details.get('buy'),'Credits Left':user_credi_details.get('left'),
-                    'Plan':plan_name,'Subscription status':status,'Created':pd.to_datetime(user.date_joined.replace(tzinfo=None))}
+                  'Current Plan':plan_name,'Current Plan status':status,'Created':pd.to_datetime(user.date_joined.replace(tzinfo=None))}
             df = df.append(df2, ignore_index = True)
             # df.insert(loc=0, column='UID', value=player_vals)
             # df.insert(loc=0, column='Email', value=player_vals)
