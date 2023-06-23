@@ -3061,8 +3061,7 @@ class SelflearningApi(viewsets.ViewSet):
                     occuranc.save()         
         else:
                 if slf_lrn_list.count() <5:
-                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)
-                    
+                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)    
                 else:   
                     first_out=slf_lrn_list.first().delete()
                     slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)
@@ -3073,8 +3072,6 @@ class SelflearningApi(viewsets.ViewSet):
 
     def delete(self,request,pk):
         pass
-
-
 
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()

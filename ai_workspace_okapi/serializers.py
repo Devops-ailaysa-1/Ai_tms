@@ -544,7 +544,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         #word update in mt_raw
 
-        instance=self.slf_learning_word_update(instance,doc)
+        # instance=self.slf_learning_word_update(instance,doc)
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
