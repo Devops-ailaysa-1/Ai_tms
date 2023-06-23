@@ -2985,8 +2985,8 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        elif instance.temp_target:
-            target_segment=instance.temp_target
+        elif instance.segment.temp_target:
+            target_segment=instance.segment.temp_target
         else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
@@ -3051,9 +3051,19 @@ class SelflearningApi(viewsets.ViewSet):
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
+<<<<<<< HEAD
         print('------------',doc_id,mt_raw,edited,lang,user)
         slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
         print(slf_lrn_list)
+=======
+ 
+        asset=request.POST.get('asset',None)
+        # #   
+        asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
+        #print("--------",mt_raw)
+        for mt_raw in asset:
+            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
+>>>>>>> origin/v4-merged-production
             
         if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=edited):
                     occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=edited)

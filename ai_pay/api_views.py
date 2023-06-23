@@ -311,8 +311,9 @@ def po_generate_pdf(po):
                 return False
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
+    step = po.assignment.step.name
     context={'client': po.client,'seller':po.seller,'poid':po.poid,
-     'created_at':po.created_at,'project_name':project_name ,'project_id':project_id,'currency':po.currency.currency_code,'po_total_amount':po.po_total_amount,'tasks':tasks}
+     'created_at':po.created_at,'project_name':project_name ,'project_id':project_id,'currency':po.currency.currency_code,'po_total_amount':po.po_total_amount,'tasks':tasks,'step':step}
     html_string = render_to_string('po_pdf.html', context)
 
     html = HTML(string=html_string)
