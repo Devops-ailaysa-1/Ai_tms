@@ -219,3 +219,13 @@ def json_sr_url_change(json,instance):
     return json
 
 
+
+def paginate_items(items, page_number, items_per_page):
+    total_items = len(items)
+    total_pages = (total_items + items_per_page - 1) // items_per_page
+    if page_number < 1 or page_number > total_pages:
+        raise ValueError("Invalid page number")
+    start_index = (page_number - 1) * items_per_page
+    end_index = start_index + items_per_page
+    paginated_items = items[start_index:end_index]
+    return paginated_items, total_pages

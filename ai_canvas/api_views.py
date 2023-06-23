@@ -22,7 +22,7 @@ from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
-from ai_canvas.utils import convert_image_url_to_file
+from ai_canvas.utils import convert_image_url_to_file,paginate_items
 
 
 
@@ -748,16 +748,6 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
 #                     return Response(serializer.errors)
 #         else:
 #             return Response({'image_search':'fill image search field'},status=200)
-from rest_framework import serializers
-def all_cat_req(category):
-    params['q']=category
-    params['catagory']=str(category).lower()
-    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
-    return pixa_bay.json()
- 
-
-     
-
 
 def req_thread(category=None,page=None,search=None):
     if category and search and page:
@@ -794,6 +784,12 @@ def pixa_image_url(image_url):
     image_file =core.files.File(core.files.base.ContentFile(im),str(uuid.uuid1())+'.'+image_url.split('/')[-1].split('.')[-1])
     return image_file
 
+
+def all_cat_req(category):
+    # params['q']=category
+    params['catagory']=str(category).lower()
+    pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
+    return pixa_bay.json()
 
 def process_pixabay(**kwargs):
     data=[]
@@ -863,7 +859,11 @@ def image_list(request):
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
+
+
+    # itm_pr_pge=6
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
+    # image_cats=paginate_items(image_cats,page,itm_pr_pge)[0]
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(all_cat_req,image_cats))
 
