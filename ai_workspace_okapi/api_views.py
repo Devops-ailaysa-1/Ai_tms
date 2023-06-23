@@ -2985,8 +2985,8 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        elif instance.temp_target:
-            target_segment=instance.temp_target
+        elif instance.segment.temp_target:
+            target_segment=instance.segment.temp_target
         else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
