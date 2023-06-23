@@ -776,7 +776,7 @@ def credit_check_blog(request):
     else:
         credits_required = 200
     if initial_credit < credits_required:
-        raise Response({'msg':'Insufficient Credits'}, status=400)
+        return Response({'msg':'Insufficient Credits'}, status=400)
     else:
         return Response({'msg':'Credits to generate articles are available'},status=200)
 
