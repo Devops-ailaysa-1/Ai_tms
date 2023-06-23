@@ -683,7 +683,7 @@ class SocialMediaSizeValueViewset(viewsets.ViewSet):
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().exclude(social__media_name__icontains='Custom').order_by('social_media_name')
+        queryset = SocialMediaSize.objects.all().exclude(social_media_name__icontains='Custom').order_by('social_media_name')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
