@@ -3008,8 +3008,6 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 
 
-
-
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .serializers import SelflearningAssetSerializer
@@ -3023,8 +3021,10 @@ import difflib
 class SelflearningApi(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
-    def list(self,request,segment_id):
-        seg = Segment.objects.get(id=segment_id)
+    def list(self,request):
+        segment_id=request.GET.get('segment_id',None)
+        seg = get_object_or_404(Segment,id=segment_id)
+
         if split_check(segment_id):
                 raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
                 mt_edited=seg.target
@@ -3035,9 +3035,6 @@ class SelflearningApi(viewsets.ViewSet):
                 mt_edited=seg.target
                 print("raw_mt split>>>>>>>",raw_mt)
 
-        # raw_mt="he buy some apples in the market "
-        # mt_edited="they buy 10 more in apples in the supermarket"
-
         asset=seq_match_seg_diff(raw_mt,mt_edited)
         print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
         if asset:
@@ -3045,36 +3042,36 @@ class SelflearningApi(viewsets.ViewSet):
         return Response({},status=status.HTTP_200_OK)
 
 
-    def create(self,request,segment_id): 
-        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
-        doc = TextUnit.objects.get(id=text_unit_id).document
+    def create(self,request): 
+        doc_id=request.POST.get('document_id',None)
+        mt_raw=request.POST.get('source',None)
+        edited=request.POST.get('edited',None)
+
+        doc=get_object_or_404(Document,id=doc_id)
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
- 
-        asset=request.POST.get('asset',None)
-        # #   
-        asset={"apples":"apple","market":"supermarket","boat":"beat","buy":"bought"}
-        #print("--------",mt_raw)
-        for mt_raw in asset:
-            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
+        print('------------',doc_id,mt_raw,edited,lang,user)
+        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
+        print(slf_lrn_list)
             
-            if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw]):
-                    occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw])
-                    occuranc.occurance +=1
-                    occuranc.save()
-                   
-            else:
-                if slf_lrn_list.count() <5:
-                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    
-                else:   
-                    first_out=slf_lrn_list.first().delete()
-                    slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=asset[mt_raw],occurance=1)
-                    
-                
-        return Response(asset,status=status.HTTP_201_CREATED)
+        if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=edited):
+            occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
+            occuranc.occurance +=1
+            occuranc.save()         
+        else:
+            if slf_lrn_list.count() <5:
+                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)    
+            else:   
+                first_out=slf_lrn_list.first().delete()
+                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)
+        return Response(status=status.HTTP_201_CREATED)
 
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        pass
 
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()
@@ -3090,5 +3087,4 @@ def seq_match_seg_diff(words1,words2):
         if len(assets[i].split())>3:
             assets[i]=" ".join(assets[i].split()[0:3])
     return assets
-
 

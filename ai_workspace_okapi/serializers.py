@@ -543,7 +543,6 @@ class MT_RawSerializer(serializers.ModelSerializer):
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         #word update in mt_raw
-
         #instance=self.slf_learning_word_update(instance,doc)
         return instance
 
