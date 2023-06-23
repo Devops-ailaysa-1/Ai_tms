@@ -4402,13 +4402,4 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         # return response
     
 
-from nltk import word_tokenize
-from ai_workspace_okapi.models import SelflearningAsset,    Segment
-from ai_auth.models import AiUser 
-def token():
-  segment=get_object_or_404(Segment,id=1)
-  
-
-
-
 
