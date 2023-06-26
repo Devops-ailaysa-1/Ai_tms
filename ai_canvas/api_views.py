@@ -96,7 +96,7 @@ class CanvasTemplateViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = CanvasTemplates.objects.all()
+        queryset = CanvasTemplates.objects.all().order_by('created_at')
         serializer = CanvasTemplateSerializer(queryset,many=True)
         return Response(serializer.data)
 
