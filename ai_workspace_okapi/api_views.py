@@ -3011,6 +3011,7 @@ from nltk import word_tokenize
 from django_filters.rest_framework import DjangoFilterBackend
 import difflib
 from rest_framework.pagination import PageNumberPagination
+from django.core.exceptions import ValidationError
 
 
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
@@ -3082,16 +3083,21 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
     def update(self,request,pk):
         ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
-        ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
-        if ser.is_valid():
-            ser.save()
-            return Response(ser.data)
-        return Response(ser.errors)
+        edited=request.POST.get('edited_word',None)
+        slf=SelflearningAsset.objects.filter(user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        if slf:
+            raise ValidationError("choice list already exists!")
+        else:
+            ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+            if ser.is_valid():
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
 
     def delete(self,request,pk):
         ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
         ins.delete()
-        return  Response({},204)
+        return  Response(status=204)
     
     @staticmethod
     def seq_match_seg_diff(words1,words2):
