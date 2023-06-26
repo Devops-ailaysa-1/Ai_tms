@@ -1,6 +1,6 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
                      BlogKeywordGenerate,Blogtitle,BlogOutline,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
+                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -439,6 +439,17 @@ class ImageGeneratorPromptDelete(generics.DestroyAPIView):
     queryset = ImageGeneratorPrompt.objects.all()
     serializer_class = ImageGeneratorPromptSerializer
     lookup_field = 'pk'
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_ai_image_generated_file(request,id):
+    try:
+        file = ImageGenerationPromptResponse.objects.get(id=id).generated_image 
+        return download_file(file.path)
+    except:
+        return Response({'msg':'Requested file not exists'},status=401)
+
 
 
 class BlogCreationViewset(viewsets.ViewSet):
