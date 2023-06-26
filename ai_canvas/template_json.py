@@ -29,14 +29,23 @@ basic_json =  { "version": "5.3.0",
         "flipX": false,
         "flipY": false,
         "opacity": 1,
+        # "shadow": {
+        #     "color": "rgba(0,0,0,0.8)",
+        #     "blur": 0.01,
+        #     "offsetX": 0,
+        #     "offsetY": 0,
+        #     "affectStroke": false,
+        #     "nonScaling": false
+        # },
         "shadow": {
-            "color": "rgba(0,0,0,0.8)",
-            "blur": 0.01,
+            "color": "#0000001A",
+            "blur": 4,
             "offsetX": 0,
             "offsetY": 0,
             "affectStroke": false,
             "nonScaling": false
         },
+
         "visible": true,
         "backgroundColor": "",
         "fillRule": "nonzero",
