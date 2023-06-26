@@ -611,8 +611,8 @@ class SelflearningAsset(models.Model):
     target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
-    occurance=models.IntegerField(default=0,null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,null=True,blank=True)
+    occurance=models.IntegerField(default=1,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word

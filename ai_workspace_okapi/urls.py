@@ -9,7 +9,7 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
-router.register(r"selflearn",api_views.SelflearningApi,basename="self_learn")
+router.register(r"selflearn",api_views.Selflearningview,basename="self_learn")
 
 urlpatterns = router.urls
 

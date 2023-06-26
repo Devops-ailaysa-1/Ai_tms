@@ -1179,24 +1179,17 @@ class MT_RawAndTM_View(views.APIView):
         # tar_lang=doc
         # tar_lang=77
         word=word_tokenize(translation)
-        result={}
+        suggestion={}
         for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-occurance')
+            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
             if assets:
-                coun=[i.occurance for i in assets if i.occurance>4]
-                print(coun)
-                rep=[i.edited_word for i in assets if i.occurance>4]
-                print(rep)
-                if rep:
-                    translation=translation.replace(word,rep[0]) 
-                    result[rep[0]]=[i.edited_word for i in assets if i.occurance>2 and i.edited_word != rep[0]]
-                    result[rep[0]].insert(0,word)
-             
-                else:
-                    result[word]=[i.edited_word for i in assets if i.occurance>2]         
-                                 
+                replace_word=assets.first().edited_word
+                translation=translation.replace(word,replace_word) 
+                suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
+                suggestion[replace_word].insert(0,word)
+                                               
         print(translation)
-        return translation,result
+        return translation,suggestion
 
 
     def get(self, request, segment_id):
@@ -3018,73 +3011,84 @@ from rest_framework import status
 from nltk import word_tokenize
 import difflib
 
-class SelflearningApi(viewsets.ViewSet):
+class Selflearningview(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
-        seg = get_object_or_404(Segment,id=segment_id)
+        if segment_id:
+            seg = get_object_or_404(Segment,id=segment_id)
+            if split_check(segment_id):
+                    raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                    mt_edited=seg.target
+                    print("raw_mt normal>>>>>>",raw_mt)
+            else:
+                    split_seg = SplitSegment.objects.get(segment=seg)
+                    raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                    mt_edited=seg.target
+                    print("raw_mt split>>>>>>>",raw_mt)
 
-        if split_check(segment_id):
-                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt normal>>>>>>",raw_mt)
+            asset=Selflearningview.seq_match_seg_diff(raw_mt,mt_edited)
+            print('asset >>>>>>>>>>>>>>>>>>>>',asset)
+            if asset:
+                return Response(asset,status=status.HTTP_200_OK)    
         else:
-                split_seg = SplitSegment.objects.get(segment=seg)
-                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt split>>>>>>>",raw_mt)
-
-        asset=seq_match_seg_diff(raw_mt,mt_edited)
-        print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-        if asset:
-            return Response(asset,status=status.HTTP_200_OK)
-        return Response({},status=status.HTTP_200_OK)
-
+            asset=SelflearningAsset.objects.filter(user=self.request.user).order_by('-id')
+            slf_learning_serializer=SelflearningAssetSerializer(asset,many=True)
+            return Response(slf_learning_serializer.data,status=status.HTTP_200_OK)    
+       
 
     def create(self,request): 
         doc_id=request.POST.get('document_id',None)
-        mt_raw=request.POST.get('source',None)
-        edited=request.POST.get('edited',None)
+        mt_raw=request.POST.get('source_word',None)
+        edited=request.POST.get('edited_word',None)
 
         doc=get_object_or_404(Document,id=doc_id)
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
         print('------------',doc_id,mt_raw,edited,lang,user)
-        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
-        print(slf_lrn_list)
-            
-        if  SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=edited):
-            occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
-            occuranc.occurance +=1
-            occuranc.save()         
+        if SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=edited):
+            inst=SelflearningAsset.objects.get(user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
+            print("instance>>>>>>>",inst)
+            assetserializer=SelflearningAssetSerializer(inst,many=False)
+            assetserializer.update_occurance(inst)
+            print("asset serializer>>>>>>>>>>>",assetserializer.data)
+            return Response(assetserializer.data)
         else:
-            if slf_lrn_list.count() <5:
-                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)    
-            else:   
-                first_out=slf_lrn_list.first().delete()
-                slf_lrn_create=SelflearningAsset.objects.create(user=user,target_language=lang,source_word=mt_raw,edited_word=edited,occurance=1)
-        return Response(status=status.HTTP_201_CREATED)
+            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
+            print(slf_lrn_list.count())
+            print("request.data >>>>>>>>>.",request.data)
+            assetserializer=SelflearningAssetSerializer(data={**request.POST.dict(),'user':user.id,'target_language':lang.id},context={'request':request})
+            print(assetserializer)
+            if assetserializer.is_valid():
+                assetserializer.save()
+                if slf_lrn_list.count() >5:
+                    print("first delete")
+                    slf_lrn_list.first().delete()
+                return Response(assetserializer.data)
+            return JsonResponse({"msg":"invalid data"})
+
 
     def update(self,request,pk):
         pass
 
     def delete(self,request,pk):
         pass
-
-def seq_match_seg_diff(words1,words2):
-    s1=words1.split()
-    s2=words2.split()
-    assets={}
-    matcher=difflib.SequenceMatcher(None,s1,s2 )
-    print(matcher.get_opcodes())
-    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-        if tag=='replace':
-            assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
-    print("------------------",assets)  
-    for i in assets:
-        if len(assets[i].split())>3:
-            assets[i]=" ".join(assets[i].split()[0:3])
-    return assets
+    
+    @staticmethod
+    def seq_match_seg_diff(words1,words2):
+        s1=words1.split()
+        s2=words2.split()
+        assets={}
+        matcher=difflib.SequenceMatcher(None,s1,s2 )
+        print(matcher.get_opcodes())
+        for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+            if tag=='replace':
+                assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+        print("------------------",assets)  
+        for i in assets:
+            if len(assets[i].split())>3:
+                assets[i]=" ".join(assets[i].split()[0:3])
+        return assets
 

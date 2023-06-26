@@ -479,6 +479,10 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
         model=SelflearningAsset
         fields="__all__"
 
+    def update_occurance(self,instance):
+        print(instance)
+        instance.occurance+=1
+        instance.save()
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
