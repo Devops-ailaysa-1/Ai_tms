@@ -849,27 +849,31 @@ def weighted_count_update(receiver,sender,assignment_id):
         if existing_wc != word_count and existing_cc != char_count:
             task_assign_obj_ls.append(obj)
 
-        if receiver !=None and sender!=None:
-            print("------------------POST-----------------------------------")
-            Receiver = AiUser.objects.get(id = receiver)
-            receivers = []
-            receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) or Receiver.is_agency else []
-            receivers.append(Receiver)
-            Sender = AiUser.objects.get(id = sender)
-            hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
-            for i in [*set(receivers)]:
-                if i in hired_editors:
-                    ws_forms.task_assign_detail_mail(i,assignment_id)
-        else:
-            print("------------------------PUT------------------------------")
-            assigns = task_assgn_objs[0].task_assign
-            if assigns.task_assign_info.mtpe_count_unit_id != None:
-                if assigns.task_assign_info.mtpe_count_unit_id == 1:
-                    if existing_wc != word_count:
-                        notify_word_count(assigns,word_count,char_count)
-                else:
-                    if existing_cc != char_count:
-                        notify_word_count(assigns,word_count,char_count)
+        try:
+            if receiver !=None and sender!=None:
+                print("------------------POST-----------------------------------")
+                Receiver = AiUser.objects.get(id = receiver)
+                receivers = []
+                receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
+                receivers.append(Receiver)
+                Sender = AiUser.objects.get(id = sender)
+                hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
+                for i in [*set(receivers)]:
+                    if i in hired_editors:
+                        ws_forms.task_assign_detail_mail(i,assignment_id)
+            else:
+                print("------------------------PUT------------------------------")
+                assigns = task_assgn_objs[0].task_assign
+                if assigns.task_assign_info.mtpe_count_unit_id != None:
+                    if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                        if existing_wc != word_count:
+                            notify_word_count(assigns,word_count,char_count)
+                    else:
+                        if existing_cc != char_count:
+                            notify_word_count(assigns,word_count,char_count)
+        except:
+            print("<---------Notification error------------->")
+            pass
     logger.info('billable count updated and mail sent')
 
     if len(task_assign_obj_ls) != 0:
