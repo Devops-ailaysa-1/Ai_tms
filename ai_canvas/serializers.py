@@ -448,7 +448,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
-        fields = ("id","image_name","image")
+        fields = ("id","image_name","image",'thumbnail')
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
