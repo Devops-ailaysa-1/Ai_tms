@@ -20,10 +20,10 @@ def user_directory_path_image_translate_result(instance, filename):
 def user_directory_path_image_load_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_load/thumbnail",filename)
 
-
+from django.core.validators import FileExtensionValidator
 class Imageload(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    image=models.FileField(upload_to=user_directory_path_image_load,blank=True ,null=True)
+    image=models.FileField(upload_to=user_directory_path_image_load,blank=True ,null=True,validators=[FileExtensionValidator(allowed_extensions=["svg","jpeg","jpg","png"])])
     file_name=models.CharField(max_length=200,blank=True,null=True)
     types=models.CharField(max_length=10,blank=True,null=True)
     height=models.CharField(max_length=10,blank=True,null=True)
