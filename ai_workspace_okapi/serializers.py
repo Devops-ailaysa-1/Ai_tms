@@ -479,10 +479,25 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
         model=SelflearningAsset
         fields="__all__"
 
-    def update_occurance(self,instance):
-        print(instance)
-        instance.occurance+=1
-        instance.save()
+    def create(self,validated_data):
+        lang = validated_data.get('target_language',None)
+        edited = validated_data.get('edited_word',None)
+        source = validated_data.get('source_word',None)
+        user = validated_data.get('user',None)
+
+        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=source)
+        print(slf_lrn_list)
+    
+        if  slf_lrn_list.filter(edited_word=edited):
+            ins = slf_lrn_list.filter(edited_word=edited).last()
+            ins.occurance +=1
+            ins.save()         
+        else:
+            if slf_lrn_list.count() >4:
+                first_out=slf_lrn_list.first().delete()
+            ins=SelflearningAsset.objects.create(user_id=user.id,target_language=lang,source_word=source,edited_word=edited,occurance=1)  
+        return ins
+
 
 
 class MT_RawSerializer(serializers.ModelSerializer):

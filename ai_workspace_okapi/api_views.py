@@ -1191,7 +1191,6 @@ class MT_RawAndTM_View(views.APIView):
         print(translation)
         return translation,suggestion
 
-
     def get(self, request, segment_id):
             tm_only = {
                         "segment": segment_id,
@@ -3010,6 +3009,8 @@ from ai_staff.models import Languages
 from rest_framework import status
 from nltk import word_tokenize
 import difflib
+from rest_framework.pagination import PageNumberPagination
+from django.core.paginator import Paginator, EmptyPage
 
 class Selflearningview(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -3034,40 +3035,35 @@ class Selflearningview(viewsets.ViewSet):
                 return Response(asset,status=status.HTTP_200_OK)    
         else:
             asset=SelflearningAsset.objects.filter(user=self.request.user).order_by('-id')
-            slf_learning_serializer=SelflearningAssetSerializer(asset,many=True)
+            print("asset count>>>>>>>>>>",asset.count())
+            paginator = PageNumberPagination()
+            paginator.page_size = 20
+            asset = paginator.paginate_queryset(asset, request)
+            slf_learning_serializer=SelflearningAssetSerializer(asset,many=True)            
             return Response(slf_learning_serializer.data,status=status.HTTP_200_OK)    
+
+
+            # queryset = asset
+            # pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            # serializer = SelflearningAssetSerializer(pagin_tc,many=True,context={'request':request})
+            # response = self.get_paginated_response(serializer.data)
+            # return response
        
 
     def create(self,request): 
         doc_id=request.POST.get('document_id',None)
-        mt_raw=request.POST.get('source_word',None)
+        source=request.POST.get('source_word',None)
         edited=request.POST.get('edited_word',None)
 
         doc=get_object_or_404(Document,id=doc_id)
         lang=get_object_or_404(Languages,id=doc.target_language_id)
         
         user=self.request.user
-        print('------------',doc_id,mt_raw,edited,lang,user)
-        if SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw,edited_word=edited):
-            inst=SelflearningAsset.objects.get(user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
-            print("instance>>>>>>>",inst)
-            assetserializer=SelflearningAssetSerializer(inst,many=False)
-            assetserializer.update_occurance(inst)
-            print("asset serializer>>>>>>>>>>>",assetserializer.data)
-            return Response(assetserializer.data)
-        else:
-            slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=mt_raw)
-            print(slf_lrn_list.count())
-            print("request.data >>>>>>>>>.",request.data)
-            assetserializer=SelflearningAssetSerializer(data={**request.POST.dict(),'user':user.id,'target_language':lang.id},context={'request':request})
-            print(assetserializer)
-            if assetserializer.is_valid():
-                assetserializer.save()
-                if slf_lrn_list.count() >5:
-                    print("first delete")
-                    slf_lrn_list.first().delete()
-                return Response(assetserializer.data)
-            return JsonResponse({"msg":"invalid data"})
+        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'user':user.id,'target_language':lang.id})
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
 
 
     def update(self,request,pk):
@@ -3092,3 +3088,5 @@ class Selflearningview(viewsets.ViewSet):
                 assets[i]=" ".join(assets[i].split()[0:3])
         return assets
 
+
+    
