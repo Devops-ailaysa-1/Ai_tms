@@ -6,12 +6,12 @@ from django.http import HttpRequest
 from ai_canvas.utils import install_font
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
 from django import core
-from ai_imagetranslation.utils import image_content
+from ai_imagetranslation.utils import image_content 
 from ai_workspace_okapi.utils import get_translation
 import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
-
+from PIL import Image
 
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -443,12 +443,21 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
             
         #     data['project_category']
         return data
-
+from ai_imagetranslation.serializer import create_thumbnail_img_load
 class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
         fields = ("id","image_name","image")
+
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        if not data.get('thumbnail',None):
+            im = Image.open(instance.image.path)
+            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+            instance.save()
+        return super().to_representation(instance)
+         
 
     def create(self, validated_data):
         import cv2
@@ -463,12 +472,14 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             im = cv2.imread(instance.image.path)
             if extension !='svg':
                 width, height,channel = im.shape
+
                 if any([True if i>2048 else False for i in [width, height]]):
                     scale_val = min([2048/width, 2048/ height])
                     new_width = round(scale_val*width)
                     new_height = round(scale_val*height)
-                    im = cv2.resize(im , (new_height,new_width))
+                    im = cv2.resize(im ,(new_height,new_width))
                     content= image_content(im)
+                    instance.thumbnail=Image.fromarray(im)
                     im = core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
                     instance.image = im
                     instance.save()
