@@ -155,8 +155,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         data = {**validated_data ,'user':user}
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
-
-
+        
         print("instance.file_name",instance.file_name)
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
@@ -182,8 +181,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
             
-
-
         if social_media_create:
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(social_media_create.width)
@@ -262,9 +259,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src.save()
             instance.save()
             return instance
-
-
-
 
         if update_new_textbox:
             canvas_src_pages=instance.canvas_json_src.last()

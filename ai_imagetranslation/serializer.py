@@ -25,13 +25,13 @@ class ImageloadSerializer(serializers.ModelSerializer):
         model = Imageload
         fields = ('id','image','file_name','types','height','width','thumbnail')
     
-    def to_representation(self, instance):
-        data=super().to_representation(instance)
-        if not data.get('thumbnail',None):
-            im = Image.open(instance.image.path)
-            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-            instance.save()
-        return super().to_representation(instance)
+    # def to_representation(self, instance):
+    #     data=super().to_representation(instance)
+    #     if not data.get('thumbnail',None):
+    #         im = Image.open(instance.image.path)
+    #         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+    #         instance.save()
+    #     return super().to_representation(instance)
 
 
 
