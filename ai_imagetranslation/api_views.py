@@ -7,7 +7,7 @@ from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
 ###image_upload
 from rest_framework.pagination import PageNumberPagination
-
+from PIL import Image
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -26,6 +26,9 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     
     def create(self,request):
         image = request.FILES.get('image')
+        
+        if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            return Response({'msg':'unsuppported file only .svg, .png, .jpeg, .jpg'},status=400)
         serializer = ImageloadSerializer(data=request.data ,context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -69,6 +72,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
     def create(self,request):
         image = request.FILES.get('image')
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            return Response({'msg':'unsuppported file only .svg, .png, .jpeg, .jpg'},status=400)
         image_id =  request.POST.getlist('image_id')
         im_details = Imageload.objects.filter(id__in = image_id)
         data = [{'image':im.image} for im in im_details]
