@@ -141,6 +141,8 @@ class GlossaryFileView(viewsets.ViewSet):
         if serializer.is_valid():
             print(serializer.is_valid())
             serializer.save()
+            #print("Data---------------->",[i.get('id') for i in serializer.data])
+
             return Response(serializer.data, status=201)
         else:
             return Response (serializer.errors,status=400)

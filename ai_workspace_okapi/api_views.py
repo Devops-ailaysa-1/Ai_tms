@@ -3094,7 +3094,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     def delete(self,request,pk):
         ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
         ins.delete()
-        return  Response({},204)
+        return Response(status=204)
 
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()

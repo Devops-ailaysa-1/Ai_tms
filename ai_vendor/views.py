@@ -735,7 +735,7 @@ def get_vendor_settings_filled(request):
     user = request.user
     if user.is_vendor:
         query = VendorsInfo.objects.filter(user=request.user)
-        if not query or (query.last() and query.last().cv_file == None):
+        if not query or (query.last() and (query.last().cv_file == None or query.last().cv_file.name == '')):
             incomplete = True
             print("CV file not uploaded ")
             return Response({'incomplete status':incomplete})
