@@ -500,11 +500,11 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
         return ins
 
 
-    def update(self, instance, validated_data):
-        edited_word = validated_data.get('edited_word',None)
-        instance.edited_word=edited_word
-        instance.save()  
-        return instance
+    # def update(self, instance, validated_data):
+    #     edited_word = validated_data.get('edited_word',None)
+    #     instance.edited_word=edited_word
+    #     instance.save()  
+    #     return instance
         
 
 
