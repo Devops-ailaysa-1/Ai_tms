@@ -7,14 +7,34 @@ from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
 import copy,os
-
+from ai_canvas.utils import convert_image_url_to_file
+from ai_imagetranslation.utils import background_remove
+from ai_canvas.template_json import img_json,basic_json
 HOST_NAME=os.getenv('HOST_NAME')
+
+def create_thumbnail_img_load(base_dimension,image):
+    wpercent = (base_dimension/float(image.size[0]))
+    hsize = int((float(image.size[1])*float(wpercent)))
+    img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
+    img=convert_image_url_to_file(image_url=img,no_pil_object=False)
+    return img
+
 
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
-        fields = ('id','image','file_name','types','height','width')
-        
+        fields = ('id','image','file_name','types','height','width','thumbnail')
+    
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        if not data.get('thumbnail',None):
+            im = Image.open(instance.image.path)
+            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+            instance.save()
+        return super().to_representation(instance)
+
+
+
     def create(self, validated_data):
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
@@ -27,10 +47,11 @@ class ImageloadSerializer(serializers.ModelSerializer):
         width, height = im.size
         instance.height = height
         instance.width = width
+        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
         return instance
 
-from ai_canvas.template_json import img_json,basic_json
+
 
 # class TargetInpaintimageSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -307,8 +328,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 # class ImageloadRetrieveLSerializer(serializers.ModelSerializer):
 #     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
 
-from ai_canvas.utils import convert_image_url_to_file
-from ai_imagetranslation.utils import background_remove
+
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
     class Meta:

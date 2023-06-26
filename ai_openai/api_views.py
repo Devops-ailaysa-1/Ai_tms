@@ -372,7 +372,7 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        obj = CustomizationSettings.objects.filter(id = pk, user=user)
+        obj = CustomizationSettings.objects.filter(id = pk, user=request.user)
         if not obj:
             return Response({"msg":"No detail"})
         obj.delete()
@@ -1001,6 +1001,8 @@ def generate_article(request):
                                             print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                             AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                                                     
+                                            print("tot_us",token_usage)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
@@ -1011,6 +1013,8 @@ def generate_article(request):
                                 arr.append(word)
                     else:
                         token_usage=num_tokens_from_string(prompt)
+                        print("prompt",prompt)
+                        print("tot_us",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("finished")
                         # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
