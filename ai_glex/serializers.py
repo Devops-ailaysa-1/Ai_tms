@@ -21,6 +21,12 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
+    # def create(self,validated_data):
+        
+    #     return super().create(self,validated_data)
+
+
+
 class MyGlossarySerializer(serializers.ModelSerializer):
     class Meta:
         model = MyGlossary
