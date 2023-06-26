@@ -34,4 +34,5 @@ urlpatterns+= [
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
     path('vendor_lang_template/',views.vendor_lang_pair_template,name='vendor-lang-pair-template'),
     path('vendor_lang_pair/',views.vendor_language_pair,name='language_pair'),
+    path('editor_settings_status/',views.get_vendor_settings_filled),
     ]

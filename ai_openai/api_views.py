@@ -981,7 +981,7 @@ def generate_article(request):
                                     if initial_credit >= consumable_credits_for_article_gen:
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
-                                        AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                        #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' #####
@@ -998,7 +998,7 @@ def generate_article(request):
                                         if initial_credit >= consumable_credits_for_article_gen:
                                             print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
-                                            AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                            #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
