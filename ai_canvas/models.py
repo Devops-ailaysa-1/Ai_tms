@@ -11,7 +11,7 @@ class CanvasCatagories(models.Model):
 
 
 class CanvasTemplates(models.Model):
-    file_name =  models.CharField(max_length=50,null=True,blank=True) 
+    file_name =  models.CharField(max_length=2000,null=True,blank=True) 
     template_json = models.JSONField()
     thumbnail=models.FileField(upload_to='aidesign_templates/thumbnails/',blank=True,null=True)
     width = models.IntegerField(null=True,blank=True)
@@ -41,7 +41,7 @@ def user_directory_path_canvas_user_imageassets(instance, filename):
 
 class CanvasUserImageAssets(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    image_name =  models.CharField(max_length=50,null=True,blank=True)
+    image_name =  models.CharField(max_length=2000,null=True,blank=True)
     image= models.FileField(upload_to=user_directory_path_canvas_image_assets,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
@@ -180,7 +180,7 @@ def user_directory_path_font_file(instance, filename):
 
 class FontFile(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    name=models.CharField(max_length=200,blank=True,null=True)
+    name=models.CharField(max_length=2000,blank=True,null=True)
     font_family=models.FileField(upload_to=user_directory_path_font_file,blank=True,null=True)
 
     def __str__(self) -> str:
