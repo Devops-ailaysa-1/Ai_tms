@@ -2887,43 +2887,43 @@ from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDi
 from ai_workspace_okapi.utils import do_compare_sentence
 from django.db.models.signals import post_save 
 
-class SelflearningAssetViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get_object(self, pk):
-        try:
-            return SelflearningAsset.objects.get(id=pk)
-        except SelflearningAsset.DoesNotExist:
-            raise Http404
+# class SelflearningAssetViewset(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated,]
+#     def get_object(self, pk):
+#         try:
+#             return SelflearningAsset.objects.get(id=pk)
+#         except SelflearningAsset.DoesNotExist:
+#             raise Http404
 
-    def create(self,request):
-        serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+#     def create(self,request):
+#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
     
-    def list(self, request):
-        target_language=request.query_params.get('target_language', None)
-        if target_language:
-            target_language=Languages.objects.get(id=target_language)
-            queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
-        else:
-            queryset = SelflearningAsset.objects.filter(user=request.user.id)
-        serializer=SelflearningAssetSerializer(queryset,many=True)
-        return Response(serializer.data)
+#     def list(self, request):
+#         target_language=request.query_params.get('target_language', None)
+#         if target_language:
+#             target_language=Languages.objects.get(id=target_language)
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+#         else:
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
+#         serializer=SelflearningAssetSerializer(queryset,many=True)
+#         return Response(serializer.data)
 
-    def retrieve(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj)
-        return Response(serializer.data)
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj)
+#         return Response(serializer.data)
     
-    def update(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors,status=400)
+#     def update(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
 
 class SegmentDiffViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -3008,47 +3008,62 @@ from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment
 from ai_staff.models import Languages
 from rest_framework import status
 from nltk import word_tokenize
+from django_filters.rest_framework import DjangoFilterBackend
 import difflib
 from rest_framework.pagination import PageNumberPagination
-from django.core.paginator import Paginator, EmptyPage
 
-class Selflearningview(viewsets.ViewSet):
+
+class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    page_size = 20
+    search_fields = ['source_word','edited_word']
+    ordering_fields = ['id','source_word','edited_word']
+
+    @staticmethod
+    def get_object(id):
+        asset = get_object_or_404(SelflearningAsset, id=id)
+        return  asset
+
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
         if segment_id:
             seg = get_object_or_404(Segment,id=segment_id)
+
             if split_check(segment_id):
-                    raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
-                    mt_edited=seg.target
-                    print("raw_mt normal>>>>>>",raw_mt)
+                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt normal>>>>>>",raw_mt)
             else:
-                    split_seg = SplitSegment.objects.get(segment=seg)
-                    raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                    mt_edited=seg.target
-                    print("raw_mt split>>>>>>>",raw_mt)
+                split_seg = SplitSegment.objects.get(segment=seg)
+                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt split>>>>>>>",raw_mt)
 
-            asset=Selflearningview.seq_match_seg_diff(raw_mt,mt_edited)
-            print('asset >>>>>>>>>>>>>>>>>>>>',asset)
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited)
+            print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
-                return Response(asset,status=status.HTTP_200_OK)    
+                return Response(asset,status=status.HTTP_200_OK)
+            return Response({},status=status.HTTP_200_OK)
         else:
-            asset=SelflearningAsset.objects.filter(user=self.request.user).order_by('-id')
-            print("asset count>>>>>>>>>>",asset.count())
-            paginator = PageNumberPagination()
-            paginator.page_size = 20
-            asset = paginator.paginate_queryset(asset, request)
-            slf_learning_serializer=SelflearningAssetSerializer(asset,many=True)            
-            return Response(slf_learning_serializer.data,status=status.HTTP_200_OK)    
+            assets = SelflearningAsset.objects.filter(user=request.user).order_by('-id')
+            queryset = self.filter_queryset(assets)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            response = self.get_paginated_response(serializer.data)
+            print(response)
+            return  response
 
-
-            # queryset = asset
-            # pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            # serializer = SelflearningAssetSerializer(pagin_tc,many=True,context={'request':request})
-            # response = self.get_paginated_response(serializer.data)
-            # return response
-       
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj)
+        return Response(serializer.data)
 
     def create(self,request): 
         doc_id=request.POST.get('document_id',None)
@@ -3065,12 +3080,18 @@ class Selflearningview(viewsets.ViewSet):
             return Response(ser.data)
         return Response(ser.errors)
 
-
     def update(self,request,pk):
-        pass
+        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
 
     def delete(self,request,pk):
-        pass
+        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        ins.delete()
+        return  Response({},204)
     
     @staticmethod
     def seq_match_seg_diff(words1,words2):
@@ -3087,6 +3108,3 @@ class Selflearningview(viewsets.ViewSet):
             if len(assets[i].split())>3:
                 assets[i]=" ".join(assets[i].split()[0:3])
         return assets
-
-
-    

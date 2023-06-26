@@ -490,10 +490,11 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
     
         if  slf_lrn_list.filter(edited_word=edited):
             ins = slf_lrn_list.filter(edited_word=edited).last()
+            #occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
             ins.occurance +=1
             ins.save()         
         else:
-            if slf_lrn_list.count() >4:
+            if slf_lrn_list.count() >= 5:
                 first_out=slf_lrn_list.first().delete()
             ins=SelflearningAsset.objects.create(user_id=user.id,target_language=lang,source_word=source,edited_word=edited,occurance=1)  
         return ins
