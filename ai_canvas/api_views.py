@@ -794,6 +794,9 @@ def all_cat_req(category):
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
+    print("pixa_bay",pixa_bay)
+    print("pixa_bay",pixa_bay.status_code)
+    print(pixa_bay.json())
     return pixa_bay.json()
 
 def process_pixabay(**kwargs):
