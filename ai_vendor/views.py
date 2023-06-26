@@ -730,3 +730,22 @@ def vendor_lang_pair_template(request):
 #     return JsonResponse({"out":result},safe=False)
 
 
+@api_view(['GET',])
+def get_vendor_settings_filled(request):
+    user = request.user
+    if user.is_vendor:
+        query = VendorsInfo.objects.filter(user=request.user)
+        if not query or (query.last() and query.last().cv_file == None):
+            incomplete = True
+            print("CV file not uploaded ")
+            return Response({'incomplete status':incomplete})
+        else:
+            query = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None)).filter(Q(service=None) or Q(servicetype=None))
+            print("Query------------>",query)
+            if query:
+                print("Rates are not completed")
+                incomplete = True
+            else: incomplete = False
+        return Response({'incomplete status':incomplete})
+    else:
+        return Response({'msg':'user is not a vendor'})
