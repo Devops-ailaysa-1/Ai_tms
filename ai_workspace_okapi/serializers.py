@@ -480,7 +480,6 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
         fields="__all__"
 
     def create(self,validated_data):
-
         lang = validated_data.get('target_language',None)
         edited = validated_data.get('edited_word',None)
         source = validated_data.get('source_word',None)
@@ -500,11 +499,13 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
             ins=SelflearningAsset.objects.create(user_id=user.id,target_language=lang,source_word=source,edited_word=edited,occurance=1)  
         return ins
 
-    # def update(self,instance,data):
-    #     print("Inside Update")
-    #     return super().update(instance, data)
 
-
+    # def update(self, instance, validated_data):
+    #     edited_word = validated_data.get('edited_word',None)
+    #     instance.edited_word=edited_word
+    #     instance.save()  
+    #     return instance
+        
 
 
 class MT_RawSerializer(serializers.ModelSerializer):

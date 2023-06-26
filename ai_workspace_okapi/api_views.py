@@ -1179,25 +1179,17 @@ class MT_RawAndTM_View(views.APIView):
         # tar_lang=doc
         # tar_lang=77
         word=word_tokenize(translation)
-        result={}
+        suggestion={}
         for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-occurance')
+            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
             if assets:
-                coun=[i.occurance for i in assets if i.occurance>4]
-                print(coun)
-                rep=[i.edited_word for i in assets if i.occurance>4]
-                print(rep)
-                if rep:
-                    translation=translation.replace(word,rep[0]) 
-                    result[rep[0]]=[i.edited_word for i in assets if i.occurance>2 and i.edited_word != rep[0]]
-                    result[rep[0]].insert(0,word)
-             
-                else:
-                    result[word]=[i.edited_word for i in assets if i.occurance>2]         
-                                 
+                replace_word=assets.first().edited_word
+                translation=translation.replace(word,replace_word) 
+                suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
+                suggestion[replace_word].insert(0,word)
+                                               
         print(translation)
-        return translation,result
-
+        return translation,suggestion
 
     def get(self, request, segment_id):
             tm_only = {
@@ -3018,13 +3010,20 @@ from rest_framework import status
 from nltk import word_tokenize
 from django_filters.rest_framework import DjangoFilterBackend
 import difflib
+from rest_framework.pagination import PageNumberPagination
+from django.core.exceptions import ValidationError
+
 
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     search_fields = ['source_word','edited_word']
     ordering_fields = ['id','source_word','edited_word']
-    page_size = 20
+
+    @staticmethod
+    def get_object(id):
+        asset = get_object_or_404(SelflearningAsset, id=id)
+        return  asset
 
     def filter_queryset(self, queryset):
         from rest_framework.filters import SearchFilter, OrderingFilter
@@ -3048,7 +3047,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 mt_edited=seg.target
                 print("raw_mt split>>>>>>>",raw_mt)
 
-            asset=seq_match_seg_diff(raw_mt,mt_edited)
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
@@ -3067,7 +3066,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         serializer=SelflearningAssetSerializer(obj)
         return Response(serializer.data)
 
-
     def create(self,request): 
         doc_id=request.POST.get('document_id',None)
         source=request.POST.get('source_word',None)
@@ -3085,29 +3083,34 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
     def update(self,request,pk):
         ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
-        ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
-        if ser.is_valid():
-            ser.save()
-            return Response(ser.data)
-        return Response(ser.errors)
+        edited=request.POST.get('edited_word',None)
+        slf=SelflearningAsset.objects.filter(user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        if slf:
+            return Response({"msg": 'choice list already exists'}, status=400)
+        else:
+            ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+            if ser.is_valid():
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
 
     def delete(self,request,pk):
         ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
         ins.delete()
-        return Response(status=204)
-
-def seq_match_seg_diff(words1,words2):
-    s1=words1.split()
-    s2=words2.split()
-    assets={}
-    matcher=difflib.SequenceMatcher(None,s1,s2 )
-    print(matcher.get_opcodes())
-    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-        if tag=='replace':
-            assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
-    print("------------------",assets)  
-    for i in assets:
-        if len(assets[i].split())>3:
-            assets[i]=" ".join(assets[i].split()[0:3])
-    return assets
-
+        return  Response(status=204)
+    
+    @staticmethod
+    def seq_match_seg_diff(words1,words2):
+        s1=words1.split()
+        s2=words2.split()
+        assets={}
+        matcher=difflib.SequenceMatcher(None,s1,s2 )
+        print(matcher.get_opcodes())
+        for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+            if tag=='replace':
+                assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+        print("------------------",assets)  
+        for i in assets:
+            if len(assets[i].split())>3:
+                assets[i]=" ".join(assets[i].split()[0:3])
+        return assets

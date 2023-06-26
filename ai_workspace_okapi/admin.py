@@ -15,7 +15,7 @@ admin.site.register(Segment)
 # class SegmentModelAdmin(VersionAdmin):
 #     pass
 class self_learnig_list(admin.ModelAdmin):
-    list_display=['source_word',"edited_word","occurance","target_language"]
+    list_display=['source_word',"edited_word","occurance","target_language",'created_at']
 
 
 
