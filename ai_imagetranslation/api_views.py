@@ -7,7 +7,7 @@ from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
 ###image_upload
 from rest_framework.pagination import PageNumberPagination
-from PIL import Image
+ 
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20

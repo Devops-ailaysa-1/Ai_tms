@@ -134,7 +134,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = CanvasUserImageAssets.objects.filter(user=request.user.id)
+        queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('created_at')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
