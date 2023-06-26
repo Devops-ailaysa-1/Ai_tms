@@ -36,7 +36,7 @@ def user_directory_path_canvas_target_json_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "aidesign/design/aidesign_exports_target/exports/",filename)
 
 def user_directory_path_canvas_user_imageassets(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "aidesign/assets/aidesign_assets/thumbnail",filename)
+    return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/assets/aidesign_assets/thumbnail",filename)
 
 
 class CanvasUserImageAssets(models.Model):
@@ -46,7 +46,7 @@ class CanvasUserImageAssets(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
-    
+
 class CanvasDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     file_name=models.CharField(max_length=50,null=True,blank=True) 
