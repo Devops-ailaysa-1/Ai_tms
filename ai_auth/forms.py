@@ -19,7 +19,7 @@ from django.core.mail import EmailMessage
 from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger('django')
-
+import os
 
 
 class SendInviteForm(ResetPasswordForm):
@@ -130,6 +130,8 @@ def send_welcome_mail(current_site,user):
         logger.error(f"welcome mail sending failed for {email}")
 
 def send_admin_new_user_notify(user):
+    if os.environ.get("ENV_NAME") != 'Production':
+        return False
     context = {
     "user":user
     }
@@ -143,7 +145,7 @@ def send_admin_new_user_notify(user):
         html_message=msg_html,
     )
 
-
+    return True
 
 
 def send_password_change_mail(current_site,user):
