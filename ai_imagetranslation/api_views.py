@@ -18,7 +18,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
         except Imageload.DoesNotExist:
             raise Http404
     def get(self, request):
-        queryset = Imageload.objects.filter(user=request.user.id).order_by('id')
+        queryset = Imageload.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageloadSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -58,7 +58,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             raise Http404
 
     def get(self, request):
-        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('id')
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
