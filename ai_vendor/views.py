@@ -748,4 +748,4 @@ def get_vendor_settings_filled(request):
             else: incomplete = False
         return Response({'incomplete status':incomplete})
     else:
-        return Response({'msg':'user is not a vendor'})
+        return Response({'msg':'user is not a vendor'},status=400)
