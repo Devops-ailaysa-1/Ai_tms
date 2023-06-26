@@ -3086,7 +3086,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         edited=request.POST.get('edited_word',None)
         slf=SelflearningAsset.objects.filter(user=self.request.user,source_word=ins.source_word,edited_word=edited)
         if slf:
-            raise ValidationError("choice list already exists!")
+            return Response({"msg": 'choice list already exists'}, status=400)
         else:
             ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
             if ser.is_valid():
