@@ -453,8 +453,13 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data=super().to_representation(instance)
         if not data.get('thumbnail',None):
-            im = Image.open(instance.image.path)
-            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+            extension=instance.image.path.split('.')[-1]
+            if extension !='svg':
+                im = Image.open(instance.image.path)
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+            else:
+                print("svg")
+                instance.thumbnail=instance.image
             instance.save()
         return super().to_representation(instance)
          
