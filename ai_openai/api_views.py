@@ -435,6 +435,11 @@ class AiImageHistoryViewset(generics.ListAPIView):
         return queryset
 
 
+class ImageGeneratorPromptDelete(generics.DestroyAPIView):
+    queryset = ImageGeneratorPrompt.objects.all()
+    serializer_class = ImageGeneratorPromptSerializer
+    lookup_field = 'pk'
+
 
 class BlogCreationViewset(viewsets.ViewSet):
 

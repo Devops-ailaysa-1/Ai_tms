@@ -302,6 +302,8 @@ class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
         #     'created_by':{'write_only':True},
         # }
 
+ 
+
 class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
     class Meta:
