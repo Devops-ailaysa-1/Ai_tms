@@ -3026,14 +3026,14 @@ class SelflearningApi(viewsets.ViewSet):
         seg = get_object_or_404(Segment,id=segment_id)
 
         if split_check(segment_id):
-                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt normal>>>>>>",raw_mt)
+            raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+            mt_edited=seg.target
+            print("raw_mt normal>>>>>>",raw_mt)
         else:
-                split_seg = SplitSegment.objects.get(segment=seg)
-                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                mt_edited=seg.target
-                print("raw_mt split>>>>>>>",raw_mt)
+            split_seg = SplitSegment.objects.get(segment=seg)
+            raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+            mt_edited=seg.target
+            print("raw_mt split>>>>>>>",raw_mt)
 
         asset=seq_match_seg_diff(raw_mt,mt_edited)
         print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
