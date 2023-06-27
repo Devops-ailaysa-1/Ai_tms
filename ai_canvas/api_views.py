@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,ThirdpartyImageMedium)
+                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,ThirdpartyImageMedium,CanvasDownloadFormat)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
@@ -310,7 +310,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     
 
 class MyTemplateDesignRetrieveViewset(generics.RetrieveAPIView):
-    queryset = MyTemplateDesign.objects.all()
+    queryset = MyTemplateDesign.objects.all().order_by("-id")
     serializer_class = MyTemplateDesignRetrieveSerializer
     lookup_field = 'id'
 
@@ -437,20 +437,21 @@ def download_file_canvas(file_path,mime_type,name):
 @permission_classes([IsAuthenticated])
 def canvas_download_combine(request):
     design_id = request.query_params.get('design_id')
-    file_format=request.query_params.get('file_format')
+    file_format_id=request.query_params.get('file_format_id')
     export_size=request.query_params.get('export_size')
     select_language=request.query_params.get('select_language')
     page=request.query_params.get('page')
     src_id=request.query_params.get('src_id')
+    file_format=CanvasDownloadFormat.get(id=file_format_id).format_name
     canvas_inst=CanvasDesign.objects.get(id=design_id)
     if src_id:
-        print("given_src__id")
+ 
         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
         if src__single_inst.json:
             print("contains src__json")
             if file_format=='png':
-                print("file_format",file_format)
+ 
                 values=export_download(src__single_inst.json,file_format,export_size)
                 img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
                 return img_res

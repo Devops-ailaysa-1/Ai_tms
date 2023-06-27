@@ -203,3 +203,8 @@ def user_directory_path_canvas_image_medium(filename):
 #         return self.image_name+" "+self.api_name
 
 
+class CanvasDownloadFormat(models.Model):
+    format_name=models.CharField(max_length=200,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.format_name
