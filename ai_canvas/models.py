@@ -149,11 +149,11 @@ class MyTemplateDesignPage(models.Model):
     my_template_thumbnail=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
     my_template_export=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_exports,blank=True,null=True)
     my_template_json=models.JSONField(null=True,default=dict)
-    page_no=models.IntegerField()
-    class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['my_template_design','page_no'], name="%(app_label)s_%(class)s_unique")
-        ]
+    # page_no=models.IntegerField()
+    # class Meta:
+    #     constraints = [
+    #     models.UniqueConstraint(fields=['my_template_design','page_no'], name="%(app_label)s_%(class)s_unique")
+    #     ]
 
 def user_directory_path_canvas_source_image_assets(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "aidesign/assets/sourceimage/",filename)

@@ -574,11 +574,12 @@ class MyTemplateDesignPageSerializer(serializers.ModelSerializer):
 class MyTemplateDesignSerializer(serializers.ModelSerializer):
     template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
-    # canvas_lang_id =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
+    canvas_lang_id =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     canvas_trans_id = serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all(),required=False)
+    canvas_src_id=serializers.PrimaryKeyRelatedField(queryset=CanvasSourceJsonFiles.objects.all(),required=False)
     class Meta:
         model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','canvas_trans_id')
+        fields =  ('id','width','height','template_global_id','canvas_design_id','canvas_trans_id','canvas_lang_id','canvas_src_id')
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -599,6 +600,8 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
         template_global_id = validated_data.pop('template_global_id',None)
         canvas_design_id = validated_data.pop('canvas_design_id',None)
         canvas_trans_id = validated_data.pop('canvas_trans_id',None)
+        canvas_src_id=validated_data.pop('canvas_src_id',None)
+        canvas_lang_id=validated_data.pop('canvas_lang_id',None)
         user = self.context['request'].user
         if template_global_id:
             file_name=template_global_id.file_name
@@ -615,33 +618,37 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                         my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
              
-        if canvas_design_id:
+        if canvas_design_id and canvas_src_id:
             file_name=canvas_design_id.file_name
             width=canvas_design_id.width
             height=canvas_design_id.height
             canvas_translate_json_inst = canvas_design_id.canvas_translate
             my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
             if canvas_trans_id:
+                
                 can_trans_ins = canvas_translate_json_inst.get(id=canvas_trans_id.id)
-                                                #canvas_translate__source_language=canvas_translate_json_inst.canvas_translate.last().source_language,
+                #                                 #canvas_translate__source_language=canvas_translate_json_inst.canvas_translate.last().source_language,
                 can_trans_ins = can_trans_ins.canvas_json_tar.first()
                 my_template_thumbnail = can_trans_ins.thumbnail
-                my_template_export=can_trans_ins.export_file
-                my_template_json=can_trans_ins.json
-                page_no=can_trans_ins.page_no
+ 
+                my_template_json=copy.copy(can_trans_ins.json)
+                my_template_json.pop('projectid',None)
+                # my_template_json=json
+ 
                 my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
-                # print("can_trans_ins---->",can_trans_ins.thumbnail.path)
-                # print("my_temp_ins---->",my_temp_ins.my_template_thumbnail.path)
+ 
             else:
-                canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
+                canvas_source_json_inst = canvas_design_id.canvas_json_src.get(id=canvas_src_id.id)
+                # canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
                 my_template_thumbnail = canvas_source_json_inst.thumbnail
-                my_template_export=canvas_source_json_inst.export_file
-                my_template_json=canvas_source_json_inst.json
-                page_no=canvas_source_json_inst.page_no
+                # my_template_export=canvas_source_json_inst.export_file
+                my_template_json=copy.copy(canvas_source_json_inst.json)
+                my_template_json.pop('projectid',None)
+ 
                 my_temp_ins_else=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
-                # print("my_temp_ins_else---->",my_temp_ins_else.my_template_thumbnail.path)
+ 
                 
         return my_temp_design
 
