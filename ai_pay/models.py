@@ -70,7 +70,7 @@ post_save.connect(_create_po_file, sender=PurchaseOrder)
 class POTaskDetails(models.Model):
     ACCEPT_STATUS =[("task_accepted","task_accepted"),
                     ("change_request","change_request")]
-    
+    task_uid = models.CharField(max_length=191,null=True,blank=True)
     task_id = models.CharField(max_length=191)
     po = models.ForeignKey(PurchaseOrder,related_name="po_task",on_delete=models.CASCADE,null=True)
     assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)

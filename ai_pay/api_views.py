@@ -297,9 +297,19 @@ class CreateInvoiceVendor(viewsets.ViewSet):
             return Response({'msg':'Invoice Generation failed'},status=404)
 
 
+def check_task_uid(tasks):
+    from ai_workspace.models import Task
+    for tsk in tasks:
+        if tsk.task_uid in ['',None]:
+            task_obj = Task.objects.get(id=tsk.task_id)
+            tsk.task_uid = task_obj.ai_taskid
+            tsk.save()
+
+
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
     tasks = po.po_task.all()
+    check_task_uid(tasks)
     print("inside gen po",po.poid)
     ## Need to remove added for old po support
     if tasks.count() <1:
@@ -311,8 +321,9 @@ def po_generate_pdf(po):
                 return False
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
+    step = po.assignment.step.name
     context={'client': po.client,'seller':po.seller,'poid':po.poid,
-     'created_at':po.created_at,'project_name':project_name ,'project_id':project_id,'currency':po.currency.currency_code,'po_total_amount':po.po_total_amount,'tasks':tasks}
+     'created_at':po.created_at,'project_name':project_name ,'project_id':project_id,'currency':po.currency.currency_code,'po_total_amount':po.po_total_amount,'tasks':tasks,'step':step}
     html_string = render_to_string('po_pdf.html', context)
 
     html = HTML(string=html_string)
@@ -427,15 +438,40 @@ def update_task_po(task_assign,po_task):
     po.save()
     # po_generate_pdf(po)
 
-    
+def validate_data_po(task_assign_info):
+    queryset = TaskAssignInfo.objects.filter(id__in =task_assign_info)
+    res  = queryset.values('currency').annotate(dcount=Count('currency')).order_by().count()
+    # res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
+    # res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
+    if res >1:
+        logger.warning("multiple currency found")
+        raise ValueError("multiple currency found")
+
+
+
+def group_task_info(task_assign_info):
+    queryset = TaskAssignInfo.objects.filter(id__in =task_assign_info)
+    res_currency = queryset.values('currency').distinct('currency')
+    response = dict()
+    if res_currency.count() > 1:
+        for curr in res_currency:
+            response[curr['currency']]=list(queryset.filter(currency_id=curr['currency']).values_list('id',flat=True))
+    else:
+        response[res_currency[0]['currency']] = task_assign_info
+
+    return response
+
+
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
+    validate_data_po(task_assign_info)
     if len(task_assign_info) == 0:
         return None
     with transaction.atomic():
         po_total_amt=0.0
-        instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
+        task_assign_info_objs = TaskAssignInfo.objects.filter(id__in=task_assign_info)
+        instance = task_assign_info_objs.last()
         assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
         if instance.task_assign.reassigned:
             if instance.assigned_by.team:
@@ -451,11 +487,12 @@ def generate_client_po(task_assign_info):
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':0}
         # print("insert2",insert2)
-
-        old_po = PurchaseOrder.objects.filter(Q(assignment=assign)&~Q(po_status="void")&Q(po_status="issued"))
-        if  old_po.count() != 0 :
-            if old_po.count() == 1:
-                po = old_po.last()
+        tsks_ids =  TaskAssignInfo.objects.filter(id__in =task_assign_info).values_list('task_assign__task_id',flat=True)
+        po_tasks = POTaskDetails.objects.filter(Q(task_id__in=list(tsks_ids))&Q(assignment=assign)&~Q(po__po_status='void')&Q(po__po_status="issued"))     
+        #old_po = PurchaseOrder.objects.filter(Q(assignment=assign)&~Q(po_status="void")&Q(po_status="issued"))
+        if  po_tasks.count() != 0 :
+            if po_tasks.count() == 1:
+                po = po_tasks.last().po
             else:
                 logger.error("too many open po found")
         else:
@@ -478,7 +515,7 @@ def generate_client_po(task_assign_info):
                 task_tar_lang = instance.task_assign.task.job.target_language
 
             tot_amount = get_task_total_amt(instance)
-            insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
+            insert={'task_uid':instance.task_assign.task.ai_taskid,'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
                     'word_count':instance.billable_word_count,'char_count':instance.billable_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,'assign_status':instance.task_ven_status,
                     'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':task_tar_lang,'total_amount':tot_amount,'reassigned':instance.task_assign.reassigned}
             # print("insert1",insert)
@@ -502,7 +539,7 @@ def po_modify_weigted_count(task_assign_info_ls):
         elif pos.count()==0:
             return True
         else:
-            logger.error('returned more than one po for same assignment')
+            logger.error(f"returned more than one po for same assignment poids:{pos.values('id')}")
             return False
     for assign_obj in task_assign_info_ls:
         taskpo = POTaskDetails.objects.filter(task_id=assign_obj.task_assign.task.id,po=po)       
@@ -518,6 +555,16 @@ def po_modify_weigted_count(task_assign_info_ls):
     po.save()
     # msg_send_po(po,"po_updated") 
 
+
+def update_status_modified_po(po):
+    po_tsk = po.po_task.last()
+    update_po_status.send(
+        sender=po_tsk.__class__,
+        instance = po_tsk,
+        created = False
+    )
+    msg_send_po(po,"po_updated")  
+    return True
 
 def po_modify(task_assign_info_id,po_update):
     from ai_auth.signals import assign_object
@@ -581,24 +628,22 @@ def po_modify(task_assign_info_id,po_update):
         if pos.count()==1:
             po =pos.last()
         else:
-            raise ValueError('returned more than one po for same assignment')
+            raise ValueError(f"returned more than one po for same assignment poids:{pos.values('id')}")
         po.po_status="void"
         po.save()
         if len(task_assign_info_ids)==0:
             return True
-        po_new = generate_client_po(task_assign_info_ids) 
-        print("new po",po_new) 
-    if po_new:
-        po_tsk = po_new.po_task.last()
-        update_po_status.send(
-            sender=po_tsk.__class__,
-            instance = po_tsk,
-            created = False
-        )
-        msg_send_po(po,"po_updated")   
-        return True
-    else:
-        return False
+       
+        if 'currency_change' in po_update:
+            info_ids = group_task_info(task_assign_info_ids)
+            for ids in info_ids.values():
+               po_new = generate_client_po(ids)
+               update_status_modified_po(po_new)
+        else:
+            po_new = generate_client_po(task_assign_info_ids) 
+            update_status_modified_po(po_new)
+
+    return True
 
 
 def extend_po() :

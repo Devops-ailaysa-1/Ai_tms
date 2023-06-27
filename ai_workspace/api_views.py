@@ -1426,17 +1426,22 @@ def msg_send(sender,receiver,task,step):
     obj = Task.objects.get(id=task)
     work = "Post Editing" if int(step) == 1 else "Reviewing"
     proj = obj.job.project.project_name
-    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
-    if thread_ser.is_valid():
-        thread_ser.save()
-        thread_id = thread_ser.data.get('id')
-    else:
-        thread_id = thread_ser.errors.get('thread_id')
-    #print("Thread--->",thread_id)
-    if thread_id:
-        message = "You have been assigned a new task in "+proj+ " for "+ work +"."
-        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-        notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+    receivers = []
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) else []
+    receivers.append(receiver)
+    print("Receivers in assigned info------------->",receivers)
+    for i in receivers:
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        print("Thread--->",thread_id)
+        if thread_id:
+            message = "You have been assigned a new task in "+proj+ " for "+ work +"."
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
 
 class TaskAssignUpdateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1591,7 +1596,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             # print("task_assgn_objs assignment_id workspace --->>",assignment_id)
             # print("task_assgn_objs workspace --->>",task_assgn_objs)
             try:msg_send(sender,Receiver,tasks[0],step)
-            except:pass
+            except:
+                print("Inside Exception")
+                pass
             # if Receiver in hired_editors:
             #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
             # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
@@ -4383,5 +4390,23 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 #         ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
 #         response = self.get_paginated_response(ser.data)
 #         return response
+
+
+        # if ordering_param.startswith('-'):
+        #     field_name = ordering_param[1:]  
+        #     reverse_order = True
+        # else:
+        #     field_name = ordering_param
+        #     reverse_order = False
+        # if field_name == 'created_at':
+        #     ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
+        # else:
+        #     ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
+        # print("Or---------->",ordered_queryset)
+        # pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        # ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
+        # response = self.get_paginated_response(ser.data)
+        # return response
+    
 
 
