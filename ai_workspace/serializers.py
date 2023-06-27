@@ -1716,7 +1716,7 @@ def notify_task_status(task_assign,status,reason):
             print("AssignedUser--------->",assigned_user)
             print("team owner------------->",assigned_user.team.owner)
             receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
-			print("Receivers task completion------------>",receivers)
+            print("Receivers task completion------------>",receivers)
             if assigned_user.team:
                 receivers.append(assigned_user.team.owner)
         except:pass
