@@ -755,14 +755,18 @@ def req_thread(category=None,page=None,search=None):
     if category:
         params['q']=category
         params['catagory']=category
+        params['safesearch']=True
     if page:
         params['page']=page
         params['per_page']=20
+        params['safesearch']=True
     if search:
         params['q']=search
+        params['safesearch']=True
     if category and search:
         params['catagory']=category
         params['q']=search
+        params['safesearch']=True
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if pixa_bay.status_code==200:
         return pixa_bay.json()
