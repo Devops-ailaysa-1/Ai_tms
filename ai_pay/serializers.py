@@ -20,7 +20,8 @@ class POAssignmentSerializer(serializers.ModelSerializer):
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
-    currency_code = serializers.CharField(source='currency.currency_code')
+    # currency_code = serializers.CharField(source='currency.currency_code')
+    currency_code = serializers.SerializerMethodField()
     client_name = serializers.CharField(source='client.fullname')
     seller_name = serializers.CharField(source='seller.fullname')
     client_country = serializers.CharField(source='client.country.name')
@@ -41,6 +42,12 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "po_file":{"read_only": True}
              #"created_at":{"write_only":True}
             }
+
+    def get_currency_code(self,obj):
+        if  obj.currency ==None:
+            return None 
+        else:
+            return obj.currency.currency_code
 
 
 class PurchaseOrderListSerializer(serializers.Serializer):
