@@ -622,10 +622,11 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             
             my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
             if canvas_trans_id:
-                canvas_translate_json_inst = canvas_design_id.canvas_json_tar
-                can_trans_ins = canvas_translate_json_inst.get(id=canvas_trans_id.id)
+                can_trans_ins=CanvasTargetJsonFiles.objects.get(id=canvas_trans_id)
+                # canvas_translate_json_inst = canvas_design_id.canvas_json_tar
+                # can_trans_ins = canvas_translate_json_inst.get(id=canvas_trans_id.id)
                 #                                 #canvas_translate__source_language=canvas_translate_json_inst.canvas_translate.last().source_language,
-                can_trans_ins = can_trans_ins.canvas_json_tar.first()
+                # can_trans_ins = can_trans_ins.canvas_json_tar.first()
                 my_template_thumbnail = can_trans_ins.thumbnail
  
                 my_template_json=copy.copy(can_trans_ins.json)
