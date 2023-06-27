@@ -410,7 +410,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             page_len = len(instance.canvas_json_src.all())
             for my_temp_page in my_temp_pages:
                 thumbnail_page = my_temp_page.my_template_thumbnail
-                export_page = my_temp_page.my_template_export
+                # export_page = my_temp_page.my_template_export
                 json_page = my_temp_page.my_template_json
                 page_len+=1
                 CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
@@ -590,10 +590,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             else:
                 data['my_template_thumbnail'] = None
 
-            # if template_page_first.my_template_export:
-            #     data['my_template_export'] = template_page_first.my_template_export.url
-            # else:
-            #     data['my_template_export'] = None
+ 
         return data
 
     def create(self, validated_data):
@@ -612,11 +609,11 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             if any(template_globl_pag_inst):
                 for glob_pag in template_globl_pag_inst:
                     my_template_thumbnail = glob_pag.thumbnail_page
-                    my_template_export=glob_pag.export_page
+                    # my_template_export=glob_pag.export_page
                     my_template_json=glob_pag.json_page
                     page_no=glob_pag.page_no
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                        my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
+                                                        my_template_json=my_template_json,page_no=page_no)
              
         if canvas_design_id:
             file_name=canvas_design_id.file_name
@@ -636,18 +633,17 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 # my_template_json=json
  
                 my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                    my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
+                                                    my_template_json=my_template_json,page_no=page_no)
  
             elif canvas_src_id:
                 canvas_source_json_inst = canvas_design_id.canvas_json_src.get(id=canvas_src_id.id)
                 # canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
                 my_template_thumbnail = canvas_source_json_inst.thumbnail
-                # my_template_export=canvas_source_json_inst.export_file
                 my_template_json=copy.copy(canvas_source_json_inst.json)
                 my_template_json.pop('projectid',None)
  
                 my_temp_ins_else=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                    my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
+                                                    my_template_json=my_template_json,page_no=page_no)
  
                 
         return my_temp_design
