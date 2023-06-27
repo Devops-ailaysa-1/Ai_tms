@@ -1605,7 +1605,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
     if receiver.team:
         receivers.append(task_assign.task_assign_info.assigned_by.team.owner)
     receivers = [*set(receivers)]
-    print("Receivers----------->",receivers)
+    print("Receivers in vendoraccept----------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1632,9 +1632,9 @@ def msg_send_customer_rate_change(task_assign):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if receiver.team.owner.is_agency or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency else []
     receivers.append(task_assign.assign_to)
-    print("Receivers--------->",receivers)
+    print("Receivers in ratechange--------->",receivers)
     for i in receivers: 
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1716,6 +1716,7 @@ def notify_task_status(task_assign,status,reason):
             print("AssignedUser--------->",assigned_user)
             print("team owner------------->",assigned_user.team.owner)
             receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+			print("Receivers task completion------------>",receivers)
             if assigned_user.team:
                 receivers.append(assigned_user.team.owner)
         except:pass

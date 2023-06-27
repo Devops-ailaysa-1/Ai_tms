@@ -1429,7 +1429,7 @@ def msg_send(sender,receiver,task,step):
     receivers = []
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) else []
     receivers.append(receiver)
-    print("Receiverr------------->",receivers)
+    print("Receivers in assigned info------------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
