@@ -1226,13 +1226,13 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
-                # print('data normal=-----------',data['mt_raw'])
-                rep=data['mt_raw']
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
+                # # print('data normal=-----------',data['mt_raw'])
+                # rep=data['mt_raw']
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
 
         
                 # print('rep----------',asset_rep)
@@ -1252,14 +1252,14 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                rep=data['mt_raw']
+                # rep=data['mt_raw']
 
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
-                # print('rep----------',asset_rep)
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
+                # # print('rep----------',asset_rep)
 
 
 
