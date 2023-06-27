@@ -611,9 +611,9 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                     my_template_thumbnail = glob_pag.thumbnail_page
                     # my_template_export=glob_pag.export_page
                     my_template_json=glob_pag.json_page
-                    page_no=glob_pag.page_no
+                    # page_no=glob_pag.page_no
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                        my_template_json=my_template_json,page_no=page_no)
+                                                        my_template_json=my_template_json )
              
         if canvas_design_id:
             file_name=canvas_design_id.file_name
@@ -633,7 +633,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 # my_template_json=json
  
                 my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                    my_template_json=my_template_json,page_no=page_no)
+                                                    my_template_json=my_template_json )
  
             elif canvas_src_id:
                 canvas_source_json_inst = canvas_design_id.canvas_json_src.get(id=canvas_src_id.id)
@@ -643,7 +643,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 my_template_json.pop('projectid',None)
  
                 my_temp_ins_else=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                    my_template_json=my_template_json,page_no=page_no)
+                                                    my_template_json=my_template_json )
  
                 
         return my_temp_design
