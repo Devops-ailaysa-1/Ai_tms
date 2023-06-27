@@ -618,7 +618,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                         my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
              
-        if canvas_design_id and canvas_src_id:
+        if canvas_design_id:
             file_name=canvas_design_id.file_name
             width=canvas_design_id.width
             height=canvas_design_id.height
@@ -638,7 +638,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 my_temp_ins=MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
  
-            else:
+            elif canvas_src_id:
                 canvas_source_json_inst = canvas_design_id.canvas_json_src.get(id=canvas_src_id.id)
                 # canvas_source_json_inst = canvas_design_id.canvas_json_src.last()
                 my_template_thumbnail = canvas_source_json_inst.thumbnail
