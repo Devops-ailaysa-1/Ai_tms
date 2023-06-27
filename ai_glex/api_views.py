@@ -141,8 +141,8 @@ class GlossaryFileView(viewsets.ViewSet):
         if serializer.is_valid():
             print(serializer.is_valid())
             serializer.save()
-            file_ids = [i.get('id') for i in serializer.data]
-            update_words_from_template.apply_async((file_ids,))
+            # file_ids = [i.get('id') for i in serializer.data]
+            # update_words_from_template.apply_async((file_ids,))
             return Response(serializer.data, status=201)
         else:
             return Response (serializer.errors,status=400)
