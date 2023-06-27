@@ -1172,24 +1172,24 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
-    @staticmethod   
-    def asset_replace(request,translation,segment_id):
-        seg=get_object_or_404(Segment,id=segment_id)
-        tar_lang=seg.text_unit.document.job.target_language_id
-        # tar_lang=doc
-        # tar_lang=77
-        word=word_tokenize(translation)
-        suggestion={}
-        for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
-            if assets:
-                replace_word=assets.first().edited_word
-                translation=translation.replace(word,replace_word) 
-                suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
-                suggestion[replace_word].insert(0,word)
+    # @staticmethod   
+    # def asset_replace(request,translation,segment_id):
+    #     seg=get_object_or_404(Segment,id=segment_id)
+    #     tar_lang=seg.text_unit.document.job.target_language_id
+    #     # tar_lang=doc
+    #     # tar_lang=77
+    #     word=word_tokenize(translation)
+    #     suggestion={}
+    #     for word in word:
+    #         assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
+    #         if assets:
+    #             replace_word=assets.first().edited_word
+    #             translation=translation.replace(word,replace_word) 
+    #             suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
+    #             suggestion[replace_word].insert(0,word)
                                                
-        print(translation)
-        return translation,suggestion
+    #     print(translation)
+    #     return translation,suggestion
 
     def get(self, request, segment_id):
             tm_only = {
