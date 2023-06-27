@@ -290,7 +290,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     pagination_class = MyTemplateDesignPagination
     permission_classes = [IsAuthenticated,]
     def list(self,request):
-        queryset = MyTemplateDesign.objects.filter(user=request.user.id)
+        queryset = MyTemplateDesign.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
