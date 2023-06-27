@@ -473,7 +473,39 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
+from .models import SelflearningAsset
+class SelflearningAssetSerializer (serializers.ModelSerializer):
+    class Meta():
+        model=SelflearningAsset
+        fields="__all__"
 
+    def create(self,validated_data):
+        lang = validated_data.get('target_language',None)
+        edited = validated_data.get('edited_word',None)
+        source = validated_data.get('source_word',None)
+        user = validated_data.get('user',None)
+
+        slf_lrn_list=SelflearningAsset.objects.filter(user=user,target_language=lang,source_word=source)
+        print(slf_lrn_list)
+    
+        if  slf_lrn_list.filter(edited_word=edited):
+            ins = slf_lrn_list.filter(edited_word=edited).last()
+            #occuranc=get_object_or_404(SelflearningAsset,user=user,target_language=lang,source_word=mt_raw,edited_word=edited)
+            ins.occurance +=1
+            ins.save()         
+        else:
+            if slf_lrn_list.count() >= 5:
+                first_out=slf_lrn_list.first().delete()
+            ins=SelflearningAsset.objects.create(user_id=user.id,target_language=lang,source_word=source,edited_word=edited,occurance=1)  
+        return ins
+
+
+    # def update(self, instance, validated_data):
+    #     edited_word = validated_data.get('edited_word',None)
+    #     instance.edited_word=edited_word
+    #     instance.save()  
+    #     return instance
+        
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
@@ -536,6 +568,8 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
+
+        #word update in mt_raw
         #instance=self.slf_learning_word_update(instance,doc)
         return instance
 

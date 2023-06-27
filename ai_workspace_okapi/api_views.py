@@ -329,6 +329,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = get_res_path(params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
+            print("doc_req_res_params",json.dumps(res_paths))
+
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
@@ -1024,6 +1026,8 @@ class MT_RawAndTM_View(views.APIView):
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
+        
+    
 
     @staticmethod
     def get_split_data(request, segment_id, mt_params):
@@ -1066,6 +1070,10 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                
+                print(translation)
+                # translation=MT_RawAndTM_View.asset_replace(translation)
+
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1075,8 +1083,12 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                
+                # translation=MT_RawAndTM_View.asset_replace(translation)
+
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
         else:
@@ -1160,9 +1172,26 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
+    # @staticmethod   
+    # def asset_replace(request,translation,segment_id):
+    #     seg=get_object_or_404(Segment,id=segment_id)
+    #     tar_lang=seg.text_unit.document.job.target_language_id
+    #     # tar_lang=doc
+    #     # tar_lang=77
+    #     word=word_tokenize(translation)
+    #     suggestion={}
+    #     for word in word:
+    #         assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
+    #         if assets:
+    #             replace_word=assets.first().edited_word
+    #             translation=translation.replace(word,replace_word) 
+    #             suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
+    #             suggestion[replace_word].insert(0,word)
+                                               
+    #     print(translation)
+    #     return translation,suggestion
 
     def get(self, request, segment_id):
-
             tm_only = {
                         "segment": segment_id,
                         "mt_raw": "",
@@ -1197,6 +1226,17 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
+                # # print('data normal=-----------',data['mt_raw'])
+                # rep=data['mt_raw']
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
+
+        
+                # print('rep----------',asset_rep)
+
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
 
@@ -1211,9 +1251,42 @@ class MT_RawAndTM_View(views.APIView):
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
-                # tm_data = self.get_tm_data(request, segment_id)
+                
+                # rep=data['mt_raw']
+
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
+                # # print('rep----------',asset_rep)
+
+
+
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
+            
+"""
+
+
+
+def word_change():
+    # segment=request.POST.get('segment',None)
+    # tar_lang=request.POST.get('target_language',None)
+    segment="This apple size is small so he provide multiple apples"
+    tar_lang=17
+    word=word_tokenize(segment)
+    for word in word:
+        assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id =946) & Q(source_word__iexact = word))
+        if assets:
+            edited_word=assets.last().edited_word
+            # print(edited_word)
+            segment=segment.replace(word,edited_word)         
+    print(segment)
+"""
+        # return JsonResponse(result,status=status.HTTP_200_OK)
+
+
     # def get(self, request, segment_id):
     #
     #     # Getting MT params
@@ -2794,50 +2867,50 @@ def get_tags(seg):
     return tags
 
 
-from ai_workspace_okapi.serializers import SegmentDiffSerializer
+from ai_workspace_okapi.serializers import SegmentDiffSerializer,SelflearningAssetSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
 from ai_workspace_okapi.utils import do_compare_sentence
 from django.db.models.signals import post_save 
 
-class SelflearningAssetViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get_object(self, pk):
-        try:
-            return SelflearningAsset.objects.get(id=pk)
-        except SelflearningAsset.DoesNotExist:
-            raise Http404
+# class SelflearningAssetViewset(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated,]
+#     def get_object(self, pk):
+#         try:
+#             return SelflearningAsset.objects.get(id=pk)
+#         except SelflearningAsset.DoesNotExist:
+#             raise Http404
 
-    def create(self,request):
-        serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+#     def create(self,request):
+#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
     
-    def list(self, request):
-        target_language=request.query_params.get('target_language', None)
-        if target_language:
-            target_language=Languages.objects.get(id=target_language)
-            queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
-        else:
-            queryset = SelflearningAsset.objects.filter(user=request.user.id)
-        serializer=SelflearningAssetSerializer(queryset,many=True)
-        return Response(serializer.data)
+#     def list(self, request):
+#         target_language=request.query_params.get('target_language', None)
+#         if target_language:
+#             target_language=Languages.objects.get(id=target_language)
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+#         else:
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
+#         serializer=SelflearningAssetSerializer(queryset,many=True)
+#         return Response(serializer.data)
 
-    def retrieve(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj)
-        return Response(serializer.data)
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj)
+#         return Response(serializer.data)
     
-    def update(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors,status=400)
+#     def update(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
 
 class SegmentDiffViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -2891,8 +2964,8 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        elif instance.temp_target:
-            target_segment=instance.temp_target
+        elif instance.segment.temp_target:
+            target_segment=instance.segment.temp_target
         else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
@@ -2914,7 +2987,117 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 
 
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from .serializers import SelflearningAssetSerializer
+from rest_framework.response import Response
+from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment
+from ai_staff.models import Languages
+from rest_framework import status
+from nltk import word_tokenize
+from django_filters.rest_framework import DjangoFilterBackend
+import difflib
+from rest_framework.pagination import PageNumberPagination
+from django.core.exceptions import ValidationError
 
 
+class SelflearningView(viewsets.ViewSet, PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size = 20
+    search_fields = ['source_word','edited_word']
+    ordering_fields = ['id','source_word','edited_word']
 
+    @staticmethod
+    def get_object(id):
+        asset = get_object_or_404(SelflearningAsset, id=id)
+        return  asset
 
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self,request):
+        segment_id=request.GET.get('segment_id',None)
+        if segment_id:
+            seg = get_object_or_404(Segment,id=segment_id)
+
+            if split_check(segment_id):
+                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt normal>>>>>>",raw_mt)
+            else:
+                split_seg = SplitSegment.objects.get(segment=seg)
+                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt split>>>>>>>",raw_mt)
+
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited)
+            print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+            if asset:
+                return Response(asset,status=status.HTTP_200_OK)
+            return Response({},status=status.HTTP_200_OK)
+        else:
+            assets = SelflearningAsset.objects.filter(user=request.user).order_by('-id')
+            queryset = self.filter_queryset(assets)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            response = self.get_paginated_response(serializer.data)
+            print(response)
+            return  response
+
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj)
+        return Response(serializer.data)
+
+    def create(self,request): 
+        doc_id=request.POST.get('document_id',None)
+        source=request.POST.get('source_word',None)
+        edited=request.POST.get('edited_word',None)
+
+        doc=get_object_or_404(Document,id=doc_id)
+        lang=get_object_or_404(Languages,id=doc.target_language_id)
+        
+        user=self.request.user
+        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'user':user.id,'target_language':lang.id})
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
+
+    def update(self,request,pk):
+        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        edited=request.POST.get('edited_word',None)
+        slf=SelflearningAsset.objects.filter(user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        if slf:
+            return Response({"msg": 'choice list already exists'}, status=400)
+        else:
+            ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+            if ser.is_valid():
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
+
+    def delete(self,request,pk):
+        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        ins.delete()
+        return  Response(status=204)
+    
+    @staticmethod
+    def seq_match_seg_diff(words1,words2):
+        s1=words1.split()
+        s2=words2.split()
+        assets={}
+        matcher=difflib.SequenceMatcher(None,s1,s2 )
+        print(matcher.get_opcodes())
+        for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+            if tag=='replace':
+                assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+        print("------------------",assets)  
+        for i in assets:
+            if len(assets[i].split())>3:
+                assets[i]=" ".join(assets[i].split()[0:3])
+        return assets
