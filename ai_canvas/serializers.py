@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile)
+                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,CanvasDownloadFormat)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -738,3 +738,9 @@ class SocialMediaSizeValueSerializer(serializers.ModelSerializer):
 
 #     def create(self, validated_data):
 #         return super().create(validated_data)
+
+
+class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=CanvasDownloadFormat
+        fields='__all__'

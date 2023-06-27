@@ -9,7 +9,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -314,6 +314,13 @@ class MyTemplateDesignRetrieveViewset(generics.RetrieveAPIView):
     serializer_class = MyTemplateDesignRetrieveSerializer
     lookup_field = 'id'
 
+
+
+class CanvasDownloadFormatViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset = CanvasDownloadFormat.objects.all()
+        serializer = CanvasDownloadFormatSerializer(queryset,many=True)
+        return Response(serializer.data)
 
 ######################################################canvas______download################################
 
