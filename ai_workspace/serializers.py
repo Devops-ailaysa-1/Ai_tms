@@ -1683,7 +1683,7 @@ def notify_client_status(task_assign,response,reason):
             if response == 1:
                 message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has been approved. you can initiate your payment process."
             elif response == 2:
-                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason. "+reason
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason.\n Reason: "+reason
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
@@ -1742,7 +1742,7 @@ def notify_task_status(task_assign,status,reason):
             if status == 3:
                 message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
             elif status == 4:
-                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason.\n Reason: "+ reason
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))

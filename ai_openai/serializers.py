@@ -378,16 +378,25 @@ class CustomizationSettingsSerializer(serializers.ModelSerializer):
         fields=('id','user','append','new_line','src','tar','mt_engine',)
 
     def get_src(self,obj):
-        user = self.context.get('request').user
-        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if self.context.get('request'):
+            user = self.context.get('request').user.id
+        else:
+            user = self.context.get('user')
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user_id = user)
+        print("Qr------------>",queryset.last())
         if queryset:
-            source = queryset.last().customization.user_text_lang_id
-            return source
+            try:
+                source = queryset.last().customization.user_text_lang_id
+                return source
+            except: return None
         return None
 
     def get_tar(self,obj):
-        user = self.context.get('request').user
-        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if self.context.get('request'):
+            user = self.context.get('request').user.id
+        else:
+            user = self.context.get('user')
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user_id = user)
         if queryset:
             target = queryset.last().target_language_id
             return target

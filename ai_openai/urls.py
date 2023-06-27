@@ -29,6 +29,7 @@ urlpatterns += [
     path('download_ai_image_generated_file/<int:id>/',api_views.download_ai_image_generated_file),
  
     # path('stream_article/',api_views.PostStreamView.as_view()),
+    path('credit_blog_check/',api_views.credit_check_blog),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

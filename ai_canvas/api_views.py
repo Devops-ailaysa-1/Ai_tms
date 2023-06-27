@@ -316,6 +316,10 @@ class MyTemplateDesignRetrieveViewset(generics.RetrieveAPIView):
 ######################################################canvas______download################################
 
 
+
+
+
+
 from ai_canvas.utils import export_download
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -357,56 +361,7 @@ def canvas_export_download(request):
         download_path = f'{settings.MEDIA_URL}{can_des.user.uid}/temp_download/{can_des.file_name}.zip'
     return JsonResponse({"url":download_path},status=200)                
 
-
  
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def canvas_export_download(request):
-#     format=request.POST.get('format')
-#     multipliervalue=request.POST.get('multipliervalue')
-#     canvas_design_id=request.POST.get('canvas_design_id')
-#     design=CanvasDesign.objects.get(id=canvas_design_id)
-#     file_path=f'{settings.MEDIA_ROOT}/{design.user.uid}/temp_download/'
-#     try:
-#         os.makedirs(file_path) #{design.file_name}
-#     except FileExistsError:
-#         pass
-#     zip_path = f'{file_path}{design.file_name}.zip'
-    
-#     with zipfile.ZipFile(zip_path, 'w') as zipf:
-#         src_insts=design.canvas_json_src.all()
-        
-#         for src_inst in src_insts:
-#             if src_inst.json:
-#                 compressed_data_img=export_download(json_str=src_inst.json,format=format,multipliervalue=multipliervalue)
-#                 canvas_src_instance=design.canvas_translate.last()
-
-#                 if canvas_src_instance:
-#                     src_lang=canvas_src_instance.source_language.language_locale_name.strip()
-#                 else:
-#                     src_lang=design.file_name
-#                 print("src_lang---------->>>",src_lang)
-#                 src_file_name=src_lang+'_page_{}.{}'.format(src_inst.page_no,format)
-#                 zipf.writestr(src_file_name, compressed_data_img)
-
-#                 if canvas_src_instance:
-#                     canvas_tar_inst=canvas_src_instance.canvas_json_tar.all()
-
-#                     if canvas_tar_inst:
-
-#                         for canvas_tar_instance in canvas_tar_inst:
-#                             tar_json=canvas_tar_instance.json
-#                             print(tar_json)
-#                             print("------>src_lang---------->>>",src_lang)
-#                             compressed_data_img=export_download(json_str=tar_json,format=format,
-#                                                                 multipliervalue=multipliervalue)
-#                             src_file_name=src_lang+'_page_{}.{}'.format(src_inst.page_no,format)
-#                             zipf.writestr(src_file_name, compressed_data_img)
-#         download_path = f'{settings.MEDIA_URL}{design.user.uid}/temp_download/{design.file_name}.zip'
-#     return JsonResponse({"url":download_path},status=200)
-                 
-
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -452,8 +407,62 @@ def canvas_download(request):
     return JsonResponse({"url":download_path},status=200)
 
 
-###############################################################################
+#########################################################################################################################################
 
+import os, mimetypes,  urllib,difflib
+from django.http import JsonResponse, Http404, HttpResponse
+
+
+mime_type={'svg':'image/svg+xml',
+'png':'image/png',
+    'jpeg':'image/jpeg',
+        'jpg':'image/jpeg'}
+
+def download_file_canvas(file_path,mime_type,name):
+ 
+     
+    response = HttpResponse(file_path, content_type=mime_type)
+ 
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(name)
+    response['X-Suggested-Filename'] = name
+    #response['Content-Disposition'] = "attachment; filename=%s" % filename
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def canvas_download_combine(request):
+    design_id = request.query_params.get('design_id')
+    file_format=request.query_params.get('file_format')
+    export_size=request.query_params.get('export_size')
+    select_language=request.query_params.get('select_language')
+    page=request.query_params.get('page')
+    src_id=request.query_params.get('src_id')
+    canvas_inst=CanvasDesign.objects.get(id=design_id)
+    if src_id:
+        print("given_src__id")
+        src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
+        src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
+        if src__single_inst.json:
+            print("contains src__json")
+            if file_format=='png':
+                print("file_format",file_format)
+                values=export_download(src__single_inst.json,file_format,export_size)
+                img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
+                return img_res
+                # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
+
+
+ 
+
+
+
+
+
+
+#####################
 ####free_____pix
 
 @api_view(['GET'])
@@ -721,38 +730,7 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
         query_set=SocialMediaSize.objects.get(id=pk)
         query_set.delete()
         return Response(status=204)
-# import asyncio
-# async def one_iteration(pixa_json):
-#     preview_image=convert_image_url_to_file(pixa_json['previewURL'])
-#     return {'image_url' :pixa_json['webformatURL'],'tags':pixa_json['tags'],'image_name':pixa_json['type'],
-#                                  'preview_image':preview_image}
-
-
-
-# async def generate_url(pixa_url_list):
-#     coroutines=[]
-#     for pixa_url_value in pixa_url_list:
-#         coroutines.append(one_iteration(pixa_url_value))
-#     return await asyncio.gather(*coroutines)
-
-# class ImageListMediumViewset(viewsets.ViewSet):
-
-#     def list(self,request):
-#         image_search=request.query_params.get('image_search',None)
-#         if image_search:
-            
-#             params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
-#             response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-#             if response and 'hits' in response and response['hits']:
-#                 data = asyncio.run(generate_url(response['hits']))
-#                 serializer=ImageListMediumSerializer(data=data,many=True)
-#                 if serializer.is_valid():
-#                     serializer.save()
-#                     return Response(serializer.data)
-#                 else:
-#                     return Response(serializer.errors)
-#         else:
-#             return Response({'image_search':'fill image search field'},status=200)
+ 
 
 def req_thread(category=None,page=None,search=None):
     if category and search and page:
@@ -791,6 +769,8 @@ def pixa_image_url(image_url):
 
 
 def all_cat_req(category):
+    params = {'key':pixa_bay_api_key,'order':'popular','image_type':'photo',
+            'orientation':'all','per_page':10,'safesearch':True}
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 

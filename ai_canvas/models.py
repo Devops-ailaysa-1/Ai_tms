@@ -59,10 +59,6 @@ class CanvasDesign(models.Model):
     class Meta:
         ordering = ('updated_at',)
 
-
-
-
-
     # def save(self,*args,**kwargs):
     #     print("self.pk is None",(self.pk is None))
     #     print(self.file_name)

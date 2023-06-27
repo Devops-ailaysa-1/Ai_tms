@@ -33,7 +33,8 @@ urlpatterns += [
     path('canvas-export',api_views.canvas_export_download,name='canvas_export_download'),
     path('image-list-category',api_views.image_list,name='image_list'),
     path('social-media-size/', api_views.SocialMediaSizeValueViewset.as_view({'get': 'list'}), name='socialmediasize'), ##old 
-    path('social-media-custom/',api_views.SocialMediaSizeCustom.as_view({'get': 'list'}), name='socialmediacustom')
+    path('social-media-custom/',api_views.SocialMediaSizeCustom.as_view({'get': 'list'}), name='socialmediacustom'),
+    path('canvas_down_load/',api_views.canvas_download_combine,name='canvas_download')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
