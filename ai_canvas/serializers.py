@@ -575,7 +575,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
     canvas_lang_id =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    canvas_trans_id = serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all(),required=False)
+    canvas_trans_id = serializers.PrimaryKeyRelatedField(queryset=CanvasTargetJsonFiles.objects.all(),required=False)
     canvas_src_id=serializers.PrimaryKeyRelatedField(queryset=CanvasSourceJsonFiles.objects.all(),required=False)
     class Meta:
         model = MyTemplateDesign
