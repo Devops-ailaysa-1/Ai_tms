@@ -347,12 +347,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                    "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
                         can_tar_ins.json=tar_json_pro
                         can_tar_ins.save()
-                json=copy.deepcopy(can_src_translate_json.json)
-                for i in json['objects']:
-                    if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
-                        i['isTranslate'] == True
-                can_src_translate_json.json=json
-                can_src_translate_json.save()
+ 
 
         if canvas_translation_target and tar_page:
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
