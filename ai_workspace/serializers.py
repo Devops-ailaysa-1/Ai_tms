@@ -1726,8 +1726,7 @@ def notify_task_status(task_assign,status,reason):
             team = task_assign.task.job.project.ai_user.team
             print("user---------->",task_assign.task.job.project.ai_user)
             receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
-			if team:
-				receivers.append(task_assign.task.job.project.ai_user)
+            if team:receivers.append(task_assign.task.job.project.ai_user)
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
