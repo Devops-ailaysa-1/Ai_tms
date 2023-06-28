@@ -392,8 +392,8 @@ def vendor_lang_sheet():
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
-    worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
-    worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
+    worksheet.data_validation('F2:F1048576', {'validate': 'decimal','criteria': 'between', 'minimum': 0, 'maximum': 999999.0})
+    worksheet.data_validation('G2:G1048576', {'validate': 'decimal','criteria': 'between', 'minimum': 0, 'maximum': 999999.0})
     worksheet.data_validation('H2:H1048576', {'validate': 'list','source':boolean})
     worksheet2.hide()
     workbook.close()
@@ -436,8 +436,8 @@ def vendor_language_pair(request):
             df=df.drop_duplicates(keep="first", inplace=False)
             for _, row in df.iterrows():
                 try:
-                    src_lang=Languages.objects.get(language=row['Source Language'])
-                    tar_lang=Languages.objects.get(language=row['Target Language'])
+                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
+                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
                     currency=Currencies.objects.get(currency_code=row['Currency'])
                     service=ServiceTypes.objects.get(name=row['Service'])
                     unit_type=ServiceTypeunits.objects.get(unit=row['Unit Type'])
