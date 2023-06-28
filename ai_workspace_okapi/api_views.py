@@ -3002,9 +3002,9 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .serializers import SelflearningAssetSerializer
+from .serializers import SelflearningAssetSerializer,ChoiceListSelectedSerializer,ChoiceListsSerializer
 from rest_framework.response import Response
-from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment
+from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment,ChoiceLists,ChoiceListSelected
 from ai_staff.models import Languages
 from rest_framework import status
 from nltk import word_tokenize
@@ -3053,7 +3053,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 return Response(asset,status=status.HTTP_200_OK)
             return Response({},status=status.HTTP_200_OK)
         else:
-            assets = SelflearningAsset.objects.filter(user=request.user).order_by('-id')
+            assets = SelflearningAsset.objects.filter(choice_list__user=request.user).order_by('-id')
             queryset = self.filter_queryset(assets)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = SelflearningAssetSerializer(pagin_tc, many=True)
@@ -3068,23 +3068,30 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
     def create(self,request): 
         doc_id=request.POST.get('document_id',None)
+        choice_list_id=request.POST.get('choice_list_id',None)
         source=request.POST.get('source_word',None)
         edited=request.POST.get('edited_word',None)
-
-        doc=get_object_or_404(Document,id=doc_id)
-        lang=get_object_or_404(Languages,id=doc.target_language_id)
-        
-        user=self.request.user
-        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'user':user.id,'target_language':lang.id})
+        if doc_id:
+            doc=get_object_or_404(Document,id=doc_id)
+            lang=get_object_or_404(Languages,id=doc.target_language_id)
+            user=self.request.user
+            get,create=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
+            if get:
+               choice_list=get
+            else:
+               choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name=lang.language)
+        else:
+            choice_list=get_object_or_404(ChoiceLists,id=choice_list_id)
+        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
         return Response(ser.errors)
 
     def update(self,request,pk):
-        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
         edited=request.POST.get('edited_word',None)
-        slf=SelflearningAsset.objects.filter(user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        slf=SelflearningAsset.objects.filter(choice_list__user=self.request.user,source_word=ins.source_word,edited_word=edited)
         if slf:
             return Response({"msg": 'choice list already exists'}, status=400)
         else:
@@ -3095,7 +3102,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             return Response(ser.errors)
 
     def delete(self,request,pk):
-        ins = SelflearningAsset.objects.get(user=self.request.user,id=pk)
+        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
         ins.delete()
         return  Response(status=204)
     
@@ -3114,3 +3121,91 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if len(assets[i].split())>3:
                 assets[i]=" ".join(assets[i].split()[0:3])
         return assets
+
+
+class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size = 20
+    search_fields = ['name']
+    ordering_fields = ['id','name','language']
+
+    @staticmethod
+    def get_object(id):
+        asset = get_object_or_404(ChoiceLists, id=id)
+        return  asset
+
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self,request):
+        choice=request.GET.get('choice_list_id',None)
+        if choice:
+            ch_list=self.get_object(choice)
+            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list)
+            choice_serializer=SelflearningAssetSerializer(self_learning,many=True)
+            return Response(choice_serializer.data)
+        else:
+            ch_list=ChoiceLists.objects.all()
+            choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+            return Response(choice_serializer.data)
+
+    def retrieve(self,request,pk):
+        ch_list =self.get_object(pk)
+        choice_serializer=ChoiceListsSerializer(ch_list,many=False)
+        return Response(choice_serializer.data)
+
+    def create(self,request): 
+        lang=request.POST.get('language',None)
+        name=request.POST.get('name',None)
+        lang=get_object_or_404(Languages,id=lang)
+
+        user=self.request.user
+        choice_serializer= ChoiceListsSerializer(data={'name':name,'language':lang.id,'user':user.id})
+        if choice_serializer.is_valid():
+            choice_serializer.save()
+            return Response(choice_serializer.data)
+        return Response(choice_serializer.errors)
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        ins = ChoiceLists.objects.get(user=self.request.user,id=pk)
+        ins.delete()
+        return  Response(status=204)
+    
+
+
+class Choicelistselectedview(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChoiceListSelectedSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 10
+
+    def list(self,request):
+        project = request.GET.get('project')
+        if not project:
+            return Response({"msg":"project_id required"})
+        # lang=get_object_or_404(Project,id=project).get_target_languages
+        choice=ChoiceListSelected.objects.filter(project__id=project)
+        Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
+        return Response(Choice_selected_ser.data)
+
+    def create(self,request):
+        project = request.POST.get('project')
+        choice_list=request.POST.getlist('choice_list')
+        data = [{"project":project, "choice_list": choice} for choice in choice_list]
+        serializer = ChoiceListSelectedSerializer(data=data,many=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        obj=get_object_or_404(ChoiceListSelected,id=pk)
+        obj.delete()
+        return Response(status=204)
