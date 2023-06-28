@@ -1613,7 +1613,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
             thread_id = thread_ser.data.get('id')
         else:
             thread_id = thread_ser.errors.get('thread_id')
-		#print("Thread--->",thread_id)
+        print("Thread--->",thread_id)
         print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
         if input == 'task_accepted':
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
@@ -1785,6 +1785,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		return super().to_internal_value(data)
 
 	def update(self,instance,data):
+		request_user = self.context.get('request').user
 		task_assign_serializer = TaskAssignSerializer()
 		task_assign_info_serializer = TaskAssignInfoNewSerializer()
 		po_update =[]
@@ -1810,10 +1811,10 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 						res_obj.save()
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
-				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
+				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=request_user)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 				task_assign_data.update({'status':1})
-				print("TAS Data----------->",task_assign_data)
+				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
 				if task_assign_data.get('client_response') == 2:
