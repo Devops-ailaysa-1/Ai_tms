@@ -127,14 +127,18 @@ def task_assign_detail_mail(Receiver,assignment_id):
 
 def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reason):
     context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'step':task_assign.step.name,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project, 'reason':change_request_reason}
-    email = task_assign.task_assign_info.assigned_by.email
+    receiver = task_assign.task_assign_info.assigned_by
+    receivers =  receiver.team.get_project_manager if receiver.team else [] 
+    receivers.append(task_assign.task_assign_info.assigned_by)
+    emails = [i.email for i in [*set(receivers)]]
+    print("Emails-------------->",emails)
    
 
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
         'Task Assign Service Provider Status',None,
         settings.DEFAULT_FROM_EMAIL,
-        [email],
+        emails,
         html_message=msg_html,
     )
     print("assign vendor status-->>>")
