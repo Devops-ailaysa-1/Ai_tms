@@ -110,7 +110,10 @@ class ImageInpaintCreationListView(ListAPIView):
     queryset = ImageInpaintCreation.objects.all()  # Specify the queryset for retrieving objects
     serializer_class = ImageInpaintCreationListSerializer
 
- 
+    # def get_queryset(self):
+    #     # Specify the fields to include in the serialized representation
+    #     fields = ['id','image', 'width', 'field3']
+    #     return ImageInpaintCreation.objects.only(*fields)
 # class ImageloadRetrieveViewset(generics.RetrieveAPIView):
 #     queryset = Imageload.objects.all()
 #     serializer_class = ImageloadRetrieveRetrieveSerializer
