@@ -1234,7 +1234,7 @@ class MT_RawAndTM_View(views.APIView):
                 data['options']=asset_list
 
         
-                # print('rep----------',asset_rep)
+                print('rep----------',asset_rep)
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)

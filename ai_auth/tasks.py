@@ -856,10 +856,12 @@ def weighted_count_update(receiver,sender,assignment_id):
                 receivers = []
                 receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
                 receivers.append(Receiver)
+                print("Receivers in TaskAssign----------->", receivers)
                 Sender = AiUser.objects.get(id = sender)
                 hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
                 for i in [*set(receivers)]:
                     if i in hired_editors:
+                        print("#########",i)
                         ws_forms.task_assign_detail_mail(i,assignment_id)
             else:
                 print("------------------------PUT------------------------------")
