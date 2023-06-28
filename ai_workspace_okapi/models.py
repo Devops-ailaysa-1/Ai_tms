@@ -626,7 +626,7 @@ class SelflearningAsset(models.Model):
 # from ai_workspace_okapi.api_views import update_self_learning
 # post_save.connect(update_self_learning, sender=SegmentHistory)
 class ChoiceListSelected(models.Model):
-    project = models.ForeignKey("ai_workspace.Project", on_delete=models.CASCADE)
+    project = models.ForeignKey("ai_workspace.Project", on_delete=models.CASCADE,related_name='choicelist_project')
     choice_list = models.ForeignKey(ChoiceLists,on_delete=models.CASCADE,related_name='choicelist')
 
     class Meta:
