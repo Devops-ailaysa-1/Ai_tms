@@ -861,7 +861,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                 hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
                 for i in [*set(receivers)]:
                     if i in hired_editors:
-                        print("#########")
+                        print("#########",i)
                         ws_forms.task_assign_detail_mail(i,assignment_id)
             else:
                 print("------------------------PUT------------------------------")
