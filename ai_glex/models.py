@@ -68,7 +68,7 @@ class GlossaryFiles(models.Model):
     # def __str__(self):
     #     return self.file_name
 
-post_save.connect(update_words_from_template, sender=GlossaryFiles)
+#post_save.connect(update_words_from_template, sender=GlossaryFiles)
 post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
 ###############################################################################
 
