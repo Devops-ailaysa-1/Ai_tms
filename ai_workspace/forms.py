@@ -132,7 +132,7 @@ def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reaso
 
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
-        'Task Assign Vendor Status',None,
+        'Task Assign Service Provider Status',None,
         settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,
