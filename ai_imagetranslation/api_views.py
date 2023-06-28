@@ -72,12 +72,17 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
     def create(self,request):
         image = request.FILES.get('image')
+        image_id =  request.POST.getlist('image_id')
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
-        image_id =  request.POST.getlist('image_id')
-        im_details = Imageload.objects.filter(id__in = image_id)
-        data = [{'image':im.image} for im in im_details]
-        serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request})  
+        
+        if image:
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 
+        
+        elif image_id:
+            im_details = Imageload.objects.filter(id__in = image_id)
+            data = [{'image':im.image} for im in im_details]
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request})  
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
