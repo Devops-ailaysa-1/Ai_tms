@@ -96,7 +96,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     null = 'null'
     true = True
     languages = languages.split(",")
-    canvas_json_copy = copy.copy(canvas_json)
+    canvas_json_copy =  canvas_json
     # canvas_src =copy.copy(canvas_json)
     
     canvas_result = {}
