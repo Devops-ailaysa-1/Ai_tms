@@ -737,10 +737,13 @@ def get_vendor_settings_filled(request):
         query = VendorsInfo.objects.filter(user=request.user)
         if not query or (query.last() and (query.last().cv_file == None or query.last().cv_file.name == '')):
             incomplete = True
-            print("CV file not uploaded ")
-            return Response({'incomplete status':incomplete})
+            return Response({'incomplete status':incomplete,'msg':'Cv not uploaded'})
         else:
-            query = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None)).filter(Q(service=None) or Q(servicetype=None))
+            query_1 = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None))
+            if not query_1:
+                incomplete = True
+                return Response({'incomplete status':incomplete,'msg':'No lang pair exists'})
+            query = query_1.filter(Q(service=None) or Q(servicetype=None))
             print("Query------------>",query)
             if query:
                 print("Rates are not completed")
