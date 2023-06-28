@@ -149,7 +149,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         duplicate=validated_data.pop('duplicate',None)
         width=validated_data.get('width',None)
         height=validated_data.get('height',None)
-        update_new_textbox=validated_data.pop('update_new_textbox')
+        update_new_textbox=validated_data.pop('update_new_textbox',None)
         # project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
@@ -267,25 +267,27 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             json=canvas_src_pages.json
  
             for i in json['objects']:
+                print("data and database")
                 if (i['type']=='textbox') and ("is_translate" in i.keys()) and (i['is_translate'] == False):
                     text_box=i
-            if text_box and ("text" in text_box.keys()):
-                text=text_box['text']
-                canvas_tar_lang=instance.canvas_translate.all()
-                for tar_json in canvas_tar_lang:
-                    src=tar_json.source_locale.locale.first().locale_code
-                    tar=tar_json.target.locale.first().locale_code
- 
-                    for i in tar_json.canvas_json_tar.all():
-                        json=i.json
-                        copy_txt_box=copy.copy(text_box)
-                        trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                        copy_txt_box['text']=trans_text
-                        
-                        copy_txt_box['is_translate']=True
-                        obj_list=json['objects']
-                        obj_list.append(copy_txt_box)
-                        i.save()
+                    print("text-------->>>",text_box)
+                if text_box and ("text" in text_box.keys()):
+                    text=text_box['text']
+                    canvas_tar_lang=instance.canvas_translate.all()
+                    for tar_json in canvas_tar_lang:
+                        src=tar_json.source_locale.locale.first().locale_code
+                        tar=tar_json.target.locale.first().locale_code
+                        print("src",src,"tar",tar)
+                        for i in tar_json.canvas_json_tar.all():
+                            json=i.json
+                            copy_txt_box=copy.copy(text_box)
+                            trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                            copy_txt_box['text']=trans_text
+                            
+                            copy_txt_box['is_translate']=True
+                            obj_list=json['objects']
+                            obj_list.append(copy_txt_box)
+                            i.save()
             return instance
 
         if next_page:

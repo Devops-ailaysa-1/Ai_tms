@@ -208,3 +208,16 @@ class CanvasDownloadFormat(models.Model):
 
     def __str__(self) -> str:
         return self.format_name
+    
+
+class CanvasSourceUpdate(models.Model):
+    text_id=models.CharField(max_length=300,null=True,blank=True)
+    # translate_text=models.CharField(max_length=2000,null=True,blank=True)
+    source_text=models.CharField(max_length=2000,null=True,blank=True)
+    prev_text=models.CharField(max_length=2000,null=True,blank=True)
+
+    def __str__(self) -> str:
+        prev_text= "" if not self.prev_text else self.prev_text
+        source_text= "" if not self.source_text else self.source_text
+        # translate_text= "" if not self.translate_text else self.translate_text
+        return self.text_id+"--"+source_text+"--"+prev_text
