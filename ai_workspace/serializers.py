@@ -1599,7 +1599,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
     sender = task_assign.assign_to
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
-    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
     print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
     receivers.append(task_assign.task_assign_info.assigned_by)
     if receiver.team:
