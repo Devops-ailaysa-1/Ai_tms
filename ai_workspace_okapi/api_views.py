@@ -1172,14 +1172,6 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
-# roject = request.GET.get('project')
-#         if not project:
-#             return Response({"msg":"project_id required"})
-#         # lang=get_object_or_404(Project,id=project).get_target_languages
-#         choice=ChoiceListSelected.objects.filter(project__id=project)
-#         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
-#         return Response(Choice_selected_ser.data)
-
     @staticmethod
     def get_project(request,segment_id):
         project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set=segment_id).first()
@@ -1279,7 +1271,7 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                rep=data['mt_raw']
+                # rep=data['mt_raw']
 
                 # #list option assets
                 # # replace asset auto
@@ -3102,10 +3094,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             doc=get_object_or_404(Document,id=doc_id)
             lang=get_object_or_404(Languages,id=doc.target_language_id)
             user=self.request.user
-            get,create=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
-            if get:
-               choice_list=get
-            else:
+            choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
+            if created == False:
                choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name=lang.language)
         else:
             choice_list=get_object_or_404(ChoiceLists,id=choice_list_id)

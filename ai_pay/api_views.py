@@ -621,16 +621,30 @@ def po_modify(task_assign_info_id,po_update):
     po_new =None
     with transaction.atomic():
         task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
+
+        # tsks_ids =  TaskAssignInfo.objects.filter(id__in =task_assign_info_ids).values_list('task_assign__task_id',flat=True)
+        po_tasks = POTaskDetails.objects.filter(Q(task_id=instance.task_assign.task.id)&Q(assignment__assignment_id=assignment_id)&~Q(po__po_status='void'))    
+        #pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
+
+        if po_tasks.count()==1:
+            po =po_tasks.last().po
+        else:
+            raise ValueError(f"returned more than one po for same assignment po_tasks:{po_tasks.values('id')}")
+        old_tsk_ids = po.po_task.values_list('task_id',flat=True)
+        po.po_status="void"
+
+        po.save()
+
+        task_assign_info_ids = [tsk_info.id for tsk_info in TaskAssignInfo.objects.filter(Q(assignment_id=assignment_id)&Q(task_assign__task__in=list(old_tsk_ids)))]
+
+        # tsks_ids =  TaskAssignInfo.objects.filter(id__in =task_assign_info_ids).values_list('task_assign__task_id',flat=True)
+        # po_tasks = POTaskDetails.objects.filter(Q(task_id__in=list(tsks_ids))&Q(assignment__assignment_id=assignment_id)&Q(po__po_status__in=['open','issued']))
+        # po_tasks = POTaskDetails.objects.filter(Q(task_id=instance.task_assign.task.id)&Q(assignment__assignment_id=assignment_id)&Q(po__po_status__in=['open','issued']))
+        
         if 'unassigned' in po_update:
             # if task is unassigned
             task_assign_info_ids.remove(instance.id)
-        pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
-        if pos.count()==1:
-            po =pos.last()
-        else:
-            raise ValueError(f"returned more than one po for same assignment poids:{pos.values('id')}")
-        po.po_status="void"
-        po.save()
+            
         if len(task_assign_info_ids)==0:
             return True
        
@@ -967,7 +981,7 @@ class ProjectPOTaskView(viewsets.ViewSet):
             req_user = self.request.user
 
         queryset = POTaskDetails.objects.filter(Q(projectid__in=proj_queryset.values_list('ai_project_id',flat=True))&
-                                                Q(po__seller=req_user)&~Q(po__po_status="void"))
+                                                Q(po__seller=req_user)&~Q(po__po_status="void")).order_by('-task_id')
         
         return queryset
     

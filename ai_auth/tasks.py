@@ -860,8 +860,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                 Sender = AiUser.objects.get(id = sender)
                 hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
                 for i in [*set(receivers)]:
-                    if i in hired_editors:
-                        print("#########",i)
+                    if i in hired_editors or (i.team and i.team.owner) in hired_editors:
                         ws_forms.task_assign_detail_mail(i,assignment_id)
             else:
                 print("------------------------PUT------------------------------")

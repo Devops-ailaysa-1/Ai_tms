@@ -1490,7 +1490,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com")).filter(~Q(hired_editor__deactivate = True))
 		qs_ = [i for i in qs_ if get_plan_name(i.hired_editor) != None ]
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
@@ -1716,6 +1716,7 @@ def notify_task_status(task_assign,status,reason):
             print("AssignedUser--------->",assigned_user)
             print("team owner------------->",assigned_user.team.owner)
             receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+			#receivers.append(assigned_user)
             print("Receivers task completion------------>",receivers)
             if assigned_user.team:
                 receivers.append(assigned_user.team.owner)
@@ -1725,6 +1726,7 @@ def notify_task_status(task_assign,status,reason):
             team = task_assign.task.job.project.ai_user.team
             print("user---------->",task_assign.task.job.project.ai_user)
             receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+            if team:receivers.append(task_assign.task.job.project.ai_user)
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
