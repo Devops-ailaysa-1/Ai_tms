@@ -533,7 +533,7 @@ def find_taxrate(user,trial=False):
         if user.country.sortname == 'IN':
             addr=BillingAddress.objects.get(user=user)
             print(addr.state)
-            state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            state = IndianStates.objects.filter(Q(state_name__icontains=addr.state)|Q(state_code__contains=addr.state))
             if state.exists() and state.first().state_code == 'TN':
                 tax_rate=[TaxRate.objects.filter(display_name = 'CGST').last().id,TaxRate.objects.filter(display_name = 'SGST').last().id]
             elif state.exists():
@@ -587,9 +587,9 @@ def subscribe_lsp(user):
             currency ='usd'
     else:
         currency =cust.currency
-    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',djstripe_owner_account=default_djstripe_owner)
+    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',amount=0,djstripe_owner_account=default_djstripe_owner)
     if plan == 'new':
-        sub=subscribe_trial(price=price,customer=cust)
+        sub=subscribe(price=price,customer=cust)
         return sub
 
 
@@ -1477,8 +1477,8 @@ def account_activation(request):
 def user_delete(user):
     cancel_subscription(user)
     dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
-    os.system("rm -r " +dir)
     user.delete()
+    os.system("rm -r " +dir)
 
 
 @api_view(['POST'])
@@ -1998,7 +1998,7 @@ def vendor_onboard_complete(request):#######while using social signups##########
     target_lang = request.POST.get('target_language')
     cv_file = request.FILES.get('cv_file')
     if source_lang and target_lang:
-        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang)
+        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
     if cv_file:
         VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
         VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
@@ -2350,7 +2350,7 @@ class UserDetailView(viewsets.ViewSet):
                         raise ValueError
 
                 if source_lang and target_lang:
-                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
+                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
                     user_obj.is_vendor=True
                     user_obj.save()
                     sub=subscribe_vendor(user_obj)

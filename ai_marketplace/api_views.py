@@ -656,7 +656,7 @@ class VendorFilterNew(django_filters.FilterSet):
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
     country = django_filters.NumberFilter(field_name='country_id')
     location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
-    category = django_filters.CharFilter(field_name='vendor_info__type')
+    category = django_filters.BooleanFilter(field_name='is_agency')
     class Meta:
         model = AiUser
         fields = ('fullname', 'email','year_of_experience','country','location','category',)
@@ -729,36 +729,113 @@ def get_last_messages(request):
     return JsonResponse({"data":data},safe=False)
 
 
-
-
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_previous_accepted_rate(request):
     user = request.user
     vendor_id = request.POST.get('vendor_id')
-    job_id = request.POST.get('job_id')
-    job_obj = Job.objects.get(id=job_id)
-    authorize(request, resource=job_obj, actor=request.user, action="read")
-    print(job_obj.source_language,job_obj.target_language)
-    vendor = AiUser.objects.get(id=vendor_id)
-    print(vendor)
-    #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
-    query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
+    jobs = request.POST.getlist('job_id')
+    final_rates =[]
+    final_rates_given=[]
+    for j in jobs:
+        job_obj = Job.objects.get(id=j)
+        authorize(request, resource=job_obj, actor=request.user, action="read")
+        print(job_obj.source_language,job_obj.target_language)
+        vendor = AiUser.objects.get(id=vendor_id)
+        query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+        query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language)).last()
+        rates ={}
+        out = {'currency':query_final.currency.id,'mtpe_rate':query_final.mtpe_rate,'mtpe_count_unit':query_final.mtpe_count_unit_id,'step':query_final.task_assign.step.id} if query_final else {}
+        rates[j] = out
+        final_rates.append(rates)
+        rates_given={}
+        query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+        tot_2=[]
+        for i in query_1:
+            currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
+            print("SS---------->",i.get('service__mtpe_rate'))
+            if i.get('service__mtpe_rate') != None:
+                print("Inside if")
+                out_1 = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
+                        'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
+                if out_1:
+                    tot_2.extend(out_1)
+        #if tot_2:
+        rates_given[j] = tot_2
+        final_rates_given.append(rates_given)
+    return JsonResponse({"Previously Agreed Rates":final_rates,"Given Rates":final_rates_given})
 
-    rates =[]
-    for i in query_final:
-        out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
-        rates.append(out)
-    rates_given=[]
-    query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
-             .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
-    for i in query_1:
-        currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
-        out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
-                    'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
-        rates_given.extend(out)
-    return JsonResponse({"Previously Agreed Rates":rates,"Given Rates":rates_given})
+
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def get_previous_accepted_rate(request):
+#     user = request.user
+#     vendor_id = request.POST.get('vendor_id')
+#     jobs = request.POST.getlist('job_id')
+#     final_rates =[]
+#     final_rates_given=[]
+#     for j in jobs:
+#         job_obj = Job.objects.get(id=j)
+#         authorize(request, resource=job_obj, actor=request.user, action="read")
+#         print(job_obj.source_language,job_obj.target_language)
+#         vendor = AiUser.objects.get(id=vendor_id)
+#         print(vendor)
+#         #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
+#         query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+#         query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language)).last()
+#         rates ={}
+#         tot =[]
+#         for i in query_final:
+#             out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
+#             if out:
+#                 tot.extend(out)
+#         #if tot:
+#         rates[j] = tot
+#         final_rates.append(rates)
+#         rates_given={}
+#         query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#                 .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+#         tot_2=[]
+#         for i in query_1:
+#             currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
+#             out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
+#                         'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
+#             if out:
+#                 tot_2.extend(out)
+#         #if tot_2:
+#         rates_given[j] = tot_2
+#         final_rates_given.append(rates_given)
+#     return JsonResponse({"Previously Agreed Rates":final_rates,"Given Rates":final_rates_given})
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def get_previous_accepted_rate(request):
+#     user = request.user
+#     vendor_id = request.POST.get('vendor_id')
+#     job_id = request.POST.get('job_id')
+#     job_obj = Job.objects.get(id=job_id)
+#     authorize(request, resource=job_obj, actor=request.user, action="read")
+#     print(job_obj.source_language,job_obj.target_language)
+#     vendor = AiUser.objects.get(id=vendor_id)
+#     print(vendor)
+#     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
+#     query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+#     query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
+#     rates =[]
+#     for i in query_final:
+#         out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
+#         rates.append(out)
+#     rates_given=[]
+#     query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#              .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+#     for i in query_1:
+#         currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
+#         out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
+#                     'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
+#         rates_given.extend(out)
+#     return JsonResponse({"Previously Agreed Rates":rates,"Given Rates":rates_given})
 
 
 

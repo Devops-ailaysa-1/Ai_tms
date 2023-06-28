@@ -29,13 +29,37 @@ update_po_status= Signal()
 @receiver(update_po_status)
 def change_po_status(sender, instance, created, *args, **kwargs):
     from ai_pay.models import POTaskDetails
-    print("inside change po signal")
+    from ai_pay.api_views import po_generate_pdf
     if instance.po:
         po_tasks = POTaskDetails.objects.filter(assignment=instance.assignment,po=instance.po)
         po_accepted = po_tasks.filter(tsk_accepted=True)
         if po_tasks.count() == po_accepted.count():
             po =po_accepted.last().po
             po.po_status = "open"
-            po.save()       
+            po.save() 
+            po_generate_pdf(po)
+            # print("po status",po.po_status)      
     else:
         print(f"instance po is null {instance.id}")
+
+
+# change_po_file= Signal()
+
+# @receiver(change_po_file)
+# def update_po_file(sender, instance, created, *args, **kwargs):
+#     from ai_pay.api_views import po_generate_pdf
+#     po = instance.po
+#     print("inside po file change_po_file")
+#     if not created:
+#         print("inside po file change_po_file if create")
+#         po_generate_pdf(po)
+
+
+create_po_file= Signal()
+
+@receiver(create_po_file)
+def _create_po_file(sender, instance, created, *args, **kwargs):
+    from ai_pay.api_views import po_generate_pdf
+    if instance.po_file == None:
+        pass
+        # po_generate_pdf(instance)

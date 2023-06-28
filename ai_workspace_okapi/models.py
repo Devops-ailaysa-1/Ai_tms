@@ -204,6 +204,7 @@ class Segment(BaseSegment):
     def get_parent_seg_id(self):
         return self.id
 
+
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
 # post_save.connect(create_segment_controller, sender=Segment)
@@ -333,13 +334,17 @@ class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
     mt_raw = models.TextField(null=True, blank=True)
+
+
 class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
         "segment_comments_set")
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
                     related_name="split_segment_comments_set")
-    #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
+    commented_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL,null=True,blank=True, related_name = 'comment_user')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     @property
     def owner_pk(self):
@@ -552,7 +557,7 @@ class Document(models.Model):
         task = Task.objects.filter(document=self).first().id
         if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
             rr = TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False)
-            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status} for i in rr]
+            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status,'reassigned':i.reassigned} for i in rr]
         else:
             return []
 
@@ -591,25 +596,41 @@ class FontSize(models.Model):
 
 class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
+    split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
     target=models.TextField(null=True, blank=True)
+    #step = models.ForeignKey(Steps, on_delete=models.CASCADE,null=True,blank=True,related_name="seg_save_step")
     status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user=models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
     created_at=models.DateTimeField(auto_now_add=True)
     
     # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     # save_type=models.CharField(max_length=100,blank=True,null=True)
+class ChoiceLists(models.Model):
+    name = models.CharField(max_length=230,null=True,blank=True)
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    language=models.ForeignKey(Languages,related_name='choicelist_lang',on_delete=models.CASCADE)
+    is_default = models.BooleanField(default=False)
 
 class SelflearningAsset(models.Model):
-    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
+    choice_list = models.ForeignKey(ChoiceLists, null=True, on_delete=models.CASCADE,related_name='choice_list')
+    # user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    # target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
+    occurance=models.IntegerField(default=1,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word
     
 # from ai_workspace_okapi.api_views import update_self_learning
 # post_save.connect(update_self_learning, sender=SegmentHistory)
+class ChoiceListSelected(models.Model):
+    project = models.ForeignKey("ai_workspace.Project", on_delete=models.CASCADE,related_name='choicelist_project')
+    choice_list = models.ForeignKey(ChoiceLists,on_delete=models.CASCADE,related_name='choicelist')
+
+    class Meta:
+        unique_together = ("project", "choice_list")
 
 
 class SegmentDiff(models.Model):

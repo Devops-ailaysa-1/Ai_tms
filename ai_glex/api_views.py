@@ -111,7 +111,7 @@ from django_oso.auth import authorize
 #
 
 ######### Glossary FILE UPLOAD  #####################################
-
+from ai_auth.tasks import update_words_from_template
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -141,6 +141,8 @@ class GlossaryFileView(viewsets.ViewSet):
         if serializer.is_valid():
             print(serializer.is_valid())
             serializer.save()
+            file_ids = [i.get('id') for i in serializer.data]
+            update_words_from_template.apply_async((file_ids,))
             return Response(serializer.data, status=201)
         else:
             return Response (serializer.errors,status=400)
@@ -351,7 +353,6 @@ def glossaries_list(request,project_id):
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
-
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 

@@ -20,6 +20,8 @@ urlpatterns += [
     path('invo-pdf/',api_views.invoice_pdf_get,name='get_invo_pdf'),
     path('invo-list/',api_views.InvoiceListView.as_view(),name='invo_list'),
     path('invo-stripe-cancel/',api_views.cancel_stripe_invoice,name='invo_stripe_cancel'),
+    path('po-assign-info/',api_views.ProjectPOTaskView.as_view({'get': 'list'}),name='po_assign_info'),
+    path('po/',api_views.PurchaseOrderView.as_view({'get': 'list'}),name='po'),
 ]
 
 

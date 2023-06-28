@@ -402,8 +402,11 @@ def vendor_lang_sheet():
 
 
 def check_null_rows(df):
-    check_row_empty=df.notnull().all(axis=1)
-    return all(check_row_empty)
+    fields_to_check = ['Source Language','Target Language']
+    check_fields_empty = df[fields_to_check].notnull().all(axis=1)
+    print("Check---->",check_fields_empty)
+    #check_row_empty=df.notnull().all(axis=1)
+    return all(check_fields_empty)
 
 def check_lang_pair(df):
     return any(list(df['Source Language']==df['Target Language']))
@@ -413,9 +416,11 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
     if service.name=='MTPE (MPE)':
         service=VendorServiceInfo.objects.create(lang_pair=vender_lang_pair,mtpe_rate=unit_rate,
                                     mtpe_count_unit=unit_type,mtpe_hourly_rate=hourly_rate)
+        print("ser------>",service)
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
                                     unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+        print("ser--------->",service)
     return service
 
 @api_view(['POST'])
@@ -430,28 +435,40 @@ def vendor_language_pair(request):
     #     return JsonResponse({'status':'empty file upload'})
     if df.columns.to_list() == column_name:
         any_null=check_null_rows(df)
-        df=df.dropna()
+        print("anyNull---->",any_null)
+        print("Df-------->",df)
+        #df=df.dropna()
         lang_check=check_lang_pair(df)
         if any_null and not lang_check:
             df=df.drop_duplicates(keep="first", inplace=False)
+            print("Df-------->",df)
             for _, row in df.iterrows():
                 try:
+                    print("Inside Try")
                     src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
                     tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
-                    currency=Currencies.objects.get(currency_code=row['Currency'])
-                    service=ServiceTypes.objects.get(name=row['Service'])
-                    unit_type=ServiceTypeunits.objects.get(unit=row['Unit Type'])
-                    unit_rate=row['Unit Rate']
-                    hourly_rate=row['Hourly Rate']
+                    currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
+                    print("Cur------>",currency_code)
+                    currency=Currencies.objects.get(currency_code=currency_code)
+                    service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
+                    unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
+                    unit_rate=None if pd.isnull(row['Unit Rate']) else row['Unit Rate']
+                    hourly_rate=None if pd.isnull(row['Hourly Rate']) else row['Hourly Rate']
+                    reverse = None if pd.isnull(row['Reverse']) else row['Reverse']
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
-                    ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                    print("Vendor_lang----->",vender_lang_pair)
+                    if service and unit_type and unit_rate:
+                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
-                    if row['Reverse']:
+                    if reverse:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
-                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                        print("Vendor_lang----->",vender_lang_pair)
+                        if service and unit_type and unit_rate:
+                            ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
+                    print("Exception--------->",e)
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
@@ -460,7 +477,7 @@ def vendor_language_pair(request):
         return JsonResponse({'status':'column_name miss match'})
     return JsonResponse({'status':'uploaded successfully'})
 
-
+#from rest_framework.permissions import AllowAny
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def vendor_lang_pair_template(request):
@@ -470,6 +487,7 @@ def vendor_lang_pair_template(request):
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers']='Content-Disposition'
     return response
+
 
 # @api_view(['POST',])
 # def get_vendor_list(request):
@@ -710,3 +728,24 @@ def vendor_lang_pair_template(request):
 #     except:
 #         result["MT-Engines"]=[]
 #     return JsonResponse({"out":result},safe=False)
+
+
+@api_view(['GET',])
+def get_vendor_settings_filled(request):
+    user = request.user
+    if user.is_vendor:
+        query = VendorsInfo.objects.filter(user=request.user)
+        if not query or (query.last() and (query.last().cv_file == None or query.last().cv_file.name == '')):
+            incomplete = True
+            print("CV file not uploaded ")
+            return Response({'incomplete status':incomplete})
+        else:
+            query = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None)).filter(Q(service=None) or Q(servicetype=None))
+            print("Query------------>",query)
+            if query:
+                print("Rates are not completed")
+                incomplete = True
+            else: incomplete = False
+        return Response({'incomplete status':incomplete})
+    else:
+        return Response({'msg':'user is not a vendor'},status=400)

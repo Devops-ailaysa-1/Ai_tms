@@ -1,3 +1,4 @@
+from ai_workspace.models import Task
 from rest_framework import serializers
 from ai_pay.models import POAssignment, POTaskDetails, PurchaseOrder,AilaysaGeneratedInvoice
 from django.http import HttpRequest
@@ -12,22 +13,24 @@ class POTaskSerializer(serializers.ModelSerializer):
 
 
 class POAssignmentSerializer(serializers.ModelSerializer):
-    tasks = POTaskSerializer(many=True,source='assignment_po')
+    # tasks = POTaskSerializer(many=True,source='assignment_po')
     class Meta:
         model = POAssignment    
-        fields =('assignment_id','tasks')
+        fields =('assignment_id','step')
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
-    currency_code = serializers.CharField(source='currency.currency_code')
+    # currency_code = serializers.CharField(source='currency.currency_code')
+    currency_code = serializers.SerializerMethodField()
     client_name = serializers.CharField(source='client.fullname')
     seller_name = serializers.CharField(source='seller.fullname')
     client_country = serializers.CharField(source='client.country.name')
     seller_country = serializers.CharField(source='seller.country.name')
     assignment = POAssignmentSerializer()
+    # tasks = POTaskSerializer(many=True,source='po_task')
     class Meta:
         model = PurchaseOrder
-        fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status',
+        fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status','po_file',
                 'currency','currency_code','created_at','po_total_amount','assignment')
         extra_kwargs = {
 		 	"currency_name": {"read_only": True},
@@ -36,8 +39,15 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "seller_name":{"read_only": True},
             "client_country":{"read_only": True},
             "seller_country":{"read_only": True},
+            "po_file":{"read_only": True}
              #"created_at":{"write_only":True}
             }
+
+    def get_currency_code(self,obj):
+        if  obj.currency ==None:
+            return None 
+        else:
+            return obj.currency.currency_code
 
 
 class PurchaseOrderListSerializer(serializers.Serializer):
@@ -61,7 +71,25 @@ class PurchaseOrderListSerializer(serializers.Serializer):
         return PurchaseOrderSerializer(query,many=True).data
 
 
+class PurchaseOrderTaskListSerializer(serializers.Serializer):
+    payable=serializers.SerializerMethodField()
+    receivable=serializers.SerializerMethodField()
 
+
+    def _get_request(self):
+        request = self.context
+        if not isinstance(request, HttpRequest):
+            request = request._request
+        return request
+
+    def get_payable(self,obj):
+        query = obj.filter(client = self._get_request().user).order_by('-created_at')
+        return PurchaseOrderSerializer(query,many=True).data
+
+
+    def get_receivable(self,obj):
+        query = obj.filter(seller = self._get_request().user).order_by('-created_at')
+        return PurchaseOrderSerializer(query,many=True).data
 
     
 class AilaysaGeneratedInvoiceSerializer(serializers.ModelSerializer):
@@ -192,3 +220,38 @@ class InvoiceListSerializer(serializers.Serializer):
         response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()], reverse=True)
         response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()],reverse=True)
         return response
+
+
+class ProjectPoSerializer(serializers.Serializer):  
+    pass
+
+
+class PoAssignDetailsSerializer(serializers.ModelSerializer):
+    step = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    job = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+    class Meta:
+        model = POTaskDetails
+        fields = ("task_id","file_name","job","po","assignment","step","source_language","target_language","project_name",
+                  "projectid","word_count","char_count","estimated_hours","unit_price","unit_type",
+                  "total_amount","currency","tsk_accepted","assign_status","reassigned")
+        
+    def get_step(self,obj):
+        return obj.assignment.step.id
+    
+    def get_file_name(self,obj):
+        tsk = Task.objects.get(id=obj.task_id)
+        if tsk.file:
+            return tsk.file.filename
+        return None
+    
+    def get_job(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return tsk.job.id
+    
+    def get_currency(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return obj.po.currency.id
+    
+    # def get

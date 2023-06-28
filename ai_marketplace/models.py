@@ -34,7 +34,7 @@ class ProjectboardDetails(models.Model):#stephen
     rate_range_max = models.DecimalField(
                          max_digits = 5,
                          decimal_places = 2,blank=True, null=True)
-    # project_brief = models.BooleanField(default=False)
+    project_brief = models.BooleanField(default=False)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)
@@ -239,7 +239,8 @@ class BidPropasalDetails(models.Model):
     @property
     def filename(self):
         if self.sample_file:
-            return  os.path.basename(self.sample_file.file.name)
+            try:return os.path.basename(self.sample_file.file.name)
+            except: return None
         else:
             return None
 

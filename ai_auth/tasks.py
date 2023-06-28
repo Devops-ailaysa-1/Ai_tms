@@ -104,7 +104,7 @@ def sync_invoices_and_charges(days):
     
 @task
 def renewal_list():
-    today = timezone.now()
+    today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
     if last_day == today.day:
         cycle_dates = [x for x in range(today.day,32)]
@@ -624,6 +624,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
     proj = Project.objects.get(id=project_id)
+    print("tasks-------->",proj.get_tasks)
     task = proj.get_tasks[0]
     try:
         obj = MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
@@ -848,23 +849,33 @@ def weighted_count_update(receiver,sender,assignment_id):
         if existing_wc != word_count and existing_cc != char_count:
             task_assign_obj_ls.append(obj)
 
-        if receiver !=None and sender!=None:
-            print("------------------POST-----------------------------------")
-            Receiver = AiUser.objects.get(id = receiver)
-            Sender = AiUser.objects.get(id = sender)
-            hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
-            if Receiver in hired_editors:
-                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-        else:
-            print("------------------------PUT------------------------------")
-            assigns = task_assgn_objs[0].task_assign
-            if assigns.task_assign_info.mtpe_count_unit_id != None:
-                if assigns.task_assign_info.mtpe_count_unit_id == 1:
-                    if existing_wc != word_count:
-                        notify_word_count(assigns,word_count,char_count)
-                else:
-                    if existing_cc != char_count:
-                        notify_word_count(assigns,word_count,char_count)
+        try:
+            if receiver !=None and sender!=None:
+                print("------------------POST-----------------------------------")
+                Receiver = AiUser.objects.get(id = receiver)
+                receivers = []
+                receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
+                receivers.append(Receiver)
+                print("Receivers in TaskAssign----------->", receivers)
+                Sender = AiUser.objects.get(id = sender)
+                hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
+                for i in [*set(receivers)]:
+                    if i in hired_editors:
+                        print("#########",i)
+                        ws_forms.task_assign_detail_mail(i,assignment_id)
+            else:
+                print("------------------------PUT------------------------------")
+                assigns = task_assgn_objs[0].task_assign
+                if assigns.task_assign_info.mtpe_count_unit_id != None:
+                    if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                        if existing_wc != word_count:
+                            notify_word_count(assigns,word_count,char_count)
+                    else:
+                        if existing_cc != char_count:
+                            notify_word_count(assigns,word_count,char_count)
+        except:
+            print("<---------Notification error------------->")
+            pass
     logger.info('billable count updated and mail sent')
 
     if len(task_assign_obj_ls) != 0:
@@ -900,3 +911,52 @@ def mail_report():
 def record_api_usage(provider,service,uid,email,usage):
     from ai_auth.utils import record_usage
     record_usage(provider,service,uid,email,usage)
+
+from ai_glex import models as glex_model
+from tablib import Dataset
+@task
+def update_words_from_template(file_ids):
+    print("File Ids--->",file_ids)
+    for i in file_ids:
+        instance = glex_model.GlossaryFiles.objects.get(id=i)
+        glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
+        dataset = Dataset()
+        imported_data = dataset.load(instance.file.read(), format='xlsx')
+        if instance.source_only == False and instance.job.source_language != instance.job.target_language:
+            for data in imported_data:
+                if data[2]:
+                    try:
+                        value = glex_model.TermsModel(
+                                # data[0],          #Blank column
+                                data[1],            #Autoincremented in the model
+                                data[2].strip(),    #SL term column
+                                data[3].strip() if data[3] else data[3],    #TL term column
+                                data[4], data[5], data[6], data[7], data[8], data[9],
+                                data[10], data[11], data[12], data[13], data[14], data[15]
+                        )
+                    except:
+                        value = glex_model.TermsModel(
+                                # data[0],          #Blank column
+                                data[1],            #Autoincremented in the model
+                                data[2].strip(),    #SL term column
+                                data[3].strip() if data[3] else data[3], )
+                    value.glossary_id = glossary_obj.id
+                    value.file_id = instance.id
+                    value.job_id = instance.job_id
+                    value.save()
+                    #print("ID----------->",value.id)
+        else:
+            for data in imported_data:
+                print("Data in else------->",data)
+                if data[2]:
+                        value = glex_model.TermsModel(
+                                # data[0],          #Blank column
+                                data[1],            #Autoincremented in the model
+                                data[2].strip()
+                                )
+                value.glossary_id = glossary_obj.id
+                value.file_id = instance.id
+                value.job_id = instance.job_id
+                value.save()
+                #print("ID----------->",value.id)
+        print("Terms Uploaded")

@@ -276,7 +276,7 @@ REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
     'PASSWORD_CHANGE_SERIALIZER': 'ai_auth.serializers.AiPasswordChangeSerializer',
-    # 'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
+    'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
 }
 
 PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
@@ -470,6 +470,7 @@ OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
+TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
 
 
 

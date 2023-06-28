@@ -10,6 +10,7 @@ router.register(r'blogtitle',api_views.BlogtitleViewset ,basename='ai_title_gen'
 router.register(r'blogoutline',api_views.BlogOutlineViewset ,basename='ai_outline_gen')
 router.register(r'blogoutlinesession',api_views.BlogOutlineSessionViewset ,basename='ai_outline_session_gen')
 router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_article_gen')
+router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -22,6 +23,7 @@ urlpatterns += [
     path('image/',api_views.image_gen),
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
+    path('credit_blog_check/',api_views.credit_check_blog),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

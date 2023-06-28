@@ -334,9 +334,10 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    #@cached_property
-    @property
-    def progress(self):
+
+
+    # @property
+    def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
@@ -352,25 +353,27 @@ class Project(models.Model):
 
         elif self.project_type_id == 5:
             count=0
-            for i in self.get_tasks:
+            for i in tasks:
                 obj = ExpressProjectDetail.objects.filter(task=i)
                 if obj.exists():
                     if obj.first().target_text!=None:
                         count+=1
                 else:
                     return "Yet to start"
-            if len(self.get_tasks) == count:
+            if len(tasks) == count:
                 return "Completed"
             else:
                 return "In Progress"
 
         elif self.project_type_id == 4:
-            rr = voice_project_progress(self)
+            rr = voice_project_progress(self,tasks)
             return rr
 
         else:
-            docs = Document.objects.filter(job__project_id=self.id).all()
-            tasks = len(self.get_tasks)
+            assigned_jobs = [i.job.id for i in tasks]
+            docs = Document.objects.filter(job__in=assigned_jobs).all()
+            #docs = Document.objects.filter(job__project_id=self.id).all()
+            tasks = len(tasks)
             total_segments = 0
             if not docs:
                 return "Yet to start"
@@ -411,6 +414,84 @@ class Project(models.Model):
                 return "Completed"
             else:
                 return "In Progress"
+
+    #@cached_property
+    # @property
+    # def progress(self):
+    #     from ai_workspace.api_views import voice_project_progress
+    #     if self.project_type_id == 3:
+    #         terms = self.glossary_project.term.all()
+    #         if terms.count() == 0:
+    #             return "Yet to start"
+    #         elif terms.count() == terms.filter(Q(tl_term='') | Q(tl_term__isnull = True)).count():
+    #             return "Yet to start"
+    #         else:
+    #             if terms.count() == terms.filter(tl_term__isnull = False).exclude(tl_term='').count():
+    #                 return "Completed"
+    #             else:
+    #                 return "In Progress"
+
+    #     elif self.project_type_id == 5:
+    #         count=0
+    #         for i in self.get_tasks:
+    #             obj = ExpressProjectDetail.objects.filter(task=i)
+    #             if obj.exists():
+    #                 if obj.first().target_text!=None:
+    #                     count+=1
+    #             else:
+    #                 return "Yet to start"
+    #         if len(self.get_tasks) == count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
+
+    #     elif self.project_type_id == 4:
+    #         rr = voice_project_progress(self)
+    #         return rr
+
+    #     else:
+    #         docs = Document.objects.filter(job__project_id=self.id).all()
+    #         tasks = len(self.get_tasks)
+    #         total_segments = 0
+    #         if not docs:
+    #             return "Yet to start"
+    #         else:
+    #             if docs.count() == tasks:
+
+    #                 total_seg_count = 0
+    #                 confirm_count  = 0
+    #                 confirm_list = [102, 104, 106, 110, 107]
+
+    #                 segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
+    #                 for seg in segs:
+
+    #                     if (seg.is_merged == True and seg.is_merge_start != True):
+    #                         continue
+
+    #                     elif seg.is_split == True:
+    #                         total_seg_count += 2
+
+    #                     else:
+    #                         total_seg_count += 1
+
+    #                     seg_new = seg.get_active_object()
+
+    #                     if seg_new.is_split == True:
+    #                         for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+    #                             if split_seg.status_id in confirm_list:
+    #                                 confirm_count += 1
+
+    #                     elif seg_new.status_id in confirm_list:
+    #                         confirm_count += 1
+
+    #             else:
+    #                 return "In Progress"
+
+    #         if total_seg_count == confirm_count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -1317,10 +1398,20 @@ class TaskAssign(models.Model):
     YET_TO_START = 1
     IN_PROGRESS = 2
     COMPLETED = 3
+    RETURN_REQUEST = 4
     STATUS_CHOICES = [
         (YET_TO_START,'Yet to start'),
         (IN_PROGRESS, 'In Progress'),
         (COMPLETED, 'Completed'),
+        (RETURN_REQUEST, 'Return Request')
+    ]
+    APPROVED = 1
+    REWORK = 2
+    CLOSE = 3
+    RESPONSE_CHOICES = [
+        (APPROVED, 'Approved'),
+        (REWORK, 'Rework'),
+        (CLOSE, 'Close'),
     ]
     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_info")
@@ -1335,6 +1426,10 @@ class TaskAssign(models.Model):
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     reassigned = models.BooleanField(default=False)
+    client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
+    client_reason = models.TextField(null=True, blank=True)
+    return_request_reason = models.TextField(null=True, blank=True)
+    user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = TaskAssignManager()
 
@@ -1376,6 +1471,7 @@ class TaskAssignInfo(models.Model):
     billable_char_count = models.IntegerField(blank=True,null=True)
     billable_word_count = models.IntegerField(blank=True,null=True)
     account_raw_count = models.BooleanField(default=True)
+    change_request_reason = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
@@ -1737,6 +1833,7 @@ class WorkflowSteps(models.Model):
 
 
 class AiRoleandStep(models.Model):
+    """maps which role responsible for which task"""
     role = models.ForeignKey(AiRoles,related_name='step_role',
         on_delete=models.CASCADE,blank=True, null=True)
     step = models.ForeignKey(Steps, on_delete=models.CASCADE,

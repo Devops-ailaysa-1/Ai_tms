@@ -9,6 +9,9 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
+router.register(r"selflearn",api_views.SelflearningView,basename="self_learn")
+router.register(r"choicelist",api_views.ChoicelistView,basename="choice_list")
+router.register(r"choicelistselected",api_views.Choicelistselectedview,basename="choice_list")
 
 urlpatterns = router.urls
 
@@ -60,6 +63,7 @@ urlpatterns+=[
     path('synonyms/',api_views.get_word_api, name ='synonyms'),
     path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
     path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
+    path('seg_rewrite/',api_views.paraphrasing_for_non_english),
     path('download_audio_file/',api_views.download_audio_output_file),
     path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
@@ -70,5 +74,7 @@ urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
-    path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file")
+    path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file"),
+
+
 ]
