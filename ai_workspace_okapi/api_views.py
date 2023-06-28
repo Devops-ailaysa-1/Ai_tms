@@ -1228,14 +1228,14 @@ class MT_RawAndTM_View(views.APIView):
 
                 # print('data normal=-----------',data['mt_raw'])
                 rep=data['mt_raw']
-                #list option assets
+                # #list option assets
                 # replace asset auto
                 asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
                 data['mt_raw']=asset_rep
                 data['options']=asset_list
 
         
-                print('rep----------',asset_rep)
+                # print('rep----------',asset_rep)
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
@@ -1254,12 +1254,12 @@ class MT_RawAndTM_View(views.APIView):
                 
                 rep=data['mt_raw']
 
-                #list option assets
-                # replace asset auto
+                # #list option assets
+                # # replace asset auto
                 asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
                 data['mt_raw']=asset_rep
                 data['options']=asset_list
-                # print('rep----------',asset_rep)
+                print('rep----------',asset_rep)
 
 
 
@@ -3142,13 +3142,23 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return queryset
     
     def list(self,request):
+        project = request.GET.get('project',None)
         choice=request.GET.get('choice_list_id',None)
         if choice:
             ch_list=self.get_object(choice)
             self_learning=SelflearningAsset.objects.filter(choice_list=ch_list)
             choice_serializer=SelflearningAssetSerializer(self_learning,many=True)
             return Response(choice_serializer.data)
+        elif project:
+            project=get_object_or_404(Project,id=project)
+            # lang=Languages.objects.filter(language__in=project.get_target_languages)
+            # print(lang)
+            lang=project.get_target_languages
+            ch_list=ChoiceLists.objects.filter(language__language__in=lang)
+            choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+            return Response(choice_serializer.data)
         else:
+            print("allllllllllllllllll")            
             ch_list=ChoiceLists.objects.all()
             choice_serializer=ChoiceListsSerializer(ch_list,many=True)
             return Response(choice_serializer.data)
