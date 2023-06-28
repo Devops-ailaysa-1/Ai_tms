@@ -465,12 +465,6 @@ def canvas_download_combine(request):
                 # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
 
 
- 
-
-
-
-
-
 
 #####################
 ####free_____pix

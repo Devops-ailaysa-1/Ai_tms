@@ -468,20 +468,26 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             if extension=='jpg':
                 extension='jpeg'
             
-            im = cv2.imread(instance.image.path)
+            img = cv2.imread(instance.image.path)
             if extension !='svg':
-                width, height,channel = im.shape
-
-                if any([True if i>2048 else False for i in [width, height]]):
-                    scale_val = min([2048/width, 2048/ height])
-                    new_width = round(scale_val*width)
-                    new_height = round(scale_val*height)
-                    im = cv2.resize(im ,(new_height,new_width))
-                    content= image_content(im)
-                    instance.thumbnail=Image.fromarray(im)
-                    im = core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
-                    instance.image = im
-                    instance.save()
+                width, height,_ = img.shape
+                content= image_content(img)
+                im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.fromarray(img))
+                instance.image = im
+                instance.height=height
+                instance.width=width
+                instance.save()
+                # if any([True if i>2048 else False for i in [width, height]]):
+                #     scale_val = min([2048/width, 2048/ height])
+                #     new_width = round(scale_val*width)
+                #     new_height = round(scale_val*height)
+                #     im = cv2.resize(im ,(new_height,new_width))
+                #     content= image_content(im)
+                #     instance.thumbnail=Image.fromarray(im)
+                #     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
+                #     instance.image = im
+                #     instance.save()
         return instance
     
 ####################################################################################################
