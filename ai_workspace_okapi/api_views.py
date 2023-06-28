@@ -1172,23 +1172,50 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
+# roject = request.GET.get('project')
+#         if not project:
+#             return Response({"msg":"project_id required"})
+#         # lang=get_object_or_404(Project,id=project).get_target_languages
+#         choice=ChoiceListSelected.objects.filter(project__id=project)
+#         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
+#         return Response(Choice_selected_ser.data)
+
+    @staticmethod
+    def get_project(request,segment_id):
+        project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        print(project)
+        return project
+
     @staticmethod   
     def asset_replace(request,translation,segment_id):
-        seg=get_object_or_404(Segment,id=segment_id)
-        tar_lang=seg.text_unit.document.job.target_language_id
-        # tar_lang=doc
-        # tar_lang=77
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+        choice=[choice.choice_list.id for choice in choice_selected]
+   
         word=word_tokenize(translation)
         suggestion={}
-        for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
-            if assets:
-                replace_word=assets.first().edited_word
-                translation=translation.replace(word,replace_word) 
-                suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
-                suggestion[replace_word].insert(0,word)
-                                               
-        print(translation)
+
+        def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        choicelist=ChoiceLists.objects.filter(id__in=choice).filter(is_default=False)
+    
+        if choicelist:
+            for word in word: 
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by('-created_at')
+                if choice:
+                    replace_word=choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)  
+        elif def_choice:
+            for word in word:
+                def_choice=def_choice.filter(source_word__iexact = word).order_by('-created_at')
+                if def_choice:
+                    replace_word=def_choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in def_choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)
+        
+        # print(translation)
         return translation,suggestion
 
     def get(self, request, segment_id):
@@ -3151,14 +3178,11 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
             return Response(choice_serializer.data)
         elif project:
             project=get_object_or_404(Project,id=project)
-            # lang=Languages.objects.filter(language__in=project.get_target_languages)
-            # print(lang)
             lang=project.get_target_languages
             ch_list=ChoiceLists.objects.filter(language__language__in=lang)
             choice_serializer=ChoiceListsSerializer(ch_list,many=True)
             return Response(choice_serializer.data)
-        else:
-            print("allllllllllllllllll")            
+        else:       
             ch_list=ChoiceLists.objects.all()
             choice_serializer=ChoiceListsSerializer(ch_list,many=True)
             return Response(choice_serializer.data)
@@ -3191,16 +3215,24 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
 
 
 class Choicelistselectedview(viewsets.ModelViewSet):
+    queryset = ChoiceListSelected.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = ChoiceListSelectedSerializer
     paginator = PageNumberPagination()
     paginator.page_size = 10
 
+    def get_object(self):
+        pk = self.kwargs.get("pk", 0)
+        try:
+            obj = get_object_or_404(ChoiceListSelected, id=pk)
+        except:
+            raise Http404
+        return obj
+
     def list(self,request):
         project = request.GET.get('project')
         if not project:
             return Response({"msg":"project_id required"})
-        # lang=get_object_or_404(Project,id=project).get_target_languages
         choice=ChoiceListSelected.objects.filter(project__id=project)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
@@ -3214,8 +3246,10 @@ class Choicelistselectedview(viewsets.ModelViewSet):
             serializer.save()
             return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self,request,pk):
-        obj=get_object_or_404(ChoiceListSelected,id=pk)
+    
+    def destroy(self, request, *args, **kwargs):
+        obj= self.get_object()
         obj.delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    
