@@ -58,7 +58,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             raise Http404
 
     def get(self, request):
-        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = ImageTranslate.objects.filter(user=request.user.id).values('id','project_name','height','width','types').order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -107,7 +107,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
 from rest_framework.generics import ListAPIView
 
 class ImageInpaintCreationListView(ListAPIView):
-    queryset = ImageInpaintCreation.objects.all()  # Specify the queryset for retrieving objects
+    queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
 
     # def get_queryset(self):
