@@ -275,8 +275,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     text=text_box['text']
                     canvas_tar_lang=instance.canvas_translate.all()
                     for tar_json in canvas_tar_lang:
-                        src=tar_json.source_language.locale.first().locale_code
-                        tar=tar_json.target_language.locale.first().locale_code
+                        src=tar_json.source_language.locale_code
+                        tar=tar_json.target_language.locale_code
                         print("src",src, "tar",tar)
                         for j in tar_json.canvas_json_tar.all():
                             json=j.json
