@@ -444,8 +444,8 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
-                    src_lang=Languages.objects.get(language=row['Source Language'])
-                    tar_lang=Languages.objects.get(language=row['Target Language'])
+                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
+                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
                     print("Cur------>",currency_code)
                     currency=Currencies.objects.get(currency_code=currency_code)
