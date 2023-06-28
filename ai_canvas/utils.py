@@ -12,8 +12,7 @@ import os
 import shutil
 import io
 from PIL import Image ,ImageFont
-
-
+import copy
  
 
 def calculate_font_size(box_width, box_height,text,font_size):
@@ -97,12 +96,10 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     null = 'null'
     true = True
     languages = languages.split(",")
-    canvas_json_copy =canvas_json
-    # fontSize=canvas_json_copy['fontSize']
-    # height=canvas_json_copy['height']
-    # width=canvas_json_copy['width']
-    canvas_result = {}
+    canvas_json_copy = copy.copy(canvas_json)
+    # canvas_src =copy.copy(canvas_json)
     
+    canvas_result = {}
     for lang in languages:
         if 'template_json' in  canvas_json_copy.keys():
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
@@ -111,10 +108,8 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
-                    # if ("styles" in canvas_json_copy['objects'][count].keys())   # ("style" in canvas_json_copy['objects'][count]['styles']):
-                    #     if canvas_json_copy['objects'][count]['styles']['style']
-                    #     blod=canvas_json_copy['objects'][count]['styles']['style']
-                    #     italic=canvas_json_copy['objects'][count]['styles']['style']
+                    # canvas_src['objects'][count]['isTranslate']=True
+
                     text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
@@ -128,13 +123,12 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
-                    
+                    # canvas_src['objects'][count]['isTranslate']=True
+
                     text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
-                    # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
-                    # canvas_json_copy['fontSize']=fontSize
                     if i['type'] == 'group':
                         canva_group(i['objects'])
         canvas_result[lang] = canvas_json_copy

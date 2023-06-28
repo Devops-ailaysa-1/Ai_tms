@@ -262,15 +262,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if update_new_textbox and src_page:
             canvas_src_pages=instance.canvas_json_src.get(page_no=src_page)
- 
             text_box=""
             json=canvas_src_pages.json
-            print("json",json)
             for i in json['objects']:
-  
                 if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
- 
                 if text_box and ("text" in text_box.keys()):
                     text=text_box['text']
                     canvas_tar_lang=instance.canvas_translate.all()
@@ -329,7 +325,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
-                     
+                    
+                    json=copy.deepcopy(src_json_file.json)
+                    for i in json['objects']:
+                        if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
+                            i['isTranslate'] == True
+                    src_json_file.json=json
+                    src_json_file.save()
+
                     if res[tar_lang.locale.first().locale_code]:
                         tar_json_form=res[tar_lang.locale.first().locale_code]
                         
