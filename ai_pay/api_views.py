@@ -563,7 +563,7 @@ def update_status_modified_po(po):
         instance = po_tsk,
         created = False
     )
-    msg_send_po(po,"po_updated")  
+    # msg_send_po(po,"po_updated")  
     return True
 
 def po_modify(task_assign_info_id,po_update):
