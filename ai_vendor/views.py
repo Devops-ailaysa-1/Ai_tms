@@ -455,18 +455,18 @@ def vendor_language_pair(request):
                     unit_rate=None if pd.isnull(row['Unit Rate']) else row['Unit Rate']
                     hourly_rate=None if pd.isnull(row['Hourly Rate']) else row['Hourly Rate']
                     reverse = None if pd.isnull(row['Reverse']) else row['Reverse']
-                    vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
+                    vender_lang_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
-                    print("Vendor_lang----->",vender_lang_pair)
+                    print("Vendor_lang----->",vender_lang_pair[0])
                     if service and unit_type and unit_rate:
-                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                        ser_ven=create_service_types(service,vender_lang_pair[0],unit_rate,unit_type,hourly_rate)
                 
                     if reverse:
                         src_lang,tar_lang=tar_lang,src_lang #swapping src to tar and tar to src for reverse
-                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,target_lang=tar_lang,currency=currency)
-                        print("Vendor_lang----->",vender_lang_pair)
+                        vender_lang_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,target_lang=tar_lang,currency=currency)
+                        print("Vendor_lang----->",vender_lang_pair[0])
                         if service and unit_type and unit_rate:
-                            ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                            ser_ven=create_service_types(service,vender_lang_pair[0],unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
                     ven_lan_pair=VendorLanguagePair.objects.get(user=user,source_lang=src_lang,target_lang=tar_lang)
