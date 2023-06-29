@@ -100,7 +100,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         print("Agency----->",is_agency)
 
-        if is_agency:
+        if 'is_agency' in self.validated_data:
             if is_agency == True:
                 sub = subscribe_lsp(user)
             else:
