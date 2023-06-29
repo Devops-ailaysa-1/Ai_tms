@@ -965,12 +965,17 @@ class PurchaseOrderView(viewsets.ViewSet):
         participant = self.request.query_params.get('participant')
         task = self.request.query_params.get('task')
         step = self.request.query_params.get('step')
+        user = self.request.user
+
+        if user.is_internal_member:
+            user = user.team.owner
+
         if participant == "seller":
-            queryset = queryset.filter(seller=self.request.user)
+            queryset = queryset.filter(seller=user)
         elif participant == "buyer":
-            queryset = queryset.filter(client=self.request.user)
+            queryset = queryset.filter(client=user)
         else:
-            queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
+            queryset = queryset.filter(Q(client=user)|Q(seller=user))        
         queryset = queryset.filter(po_task__task_id =task)
         # queryset= queryset.filter(assignment__step_id=step)
         queryset = queryset.filter(po_status__in=['issued','open'])
