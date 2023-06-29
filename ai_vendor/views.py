@@ -363,7 +363,7 @@ def vendor_lang_sheet():
             'border': 1,
             'locked': True
         })
-    worksheet = workbook.add_worksheet('Vendor Language Pairs')
+    worksheet = workbook.add_worksheet('service_provider_translation_rates')
 
     worksheet2 = workbook.add_worksheet('Languages')
     languages=list(Languages.objects.all().values_list('language',flat=True))
