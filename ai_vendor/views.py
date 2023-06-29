@@ -479,9 +479,9 @@ def vendor_language_pair(request):
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
-            return JsonResponse({'status':'some null present in rolls and might contain same lang pair'})
+            return JsonResponse({'msg':'some null present in rolls and might contain same lang pair'},status=400)
     else:
-        return JsonResponse({'status':'column_name miss match'})
+        return JsonResponse({'msg':'column_name miss match'},status=400)
     return JsonResponse({'status':'uploaded successfully'})
 
 #from rest_framework.permissions import AllowAny
