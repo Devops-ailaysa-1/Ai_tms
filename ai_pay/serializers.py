@@ -75,20 +75,26 @@ class PurchaseOrderTaskListSerializer(serializers.Serializer):
     payable=serializers.SerializerMethodField()
     receivable=serializers.SerializerMethodField()
 
-
     def _get_request(self):
         request = self.context
         if not isinstance(request, HttpRequest):
             request = request._request
         return request
 
+    def _get_user(self):
+        user = self._get_request().user
+        if user.is_internal_member:
+            user = user.team.owner
+        return user
+   
+
     def get_payable(self,obj):
-        query = obj.filter(client = self._get_request().user).order_by('-created_at')
+        query = obj.filter(client = self._get_user()).order_by('-created_at')
         return PurchaseOrderSerializer(query,many=True).data
 
 
     def get_receivable(self,obj):
-        query = obj.filter(seller = self._get_request().user).order_by('-created_at')
+        query = obj.filter(seller = self._get_user()).order_by('-created_at')
         return PurchaseOrderSerializer(query,many=True).data
 
     
