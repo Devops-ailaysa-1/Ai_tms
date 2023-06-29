@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.urls import path
 router = routers.DefaultRouter()
 router.register(r'imageloadlist',api_views.ImageloadViewset ,basename= 'imageuploadlist')
-router.register(r'imagetranslate' , api_views.ImageTranslateViewset ,basename= 'inpaintimage')
+router.register(r'imagetranslate' , api_views.ImageTranslateViewset ,basename= 'inpaintimage') ########
 router.register(r'backgroundremove' , api_views.BackgroundRemovelViewset ,basename= 'background-remove')
 urlpatterns =  router.urls
 

@@ -876,9 +876,10 @@ def image_list(request):
  
 
 
-class TemplateGlobalDesignViewsetV2(viewsets.ViewSet):
+class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-
+    pagination_class = CustomPagination
+    page_size = 20
     def create(self,request):
         serializer=TemplateGlobalDesignSerializerV2(data=request.data)
         if serializer.is_valid():
@@ -886,3 +887,14 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+    def list(self,request):
+        queryset = TemplateGlobalDesign.objects.all().values('template_name','category','thumbnail_page','template_lang','height','width').order_by("-id")
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer=TemplateGlobalDesignSerializerV2(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response

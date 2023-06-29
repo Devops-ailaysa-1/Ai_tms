@@ -59,7 +59,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             raise Http404
 
     def get(self, request):
-        queryset = ImageTranslate.objects.filter(user=request.user.id).values('height','image','project_name','types','width').order_by('-id')
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
