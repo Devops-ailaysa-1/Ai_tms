@@ -4,7 +4,7 @@ from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
-from ai_workspace.models import Project, TaskAssignInfo,AiRoleandStep
+from ai_workspace.models import Project, TaskAssignInfo,AiRoleandStep,TaskAssignHistory
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -568,10 +568,30 @@ def update_status_modified_po(po):
 
 def po_modify(task_assign_info_id,po_update):
     from ai_auth.signals import assign_object
+    from ai_auth.utils import unassign_task
 
     instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
     assignment_id= instance.assignment_id
-    task =instance.task_assign.task.id
+    task =instance.task_assign.task
+
+    if 'assign_to' in po_update:
+        tsk_history = TaskAssignHistory.objects.filter(task_assign =instance.task_assign,unassigned_by__isnull=False)
+
+        for tsk_c in tsk_history:
+            role_name = get_assignment_role(tsk_c.task_assign.step,tsk_c.task_assign.reassigned)
+            unassign_task(tsk_c.previous_assign,role_name,task)
+
+
+        if instance.task_assign.assign_to.is_internal_member:
+            assign_object.send(
+            sender=TaskAssignInfo,
+            instance = instance,
+            user=instance.task_assign.assign_to,
+            role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
+            )
+
+            # return True
+
 
     if 'accepted' in po_update:
         #if instance.owner != instance.task_assign.task.job.project.project_manager:
@@ -584,7 +604,7 @@ def po_modify(task_assign_info_id,po_update):
             role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
         )
         try:
-            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task.id)&~Q(po__po_status='void'))
             po_task_obj.tsk_accepted=True
             po_task_obj.assign_status="task_accepted"
             po_task_obj.save()
@@ -594,7 +614,7 @@ def po_modify(task_assign_info_id,po_update):
             
     if 'change_request' in po_update:
         try:
-            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task.id)&~Q(po__po_status='void'))
             po_task_obj.assign_status="change_request"
             po_task_obj.save()
             return True
@@ -604,7 +624,7 @@ def po_modify(task_assign_info_id,po_update):
     if ('accepted_rate' in po_update or 'accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
-                po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+                po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task.id)&~Q(po__po_status='void'))
                 try:
                     update_task_po(instance,po_task_obj)
                 except:
@@ -620,7 +640,7 @@ def po_modify(task_assign_info_id,po_update):
 
     po_new =None
     with transaction.atomic():
-        task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
+        # task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
 
         # tsks_ids =  TaskAssignInfo.objects.filter(id__in =task_assign_info_ids).values_list('task_assign__task_id',flat=True)
         po_tasks = POTaskDetails.objects.filter(Q(task_id=instance.task_assign.task.id)&Q(assignment__assignment_id=assignment_id)&~Q(po__po_status='void'))    
@@ -641,9 +661,11 @@ def po_modify(task_assign_info_id,po_update):
         # po_tasks = POTaskDetails.objects.filter(Q(task_id__in=list(tsks_ids))&Q(assignment__assignment_id=assignment_id)&Q(po__po_status__in=['open','issued']))
         # po_tasks = POTaskDetails.objects.filter(Q(task_id=instance.task_assign.task.id)&Q(assignment__assignment_id=assignment_id)&Q(po__po_status__in=['open','issued']))
         
-        if 'unassigned' in po_update:
+        if 'unassigned' in po_update or instance.task_assign.assign_to.is_internal_member:
             # if task is unassigned
             task_assign_info_ids.remove(instance.id)
+            role_name = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned)
+            unassign_task(tsk_c.previous_assign,role_name,task)           
             
         if len(task_assign_info_ids)==0:
             return True
