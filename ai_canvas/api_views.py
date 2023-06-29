@@ -889,7 +889,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.errors)
         
     def list(self,request):
-        queryset = TemplateGlobalDesign.objects.all().values('template_name','category','thumbnail_page','template_lang','height','width').order_by("-id")
+        queryset = TemplateGlobalDesign.objects.all().order_by("-id") #.values('template_name','category','thumbnail_page','template_lang','height','width')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer=TemplateGlobalDesignSerializerV2(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -898,3 +898,9 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
+    
+
+    def retrieve(self,request,pk):
+        query_set=TemplateGlobalDesign.objects.get(id = pk)
+        serializer=TemplateGlobalDesignSerializerV2(query_set )
+        return Response(serializer.data)
