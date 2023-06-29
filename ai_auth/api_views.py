@@ -391,10 +391,11 @@ class ContactPricingCreateView(viewsets.ViewSet):
 
 def send_email(subject,template,context):
     content = render_to_string(template, context)
-    file =context.get('file')
+    file_ =context.get('file')
+    name = os.path.basename(file_.path)
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
-    if file:
-        msg.attach(file.name, file.read(), file.content_type)
+    if file_:
+        msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -1335,7 +1336,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 
-
+from .models import CarrierSupport
 class CarrierSupportCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
@@ -1354,10 +1355,13 @@ class CarrierSupportCreateView(viewsets.ViewSet):
         time = date.today()
         template = 'carrier_support_email.html'
         subject='Regarding Job Hiring'
-        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'file':cv_file,'message':message}
+        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'message':message}
         serializer = CarrierSupportSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save()
+            ins = CarrierSupport.objects.get(id=serializer.data.get('id'))
+            if ins.cv_file:
+                context.update({'file':ins.cv_file})
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1380,10 +1384,13 @@ class GeneralSupportCreateView(viewsets.ViewSet):
         today = date.today()
         template = 'general_support_email.html'
         subject='Regarding General Support'
-        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'file':support_file,'message':message}
+        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'message':message}
         serializer = GeneralSupportSerializer(data={**request.POST.dict(),'support_file':support_file})
         if serializer.is_valid():
             serializer.save()
+            ins = GeneralSupport.objects.get(id=serializer.data.get('id'))
+            if ins.support_file:
+                context.update({'file':ins.support_file})
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
