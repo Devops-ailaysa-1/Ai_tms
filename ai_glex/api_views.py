@@ -111,7 +111,7 @@ from django_oso.auth import authorize
 #
 
 ######### Glossary FILE UPLOAD  #####################################
-from ai_auth.tasks import update_words_from_template
+#from ai_auth.tasks import update_words_from_template
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
