@@ -563,7 +563,7 @@ def update_status_modified_po(po):
         instance = po_tsk,
         created = False
     )
-    msg_send_po(po,"po_updated")  
+    # msg_send_po(po,"po_updated")  
     return True
 
 def po_modify(task_assign_info_id,po_update):
@@ -648,6 +648,8 @@ def po_modify(task_assign_info_id,po_update):
 
         if po_tasks.count()==1:
             po =po_tasks.last().po
+        elif po_tasks.count()==0 and instance.task_assign.assign_to.is_internal_member:
+            return True
         else:
             raise ValueError(f"returned more than one po for same assignment po_tasks:{po_tasks.values('id')}")
         old_tsk_ids = po.po_task.values_list('task_id',flat=True)
