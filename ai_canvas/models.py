@@ -110,25 +110,59 @@ class CanvasTargetJsonFiles(models.Model):
     class Meta:
         ordering = ('page_no',)
 
-# #########template design##############
+# #########global template design##############
+
+
 
 class TemplateGlobalDesign(models.Model):
-    file_name=models.CharField(max_length=50,null=True,blank=True) 
+    template_name=models.CharField(max_length=50,null=True,blank=True)
+    category=models.ForeignKey(SocialMediaSize,related_name='template_global_categoty', on_delete=models.CASCADE)
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
-    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
-    user_name=models.CharField(max_length=100,null=True,blank=True)
-
-class TemplatePage(models.Model):
-    template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+    # user_name=models.CharField(max_length=100,null=True,blank=True)
+    is_pro=models.BooleanField()
+    is_published=models.BooleanField()
+    
+    description=models.CharField(max_length=600,blank=True,null=True)
     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-    json_page=models.JSONField(null=True,default=dict)
-    page_no=models.IntegerField()
-    class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+    design_json=models.JSONField(null=True,default=dict)
+    template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
+
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
+class TemplateTag(models.Model):
+    tag_name=models.CharField(max_length=50,null=True,blank=True)
+    global_template=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_page', on_delete=models.CASCADE)
+    def __str__(self) -> str:
+        if self.tag_name:
+            return self.tag_name
+        else:
+            return ""
+
+
+
+# class GlobalTemplateTags(models.Model):
+#     tag_name=models.ForeignKey(TemplateTag,related_name='template_global_tag_name', on_delete=models.CASCADE)
+#     template_design=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_tag', on_delete=models.CASCADE)
+
+#     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+ 
+
+
+# class TemplatePage(models.Model):
+#     template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+#     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
+#     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
+#     json_page=models.JSONField(null=True,default=dict)
+#     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
+    # page_no=models.IntegerField()
+    # class Meta:
+    #     constraints = [
+    #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
 
 
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):

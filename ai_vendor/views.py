@@ -418,8 +418,8 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
         print("ser------>",service)
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
-                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
-        print("ser--------->",service)
+                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate) #
+        print("ser--------->",service) 
     return service
 
 @api_view(['POST'])
@@ -461,13 +461,20 @@ def vendor_language_pair(request):
                         ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if reverse:
-                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
-                                                                    target_lang=src_lang,currency=currency)
+                        src_lang,tar_lang=tar_lang,src_lang #swapping src to tar and tar to src for reverse
+                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,target_lang=tar_lang,currency=currency)
                         print("Vendor_lang----->",vender_lang_pair)
                         if service and unit_type and unit_rate:
                             ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
+                    ven_lan_pair=VendorLanguagePair.objects.get(user=user,source_lang=src_lang,target_lang=tar_lang)
+                    ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]
+                    service=ven_service_info.services
+                    unit_type=ven_service_info.unit_type
+                    unit_rate=ven_service_info.unit_rate
+                    hourly_rate=ven_service_info.hourly_rate
+                    ven_service_info.save()
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
