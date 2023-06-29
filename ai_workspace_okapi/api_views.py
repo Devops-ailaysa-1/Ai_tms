@@ -1188,12 +1188,12 @@ class MT_RawAndTM_View(views.APIView):
         suggestion={}
 
         def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
-        choicelist=ChoiceLists.objects.filter(id__in=choice).filter(is_default=False)
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(is_default=False)&Q(user=request.user))
     
         if choicelist:
             print("choicelist")
             for word in word: 
-                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by('-created_at')
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
                 if choice:
                     replace_word=choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
@@ -1202,7 +1202,7 @@ class MT_RawAndTM_View(views.APIView):
         elif def_choice:
             print("default_choice")
             for word in word:
-                def_choice=def_choice.filter(source_word__iexact = word).order_by('-created_at')
+                def_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
                 if def_choice:
                     replace_word=def_choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
@@ -3110,7 +3110,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     def update(self,request,pk):
         ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
         edited=request.POST.get('edited_word',None)
-        slf=SelflearningAsset.objects.filter(choice_list__user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
         if slf:
             return Response({"msg": 'choice list already exists'}, status=400)
         else:
