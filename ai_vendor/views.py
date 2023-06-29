@@ -489,7 +489,7 @@ def vendor_language_pair(request):
 @permission_classes([IsAuthenticated])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=service_provider_translation_rates.xlsx'
     xlsx_data = vendor_lang_sheet()
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers']='Content-Disposition'
