@@ -486,8 +486,8 @@ def vendor_language_pair(request):
 
 #from rest_framework.permissions import AllowAny
 @api_view(['GET',])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
+#@permission_classes([AllowAny])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=service_provider_translation_rates.xlsx'
