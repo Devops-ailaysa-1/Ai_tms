@@ -612,13 +612,15 @@ class ChoiceLists(models.Model):
     is_default = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        
         with transaction.atomic():
-            #transaction.set_isolation_level(transaction.ISOLATION_SERIALIZABLE)
             queryset = ChoiceLists.objects.select_for_update().filter(user=self.user)
             if not self.name:
                 count = queryset.count()
                 self.name = 'choice list-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+            if self.id:
+                query=ChoiceLists.objects.select_for_update().filter(user=self.user).filter(name=self.name)
+                if query:
+                    self.name=self.name + "(" + str(query.count()+1)+")"
             return super().save()
 
 

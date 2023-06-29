@@ -3144,7 +3144,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
 class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    page_size = 20
+    page_size = 10
     search_fields = ['name']
     ordering_fields = ['id','name','language']
 
@@ -3165,9 +3165,11 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         choice=request.GET.get('choice_list_id',None)
         if choice:
             ch_list=self.get_object(request,choice)
-            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list)
-            choice_serializer=SelflearningAssetSerializer(self_learning,many=True)
-            return Response(choice_serializer.data)
+            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+            queryset = self.filter_queryset(self_learning)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
         elif project:
             project=get_object_or_404(Project,id=project)
             lang=project.get_target_languages
@@ -3176,11 +3178,15 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
             return Response(choice_serializer.data)
         else:       
             ch_list=ChoiceLists.objects.all()
-            choice_serializer=ChoiceListsSerializer(ch_list,many=True)
-            return Response(choice_serializer.data)
+            queryset = self.filter_queryset(ch_list).order_by("-id")
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = ChoiceListsSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
+            # choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+            # return Response(choice_serializer.data)
 
     def retrieve(self,request,pk):
-        ch_list =self.get_object(pk)
+        ch_list =self.get_object(request,pk)
         choice_serializer=ChoiceListsSerializer(ch_list,many=False)
         return Response(choice_serializer.data)
 
@@ -3198,21 +3204,18 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
 
     def update(self,request,pk):
         obj=self.get_object(request,pk)
-        print(obj,"objjjjjjjjjj")
+        print(obj,"object")
         ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
         return Response(ser.errors)
 
-        
-
     def delete(self,request,pk):
         ins = ChoiceLists.objects.get(user=self.request.user,id=pk)
         ins.delete()
         return  Response(status=204)
     
-
 
 class Choicelistselectedview(viewsets.ModelViewSet):
     queryset = ChoiceListSelected.objects.all()
@@ -3240,12 +3243,14 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     def create(self,request):
         project = request.POST.get('project')
         choice_list=request.POST.getlist('choice_list')
-        data = [{"project":project, "choice_list": choice} for choice in choice_list]
-        serializer = ChoiceListSelectedSerializer(data=data,many=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if choice_list:
+            data = [{"project":project, "choice_list": choice} for choice in choice_list]
+            serializer = ChoiceListSelectedSerializer(data=data,many=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
     
     def destroy(self, request, *args, **kwargs):
         obj= self.get_object()
