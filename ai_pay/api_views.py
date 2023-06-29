@@ -666,8 +666,8 @@ def po_modify(task_assign_info_id,po_update):
         if 'unassigned' in po_update or instance.task_assign.assign_to.is_internal_member:
             # if task is unassigned
             task_assign_info_ids.remove(instance.id)
-            role_name = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned)
-            unassign_task(tsk_c.previous_assign,role_name,task)           
+            # role_name = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned)
+            # unassign_task(tsk_c.previous_assign,role_name,task)           
             
         if len(task_assign_info_ids)==0:
             return True
