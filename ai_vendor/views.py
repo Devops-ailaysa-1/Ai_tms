@@ -7,7 +7,7 @@ from django.test.client import RequestFactory
 from rest_framework import pagination, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import IntegrityError
@@ -363,7 +363,7 @@ def vendor_lang_sheet():
             'border': 1,
             'locked': True
         })
-    worksheet = workbook.add_worksheet('service_provider_translation_rates')
+    worksheet = workbook.add_worksheet('Vendor Language Pairs')
 
     worksheet2 = workbook.add_worksheet('Languages')
     languages=list(Languages.objects.all().values_list('language',flat=True))
@@ -486,7 +486,8 @@ def vendor_language_pair(request):
 
 #from rest_framework.permissions import AllowAny
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=service_provider_translation_rates.xlsx'
@@ -494,6 +495,7 @@ def vendor_lang_pair_template(request):
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers']='Content-Disposition'
     return response
+
 
 
 # @api_view(['POST',])
