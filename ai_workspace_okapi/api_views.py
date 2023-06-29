@@ -1171,24 +1171,24 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
-    @staticmethod   
-    def asset_replace(request,translation,segment_id):
-        seg=get_object_or_404(Segment,id=segment_id)
-        tar_lang=seg.text_unit.document.job.target_language_id
-        # tar_lang=doc
-        # tar_lang=77
-        word=word_tokenize(translation)
-        suggestion={}
-        for word in word:
-            assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
-            if assets:
-                replace_word=assets.first().edited_word
-                translation=translation.replace(word,replace_word) 
-                suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
-                suggestion[replace_word].insert(0,word)
+    # @staticmethod   
+    # def asset_replace(request,translation,segment_id):
+    #     seg=get_object_or_404(Segment,id=segment_id)
+    #     tar_lang=seg.text_unit.document.job.target_language_id
+    #     # tar_lang=doc
+    #     # tar_lang=77
+    #     word=word_tokenize(translation)
+    #     suggestion={}
+    #     for word in word:
+    #         assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
+    #         if assets:
+    #             replace_word=assets.first().edited_word
+    #             translation=translation.replace(word,replace_word) 
+    #             suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
+    #             suggestion[replace_word].insert(0,word)
                                                
-        print(translation)
-        return translation,suggestion
+    #     print(translation)
+    #     return translation,suggestion
 
     def get(self, request, segment_id):
             tm_only = {
@@ -1225,16 +1225,16 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
-                # print('data normal=-----------',data['mt_raw'])
-                rep=data['mt_raw']
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
+                # # print('data normal=-----------',data['mt_raw'])
+                # rep=data['mt_raw']
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
 
         
-                print('rep----------',asset_rep)
+                # print('rep----------',asset_rep)
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
@@ -1251,14 +1251,14 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                rep=data['mt_raw']
+                # rep=data['mt_raw']
 
-                #list option assets
-                # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                data['mt_raw']=asset_rep
-                data['options']=asset_list
-                # print('rep----------',asset_rep)
+                # #list option assets
+                # # replace asset auto
+                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                # data['mt_raw']=asset_rep
+                # data['options']=asset_list
+                # # print('rep----------',asset_rep)
 
 
 
@@ -3085,10 +3085,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             doc=get_object_or_404(Document,id=doc_id)
             lang=get_object_or_404(Languages,id=doc.target_language_id)
             user=self.request.user
-            get,create=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
-            if get:
-               choice_list=get
-            else:
+            choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
+            if created == False:
                choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name=lang.language)
         else:
             choice_list=get_object_or_404(ChoiceLists,id=choice_list_id)

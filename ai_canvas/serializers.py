@@ -515,14 +515,14 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
     template_list=serializers.CharField(required=False)
     category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
-
-    design_json=serializers.JSONField(required=True)
+    json=serializers.JSONField(required=True)
     template_lang=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=True)
     is_pro=serializers.BooleanField(default=False)
     is_published=serializers.BooleanField(default=False)
+
     class Meta:
         model=TemplateGlobalDesign
-        fields=('id','template_tag','template_list','design_json','template_name','category','is_pro','is_published',
+        fields=('id','template_tag','template_list','json','template_name','category','is_pro','is_published',
                 'template_lang','description','thumbnail_page')
         extra_kwargs = { 
             'template_list':{'write_only':True},}
@@ -533,13 +533,19 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         thumbnail_src=core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
 
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        data['template_lang'] = instance.template_lang.locale.first().locale_code
+        data['category'] = instance.category.social_media_name
+        data['width'] =  instance.category.width
+        data['height'] =  instance.category.height
+        return data
 
     def create(self, validated_data):
         template_list=validated_data.pop('template_list',None)
         template_lists=template_list.split(",")
-        print("valid__",'---',template_lists,"---",validated_data)
         instance = TemplateGlobalDesign.objects.create(**validated_data)
-        thumbnail_page = self.thumb_create(json_str=instance.design_json,formats='png',multiplierValue=1)
+        thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
         instance.thumbnail_page=thumbnail_page
         instance.save()
         for template_list in template_lists:

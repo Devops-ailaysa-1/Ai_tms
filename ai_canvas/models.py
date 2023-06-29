@@ -122,11 +122,11 @@ class TemplateGlobalDesign(models.Model):
     # user_name=models.CharField(max_length=100,null=True,blank=True)
     is_pro=models.BooleanField()
     is_published=models.BooleanField()
-    
+
     description=models.CharField(max_length=600,blank=True,null=True)
     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-    design_json=models.JSONField(null=True,default=dict)
+    json=models.JSONField(blank=True , null=True)
     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
 
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
@@ -134,7 +134,7 @@ class TemplateGlobalDesign(models.Model):
 
 
 class TemplateTag(models.Model):
-    tag_name=models.CharField(max_length=50,null=True,blank=True)
+    tag_name=models.CharField(max_length=500,null=True,blank=True)
     global_template=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_page', on_delete=models.CASCADE)
     def __str__(self) -> str:
         if self.tag_name:
