@@ -1191,6 +1191,7 @@ class MT_RawAndTM_View(views.APIView):
         choicelist=ChoiceLists.objects.filter(id__in=choice).filter(is_default=False)
     
         if choicelist:
+            print("choicelist")
             for word in word: 
                 choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by('-created_at')
                 if choice:
@@ -1199,6 +1200,7 @@ class MT_RawAndTM_View(views.APIView):
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
                     suggestion[replace_word].insert(0,word)  
         elif def_choice:
+            print("default_choice")
             for word in word:
                 def_choice=def_choice.filter(source_word__iexact = word).order_by('-created_at')
                 if def_choice:
@@ -3147,8 +3149,8 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     ordering_fields = ['id','name','language']
 
     @staticmethod
-    def get_object(id):
-        asset = get_object_or_404(ChoiceLists, id=id)
+    def get_object(request,id):
+        asset = get_object_or_404(ChoiceLists, id=id,user=request.user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3162,7 +3164,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         project = request.GET.get('project',None)
         choice=request.GET.get('choice_list_id',None)
         if choice:
-            ch_list=self.get_object(choice)
+            ch_list=self.get_object(request,choice)
             self_learning=SelflearningAsset.objects.filter(choice_list=ch_list)
             choice_serializer=SelflearningAssetSerializer(self_learning,many=True)
             return Response(choice_serializer.data)
@@ -3195,7 +3197,15 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return Response(choice_serializer.errors)
 
     def update(self,request,pk):
-        pass
+        obj=self.get_object(request,pk)
+        print(obj,"objjjjjjjjjj")
+        ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
+
+        
 
     def delete(self,request,pk):
         ins = ChoiceLists.objects.get(user=self.request.user,id=pk)

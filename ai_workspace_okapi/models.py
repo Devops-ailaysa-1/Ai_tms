@@ -1,11 +1,11 @@
 import json
 import re
-
+from django.db import transaction
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.utils.functional import cached_property
-
+from datetime import datetime, date
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines, \
     MTLanguageSupport
@@ -610,6 +610,17 @@ class ChoiceLists(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     language=models.ForeignKey(Languages,related_name='choicelist_lang',on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        
+        with transaction.atomic():
+            #transaction.set_isolation_level(transaction.ISOLATION_SERIALIZABLE)
+            queryset = ChoiceLists.objects.select_for_update().filter(user=self.user)
+            if not self.name:
+                count = queryset.count()
+                self.name = 'choice list-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+            return super().save()
+
 
 class SelflearningAsset(models.Model):
     choice_list = models.ForeignKey(ChoiceLists, null=True, on_delete=models.CASCADE,related_name='choice_list')
