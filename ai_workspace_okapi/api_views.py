@@ -1187,27 +1187,30 @@ class MT_RawAndTM_View(views.APIView):
         word=word_tokenize(translation)
         suggestion={}
 
-        def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
         choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(is_default=False)&Q(user=request.user))
     
         if choicelist:
             print("choicelist")
             for word in word: 
-                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                choice = choice[:5]
                 if choice:
                     replace_word=choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
                     suggestion[replace_word].insert(0,word)  
-        elif def_choice:
-            print("default_choice")
-            for word in word:
-                def_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
-                if def_choice:
-                    replace_word=def_choice.first().edited_word
-                    translation=translation.replace(word,replace_word) 
-                    suggestion[replace_word]=[i.edited_word for i in def_choice if  i.edited_word != replace_word]
-                    suggestion[replace_word].insert(0,word)
+        # elif def_choice:
+        #     print("default_choice--------->",def_choice)
+        #     for word in word:
+        #         default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+        #         d_choice = default_choice[:5]
+        #         print("Dchoice------->",d_choice)
+        #         if d_choice:
+        #             replace_word=d_choice.first().edited_word
+        #             translation=translation.replace(word,replace_word) 
+        #             suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
+        #             suggestion[replace_word].insert(0,word)
         
         # print(translation)
         return translation,suggestion
