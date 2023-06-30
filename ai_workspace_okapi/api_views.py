@@ -1172,24 +1172,45 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
-    # @staticmethod   
-    # def asset_replace(request,translation,segment_id):
-    #     seg=get_object_or_404(Segment,id=segment_id)
-    #     tar_lang=seg.text_unit.document.job.target_language_id
-    #     # tar_lang=doc
-    #     # tar_lang=77
-    #     word=word_tokenize(translation)
-    #     suggestion={}
-    #     for word in word:
-    #         assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user=request.user) & Q(source_word__iexact = word)).order_by('-created_at')
-    #         if assets:
-    #             replace_word=assets.first().edited_word
-    #             translation=translation.replace(word,replace_word) 
-    #             suggestion[replace_word]=[i.edited_word for i in assets if  i.edited_word != replace_word]
-    #             suggestion[replace_word].insert(0,word)
-                                               
-    #     print(translation)
-    #     return translation,suggestion
+    @staticmethod
+    def get_project(request,segment_id):
+        project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        print(project)
+        return project
+
+    @staticmethod   
+    def asset_replace(request,translation,segment_id):
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+        choice=[choice.choice_list.id for choice in choice_selected]
+   
+        word=word_tokenize(translation)
+        suggestion={}
+
+        def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(is_default=False)&Q(user=request.user))
+    
+        if choicelist:
+            print("choicelist")
+            for word in word: 
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
+                if choice:
+                    replace_word=choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)  
+        elif def_choice:
+            print("default_choice")
+            for word in word:
+                def_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
+                if def_choice:
+                    replace_word=def_choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in def_choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)
+        
+        # print(translation)
+        return translation,suggestion
 
     def get(self, request, segment_id):
             tm_only = {
@@ -1226,13 +1247,13 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
-                # # print('data normal=-----------',data['mt_raw'])
-                # rep=data['mt_raw']
+                # print('data normal=-----------',data['mt_raw'])
+                rep=data['mt_raw']
                 # #list option assets
-                # # replace asset auto
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
+                # replace asset auto
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
 
         
                 # print('rep----------',asset_rep)
@@ -1256,10 +1277,10 @@ class MT_RawAndTM_View(views.APIView):
 
                 # #list option assets
                 # # replace asset auto
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-                # # print('rep----------',asset_rep)
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
+                print('rep----------',asset_rep)
 
 
 
@@ -3089,7 +3110,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     def update(self,request,pk):
         ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
         edited=request.POST.get('edited_word',None)
-        slf=SelflearningAsset.objects.filter(choice_list__user=self.request.user,source_word=ins.source_word,edited_word=edited)
+        slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
         if slf:
             return Response({"msg": 'choice list already exists'}, status=400)
         else:
@@ -3123,13 +3144,13 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
 class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    page_size = 20
+    page_size = 10
     search_fields = ['name']
     ordering_fields = ['id','name','language']
 
     @staticmethod
-    def get_object(id):
-        asset = get_object_or_404(ChoiceLists, id=id)
+    def get_object(request,id):
+        asset = get_object_or_404(ChoiceLists, id=id,user=request.user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3140,19 +3161,32 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return queryset
     
     def list(self,request):
+        project = request.GET.get('project',None)
         choice=request.GET.get('choice_list_id',None)
         if choice:
-            ch_list=self.get_object(choice)
-            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list)
-            choice_serializer=SelflearningAssetSerializer(self_learning,many=True)
-            return Response(choice_serializer.data)
-        else:
-            ch_list=ChoiceLists.objects.all()
+            ch_list=self.get_object(request,choice)
+            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+            queryset = self.filter_queryset(self_learning)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
+        elif project:
+            project=get_object_or_404(Project,id=project)
+            lang=project.get_target_languages
+            ch_list=ChoiceLists.objects.filter(language__language__in=lang)
             choice_serializer=ChoiceListsSerializer(ch_list,many=True)
             return Response(choice_serializer.data)
+        else:       
+            ch_list=ChoiceLists.objects.all()
+            queryset = self.filter_queryset(ch_list).order_by("-id")
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = ChoiceListsSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
+            # choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+            # return Response(choice_serializer.data)
 
     def retrieve(self,request,pk):
-        ch_list =self.get_object(pk)
+        ch_list =self.get_object(request,pk)
         choice_serializer=ChoiceListsSerializer(ch_list,many=False)
         return Response(choice_serializer.data)
 
@@ -3169,7 +3203,13 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return Response(choice_serializer.errors)
 
     def update(self,request,pk):
-        pass
+        obj=self.get_object(request,pk)
+        print(obj,"object")
+        ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
 
     def delete(self,request,pk):
         ins = ChoiceLists.objects.get(user=self.request.user,id=pk)
@@ -3177,18 +3217,25 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
 
-
 class Choicelistselectedview(viewsets.ModelViewSet):
+    queryset = ChoiceListSelected.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = ChoiceListSelectedSerializer
     paginator = PageNumberPagination()
     paginator.page_size = 10
 
+    def get_object(self):
+        pk = self.kwargs.get("pk", 0)
+        try:
+            obj = get_object_or_404(ChoiceListSelected, id=pk)
+        except:
+            raise Http404
+        return obj
+
     def list(self,request):
         project = request.GET.get('project')
         if not project:
             return Response({"msg":"project_id required"})
-        # lang=get_object_or_404(Project,id=project).get_target_languages
         choice=ChoiceListSelected.objects.filter(project__id=project)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
@@ -3196,14 +3243,18 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     def create(self,request):
         project = request.POST.get('project')
         choice_list=request.POST.getlist('choice_list')
-        data = [{"project":project, "choice_list": choice} for choice in choice_list]
-        serializer = ChoiceListSelectedSerializer(data=data,many=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self,request,pk):
-        obj=get_object_or_404(ChoiceListSelected,id=pk)
+        if choice_list:
+            data = [{"project":project, "choice_list": choice} for choice in choice_list]
+            serializer = ChoiceListSelectedSerializer(data=data,many=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        obj= self.get_object()
         obj.delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    
