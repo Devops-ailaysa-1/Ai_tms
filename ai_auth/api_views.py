@@ -63,7 +63,7 @@ from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name,company_members_list
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
-from ai_vendor.models import VendorsInfo,VendorLanguagePair
+from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorOnboardingInfo
 from django.db import transaction
 from django.contrib.sites.shortcuts import get_current_site
 #for soc
@@ -2254,7 +2254,7 @@ def ai_social_callback(request):
         user_type = user_state.get('socialaccount_user_state',None)
         if user_type!=None:
                 if user_type == 'vendor':
-                    required.append('language_pair')
+                    required.append('service_provider_type')
 
 
         resp_data.update({"required_details":required})
@@ -2305,9 +2305,10 @@ class UserDetailView(viewsets.ViewSet):
 
     def create(self,request):
         country = request.POST.get('country',None)
-        source_lang = request.POST.get('source_language',None)
-        target_lang = request.POST.get('target_language',None)
-        cv_file = request.FILES.get('cv_file',None)
+        # source_lang = request.POST.get('source_language',None)
+        # target_lang = request.POST.get('target_language',None)
+        service_provider_type = request.POST.get('service_provider_type',None)
+        # cv_file = request.FILES.get('cv_file',None)
         state = request.POST.get('state',None)
         user = request.user
 
@@ -2322,7 +2323,7 @@ class UserDetailView(viewsets.ViewSet):
 
         user_type = user_state.get('socialaccount_user_state',None)
         if user_type == 'vendor':
-            if not (source_lang and target_lang):
+            if not (service_provider_type):
                 return Response({"error": "language_pair_required"},status=400)
 
         #user_pricing = user_state.get('socialaccount_user_state',None)
@@ -2356,15 +2357,26 @@ class UserDetailView(viewsets.ViewSet):
                         logger.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
 
-                if source_lang and target_lang:
-                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
-                    user_obj.is_vendor=True
-                    user_obj.save()
-                    sub=subscribe_vendor(user_obj)
+                # if source_lang and target_lang:
+                #     VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
+                #     user_obj.is_vendor=True
+                #     user_obj.save()
+                #     sub=subscribe_vendor(user_obj)
 
-                if cv_file:
-                    VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
-                    VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+                if service_provider_type:
+                    if service_provider_type == 'agency':
+                        sub = subscribe_lsp(user_obj)
+                        user_obj.is_agency = True
+                    elif service_provider_type == 'freelancer':
+                        sub = subscribe_vendor(user_obj)
+                    user_obj.is_vendor = True
+                    user_obj.save() 
+                    VendorOnboardingInfo.objects.create(user=user_obj,onboarded_as_vendor=True)
+
+
+                # if cv_file:
+                #     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
+                #     VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
 
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
