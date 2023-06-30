@@ -563,12 +563,13 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     category=TemplateGlobalDesignSerializerV2(many=True,required=False,source='template_global_categoty')
     
     class Meta:
-        fields=('id','social_media_name','category','width','height')
+        fields='__all__'
         model=SocialMediaSize
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
         if instance.category:
+ 
             return data
 
 
