@@ -3058,6 +3058,10 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
+        self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
+        
         if segment_id:
             seg = get_object_or_404(Segment,id=segment_id)
 
@@ -3071,7 +3075,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 mt_edited=seg.target
                 print("raw_mt split>>>>>>>",raw_mt)
 
-            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited)
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
@@ -3129,19 +3133,23 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
     @staticmethod
-    def seq_match_seg_diff(words1,words2):
+    def seq_match_seg_diff(words1,words2,choicelist=None):
+        print(choicelist,"+++++++++++++++++++++++++")
+        prefix = "<"
+        suffix = ">"
         s1=words1.split()
-        s2=words2.split()
+        target=words2.split()
+        s2 = [word for word in target if not (word.startswith(prefix) and word.endswith(suffix))]
         assets={}
         matcher=difflib.SequenceMatcher(None,s1,s2 )
         print(matcher.get_opcodes())
         for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-            if tag=='replace':
+            if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
                 assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
         print("------------------",assets)  
-        for i in assets:
-            if len(assets[i].split())>3:
-                assets[i]=" ".join(assets[i].split()[0:3])
+        # for i in assets:
+        #     if len(assets[i].split())>3:
+        #         assets[i]=" ".join(assets[i].split()[0:3])
         return assets
 
 
