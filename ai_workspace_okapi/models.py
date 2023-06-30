@@ -614,14 +614,30 @@ class ChoiceLists(models.Model):
     def save(self, *args, **kwargs):
         with transaction.atomic():
             queryset = ChoiceLists.objects.select_for_update().filter(user=self.user)
+
             if not self.name:
                 count = queryset.count()
-                self.name = 'choice list-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                self.name = 'ChoiceLists-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+
             if self.id:
-                query=ChoiceLists.objects.select_for_update().filter(user=self.user).filter(name=self.name)
-                if query:
-                    self.name=self.name + "(" + str(query.count()+1)+")"
+                count = queryset.filter(name=self.name).exclude(id=self.id).count()
+            else:
+                count = queryset.filter(name=self.name).count()
+            if count != 0:
+                while True:
+                    try:
+                        if self.id:
+                            count= queryset.filter(name__icontains=self.name).exclude(id=self.id).count()
+                        else:
+                            count= queryset.filter(name__icontains=self.name).count()
+                        self.name = self.name + "(" + str(count) + ")"
+                        super().save()
+                        break
+                    except:
+                        count= count+1
+                        self.name = self.name + "(" + str(count) + ")"
             return super().save()
+
 
 
 class SelflearningAsset(models.Model):
