@@ -570,11 +570,11 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         return {k: v for k, v in data.items() if v is not None}
 
-    # def to_representation(self, instance):
-    #     data=super().to_representation(instance)
-    #     tempate=instance.template_global_categoty.all()
-    #     if len(tempate)>0:
-    #         return data
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        template=instance.template_global_categoty.all()
+        if template is not None:
+            return data
 
 
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
