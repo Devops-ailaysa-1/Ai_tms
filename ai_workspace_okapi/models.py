@@ -1,11 +1,11 @@
 import json
 import re
-
+from django.db import transaction
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save 
 from django.utils.functional import cached_property
-
+from datetime import datetime, date
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines, \
     MTLanguageSupport
@@ -610,6 +610,19 @@ class ChoiceLists(models.Model):
     language=models.ForeignKey(Languages,related_name='choicelist_lang',on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            queryset = ChoiceLists.objects.select_for_update().filter(user=self.user)
+            if not self.name:
+                count = queryset.count()
+                self.name = 'choice list-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+            if self.id:
+                query=ChoiceLists.objects.select_for_update().filter(user=self.user).filter(name=self.name)
+                if query:
+                    self.name=self.name + "(" + str(query.count()+1)+")"
+            return super().save()
+
+
 class SelflearningAsset(models.Model):
     choice_list = models.ForeignKey(ChoiceLists, null=True, on_delete=models.CASCADE,related_name='choice_list')
     # user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -619,8 +632,8 @@ class SelflearningAsset(models.Model):
     occurance=models.IntegerField(default=1,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self) -> str:
-        return self.source_word+'--'+self.edited_word
+    # def __str__(self) -> str:
+    #     return self.source_word+'--'+self.edited_word
     
 # from ai_workspace_okapi.api_views import update_self_learning
 # post_save.connect(update_self_learning, sender=SegmentHistory)

@@ -49,7 +49,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     target_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     cv_file = serializers.FileField(required=False,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
-    is_agency = serializers.NullBooleanField()
+    is_agency = serializers.CharField(required=False,allow_null=True)
 
     class Meta:
         model = AiUser
@@ -67,7 +67,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             print("Errors---->",list(e))
             raise serializers.ValidationError({"error":list(e)})
         return super().run_validation(data)
-
 
     def vendor_signup():
         pass
@@ -100,10 +99,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         print("Agency----->",is_agency)
 
-        if is_agency:
-            if is_agency == True:
+        if 'is_agency' in self.validated_data:
+            if is_agency == 'True':
                 sub = subscribe_lsp(user)
-            else:
+            elif is_agency == 'False':
                 sub = subscribe_vendor(user)
             user.is_agency = True
             user.is_vendor = True
