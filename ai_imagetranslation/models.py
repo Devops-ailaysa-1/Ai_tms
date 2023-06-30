@@ -1,7 +1,7 @@
 from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale
 from ai_auth.models import AiUser
-
+from django.core.validators import FileExtensionValidator
 def user_directory_path_image_load(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_load/",filename)
 
@@ -20,7 +20,7 @@ def user_directory_path_image_translate_result(instance, filename):
 def user_directory_path_image_load_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_load/thumbnail",filename)
 
-from django.core.validators import FileExtensionValidator
+
 class Imageload(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
     image=models.FileField(upload_to=user_directory_path_image_load,blank=True ,null=True,validators=[FileExtensionValidator(allowed_extensions=["svg","jpeg","jpg","png"])])

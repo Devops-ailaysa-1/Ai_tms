@@ -10,6 +10,7 @@ import copy,os
 from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove
 from ai_canvas.template_json import img_json,basic_json
+from ai_canvas.models import CanvasUserImageAssets
 HOST_NAME=os.getenv('HOST_NAME')
 
 def create_thumbnail_img_load(base_dimension,image):
@@ -113,6 +114,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     export=serializers.FileField(required=False)
     source_language=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required= False)
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
+    canvas_asset_image_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required=False,write_only=True)
+
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
     
     class Meta:
@@ -152,7 +155,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         src_lang = validated_data.get('source_language' ,None)
         inpaint_creation_target_lang = validated_data.get('inpaint_creation_target_lang' ,None)
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
+        canvas_asset_image_id=validated_data.get('canvas_asset_image_id' ,None)
         mask_json=validated_data.get('mask_json')
+
+        if canvas_asset_image_id:
+            instance.image=canvas_asset_image_id.image
+            instance.height=canvas_asset_image_id.height
+            instance.width=canvas_asset_image_id.width
+            instance.save()
+
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
             width , height = self.image_shape(instance.image)
