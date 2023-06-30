@@ -1202,12 +1202,13 @@ class MT_RawAndTM_View(views.APIView):
         elif def_choice:
             print("default_choice--------->",def_choice)
             for word in word:
-                default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-                def_choice = default_choice[:5]
-                if def_choice:
-                    replace_word=def_choice.first().edited_word
+                default_choice=d_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                d_choice = default_choice[:5]
+                print("Dchoice------->",d_choice)
+                if d_choice:
+                    replace_word=d_choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
-                    suggestion[replace_word]=[i.edited_word for i in def_choice if  i.edited_word != replace_word]
+                    suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
                     suggestion[replace_word].insert(0,word)
         
         # print(translation)
