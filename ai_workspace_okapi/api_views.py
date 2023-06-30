@@ -1188,7 +1188,7 @@ class MT_RawAndTM_View(views.APIView):
         suggestion={}
 
         #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
-        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(is_default=False)&Q(user=request.user))
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
     
         if choicelist:
             print("choicelist")
