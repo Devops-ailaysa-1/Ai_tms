@@ -246,7 +246,7 @@ def background_merge(u2net_result,original_img):
     img_io = io.BytesIO()
     u2net_result.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
-    print(type(img_byte_arr))
+    # print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
  
 

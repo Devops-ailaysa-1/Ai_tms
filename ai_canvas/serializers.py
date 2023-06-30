@@ -156,10 +156,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
         
-        print("instance.file_name",instance.file_name)
+        # print("instance.file_name",instance.file_name)
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
-            print("can_obj",can_obj)
+            # print("can_obj",can_obj)
             if can_obj:
                 instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
             else:
@@ -265,7 +265,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
  
             text_box=""
             json=canvas_src_pages.json
-            print("json",json)
+            # print("json",json)
             for i in json['objects']:
   
                 if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
@@ -277,7 +277,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     for tar_json in canvas_tar_lang:
                         src=tar_json.source_language.locale_code
                         tar=tar_json.target_language.locale_code
-                        print("src",src, "tar",tar)
+                        # print("src",src, "tar",tar)
                         for j in tar_json.canvas_json_tar.all():
                             json=j.json
                             copy_txt_box=copy.copy(text_box)

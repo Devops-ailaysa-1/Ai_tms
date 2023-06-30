@@ -51,7 +51,7 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-                print("src_url",i['src'])
+                # print("src_url",i['src'])
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         else:
@@ -93,8 +93,8 @@ def canva_group(_dict,src_lang ,lang):
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
-    print("canvas_json")
-    print(canvas_json)
+    # print("canvas_json")
+    # print(canvas_json)
     false = False
     null = 'null'
     true = True
@@ -196,7 +196,7 @@ def install_font(font_path):
     destination_file_path=os.path.join(destination_path, font_filename)
     shutil.copy(font_path,destination_file_path)
     os.system("fc-cache -f -v")
-    print(f"Font '{family_name}' installed successfully!")
+    # print(f"Font '{family_name}' installed successfully!")
     return family_name
 
 

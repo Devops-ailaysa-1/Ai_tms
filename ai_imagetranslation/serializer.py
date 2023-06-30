@@ -73,7 +73,7 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
         if not representation.get('thumbnail',None):
             if instance.target_canvas_json:
                 target_canvas_json=instance.target_canvas_json
-                print("target_canvas_json",target_canvas_json)
+                # print("target_canvas_json",target_canvas_json)
                 if isinstance(target_canvas_json,dict) and  'backgroundImage' in target_canvas_json.keys():
                     target_canvas_json_bs64=thumbnail_create(json_str=target_canvas_json,formats='png')
                     name=instance.source_image.project_name
@@ -242,7 +242,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
                 instance.mask_json=mask_json
-                print(instance.inpaint_image)
+                # print(instance.inpaint_image)
                 instance.save()
             else:
                 instance.mask_json=mask_json
