@@ -267,12 +267,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             json=canvas_src_pages.json
  
             for i in json['objects']:
-          
                 if (i['type']=='textbox') and ("is_translate" in i.keys()) and (i['is_translate'] == False):
                     text_box=i
-          
             if text_box and ("text" in text_box.keys()):
- 
                 text=text_box['text']
                 canvas_tar_lang=instance.canvas_translate.all()
                 for tar_json in canvas_tar_lang:

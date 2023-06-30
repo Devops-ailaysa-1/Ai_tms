@@ -3,6 +3,7 @@ from ai_canvas.models import SourceImageAssetsCanvasTranslate
 from django import core
 from ai_workspace_okapi.utils import get_translation
 import os
+import pygame
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 HOST_NAME=os.getenv("HOST_NAME")
@@ -57,11 +58,12 @@ def json_src_change(json_src ,req_host,instance):
             break
     return json_src
 
-import pygame
+
 
 def calculate_textbox_dimensions(text,font_size,bold,italic): #
     font_size=int(font_size)
     pygame.init()
+    # font=0
     font = pygame.font.SysFont(r"Arial.ttf", font_size) #,bold=bold,italic=italic
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
