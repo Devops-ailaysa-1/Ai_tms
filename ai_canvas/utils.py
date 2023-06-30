@@ -199,8 +199,6 @@ def install_font(font_path):
     # print(f"Font '{family_name}' installed successfully!")
     return family_name
 
-
-
 def convert_image_url_to_file(image_url,no_pil_object=True):
     img_io = io.BytesIO()
     if no_pil_object:
