@@ -1202,7 +1202,7 @@ class MT_RawAndTM_View(views.APIView):
         elif def_choice:
             print("default_choice--------->",def_choice)
             for word in word:
-                default_choice=d_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 d_choice = default_choice[:5]
                 print("Dchoice------->",d_choice)
                 if d_choice:
