@@ -37,6 +37,7 @@ urlpatterns += [
     path('social-media-custom/',api_views.SocialMediaSizeCustom.as_view({'get': 'list'}), name='socialmediacustom'),
     path('canvas_down_load/',api_views.canvas_download_combine,name='canvas_download'),
     path('file_format',api_views.CanvasDownloadFormatViewset.as_view({'get':'list'}),name='file_download_format'),
+    path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list'}),name='global-temp-desi-lst')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

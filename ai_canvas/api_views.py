@@ -10,7 +10,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -904,3 +904,21 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         query_set=TemplateGlobalDesign.objects.get(id = pk)
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
+    
+
+class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    pagination_class = CustomPagination
+    page_size = 20
+    def list(self,request):
+        queryset = SocialMediaSize.objects.all().order_by("-id")  
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+
+

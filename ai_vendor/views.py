@@ -16,13 +16,6 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 from ai_workspace_okapi.models import Document
 from django_oso.auth import authorize
 from django.http import Http404
-import pandas as pd
-from ai_staff.models import Currencies ,ServiceTypeunits ,ServiceTypes
-from io import BytesIO
-
-import xlsxwriter
-
-
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -351,7 +344,11 @@ class SavedVendorView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+import pandas as pd
+from ai_staff.models import Currencies ,ServiceTypeunits ,ServiceTypes
+from io import BytesIO
 
+import xlsxwriter
 def vendor_lang_sheet():
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)

@@ -511,6 +511,8 @@ class TemplateTagSerializer(serializers.ModelSerializer):
         
 
 
+
+
 class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
     template_list=serializers.CharField(required=False)
@@ -545,6 +547,10 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         template_list=validated_data.pop('template_list',None)
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
+        json=copy.copy(instance.json)
+        json.pop('projectid',None)
+        instance.json=json
+        instance.save()
         thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
         instance.thumbnail_page=thumbnail_page
         instance.save()
@@ -552,6 +558,13 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
             TemplateTag.objects.create(tag_name=template_list,global_template=instance)
         
         return instance
+
+class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
+    category=TemplateGlobalDesignSerializerV2(many=True,required=False,source='template_global_categoty')
+    
+    class Meta:
+        fields='__all__'
+        model=SocialMediaSize
 
 
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
@@ -808,21 +821,8 @@ class FontFileSerializer(serializers.ModelSerializer):
         return instance
 
 
-
-# class ImageListMediumSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model=ImageListMedium
-#         fields='__all__'
-#         write_only_fields=['api_name','image_url']
-#         extra_kwargs = { 
-#             'api_name':{'write_only':True},
-#             'image_url':{'write_only':True}   }
-
-#     def create(self, validated_data):
-#         return super().create(validated_data)
-
-
 class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
     class Meta:
         model=CanvasDownloadFormat
         fields='__all__'
+

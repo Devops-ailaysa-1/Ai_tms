@@ -122,7 +122,6 @@ class TemplateGlobalDesign(models.Model):
     # user_name=models.CharField(max_length=100,null=True,blank=True)
     is_pro=models.BooleanField()
     is_published=models.BooleanField()
-
     description=models.CharField(max_length=600,blank=True,null=True)
     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
