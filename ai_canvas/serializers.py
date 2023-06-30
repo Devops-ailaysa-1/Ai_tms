@@ -568,7 +568,7 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
-        if instance.category:
+        if data.get('category',None):
  
             return data
 
