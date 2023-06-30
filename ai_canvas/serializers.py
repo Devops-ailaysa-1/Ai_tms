@@ -566,11 +566,10 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
         fields=('id','template_global_categoty','social_media_name')
         model=SocialMediaSize
 
-    # def to_representation(self, instance):
-    #     data=super().to_representation(instance)
-    #     if data.get('category',None):
- 
-    #         return data
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        if instance.template_global_categoty:
+            return data
 
 
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
