@@ -560,10 +560,10 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         return instance
 
 class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
-    template_global_page=TemplateGlobalDesignSerializerV2(many=True,required=False,source='template_global_categoty')
+    category=TemplateGlobalDesignSerializerV2(many=True,required=False,source='template_global_categoty')
     
     class Meta:
-        fields=('id','social_media_name','template_global_page','width','height')
+        fields=('id','social_media_name','category','width','height')
         model=SocialMediaSize
 
     def to_representation(self, instance):
