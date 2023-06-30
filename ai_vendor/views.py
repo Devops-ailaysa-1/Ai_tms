@@ -391,8 +391,8 @@ def vendor_lang_sheet():
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
-    worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
-    worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
+    worksheet.data_validation('F2:F1048576', {'validate': 'decimal','criteria': 'between', 'minimum': 0, 'maximum': 999999.0})
+    worksheet.data_validation('G2:G1048576', {'validate': 'decimal','criteria': 'between', 'minimum': 0, 'maximum': 999999.0})
     worksheet.data_validation('H2:H1048576', {'validate': 'list','source':boolean})
     worksheet2.hide()
     workbook.close()
@@ -418,8 +418,8 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
         print("ser------>",service)
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
-                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
-        print("ser--------->",service)
+                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate) #
+        print("ser--------->",service) 
     return service
 
 @api_view(['POST'])
@@ -444,8 +444,8 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
-                    src_lang=Languages.objects.get(language=row['Source Language'])
-                    tar_lang=Languages.objects.get(language=row['Target Language'])
+                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
+                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
                     print("Cur------>",currency_code)
                     currency=Currencies.objects.get(currency_code=currency_code)
@@ -461,13 +461,20 @@ def vendor_language_pair(request):
                         ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if reverse:
-                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
-                                                                    target_lang=src_lang,currency=currency)
+                        src_lang,tar_lang=tar_lang,src_lang #swapping src to tar and tar to src for reverse
+                        vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,target_lang=tar_lang,currency=currency)
                         print("Vendor_lang----->",vender_lang_pair)
                         if service and unit_type and unit_rate:
                             ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
+                    ven_lan_pair=VendorLanguagePair.objects.get(user=user,source_lang=src_lang,target_lang=tar_lang)
+                    ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]
+                    service=ven_service_info.services
+                    unit_type=ven_service_info.unit_type
+                    unit_rate=ven_service_info.unit_rate
+                    hourly_rate=ven_service_info.hourly_rate
+                    ven_service_info.save()
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
@@ -736,10 +743,13 @@ def get_vendor_settings_filled(request):
         query = VendorsInfo.objects.filter(user=request.user)
         if not query or (query.last() and (query.last().cv_file == None or query.last().cv_file.name == '')):
             incomplete = True
-            print("CV file not uploaded ")
-            return Response({'incomplete status':incomplete})
+            return Response({'incomplete status':incomplete,'msg':'Cv not uploaded'})
         else:
-            query = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None)).filter(Q(service=None) or Q(servicetype=None))
+            query_1 = VendorLanguagePair.objects.filter(Q(user = user) & Q(deleted_at=None))
+            if not query_1:
+                incomplete = True
+                return Response({'incomplete status':incomplete,'msg':'No lang pair exists'})
+            query = query_1.filter(Q(service=None) or Q(servicetype=None))
             print("Query------------>",query)
             if query:
                 print("Rates are not completed")

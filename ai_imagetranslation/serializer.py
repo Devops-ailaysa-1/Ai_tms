@@ -227,33 +227,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         export=validated_data.get('export',None)
 
 
-        # if target_update_id and mask_json:
-        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
-        #     img_tar.mask_json=mask_json
-        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
-        #     img_tar.mask=mask
-        #     img_tar.save()
-        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
-        #     content=image_content(inpaint_out_image)
-        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
-        #     img_tar.inpaint_image=inpaint_image_file
-        #     img_tar.save()
-        #     text_box_list_new=[]
-        #     for text_box in text_box_list:
-        #         txt_box=copy.deepcopy(text_box)
-        #         if 'text' in txt_box:
-        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
-        #                                              target_lang_code=img_tar.target_language.locale_code)
-        #             txt_box['text']=translate_bbox
-        #         text_box_list_new.append(txt_box)
-        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
-        #     obj_list=can_tar_json['objects']
-        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
-        #     can_tar_json['objects']=obj_list+text_box_list_new
-        #     img_tar.target_canvas_json=can_tar_json
-        #     img_tar.save()
-        #     return instance
         
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
@@ -358,3 +331,34 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.canvas_json =tar_json
             instance.save()
             return instance
+        
+
+
+
+        # if target_update_id and mask_json:
+        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
+        #     img_tar.mask_json=mask_json
+        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+        #     img_tar.mask=mask
+        #     img_tar.save()
+        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
+        #     content=image_content(inpaint_out_image)
+        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+        #     img_tar.inpaint_image=inpaint_image_file
+        #     img_tar.save()
+        #     text_box_list_new=[]
+        #     for text_box in text_box_list:
+        #         txt_box=copy.deepcopy(text_box)
+        #         if 'text' in txt_box:
+        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+        #                                              target_lang_code=img_tar.target_language.locale_code)
+        #             txt_box['text']=translate_bbox
+        #         text_box_list_new.append(txt_box)
+        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
+        #     obj_list=can_tar_json['objects']
+        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
+        #     can_tar_json['objects']=obj_list+text_box_list_new
+        #     img_tar.target_canvas_json=can_tar_json
+        #     img_tar.save()
+        #     return instance

@@ -12,6 +12,8 @@ router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-s
 # router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
 # router.register(r'segment_diff',api_views.SegmentDiffViewset,basename='segment_difference')
 router.register(r"selflearn",api_views.SelflearningView,basename="self_learn")
+router.register(r"choicelist",api_views.ChoicelistView,basename="choice_list")
+router.register(r"choicelistselected",api_views.Choicelistselectedview,basename="choice_list")
 
 urlpatterns = router.urls
 

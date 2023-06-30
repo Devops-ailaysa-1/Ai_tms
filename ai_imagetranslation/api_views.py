@@ -5,6 +5,7 @@ from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCr
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
+from ai_canvas.models import CanvasUserImageAssets
 ###image_upload
 from rest_framework.pagination import PageNumberPagination
  
@@ -72,12 +73,23 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
     def create(self,request):
         image = request.FILES.get('image')
+        image_id =  request.POST.getlist('image_id')
+        canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
-        image_id =  request.POST.getlist('image_id')
-        im_details = Imageload.objects.filter(id__in = image_id)
-        data = [{'image':im.image} for im in im_details]
-        serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request})  
+        
+        if image:
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 
+        
+        elif image_id:
+            im_details = Imageload.objects.filter(id__in = image_id)
+            data = [{'image':im.image} for im in im_details]
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
+
+        elif canvas_asset_image_id:
+             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
+             data={'image':im_details.image}
+             serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -86,7 +98,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
     def update(self,request,pk):
         obj =self.get_object(pk)
-        query_set = ImageTranslate.objects.get(id = pk)
+        query_set = ImageTranslate.objects.get(id=pk)
         serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -102,10 +114,13 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
 from rest_framework.generics import ListAPIView
 
 class ImageInpaintCreationListView(ListAPIView):
-    queryset = ImageInpaintCreation.objects.all()  # Specify the queryset for retrieving objects
+    queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
 
- 
+    # def get_queryset(self):
+    #     # Specify the fields to include in the serialized representation
+    #     fields = ['id','image', 'width', 'field3']
+    #     return ImageInpaintCreation.objects.only(*fields)
 # class ImageloadRetrieveViewset(generics.RetrieveAPIView):
 #     queryset = Imageload.objects.all()
 #     serializer_class = ImageloadRetrieveRetrieveSerializer

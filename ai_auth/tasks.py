@@ -856,10 +856,11 @@ def weighted_count_update(receiver,sender,assignment_id):
                 receivers = []
                 receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
                 receivers.append(Receiver)
+                print("Receivers in TaskAssign----------->", receivers)
                 Sender = AiUser.objects.get(id = sender)
                 hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
                 for i in [*set(receivers)]:
-                    if i in hired_editors:
+                    if i in hired_editors or (i.team and i.team.owner) in hired_editors:
                         ws_forms.task_assign_detail_mail(i,assignment_id)
             else:
                 print("------------------------PUT------------------------------")
@@ -913,7 +914,7 @@ def record_api_usage(provider,service,uid,email,usage):
 from ai_glex import models as glex_model
 from tablib import Dataset
 @task
-def update_words_from_template(file_ids):
+def update_words_from_template_task(file_ids):
     print("File Ids--->",file_ids)
     for i in file_ids:
         instance = glex_model.GlossaryFiles.objects.get(id=i)
