@@ -573,6 +573,10 @@ def write_data(workbook, worksheet, proj):
     
     write_data_rows(workbook, worksheet, 8, pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw)
 
+    # Initializing word count values
+    pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw = \
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
     proj_row =9
     worksheet.write(f'A{proj_row}', "Char",common_format)
     task_ccs=CharCountGeneral.objects.filter(project_id=proj.id).order_by('tasks','-id').distinct('tasks')
