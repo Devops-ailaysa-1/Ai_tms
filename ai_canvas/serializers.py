@@ -556,7 +556,6 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         instance.save()
         for template_list in template_lists:
             TemplateTag.objects.create(tag_name=template_list,global_template=instance)
-        
         return instance
 
 class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
@@ -570,6 +569,7 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data=super().to_representation(instance)
         template=instance.template_global_categoty.all()
+        print("template",template)
         if template is not None:
             return data
 
