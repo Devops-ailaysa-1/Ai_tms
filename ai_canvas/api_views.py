@@ -51,7 +51,7 @@ pixa_bay_headers={
 params = {
             'key':pixa_bay_api_key,
             'order':'popular',
-            'image_type':'photo',
+            'image_type':'photo+illustration',
             'orientation':'all',
             'per_page':10,
             'safesearch':True
@@ -911,7 +911,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().order_by("-id")  
+        queryset = SocialMediaSize.objects.all().order_by("social_media_name")  
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)

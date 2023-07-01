@@ -540,7 +540,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         data['template_lang'] = instance.template_lang.locale.first().locale_code
         data['category'] = instance.category.social_media_name
         data['width'] =  instance.category.width
-        data['height'] =  instance.category.height
+        data['height'] =  instance.category.height 
         return data
 
     def create(self, validated_data):
@@ -548,7 +548,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
         json=copy.copy(instance.json)
-        json.pop('projectid',None)
+        json['projectid']=None
         instance.json=json
         instance.save()
         thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
@@ -565,10 +565,7 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     class Meta:
         fields=('id','template_global_categoty','social_media_name')
         model=SocialMediaSize
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        return {k: v for k, v in data.items() if v is not None}
+ 
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
