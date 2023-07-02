@@ -317,15 +317,18 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
-            for tar_lang in canvas_translation_tar_lang:
+            for count,tar_lang in enumerate(canvas_translation_tar_lang):
 
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
                 trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
-                print("trans_json.canvas_design.canvas_json_src.last()",trans_json.canvas_design.canvas_json_src.last().page_no)                           
+
+                test=trans_json.canvas_design.canvas_json_src.get(page_no=count)
+                print("trans_json.canvas_design.canvas_json_src.last()",trans_json.canvas_design.canvas_json_src.last().page_no)
+                print("test",test)                       
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
                 source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
-                trans_json.canvas_src_json
+                # trans_json.canvas_src_json
                 for count,src_json_file in enumerate(source_json_files_all):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
