@@ -922,3 +922,29 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
 
 
+
+ 
+
+# In [18]: 
+#     ...:     print(i.page_no)
+#     ...:     
+#     ...:         print(j.source_language.locale_code,j.target_language.locale_code,j.id)
+#     ...:         
+#     ...:             print(k.id)
+
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def DesignerDownload(request):
+    canvas_id=request.query_params.get('canvas_id')
+    canvas=CanvasDesign.objects.get(id=canvas_id)
+    canvas_src_json=canvas.canvas_json_src.all()
+    pages={}
+    for i in canvas_src_json:
+        for j in i.canvas_design.canvas_translate.all():
+            for k in j.canvas_json_tar.all():
+                pages[i.page_no][j.source_language.locale_code]=k.id
+    return Response({'pages':pages})
+        
+

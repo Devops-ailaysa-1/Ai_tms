@@ -326,7 +326,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 x=trans_json.canvas_design.canvas_json_src.all()
                 print(x)
                 print(len(x))
-                print("count",count)
+                print("count",count+1)
                 print("trans_json.canvas_design.canvas_json_src.last()",trans_json.canvas_design.canvas_json_src.last().page_no)
                                       
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
@@ -576,7 +576,7 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data=super().to_representation(instance)
         template=instance.template_global_categoty.all()
-        print("template",template)
+        # print("template",template)
         if template is not None:
             return data
 
