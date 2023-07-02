@@ -3059,9 +3059,11 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
         project=MT_RawAndTM_View.get_project(request,segment_id)
-        choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
-        self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
-        
+        try:
+            choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
+            self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
+        except:
+            self_learning=None
         if segment_id:
             seg = get_object_or_404(Segment,id=segment_id)
 
@@ -3133,19 +3135,27 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
     @staticmethod
-    def seq_match_seg_diff(words1,words2,choicelist=None):
-        print(choicelist,"+++++++++++++++++++++++++")
+    def seq_match_seg_diff(words1,words2,self_learning):
+        print(self_learning,"+++++++++++++++++++++++++")
         prefix = "<"
         suffix = ">"
         s1=words1.split()
         target=words2.split()
         s2 = [word for word in target if not (word.startswith(prefix) and word.endswith(suffix))]
         assets={}
+        print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
         print(matcher.get_opcodes())
         for tag,i1,i2,j1,j2 in matcher.get_opcodes():
             if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
-                assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+                source=" ".join(s1[i1:i2])
+                edited=" ".join(s2[j1:j2])
+                print(source,"ssssssssssssssssssssssssssssssssss")
+                #
+                if self_learning: 
+                    if not self_learning.filter(source_word=source ,edited_word=edited):
+                        assets[source]=" ".join(edited)
+                assets[source]=" ".join(edited)
         print("------------------",assets)  
         # for i in assets:
         #     if len(assets[i].split())>3:
@@ -3235,10 +3245,10 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 10
 
-    def get_object(self):
+    def get_object(self,request):
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = get_object_or_404(ChoiceListSelected, id=pk,user=self.request.user)
+            obj = get_object_or_404(ChoiceListSelected, id=pk,choice_list__user=self.request.user)
         except:
             raise Http404
         return obj
@@ -3264,7 +3274,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
     
     def destroy(self, request, *args, **kwargs):
-        obj= self.get_object()
+        obj= self.get_object(request)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
