@@ -321,10 +321,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
-                trans_json_pro=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
-                                                            
-                trans_json_pro['projectid']['langNo']=trans_json.source_language.id
-                source_json_files_all=trans_json.canvas_design.canvas_json_src.all()
+                trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
+                print("trans_json.canvas_design.canvas_json_src.last()",trans_json.canvas_design.canvas_json_src.last().page_no)                           
+                trans_json_project['projectid']['langNo']=trans_json.source_language.id
+                source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
+                trans_json.canvas_src_json
                 for count,src_json_file in enumerate(source_json_files_all):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
@@ -730,11 +731,6 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             
             my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
             if canvas_trans_id:
-                # can_trans_ins=CanvasTargetJsonFiles.objects.get(id=canvas_trans_id)
-                # canvas_translate_json_inst = canvas_design_id.canvas_json_tar
-                # can_trans_ins = canvas_translate_json_inst.get(id=canvas_trans_id.id)
-                #                                 #canvas_translate__source_language=canvas_translate_json_inst.canvas_translate.last().source_language,
-                # can_trans_ins = can_trans_ins.canvas_json_tar.first()
                 my_template_thumbnail = canvas_trans_id.thumbnail
  
                 my_template_json=copy.copy(canvas_trans_id.json)

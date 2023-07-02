@@ -61,18 +61,6 @@ class CanvasDesign(models.Model):
     class Meta:
         ordering = ('updated_at',)
 
-    # def save(self,*args,**kwargs):
-    #     print("self.pk is None",(self.pk is None))
-    #     print(self.file_name)
-    #     if (self.pk is None) and (not self.file_name):
-    #         print("inside save")
-    #         can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
-    #         if can_obj:
-    #             self.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
-                
-    #     return super(CanvasDesign, self).save(*args, **kwargs)
-
-
 
 class CanvasSourceJsonFiles(models.Model):
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_json_src', on_delete=models.CASCADE)
@@ -88,6 +76,7 @@ class CanvasSourceJsonFiles(models.Model):
 
 
 class CanvasTranslatedJson(models.Model):
+    # canvas_src_json=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_src',on_delete=models.CASCADE,null=True,blank=True)
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
     target_language=models.ForeignKey(LanguagesLocale,related_name='target', on_delete=models.CASCADE)
