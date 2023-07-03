@@ -21,6 +21,7 @@ router.register(r'font-file', api_views.FontFileViewset,basename='fontfile')
 router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily')
 router.register(r'social-media',api_views.SocialMediaSizeViewset ,basename='socialmediasize')
 router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV2,basename='template__global')
+router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,name='global-temp-desi-lst')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
@@ -37,7 +38,7 @@ urlpatterns += [
     path('social-media-custom/',api_views.SocialMediaSizeCustom.as_view({'get': 'list'}), name='socialmediacustom'),
     path('canvas_down_load/',api_views.canvas_download_combine,name='canvas_download'),
     path('file_format',api_views.CanvasDownloadFormatViewset.as_view({'get':'list'}),name='file_download_format'),
-    path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list'}),name='global-temp-desi-lst'),
+    # path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list',}),name='global-temp-desi-lst'),
     path('design-download',api_views.DesignerDownload,name='designerdownload')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
