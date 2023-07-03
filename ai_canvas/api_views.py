@@ -938,7 +938,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
     else:
         buffer = io.BytesIO()
         for count,src_page in enumerate(pages_list):
-            img_res,file_name=create_image(src_page.json,file_format,export_size,page_number_list[count],lang,"source")
+            img_res,file_name=create_image(src_page.json,file_format,export_size,count+1,lang,"source")
             print(count)
             if isinstance(img_res,bytes):
                 with ZipFile(buffer, 'w') as zipObj:
