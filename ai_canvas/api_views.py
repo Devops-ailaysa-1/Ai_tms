@@ -785,7 +785,6 @@ def all_cat_req(category):
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
     print("pixa_bay",pixa_bay)
     print("pixa_bay",pixa_bay.status_code)
-    print(pixa_bay.json())
     return pixa_bay.json()
 
 def process_pixabay(**kwargs):
@@ -920,31 +919,74 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
-
-
-
- 
-
-# In [18]: 
-#     ...:     print(i.page_no)
-#     ...:     
-#     ...:         print(j.source_language.locale_code,j.target_language.locale_code,j.id)
-#     ...:         
-#     ...:             print(k.id)
-
     
+def create_image(json_page,file_format,export_size,page_number,language,language_type):
 
+    base64_img=export_download(json_page,file_format,export_size)
+    file_name="{}_page_{}_{}.{}".format(language_type,page_number,language,file_format)
+    # thumbnail_src = core.files.File(core.files.base.ContentFile(base64_img),file_name)
+    # img_res=download_file_canvas(thumbnail_src,file_format.lower(),file_name)
+    # print(base64_img)
+    return base64_img,file_name
+
+from zipfile import ZipFile
+import io
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
+    file_format=request.query_params.get('file_format')
+    language_type=request.query_params.get('language_type')
+    language=request.query_params.get('language')
+    page_number=request.query_params.get('page_number')
+    export_size=request.query_params.get('export_size',1)
     canvas=CanvasDesign.objects.get(id=canvas_id)
+    
+    tar={}
+    page_src=[]
     canvas_src_json=canvas.canvas_json_src.all()
-    pages={}
-    for i in canvas_src_json:
-        for j in i.canvas_design.canvas_translate.all():
-            for k in j.canvas_json_tar.all():
-                pages[i.page_no][j.source_language.locale_code]=k.id
-    return Response({'pages':pages})
+    if any(canvas.canvas_translate.all()):
+        canvas_trans_inst=canvas.canvas_translate.all()
+        src_lang=canvas_trans_inst[0].source_language.language.language
+        if page_number and file_format and export_size:
+            if language_type=="source":
+                src_page=canvas.canvas_json_src.get(page_no=page_number).json
+                img_res,file_name=create_image(src_page,file_format,export_size,page_number,src_lang,language_type)
+                buffer = io.BytesIO()
+                with ZipFile(buffer, 'w') as zipObj:
+                    zipObj.writestr(file_name,img_res)
+                # return img_res
+            if language_type=="target" and language:
+                
+                tar_page=canvas_trans_inst.filter(target_language__language__language=language).last().canvas_json_tar.all().get(page_no=page_number).json
+                img_res,file_name=create_image(tar_page,file_format,export_size,page_number,language,language_type)
+                 
+                buffer = io.BytesIO()
+                with ZipFile(buffer, 'w') as zipObj:
+                    zipObj.writestr(file_name,img_res)
+
+            response = HttpResponse(content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="archive.zip"'
+                
+            response.write(buffer.getvalue())
+            return response
+                # return img_res
+
+                
+
+        else:
+        
+            for i in canvas_src_json:
+                page_src.append(i.page_no)
+            page={src_lang:page_src}
+            for j in canvas.canvas_translate.all():
+                pages_list=[]
+                for k in j.canvas_json_tar.all():
+                    pages_list.append(k.page_no)
+                tar[j.target_language.language.language]=pages_list
+            return Response({**{"source":page},**{'target':tar}})
+    else:
+        return Response({'msg':"language not created"})
         
 
+# print(canvas.id,"--",i.page_no,"----",j.source_language.locale_code,j.target_language.locale_code,"----",k.page_no)

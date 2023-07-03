@@ -64,7 +64,7 @@ def calculate_textbox_dimensions(text,font_size,bold,italic): #
     font_size=int(font_size)
     pygame.init()
     # font=0
-    font = pygame.font.SysFont(r"Arial.ttf", font_size) #,bold=bold,italic=italic
+    font = pygame.font.SysFont("Arial.ttf", font_size) #,bold=bold,italic=italic
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
@@ -75,7 +75,7 @@ def calculate_textbox_dimensions(text,font_size,bold,italic): #
 def calculate_font_size(box_width, box_height, text,font_size):
     font_size=int(font_size)
     while True:
-        font = ImageFont.truetype(r"NotoSans-Regular.ttf",font_size)
+        font = ImageFont.truetype("NotoSans-Regular.ttf",font_size)
         text_width, text_height = font.getbbox(text)[2:]
         if text_width <= box_width and text_height <= box_height:
             break
@@ -113,12 +113,10 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
-                    # if ("styles" in canvas_json_copy['objects'][count].keys())   # ("style" in canvas_json_copy['objects'][count]['styles']):
-                    #     if canvas_json_copy['objects'][count]['styles']['style']
-                    #     blod=canvas_json_copy['objects'][count]['styles']['style']
-                    #     italic=canvas_json_copy['objects'][count]['styles']['style']
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+
+                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    font_size=32
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
                 if i['type'] == 'group':
@@ -131,8 +129,9 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
                     
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    font_size=34
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
                     # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)

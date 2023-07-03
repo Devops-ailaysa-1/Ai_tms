@@ -250,12 +250,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src.json=source_json_file
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)
-            # json=can_src.json
-            # basic_jsn=copy.copy(json)
-            # basic_jsn['backgroundImage']['width']=int(social_media_create.width)
-            # basic_jsn['backgroundImage']['height']=int(social_media_create.height)
-            # basic_jsn['projectid']['project_category']=social_media_create.category
-            # can_src.json=basic_jsn
             can_src.save()
             instance.save()
             return instance
