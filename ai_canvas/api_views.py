@@ -935,11 +935,11 @@ def DesignerDownload(request):
     file_format=request.query_params.get('file_format')
     # language_type=request.query_params.get('language_type')
     language=int(request.query_params.get('language'))
-    page_number_list=request.query_params.getlist('page_number_list') 
+    page_number_list=request.query_params.getlist('page_number_list',None) 
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
-    page_number_list=list(map(int,page_number_list))
-    print(page_number_list)
+    
+ 
     canvas=CanvasDesign.objects.get(id=canvas_id)
     
     tar={}
@@ -950,12 +950,14 @@ def DesignerDownload(request):
         src_lang=canvas_trans_inst[0].source_language.language.language
         src_code=canvas_trans_inst[0].source_language.language_id
         print(type(language),type(src_code))
+        if page_number_list:
+            page_number_list=list(map(int,page_number_list))
         if language==src_code:
             
             if all_page:
                 src_pages=canvas.canvas_json_src.all()
             else:
- 
+                
                 src_pages=canvas.canvas_json_src.filter(page_no__in=page_number_list)
                 # print(src_pages)
             buffer = io.BytesIO()
