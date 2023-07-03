@@ -934,12 +934,13 @@ def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
     file_format=request.query_params.get('file_format')
     # language_type=request.query_params.get('language_type')
-    language=int(request.query_params.get('language'))
+    language=request.query_params.get('language',None)
     page_number_list=request.query_params.getlist('page_number_list',None) 
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
+    if language:
+        language=int(language)
     
- 
     canvas=CanvasDesign.objects.get(id=canvas_id)
     
     tar={}
