@@ -21,7 +21,7 @@ router.register(r'font-file', api_views.FontFileViewset,basename='fontfile')
 router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily')
 router.register(r'social-media',api_views.SocialMediaSizeViewset ,basename='socialmediasize')
 router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV2,basename='template__global')
-router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,name='global-temp-desi-lst')
+router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
