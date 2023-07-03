@@ -1186,29 +1186,30 @@ class MT_RawAndTM_View(views.APIView):
         word=word_tokenize(translation)
         suggestion={}
 
-        def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
-        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(is_default=False)&Q(user=request.user))
+        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
     
         if choicelist:
             print("choicelist")
             for word in word: 
-                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")[:5]
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                choice = choice[:5]
                 if choice:
                     replace_word=choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
                     suggestion[replace_word].insert(0,word)  
-        elif def_choice:
-            print("default_choice--------->",def_choice)
-            for word in word:
-                default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-                d_choice = default_choice[:5]
-                print("Dchoice------->",d_choice)
-                if d_choice:
-                    replace_word=d_choice.first().edited_word
-                    translation=translation.replace(word,replace_word) 
-                    suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
-                    suggestion[replace_word].insert(0,word)
+        # elif def_choice:
+        #     print("default_choice--------->",def_choice)
+        #     for word in word:
+        #         default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+        #         d_choice = default_choice[:5]
+        #         print("Dchoice------->",d_choice)
+        #         if d_choice:
+        #             replace_word=d_choice.first().edited_word
+        #             translation=translation.replace(word,replace_word) 
+        #             suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
+        #             suggestion[replace_word].insert(0,word)
         
         # print(translation)
         return translation,suggestion
@@ -3054,8 +3055,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     ordering_fields = ['id','source_word','edited_word']
 
     @staticmethod
-    def get_object(id):
-        asset = get_object_or_404(SelflearningAsset, id=id)
+    def get_object(request,id):
+        asset = get_object_or_404(SelflearningAsset, id=id,user=request.user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3095,7 +3096,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             return  response
 
     def retrieve(self,request,pk):
-        obj =self.get_object(pk)
+        obj =self.get_object(request,pk)
         serializer=SelflearningAssetSerializer(obj)
         return Response(serializer.data)
 
@@ -3185,11 +3186,11 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         elif project:
             project=get_object_or_404(Project,id=project)
             lang=project.get_target_languages
-            ch_list=ChoiceLists.objects.filter(language__language__in=lang)
+            ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=self.request.user)
             choice_serializer=ChoiceListsSerializer(ch_list,many=True)
             return Response(choice_serializer.data)
         else:       
-            ch_list=ChoiceLists.objects.all()
+            ch_list=ChoiceLists.objects.filter(user=self.request.user)
             queryset = self.filter_queryset(ch_list).order_by("-id")
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = ChoiceListsSerializer(pagin_tc, many=True)
@@ -3239,7 +3240,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     def get_object(self):
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = get_object_or_404(ChoiceListSelected, id=pk)
+            obj = get_object_or_404(ChoiceListSelected, id=pk,user=self.request.user)
         except:
             raise Http404
         return obj
@@ -3248,7 +3249,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         project = request.GET.get('project')
         if not project:
             return Response({"msg":"project_id required"})
-        choice=ChoiceListSelected.objects.filter(project__id=project)
+        choice=ChoiceListSelected.objects.filter(project__id=project,choice_list__user=self.request.user)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
 
