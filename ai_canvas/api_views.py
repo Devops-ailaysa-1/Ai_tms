@@ -993,7 +993,7 @@ def DesignerDownload(request):
             resp = {"language":  {**lang,**tar_lang}, "page":page_src}
             return Response(resp)
     
-    elif page_number_list:
+    elif page_number_list and file_format:
         print("only_page_number")
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
         # print(src_lang)
