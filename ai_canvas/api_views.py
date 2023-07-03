@@ -928,69 +928,78 @@ def create_image(json_page,file_format,export_size,page_number,language,language
 
 from zipfile import ZipFile
 import io
+
+def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name):
+    if len(pages_list)==1:
+        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,page_number_list[0],lang,"source")
+        export_src = core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,file_format.lower(),file_name)
+        
+    else:
+        buffer = io.BytesIO()
+        for count,src_page in enumerate(pages_list):
+            img_res,file_name=create_image(src_page.json,file_format,export_size,page_number_list[count],lang,"source")
+            print(count)
+            if isinstance(img_res,bytes):
+                with ZipFile(buffer, 'w') as zipObj:
+                    zipObj.writestr(file_name,img_res)
+        response = HttpResponse(content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(projecct_file_name)
+        response = HttpResponse(content_type='application/zip')
+        response.write(buffer.getvalue())
+    return response
+
+
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
     file_format=request.query_params.get('file_format')
-    # language_type=request.query_params.get('language_type')
     language=request.query_params.get('language',None)
     page_number_list=request.query_params.getlist('page_number_list',None) 
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
-    if language:
-        language=int(language)
-    
+    language = int(language) if language else None
     canvas=CanvasDesign.objects.get(id=canvas_id)
-    
-    tar={}
+    page_number_list=list(map(int,page_number_list)) if page_number_list else None
+    # tar={}
+    print(page_number_list)
+    print(type(page_number_list))
     page_src=[]
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
         src_lang=canvas_trans_inst[0].source_language.language.language
         src_code=canvas_trans_inst[0].source_language.language_id
-        print(type(language),type(src_code))
-        if page_number_list:
-            page_number_list=list(map(int,page_number_list))
+        
         if language==src_code:
-            
-            if all_page:
-                src_pages=canvas.canvas_json_src.all()
-            else:
-                
-                src_pages=canvas.canvas_json_src.filter(page_no__in=page_number_list)
-                # print(src_pages)
-            buffer = io.BytesIO()
-            for count,src_page in enumerate(src_pages):
-                print(src_page,count)
-                img_res,file_name=create_image(src_page.json,file_format,export_size,
-                                                page_number_list[count],src_lang,"source")
-                print(img_res,file_name)
-                
-                if isinstance(img_res,bytes):
-                    with ZipFile(buffer, 'w') as zipObj:
-                        zipObj.writestr(file_name,img_res)
-                print("done")
-            response = HttpResponse(content_type='application/zip')
-            response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(canvas.file_name)
-            response.write(buffer.getvalue())
-            return response
+            src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
+            res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            return res
+
+        elif language and language!=src_code:
+            tar_pages=canvas.canvas_translate.all().get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
+            res=download__page(tar_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            return res
+
         else:
             tar_lang={}
             for i in canvas_src_json:
                 page_src.append(i.page_no)
-            page={src_lang:page_src}
             for j in canvas.canvas_translate.all():
-                pages_list=[]
-                for k in j.canvas_json_tar.all():
-                    pages_list.append(k.page_no)
-                tar[j.target_language.language.language]=pages_list
                 tar_lang[j.target_language.language.language]=j.target_language.language_id
 
             lang={**{"All":0},**{src_lang:src_code}}
             resp = {"language":  {**lang,**tar_lang}, "page":page_src}
             return Response(resp)
+    
+    elif page_number_list:
+        print("only_page_number")
+        src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
+        # print(src_lang)
+        res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
+        return res
+
     else:
         return Response({"page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
         
