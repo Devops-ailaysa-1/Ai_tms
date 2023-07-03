@@ -982,5 +982,5 @@ def DesignerDownload(request):
             resp = {"language":  {**lang,**tar_lang}, "page":page_src}
             return Response(resp)
     else:
-        return Response({'page':list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
+        return Response({"language":"All","page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
         
