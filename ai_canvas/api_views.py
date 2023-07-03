@@ -919,9 +919,8 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
     def destroy(self,request,pk):
-        query_set=TemplateGlobalDesign.objects.get(id=pk)
-        query_set.delete()
-        return Response(status=204)
+        TemplateGlobalDesign.objects.get(id=pk).delete()
+        return Response({'msg':'deleted successfully'})
     
 def create_image(json_page,file_format,export_size,page_number,language,language_type):
 
