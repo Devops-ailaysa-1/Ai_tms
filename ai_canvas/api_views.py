@@ -918,7 +918,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
     
-    def delete(self,request,pk):
+    def destroy(self,request,pk):
         query_set=TemplateGlobalDesign.objects.get(id=pk)
         query_set.delete()
         return Response(status=204)
