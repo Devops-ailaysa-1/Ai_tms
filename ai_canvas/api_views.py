@@ -933,10 +933,11 @@ import io
 def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
     file_format=request.query_params.get('file_format')
-    language_type=request.query_params.get('language_type')
+    # language_type=request.query_params.get('language_type')
     language=request.query_params.get('language')
-    page_number=request.query_params.get('page_number')
+    page_number_list=request.query_params.getlist('page_number_list') 
     export_size=request.query_params.get('export_size',1)
+    all_page=request.query_params.get('all_page',False)
     canvas=CanvasDesign.objects.get(id=canvas_id)
     
     tar={}
@@ -946,30 +947,25 @@ def DesignerDownload(request):
         canvas_trans_inst=canvas.canvas_translate.all()
         src_lang=canvas_trans_inst[0].source_language.language.language
         src_code=canvas_trans_inst[0].target_language.language_id
-        if page_number and file_format and export_size:
-            if language_type=="source":
-                src_page=canvas.canvas_json_src.get(page_no=page_number).json
-                img_res,file_name=create_image(src_page,file_format,export_size,page_number,src_lang,language_type)
+         
+        if language==src_code:
+            if all_page:
+                pass
+            else:
+                src_pages=canvas.canvas_json_src.get(page_no=page_number_list)
                 buffer = io.BytesIO()
-                with ZipFile(buffer, 'w') as zipObj:
-                    zipObj.writestr(file_name,img_res)
-                # return img_res
-            if language_type=="target" and language:
+                for count,src_page in enumerate(src_pages):
+                    
+                    img_res,file_name=create_image(src_page,file_format,export_size,
+                                                   page_number_list[count],src_lang,"source")
                 
-                tar_page=canvas_trans_inst.filter(target_language__language__language=language).last().canvas_json_tar.all().get(page_no=page_number).json
-                img_res,file_name=create_image(tar_page,file_format,export_size,page_number,language,language_type)
-                 
-                buffer = io.BytesIO()
-                with ZipFile(buffer, 'w') as zipObj:
-                    zipObj.writestr(file_name,img_res)
-
+                    with ZipFile(buffer, 'w') as zipObj:
+                        zipObj.writestr(file_name,img_res)
+ 
             response = HttpResponse(content_type='application/zip')
             response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(canvas.file_name)
-                
             response.write(buffer.getvalue())
             return response
-                # return img_res
-
         else:
             tar_lang={}
             for i in canvas_src_json:
@@ -982,9 +978,9 @@ def DesignerDownload(request):
                 tar[j.target_language.language.language]=pages_list
                 tar_lang[j.target_language.language.language]=j.target_language.language_id
 
-            
-            # {**{"source":page},**{'target':tar}}
-            return Response({"language":{**{src_lang:src_code},**tar_lang} , "page":page_src})
+            lang={**{"All":0},**{src_lang:src_code}}
+            resp = {"language":  {**lang,**tar_lang}, "page":page_src}
+            return Response(resp)
     else:
-        return Response({'msg':"language not created"})
+        return Response({'page':list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
         
