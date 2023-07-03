@@ -871,9 +871,6 @@ def image_list(request):
                     'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
 
             
-            
- 
-
 
 class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
@@ -948,6 +945,7 @@ def DesignerDownload(request):
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
         src_lang=canvas_trans_inst[0].source_language.language.language
+        src_code=canvas_trans_inst[0].target_language.language_id
         if page_number and file_format and export_size:
             if language_type=="source":
                 src_page=canvas.canvas_json_src.get(page_no=page_number).json
@@ -966,16 +964,14 @@ def DesignerDownload(request):
                     zipObj.writestr(file_name,img_res)
 
             response = HttpResponse(content_type='application/zip')
-            response['Content-Disposition'] = 'attachment; filename="archive.zip"'
+            response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(canvas.file_name)
                 
             response.write(buffer.getvalue())
             return response
                 # return img_res
 
-                
-
         else:
-        
+            tar_lang={}
             for i in canvas_src_json:
                 page_src.append(i.page_no)
             page={src_lang:page_src}
@@ -984,9 +980,11 @@ def DesignerDownload(request):
                 for k in j.canvas_json_tar.all():
                     pages_list.append(k.page_no)
                 tar[j.target_language.language.language]=pages_list
-            return Response({**{"source":page},**{'target':tar}})
+                tar_lang[j.target_language.language.language]=j.target_language.language_id
+
+            
+            # {**{"source":page},**{'target':tar}}
+            return Response({"language":{**{src_lang:src_code},**tar_lang} , "page":page_src})
     else:
         return Response({'msg':"language not created"})
         
-
-# print(canvas.id,"--",i.page_no,"----",j.source_language.locale_code,j.target_language.locale_code,"----",k.page_no)
