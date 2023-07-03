@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,ThirdpartyImageMedium,CanvasDownloadFormat) #TemplatePage
+                              TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
+                              ThirdpartyImageMedium,CanvasDownloadFormat) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
@@ -916,6 +917,11 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
+    
+    def delete(self,request,pk):
+        query_set=TemplateGlobalDesign.objects.get(id=pk)
+        query_set.delete()
+        return Response(status=204)
     
 def create_image(json_page,file_format,export_size,page_number,language,language_type):
 
