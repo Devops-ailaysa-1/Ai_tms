@@ -24,6 +24,8 @@ import rapidfuzz
 from rapidfuzz import process
 import xml.etree.ElementTree as ET
 from notifications.signals import notify
+from django_oso.auth import authorize
+from django.shortcuts import get_object_or_404
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
@@ -131,6 +133,8 @@ class TmxUploadView(viewsets.ViewSet):
         project_id = request.GET.get('project')
         if not project_id:
             return Response({'msg':'project_id required'},status=400)
+        project = get_object_or_404(Project.objects.all(), id=project_id)
+        authorize(request, resource=project, actor=request.user, action="read")
         files = TmxFileNew.objects.filter(project_id=project_id).all()
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
