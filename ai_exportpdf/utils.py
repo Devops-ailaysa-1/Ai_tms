@@ -104,7 +104,6 @@ def convertiopdf2docx(id ,language,ocr = None ):
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         try:
-            
             while (requests.get(url = get_url).json()['data']['step'] != 'finish'): # \
                 # and  (requests.get(url = get_url).json()['status'] != 'ok') \
                 #     and (requests.get(url = get_url).json()['code'] != 200):

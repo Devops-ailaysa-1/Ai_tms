@@ -960,16 +960,14 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
 def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
     file_format=request.query_params.get('file_format')
-    language=request.query_params.get('language',None)
+    language=request.query_params.get('language',0)
     page_number_list=request.query_params.getlist('page_number_list',None) 
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
     language = int(language) if language else None
     canvas=CanvasDesign.objects.get(id=canvas_id)
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
-    # tar={}
-    print(page_number_list)
-    print(type(page_number_list))
+ 
     page_src=[]
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
