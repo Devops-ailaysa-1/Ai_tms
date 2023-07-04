@@ -972,9 +972,9 @@ def DesignerDownload(request):
         if language==0: #all languages with number of pages
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
             buffer=io.BytesIO()
+            print("all languages with number of pages")
             with zipfile.ZipFile(buffer, mode="a") as archive:
                 for src_json in src_jsons:
- 
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,file_format)
                     path='{}/{}'.format(src_lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
@@ -1004,6 +1004,7 @@ def DesignerDownload(request):
             tar_pages=canvas_translate.get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
             tar_lang=Languages.objects.get(id=language).language
             print("tar__language",)
+            print(tar_pages)
             res=download__page(tar_pages,file_format,export_size,page_number_list,tar_lang,canvas.file_name )
             print("downloading__lang not equal")
             return res
