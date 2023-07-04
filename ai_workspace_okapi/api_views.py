@@ -3140,11 +3140,9 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     @staticmethod
     def seq_match_seg_diff(words1,words2,self_learning):
-        prefix = "<"
-        suffix = ">"
         s1=words1.split()
-        target=words2.split()
-        s2 = [word for word in target if not (word.startswith(prefix) and word.endswith(suffix))]
+        target=re.sub(rf'</?\d+>', "", words2)
+        s2=target.split()
         assets={}
         print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
