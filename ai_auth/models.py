@@ -483,7 +483,7 @@ class CoCreateForm(models.Model):
     email = models.EmailField()
     suggestion_type = models.ForeignKey(SuggestionType,on_delete=models.CASCADE)
     suggestion = models.ForeignKey(Suggestion,on_delete=models.CASCADE)
-    description = models.TextField(max_length=1000)
+    description = models.TextField(max_length=5000)
     app_suggestion_file = models.FileField(upload_to=cocreate_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

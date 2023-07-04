@@ -394,7 +394,7 @@ class ContactPricingCreateView(viewsets.ViewSet):
 def send_email(subject,template,context):
     content = render_to_string(template, context)
     file_ =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change ['support@ailaysa.com',]
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
         name = os.path.basename(file_.path)
         msg.attach(name, file_.file.read())
