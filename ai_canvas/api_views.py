@@ -425,15 +425,13 @@ from django.http import JsonResponse, Http404, HttpResponse
 
 
 mime_type={'svg':'image/svg+xml',
-'png':'image/png',
-    'jpeg':'image/jpeg',
-        'jpg':'image/jpeg'}
+        'png':'image/png',
+        'jpeg':'image/jpeg',
+        'jpg':'image/jpeg',
+        'zip':'application/zip'}
 
 def download_file_canvas(file_path,mime_type,name):
- 
-     
     response = HttpResponse(file_path, content_type=mime_type)
- 
     response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(name)
     response['X-Suggested-Filename'] = name
     #response['Content-Disposition'] = "attachment; filename=%s" % filename
@@ -950,11 +948,10 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 values=export_download(src_json.json,file_format,export_size)
                 if type(values) == bytes:
                     archive.writestr(path,values)
-        response = HttpResponse(content_type='application/zip')
-        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(projecct_file_name)
-        response = HttpResponse(content_type='application/zip')
-        response.write(buffer.getvalue())
-    return response
+
+        res=download_file_canvas(file_path=buffer,mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+ 
+    return res
 
 
 @api_view(['GET'])
