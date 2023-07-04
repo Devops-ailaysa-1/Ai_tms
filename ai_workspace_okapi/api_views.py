@@ -1189,7 +1189,7 @@ class MT_RawAndTM_View(views.APIView):
 
         #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
         choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
-    
+        print(choicelist,"+++++++++++")
         if choicelist:
             print("choicelist")
             for word in word: 
@@ -3060,8 +3060,12 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         segment_id=request.GET.get('segment_id',None)
         project=MT_RawAndTM_View.get_project(request,segment_id)
         try:
-            choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
-            self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
+            # choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
+            choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+            choice=[choice.choice_list.id for choice in choice_selected]
+            choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+            self_learning=SelflearningAsset.objects.filter(choice_list__in=choicelist)
+            # self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
         except:
             self_learning=None
         if segment_id:
@@ -3136,7 +3140,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     @staticmethod
     def seq_match_seg_diff(words1,words2,self_learning):
-        print(self_learning,"+++++++++++++++++++++++++")
         prefix = "<"
         suffix = ">"
         s1=words1.split()
@@ -3150,12 +3153,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
                 source=" ".join(s1[i1:i2])
                 edited=" ".join(s2[j1:j2])
-                print(source,"ssssssssssssssssssssssssssssssssss")
-                #
-                if self_learning: 
-                    if not self_learning.filter(source_word=source ,edited_word=edited):
-                        assets[source]=" ".join(edited)
-                assets[source]=" ".join(edited)
+                if self_learning and not self_learning.filter(source_word=source ,edited_word=edited): 
+                        assets[source]=edited
         print("------------------",assets)  
         # for i in assets:
         #     if len(assets[i].split())>3:
