@@ -6,8 +6,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries,\
-                             TaskRoleLevel,Timezones,SupportType,JobPositions,\
-                            SupportTopics,Role,Currencies,ApiServiceList
+                            TaskRoleLevel,Timezones,SupportType,JobPositions,\
+                            SupportTopics,Role,Currencies,ApiServiceList,SuggestionType,Suggestion
 from django.db.models.signals import post_save, pre_save
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
@@ -473,6 +473,21 @@ class GeneralSupport(models.Model):
     support_file = models.FileField(upload_to=support_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+def cocreate_file_path(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.email,"app_suggestion_file",filename)
+
+
+class CoCreateForm(models.Model):
+    name = models.CharField(max_length=250,blank=True,null=True)
+    email = models.EmailField()
+    suggestion_type = models.ForeignKey(SuggestionType,on_delete=models.CASCADE)
+    suggestion = models.ForeignKey(Suggestion,on_delete=models.CASCADE)
+    description = models.TextField(max_length=1000)
+    app_suggestion_file = models.FileField(upload_to=cocreate_file_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 
 class Team(models.Model):
