@@ -3151,8 +3151,11 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
                 source=" ".join(s1[i1:i2])
                 edited=" ".join(s2[j1:j2])
-                if self_learning and not self_learning.filter(source_word=source ,edited_word=edited): 
+                if self_learning:
+                    if not self_learning.filter(source_word=source ,edited_word=edited): 
                         assets[source]=edited
+                else:
+                    assets[source]=edited
         print("------------------",assets)  
         return assets
 
