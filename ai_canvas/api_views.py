@@ -974,7 +974,8 @@ def DesignerDownload(request):
         
         if language==0: #all languages with number of pages
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
-            with zipfile.ZipFile("multiple_files.zip", mode="a") as archive:
+            buffer=io.BytesIO()
+            with zipfile.ZipFile(buffer, mode="a") as archive:
                 for insc,src_json in enumerate(src_jsons):
                     c=insc+1
                     file_name = 'page_{}_{}.{}'.format(c,src_lang,file_format)
@@ -991,6 +992,9 @@ def DesignerDownload(request):
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         if type(values) == bytes:
                             archive.writestr(path,values)
+            res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
+            return res
+            
 
         if language==src_code:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
