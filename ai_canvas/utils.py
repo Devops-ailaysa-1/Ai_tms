@@ -177,6 +177,7 @@ def export_download(json_str,format,multipliervalue):
         im_file = io.BytesIO(b64_bytes)
         img = Image.open(im_file)
         output_buffer=io.BytesIO()
+        print("Format____",format)
         img.save(output_buffer, format=format, optimize=True, quality=85)
         compressed_data=output_buffer.getvalue()
         return compressed_data

@@ -923,7 +923,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return Response({'msg':'deleted successfully'})
     
 def create_image(json_page,file_format,export_size,page_number,language,language_type):
-
+ 
     base64_img=export_download(json_page,file_format,export_size)
     file_name="{}_page_{}_{}.{}".format(language_type,str(page_number),language,file_format)
     # thumbnail_src = core.files.File(core.files.base.ContentFile(base64_img),file_name)
@@ -996,14 +996,16 @@ def DesignerDownload(request):
                         if type(values) == bytes:
                             archive.writestr(path,values)
 
-        if language==src_code and all_page:
+        if language==src_code:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
             res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            print("downloading__lang equal")
             return res
 
         elif language and language!=src_code:
             tar_pages=canvas.canvas_translate.all().get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
             res=download__page(tar_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            print("downloading__lang not equal")
             return res
 
         else:
@@ -1020,7 +1022,6 @@ def DesignerDownload(request):
     elif (page_number_list or all_page) and file_format:
         print("only_page_number")
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
-         
         res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
         return res
 
