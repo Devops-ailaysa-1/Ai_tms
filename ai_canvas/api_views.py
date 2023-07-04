@@ -922,10 +922,10 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         TemplateGlobalDesign.objects.get(id=pk).delete()
         return Response({'msg':'deleted successfully'})
     
-def create_image(json_page,file_format,export_size,page_number,language,language_type):
+def create_image(json_page,file_format,export_size,page_number,language):
  
     base64_img=export_download(json_page,file_format,export_size)
-    file_name="{}_page_{}_{}.{}".format(language_type,str(page_number),language,file_format)
+    file_name="page_{}_{}.{}".format(str(page_number),language,file_format)
     # thumbnail_src = core.files.File(core.files.base.ContentFile(base64_img),file_name)
     # img_res=download_file_canvas(thumbnail_src,file_format.lower(),file_name)
     # print(base64_img)
@@ -934,10 +934,11 @@ def create_image(json_page,file_format,export_size,page_number,language,language
 from zipfile import ZipFile
 import io
 
-def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name):
+def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     if len(pages_list)==1:
-        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,1,lang,"source")
+        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no)
         export_src = core.files.File(core.files.base.ContentFile(img_res),file_name)
+        print("single_page")
         response=download_file_canvas(export_src,file_format.lower(),file_name)
         
     else:
@@ -998,13 +999,16 @@ def DesignerDownload(request):
 
         if language==src_code:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
-            res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name )
             print("downloading__lang equal")
             return res
 
         elif language and language!=src_code:
-            tar_pages=canvas.canvas_translate.all().get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
-            res=download__page(tar_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
+            canvas_translate=canvas.canvas_translate.all()
+            tar_pages=canvas_translate.get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
+            tar_lang=Languages.objects.get(id=language).language
+            print("tar__language",)
+            res=download__page(tar_pages,file_format,export_size,page_number_list,tar_lang,canvas.file_name )
             print("downloading__lang not equal")
             return res
 
