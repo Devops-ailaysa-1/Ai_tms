@@ -1189,7 +1189,7 @@ class MT_RawAndTM_View(views.APIView):
 
         #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
         choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
-    
+        print(choicelist,"+++++++++++")
         if choicelist:
             print("choicelist")
             for word in word: 
@@ -3058,6 +3058,16 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        try:
+            # choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
+            choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+            choice=[choice.choice_list.id for choice in choice_selected]
+            choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+            self_learning=SelflearningAsset.objects.filter(choice_list__in=choicelist)
+            # self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
+        except:
+            self_learning=None
         if segment_id:
             seg = get_object_or_404(Segment,id=segment_id)
 
@@ -3071,7 +3081,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 mt_edited=seg.target
                 print("raw_mt split>>>>>>>",raw_mt)
 
-            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited)
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
@@ -3129,19 +3139,24 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
     @staticmethod
-    def seq_match_seg_diff(words1,words2):
+    def seq_match_seg_diff(words1,words2,self_learning):
         s1=words1.split()
-        s2=words2.split()
+        target=re.sub(rf'</?\d+>', "", words2)
+        s2=target.split()
         assets={}
+        print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
         print(matcher.get_opcodes())
         for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-            if tag=='replace':
-                assets[" ".join(s1[i1:i2])]=" ".join(s2[j1:j2])
+            if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
+                source=" ".join(s1[i1:i2])
+                edited=" ".join(s2[j1:j2])
+                if self_learning:
+                    if not self_learning.filter(source_word=source ,edited_word=edited): 
+                        assets[source]=edited
+                else:
+                    assets[source]=edited
         print("------------------",assets)  
-        for i in assets:
-            if len(assets[i].split())>3:
-                assets[i]=" ".join(assets[i].split()[0:3])
         return assets
 
 
@@ -3227,10 +3242,10 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 10
 
-    def get_object(self):
+    def get_object(self,request):
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = get_object_or_404(ChoiceListSelected, id=pk,user=self.request.user)
+            obj = get_object_or_404(ChoiceListSelected, id=pk,choice_list__user=self.request.user)
         except:
             raise Http404
         return obj
@@ -3256,7 +3271,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
     
     def destroy(self, request, *args, **kwargs):
-        obj= self.get_object()
+        obj= self.get_object(request)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
