@@ -3046,7 +3046,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
     @staticmethod
     def get_object(request,id):
-        asset = get_object_or_404(SelflearningAsset, id=id,user=request.user)
+        asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=request.user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3192,11 +3192,13 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
             project=get_object_or_404(Project,id=project)
             lang=project.get_target_languages
             ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=self.request.user)
-            choice_serializer=ChoiceListsSerializer(ch_list,many=True)
-            return Response(choice_serializer.data)
+            queryset = self.filter_queryset(ch_list)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self) 
+            choice_serializer=ChoiceListsSerializer(pagin_tc,many=True)
+            return self.get_paginated_response(serializer.data)
         else:       
             ch_list=ChoiceLists.objects.filter(user=self.request.user)
-            queryset = self.filter_queryset(ch_list).order_by("-id")
+            queryset = self.filter_queryset(ch_list)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = ChoiceListsSerializer(pagin_tc, many=True)
             return self.get_paginated_response(serializer.data)
@@ -3242,10 +3244,10 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 10
 
-    def get_object(self,request):
+    def get_object(self,request,ids):
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = get_object_or_404(ChoiceListSelected, id=pk,choice_list__user=self.request.user)
+            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=self.request.user)
         except:
             raise Http404
         return obj
@@ -3271,7 +3273,9 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
     
     def destroy(self, request, *args, **kwargs):
-        obj= self.get_object(request)
+        choicelist_selected=request.query_params.get("remove_ids")
+        ids= choicelist_selected.split(",")
+        obj=self.get_object(request,ids)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
