@@ -946,8 +946,9 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 path='{}/{}'.format(lang,file_name)
                 print(path)
                 values=export_download(src_json.json,file_format,export_size)
-                if type(values) == bytes:
-                    archive.writestr(path,values)
+                print(type(values))
+                # if type(values) == bytes:
+                archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
  
     return response
