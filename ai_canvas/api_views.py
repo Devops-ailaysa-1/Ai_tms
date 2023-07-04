@@ -932,16 +932,19 @@ import io
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     if len(pages_list)==1:
+        print("single___page")
         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         
     else:
+        print("multiple___page")
         buffer=io.BytesIO()
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
+                print(path)
                 values=export_download(src_json.json,file_format,export_size)
                 if type(values) == bytes:
                     archive.writestr(path,values)
