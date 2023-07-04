@@ -610,8 +610,8 @@ class ChoiceLists(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     language=models.ForeignKey(Languages,related_name='choicelist_lang',on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
-    #created_at = models.DateTimeField(auto_now_add=True)
-    #updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
