@@ -969,7 +969,7 @@ def DesignerDownload(request):
     language = int(language) if language else None
     canvas=CanvasDesign.objects.get(id=canvas_id)
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
- 
+    print(page_number_list)
     page_src=[]
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
