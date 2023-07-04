@@ -941,13 +941,14 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         response=download_file_canvas(export_src,file_format.lower(),file_name)
         
     else:
-        buffer = io.BytesIO()
-        for count,src_page in enumerate(pages_list):
-            img_res,file_name=create_image(src_page.json,file_format,export_size,count+1,lang,"source")
-            print(count)
-            if isinstance(img_res,bytes):
-                with ZipFile(buffer, 'w') as zipObj:
-                    zipObj.writestr(file_name,img_res)
+        buffer=io.BytesIO()
+        with zipfile.ZipFile(buffer, mode="a") as archive:
+            for insc,src_json in enumerate(pages_list):
+                file_name = 'page_{}_{}.{}'.format(insc+1,lang,file_format)
+                path='{}/{}'.format(lang,file_name)
+                values=export_download(src_json.json,file_format,export_size)
+                if type(values) == bytes:
+                    archive.writestr(path,values)
         response = HttpResponse(content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(projecct_file_name)
         response = HttpResponse(content_type='application/zip')
@@ -975,7 +976,27 @@ def DesignerDownload(request):
         src_lang=canvas_trans_inst[0].source_language.language.language
         src_code=canvas_trans_inst[0].source_language.language_id
         
-        if language==src_code:
+        if language==0: #all languages with number of pages
+            src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
+            with zipfile.ZipFile("multiple_files.zip", mode="a") as archive:
+                for insc,src_json in enumerate(src_jsons):
+                    c=insc+1
+                    file_name = 'page_{}_{}.{}'.format(c,src_lang,file_format)
+                    path='{}/{}'.format(src_lang,file_name)
+                    values=export_download(src_json.json,file_format,export_size)
+                    if type(values) == bytes:
+                        archive.writestr(path,values)
+
+                for tar_lang in canvas_trans_inst:
+                    tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
+                    for count,tar_json in enumerate(tar_jsons):
+                        values=export_download(tar_json.json,file_format,export_size)
+                        file_name='page_{}_{}.{}'.format(count+1,tar_lang.target_language.language,file_format)
+                        path='{}/{}'.format(tar_lang.target_language.language,file_name)
+                        if type(values) == bytes:
+                            archive.writestr(path,values)
+
+        if language==src_code and all_page:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
             res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name)
             return res
@@ -999,7 +1020,7 @@ def DesignerDownload(request):
     elif (page_number_list or all_page) and file_format:
         print("only_page_number")
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
-        # print(src_lang)
+         
         res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
         return res
 
