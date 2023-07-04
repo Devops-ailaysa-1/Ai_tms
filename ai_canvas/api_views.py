@@ -431,6 +431,7 @@ mime_type={'svg':'image/svg+xml',
         'zip':'application/zip'}
 
 def download_file_canvas(file_path,mime_type,name):
+    print(mime_type)
     response = HttpResponse(file_path, content_type=mime_type)
     response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(name)
     response['X-Suggested-Filename'] = name
@@ -924,9 +925,6 @@ def create_image(json_page,file_format,export_size,page_number,language):
  
     base64_img=export_download(json_page,file_format,export_size)
     file_name="page_{}_{}.{}".format(str(page_number),language,file_format)
-    # thumbnail_src = core.files.File(core.files.base.ContentFile(base64_img),file_name)
-    # img_res=download_file_canvas(thumbnail_src,file_format.lower(),file_name)
-    # print(base64_img)
     return base64_img,file_name
 
 from zipfile import ZipFile
@@ -937,7 +935,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         print("single_page")
-        response=download_file_canvas(export_src,file_format.lower(),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         
     else:
         buffer=io.BytesIO()
@@ -948,10 +946,10 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 values=export_download(src_json.json,file_format,export_size)
                 if type(values) == bytes:
                     archive.writestr(path,values)
-
-        res=download_file_canvas(file_path=buffer,mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+        print("to create zip")
+        response=download_file_canvas(file_path=buffer,mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
  
-    return res
+    return response
 
 
 @api_view(['GET'])
@@ -1021,7 +1019,7 @@ def DesignerDownload(request):
             return Response(resp)
     
     elif (page_number_list or all_page) and file_format:
-        print("only_page_number")
+        print("only_page_number src no tar has created")
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
         res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
         return res
