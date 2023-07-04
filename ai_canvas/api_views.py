@@ -947,7 +947,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 if type(values) == bytes:
                     archive.writestr(path,values)
         print("to create zip")
-        response=download_file_canvas(file_path=buffer,mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+        response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
  
     return response
 
