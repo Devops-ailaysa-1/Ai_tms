@@ -3154,9 +3154,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 if self_learning and not self_learning.filter(source_word=source ,edited_word=edited): 
                         assets[source]=edited
         print("------------------",assets)  
-        # for i in assets:
-        #     if len(assets[i].split())>3:
-        #         assets[i]=" ".join(assets[i].split()[0:3])
         return assets
 
 
