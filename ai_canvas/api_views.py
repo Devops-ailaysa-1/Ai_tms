@@ -936,8 +936,8 @@ import io
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     if len(pages_list)==1:
-        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no)
-        export_src = core.files.File(core.files.base.ContentFile(img_res),file_name)
+        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         print("single_page")
         response=download_file_canvas(export_src,file_format.lower(),file_name)
         
