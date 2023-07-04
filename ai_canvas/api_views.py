@@ -977,6 +977,7 @@ def DesignerDownload(request):
                 for src_json in src_jsons:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,file_format)
                     path='{}/{}'.format(src_lang,file_name)
+                    print(path)
                     values=export_download(src_json.json,file_format,export_size)
                     if type(values) == bytes:
                         archive.writestr(path,values)
@@ -987,8 +988,10 @@ def DesignerDownload(request):
                         values=export_download(tar_json.json,file_format,export_size)
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,file_format)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
+                        print(path)
                         if type(values) == bytes:
                             archive.writestr(path,values)
+            print("fin")
             res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
             return res
             
