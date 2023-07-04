@@ -9,7 +9,8 @@ from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
-                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,CampaignUsers)
+                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
+                            CampaignUsers,CoCreateForm)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -102,9 +103,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if 'is_agency' in self.validated_data:
             if is_agency == 'True':
                 sub = subscribe_lsp(user)
+                user.is_agency = True
             elif is_agency == 'False':
                 sub = subscribe_vendor(user)
-            user.is_agency = True
             user.is_vendor = True
             user.save() 
             VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
@@ -505,6 +506,15 @@ class GeneralSupportSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneralSupport
         fields = "__all__"
+
+
+class CoCreateFormSerializer(serializers.ModelSerializer):
+    app_suggestion_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
+    class Meta:
+        model = CoCreateForm
+        fields = "__all__"
+
+
 
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:
