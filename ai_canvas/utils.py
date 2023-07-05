@@ -110,11 +110,13 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
-                    if 'isTranslate' in i.keys():
-                        i['isTranslate']=True   
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
+                    # if 'isTranslate' in i.keys():
+                    #     i['isTranslate']=True   
+                    # fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
+                    print(i['isTranslate']) 
+                    i['isTranslate']=True
 
                     # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
@@ -127,11 +129,13 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
+                    # fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
-                    if 'isTranslate' in i.keys():
-                        i['isTranslate']=True   
+                    # if 'isTranslate' in i.keys():
+                    print(i['isTranslate'])
+                    i['isTranslate']=True
+                    print(i['isTranslate'])
                     # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
        
