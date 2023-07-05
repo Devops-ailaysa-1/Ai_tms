@@ -256,28 +256,22 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if update_new_textbox and src_page:
             canvas_src_pages=instance.canvas_json_src.get(page_no=src_page)
- 
             text_box=""
             json=canvas_src_pages.json
-            # print("json",json)
             for i in json['objects']:
-  
                 if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
- 
                 if text_box and ("text" in text_box.keys()):
                     text=text_box['text']
                     canvas_tar_lang=instance.canvas_translate.all()
                     for tar_json in canvas_tar_lang:
                         src=tar_json.source_language.locale_code
                         tar=tar_json.target_language.locale_code
-                        # print("src",src, "tar",tar)
                         for j in tar_json.canvas_json_tar.all():
                             json=j.json
                             copy_txt_box=copy.copy(text_box)
                             trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
                             copy_txt_box['text']=trans_text    
-                            # copy_txt_box['isTranslate']=True
                             obj_list=json['objects']
                             obj_list.append(copy_txt_box)
                             j.save()
@@ -316,13 +310,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
                 trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
-
-                x=trans_json.canvas_design.canvas_json_src.all()
-                print(x)
-                print(len(x))
-                print("count",count+1)
-                print("trans_json.canvas_design.canvas_json_src.last()",trans_json.canvas_design.canvas_json_src.last().page_no)
-                                      
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
                 source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
                 # trans_json.canvas_src_json
@@ -395,16 +382,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if validated_data.get('temp_global_design',None):
             temp_global_design = validated_data.get('temp_global_design')
-            temp_pages = temp_global_design.template_globl_pag.all()
-            page_len = len(instance.canvas_json_src.all())
-            for temp_page in temp_pages:
-                thumbnail_page = temp_page.thumbnail_page
-                export_page = temp_page.export_page
-                json_page = temp_page.json_page
-                page_len+=1
-                # thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
-                CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
-                                                     export_file=export_page,json=json_page,page_no=page_len)
+            json_page = temp_global_design.json #
+            page_len = len(instance.canvas_json_src.all())+1
+            thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,json=json_page,page_no=page_len)
+
         if validated_data.get('my_temp',None):
             my_temp = validated_data.get('my_temp')
             my_temp_pages = my_temp.my_template_page.all()
@@ -415,7 +397,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 json_page = my_temp_page.my_template_json
                 page_len+=1
                 CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
-                                                     export_file=export_page,json=json_page,page_no=page_len)
+                                                     json=json_page,page_no=page_len)
         return super().update(instance=instance, validated_data=validated_data)
 
 
