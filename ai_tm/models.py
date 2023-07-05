@@ -24,6 +24,14 @@ class TmxFileNew(models.Model):
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+    
+    @property
+    def proj_obj(self):
+        return self.project
+
 
 class WordCountGeneral(models.Model):
     project = models.ForeignKey(Project, related_name="project_wc_general", null=False, blank=False, \
