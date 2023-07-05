@@ -148,6 +148,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         social_media_create=validated_data.pop('social_media_create',None)
         next_page=validated_data.pop('next_page',None)
         duplicate=validated_data.pop('duplicate',None)
+        new_project=validated_data.pop('new_project',None)
         width=validated_data.get('width',None)
         height=validated_data.get('height',None)
         update_new_textbox=validated_data.pop('update_new_textbox',None)
