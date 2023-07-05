@@ -3195,7 +3195,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
             queryset = self.filter_queryset(ch_list)
             pagin_tc = self.paginate_queryset(queryset, request , view=self) 
             choice_serializer=ChoiceListsSerializer(pagin_tc,many=True)
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(choice_serializer.data)
         else:       
             ch_list=ChoiceLists.objects.filter(user=self.request.user)
             queryset = self.filter_queryset(ch_list)
@@ -3232,7 +3232,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         return Response(ser.errors)
 
     def delete(self,request,pk):
-        ins = ChoiceLists.objects.get(user=self.request.user,id=pk)
+        ins=self.get_object(request,pk)
         ins.delete()
         return  Response(status=204)
     
@@ -3251,20 +3251,24 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         except:
             raise Http404
         return obj
-
+    
     def list(self,request):
-        project = request.GET.get('project')
-        if not project:
+        project_id = request.GET.get('project')
+        if not project_id:
             return Response({"msg":"project_id required"})
-        choice=ChoiceListSelected.objects.filter(project__id=project,choice_list__user=self.request.user)
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request, resource=project, actor=request.user, action="read")
+        choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=self.request.user)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
 
     def create(self,request):
-        project = request.POST.get('project')
+        project_id = request.POST.get('project')
         choice_list=request.POST.getlist('choice_list')
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request, resource=project, actor=request.user, action="read")
         if choice_list:
-            data = [{"project":project, "choice_list": choice} for choice in choice_list]
+            data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
             serializer = ChoiceListSelectedSerializer(data=data,many=True)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
