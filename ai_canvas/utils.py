@@ -186,6 +186,8 @@ def export_download(json_str,format,multipliervalue):
 
         output_buffer=io.BytesIO()
         print("Format____",format)
+        if format=='jpeg':
+            img = img.convert('RGB')
         img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
         compressed_data=output_buffer.getvalue()
         return compressed_data
