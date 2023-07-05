@@ -179,27 +179,23 @@ def svg_convert_base64(response_text):
 
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
-    if format=="png":
+    if format in ["png","jpeg"]:
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
-    elif format=="jpeg":
-        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+     
     elif format =='svg':
-        data = {'json':json_ , 'format':'svg','multiplierValue':multipliervalue}
-        
+        data = {'json':json_ ,'format':'svg'}
 
+
+        
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
  
     if thumb_image.status_code ==200:
-
         if format=='svg':
             compressed_data=svg_convert_base64(thumb_image.text)
         else:
-            split_text_base64 = thumb_image.text.split(",")[-1]
-            b64_bytes = base64.b64decode(split_text_base64)
-            im_file = io.BytesIO(b64_bytes)
+            im_file = io.BytesIO(base64.b64decode(thumb_image.text.split(",")[-1]))
             img = Image.open(im_file)
             output_buffer=io.BytesIO()
-            print("Format____",format)
             if format=='jpeg':
                 img = img.convert('RGB')
             img.save(output_buffer, format=format.upper(), optimize=True, quality=85)

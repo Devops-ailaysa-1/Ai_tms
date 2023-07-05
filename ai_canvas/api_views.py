@@ -372,55 +372,54 @@ def canvas_export_download(request):
         download_path = f'{settings.MEDIA_URL}{can_des.user.uid}/temp_download/{can_des.file_name}.zip'
     return JsonResponse({"url":download_path},status=200)                
 
- 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def canvas_download(request):
-    ## need to add authorization for requested user
-    design_id = request.GET.get('design_id')
-    canvas_translation_id = request.GET.get('canvas_translation_id',None)
-    design = CanvasDesign.objects.get(id=design_id)
-    zip_path = f'{settings.MEDIA_ROOT}/temp/{design.file_name}.zip'
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        ## Getting Source
-        json_src = design.canvas_json_src.all()
-        src_lang_code=design.canvas_translate.first().source_language.locale_code
-        for src in json_src :
-            if canvas_translation_id:
-                break
-            try:
-                source_path = src.thumbnail.path
-            except:
-                print("no thumbnail",src.id)
-            name = os.path.basename(src.thumbnail.name)
-            destination = f"/source/{name}" 
-            zipf.write(source_path, destination)
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def canvas_download(request):
+#     ## need to add authorization for requested user
+#     design_id = request.GET.get('design_id')
+#     canvas_translation_id = request.GET.get('canvas_translation_id',None)
+#     design = CanvasDesign.objects.get(id=design_id)
+#     zip_path = f'{settings.MEDIA_ROOT}/temp/{design.file_name}.zip'
+#     with zipfile.ZipFile(zip_path, 'w') as zipf:
+#         ## Getting Source
+#         json_src = design.canvas_json_src.all()
+#         src_lang_code=design.canvas_translate.first().source_language.locale_code
+#         for src in json_src :
+#             if canvas_translation_id:
+#                 break
+#             try:
+#                 source_path = src.thumbnail.path
+#             except:
+#                 print("no thumbnail",src.id)
+#             name = os.path.basename(src.thumbnail.name)
+#             destination = f"/source/{name}" 
+#             zipf.write(source_path, destination)
 
-        ## Getting Translated
-        if canvas_translation_id:
-            json_tranlated = design.canvas_translate.filter(id=canvas_translation_id)
-        else:
-            json_tranlated = design.canvas_translate.all()
+#         ## Getting Translated
+#         if canvas_translation_id:
+#             json_tranlated = design.canvas_translate.filter(id=canvas_translation_id)
+#         else:
+#             json_tranlated = design.canvas_translate.all()
 
-        for tar_json in json_tranlated:
-            tar_pages= tar_json.canvas_json_tar.all()
-            tar_lang_code = tar_json.target_language.locale_code
-            for tar in tar_pages :
-                try:
-                    source_path = tar.thumbnail.path
-                except:
-                    print("no thumbnail",tar.id)
-                name = os.path.basename(tar.thumbnail.name)
-                destination = f"/{tar_lang_code}/{name}"
-                zipf.write(source_path, destination)
-        download_path = f'{settings.MEDIA_URL}temp/{design.file_name}.zip'
-    return JsonResponse({"url":download_path},status=200)
+#         for tar_json in json_tranlated:
+#             tar_pages= tar_json.canvas_json_tar.all()
+#             tar_lang_code = tar_json.target_language.locale_code
+#             for tar in tar_pages :
+#                 try:
+#                     source_path = tar.thumbnail.path
+#                 except:
+#                     print("no thumbnail",tar.id)
+#                 name = os.path.basename(tar.thumbnail.name)
+#                 destination = f"/{tar_lang_code}/{name}"
+#                 zipf.write(source_path, destination)
+#         download_path = f'{settings.MEDIA_URL}temp/{design.file_name}.zip'
+#     return JsonResponse({"url":download_path},status=200)
 
 
 #########################################################################################################################################
 
-import os, mimetypes,  urllib,difflib
+import os, urllib
 from django.http import JsonResponse, Http404, HttpResponse
 
 
@@ -441,28 +440,28 @@ def download_file_canvas(file_path,mime_type,name):
 
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def canvas_download_combine(request):
-    design_id = request.query_params.get('design_id')
-    file_format_id=request.query_params.get('file_format_id')
-    export_size=request.query_params.get('export_size')
-    select_language=request.query_params.get('select_language')
-    page=request.query_params.get('page')
-    src_id=request.query_params.get('src_id')
-    file_format=CanvasDownloadFormat.get(id=file_format_id).format_name
-    canvas_inst=CanvasDesign.objects.get(id=design_id)
-    if src_id:
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def canvas_download_combine(request):
+#     design_id = request.query_params.get('design_id')
+#     file_format_id=request.query_params.get('file_format_id')
+#     export_size=request.query_params.get('export_size')
+#     select_language=request.query_params.get('select_language')
+#     page=request.query_params.get('page')
+#     src_id=request.query_params.get('src_id')
+#     file_format=CanvasDownloadFormat.get(id=file_format_id).format_name
+#     canvas_inst=CanvasDesign.objects.get(id=design_id)
+#     if src_id:
  
-        src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
-        src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
-        if src__single_inst.json:
-            print("contains src__json")
-            if file_format=='png':
+#         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
+#         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
+#         if src__single_inst.json:
+#             print("contains src__json")
+#             if file_format=='png':
  
-                values=export_download(src__single_inst.json,file_format,export_size)
-                img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
-                return img_res
+#                 values=export_download(src__single_inst.json,file_format,export_size)
+#                 img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
+#                 return img_res
                 # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
 
 
@@ -944,10 +943,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
             for src_json in pages_list:
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
-                print(path)
                 values=export_download(src_json.json,file_format,export_size)
-                print(type(values))
-                # if type(values) == bytes:
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
  
@@ -955,7 +951,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def DesignerDownload(request):
     canvas_id=request.query_params.get('canvas_id')
     file_format=request.query_params.get('file_format')
@@ -981,10 +977,9 @@ def DesignerDownload(request):
                 for src_json in src_jsons:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,file_format)
                     path='{}/{}'.format(src_lang,file_name)
-                    print(path)
                     values=export_download(src_json.json,file_format,export_size)
-                    if type(values) == bytes:
-                        archive.writestr(path,values)
+                    # if type(values) == bytes:
+                    archive.writestr(path,values)
 
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
@@ -992,10 +987,8 @@ def DesignerDownload(request):
                         values=export_download(tar_json.json,file_format,export_size)
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,file_format)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
-                        print(path)
-                        if type(values) == bytes:
-                            archive.writestr(path,values)
-            print("fin")
+                        # if type(values) == bytes:
+                        archive.writestr(path,values)
             res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
             return res
             
@@ -1003,17 +996,13 @@ def DesignerDownload(request):
         if language==src_code:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
             res=download__page(src_pages,file_format,export_size,page_number_list,src_lang,canvas.file_name )
-            print("downloading__lang equal")
             return res
 
         elif language and language!=src_code:
             canvas_translate=canvas.canvas_translate.all()
             tar_pages=canvas_translate.get(target_language__language__id=language).canvas_json_tar.filter(page_no__in=page_number_list)
             tar_lang=Languages.objects.get(id=language).language
-            print("tar__language",)
-            print(tar_pages)
             res=download__page(tar_pages,file_format,export_size,page_number_list,tar_lang,canvas.file_name )
-            print("downloading__lang not equal")
             return res
 
         else:
@@ -1028,7 +1017,6 @@ def DesignerDownload(request):
             return Response(resp)
     
     elif (page_number_list or all_page) and file_format:
-        print("only_page_number src no tar has created")
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
         res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
         return res
