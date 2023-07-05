@@ -330,8 +330,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
-                    # src_json_file.save()
-                    print("-----------------")
+                     
                     if res[tar_lang.locale.first().locale_code]:
                         tar_json_form=res[tar_lang.locale.first().locale_code]
                         
