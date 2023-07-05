@@ -51,7 +51,9 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-                # print("src_url",i['src'])
+                # print("src_url",i['src']) 
+        if i['type']== 'textbox':
+            i['isTranslate']=True
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         else:
