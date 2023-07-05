@@ -1511,8 +1511,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         reassigned = request.GET.get('reassigned',False)
 
         tsks = Task.objects.filter(id__in=tasks)
-        for tsk in tsks:
-            authorize(request, resource=tsk, actor=request.user, action="read") #
+        # for tsk in tsks:
+        #     authorize(request, resource=tsk, actor=request.user, action="read") #
 
         try:
             task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__reassigned = reassigned))
