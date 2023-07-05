@@ -176,7 +176,7 @@ def svg_convert_base64(response_text):
     return response_text
     
     
-
+import copy
 def export_download(json_str,format,multipliervalue):
     if format in ["png","jpeg"]:
         json_ = json.dumps(json_str)
@@ -186,13 +186,15 @@ def export_download(json_str,format,multipliervalue):
         json_ = json.dumps(json_str)
         data = {'json':json_ ,'format':'svg'}
     elif format=='png-transparent':
-        json_str['background']='transparent'
-        json_str['backgroundImage']['fill']='transparent'
-        json_str['backgroundImage']['globalCompositeOperation'] ='source-over'
-        json_ = json.dumps(json_str)
+        json_trans = copy.deepcopy(json_str)
+        json_trans['background']='transparent'
+        json_trans['backgroundImage']['fill']='transparent'
+        json_trans['backgroundImage']['globalCompositeOperation'] ='source-over'
+        json_ = json.dumps(json_trans)
+
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
         print("--------------------")
-        print(json_)
+        print(json_trans)
         format='png'
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
  
