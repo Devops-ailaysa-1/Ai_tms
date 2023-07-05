@@ -922,7 +922,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return Response({'msg':'deleted successfully'})
     
 def create_image(json_page,file_format,export_size,page_number,language):
-    file_format = 'png' if file_format == 'png-transparent' else file_format
+    # file_format = 'png' if file_format == 'png-transparent' else file_format
     base64_img=export_download(json_page,file_format,export_size)
     file_name="page_{}_{}.{}".format(str(page_number),language,file_format)
     return base64_img,file_name
