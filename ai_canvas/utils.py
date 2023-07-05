@@ -11,7 +11,7 @@ import json ,base64
 from fontTools.ttLib import TTFont
 import os
 import shutil
-import io
+import io,re
 from PIL import Image ,ImageFont
 
 
@@ -164,10 +164,20 @@ def thumbnail_create(json_str,formats):
     else:
         return ValidationError("error in node server")
 
-
+url_pattern = r'xlink:href="([^"]+)"'
+def svg_convert_base64(response_text):
+    matches = re.findall(url_pattern, response_text)
+    for match in matches:
+        response = requests.get(match)
+        format=match.split(".")[-1]
+        image_data = response.content
+        base64_data = base64.b64encode(image_data).decode('utf-8')
+        response_text = response_text.replace(match, f'data:image/{format};base64,{base64_data}')
+    return response_text
+    
+    
 
 def export_download(json_str,format,multipliervalue):
-
     json_ = json.dumps(json_str)
     if format=="png":
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
@@ -178,18 +188,22 @@ def export_download(json_str,format,multipliervalue):
         
 
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+    print(thumb_image.json())
     if thumb_image.status_code ==200:
-        split_text_base64 = thumb_image.text.split(",")[-1]
-        b64_bytes = base64.b64decode(split_text_base64)
-        im_file = io.BytesIO(b64_bytes)
-        img = Image.open(im_file)
 
-        output_buffer=io.BytesIO()
-        print("Format____",format)
-        if format=='jpeg':
-            img = img.convert('RGB')
-        img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
-        compressed_data=output_buffer.getvalue()
+        if format=='svg':
+            compressed_data=svg_convert_base64(thumb_image.text)
+        else:
+            split_text_base64 = thumb_image.text.split(",")[-1]
+            b64_bytes = base64.b64decode(split_text_base64)
+            im_file = io.BytesIO(b64_bytes)
+            img = Image.open(im_file)
+            output_buffer=io.BytesIO()
+            print("Format____",format)
+            if format=='jpeg':
+                img = img.convert('RGB')
+            img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
+            compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
         return ValidationError("error in node server")

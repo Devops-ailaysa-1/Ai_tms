@@ -953,11 +953,11 @@ class ImageGeneratorResolutionViewset(viewsets.ViewSet):
 
 
 class DesignShapePagination(PageNumberPagination):
-    page_size = 20 
+    page_size = 30 
     page_size_query_param = 'page_size'
 
 class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
-    page_size = 20
+    page_size = 30
     pagination_class = DesignShapePagination
     def list(self,request):
         queryset = DesignShape.objects.all().order_by('id')
