@@ -190,7 +190,7 @@ def export_download(json_str,format,multipliervalue):
         json_trans['background']='transparent'
         json_trans['backgroundImage']['fill']='transparent'
         json_trans['backgroundImage']['globalCompositeOperation'] ='source-over'
-        for i in json_str['objects']:
+        for i in json_trans['objects']:
             if 'globalCompositeOperation' in i.keys():
                 i['globalCompositeOperation']='source-over'
         json_ = json.dumps(json_trans)
