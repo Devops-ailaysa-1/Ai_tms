@@ -126,6 +126,8 @@ class UserDefinedRateView(viewsets.ViewSet):
 #                 assigns.task_assign_info.save()
 
 
+from ai_auth.utils import authorize_list
+from django.shortcuts import get_object_or_404, get_list_or_404
 
 class TmxUploadView(viewsets.ViewSet):
 
@@ -136,6 +138,9 @@ class TmxUploadView(viewsets.ViewSet):
         project = get_object_or_404(Project.objects.all(), id=project_id)
         authorize(request, resource=project, actor=request.user, action="read") #
         files = TmxFileNew.objects.filter(project_id=project_id).all()
+        # print(files)
+        # tasks = get_list_or_404(files, project_id=project_id)
+        # authorize_list(obj_list=tasks,action="read",user=request.user)
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
 
@@ -144,8 +149,8 @@ class TmxUploadView(viewsets.ViewSet):
         data = {**request.POST.dict(), "tmx_file": request.FILES.getlist('tmx_file')}
         ser_data = TmxFileSerializer.prepare_data(data)
         serializer = TmxFileSerializer(data=ser_data,many=True)
-        job_obj = get_object_or_404(Job, id=job)
-        authorize(request, resource=job_obj, actor=request.user, action="read") #
+        job_obj = get_object_or_404(Job, id=job).proj_obj
+        authorize(request, resource=job_obj, actor=request.user, action="create") #
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             count_update.apply_async((job,))
@@ -158,8 +163,7 @@ class TmxUploadView(viewsets.ViewSet):
     def update(self, request, pk):
         tmx_file_ins = TmxFileNew.objects.get(id=pk)
         job_id = request.POST.get("job_id", None)
-        job_obj = get_object_or_404(Job, id=job_id)
-        authorize(request, resource=job_obj, actor=request.user, action="read") #
+        authorize(request, resource=tmx_file_ins , actor=request.user, action="update") #
         serializer = TmxFileSerializer(tmx_file_ins, data={"job" : job_id}, partial=True)
         task_obj = Task.objects.filter(job_id=job_id).last()
         if serializer.is_valid():
@@ -173,9 +177,10 @@ class TmxUploadView(viewsets.ViewSet):
 
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
+        authorize(request, resource=instance , actor=request.user, action="delete") #
         task_obj = Task.objects.filter(job_id=instance.job.id)
-        project=get_object_or_404(Project,id=instance.project.id)
-        authorize(request, resource=project, actor=request.user, action="delete") #
+        # project=get_object_or_404(Project,id=instance.project.id)
+        # authorize(request, resource=project, actor=request.user, action="delete") #
         ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis'))
         if ins:
             MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis')).update(status=1)
@@ -342,6 +347,7 @@ def get_tasks_for_analysis(user,instance):
 
 @api_view(['GET',])
 def get_project_analysis(request,project_id):
+        
 
         from ai_workspace.models import MTonlytaskCeleryStatus
 
@@ -354,7 +360,7 @@ def get_project_analysis(request,project_id):
         proj_char_raw_total,proj_char_tm_100,proj_char_tm_95_99,proj_char_tm_85_94,proj_char_tm_75_84,proj_char_tm_50_74,proj_char_tm_101,proj_char_tm_102,proj_char_new,proj_char_repetition = 0,0,0,0,0,0,0,0,0,0
 
         proj = Project.objects.filter(id=project_id).first()
-
+        authorize(request,resource=proj,actor=request.user,action="read")
         user = proj.ai_user
 
         rates = UserDefinedRate.objects.filter(user = user).last()
