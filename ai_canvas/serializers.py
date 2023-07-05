@@ -105,6 +105,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     duplicate=serializers.BooleanField(required=False,write_only=True)
     social_media_create=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     update_new_textbox=serializers.BooleanField(required=False,write_only=True)
+    new_project=serializers.BooleanField(required=False,write_only=True)
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.CharField(required=False)
     # height=serializers.CharField(required=False)
@@ -114,7 +115,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox')
+                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox','new_project')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -229,7 +230,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         social_media_create=validated_data.get('social_media_create',None)
         width=validated_data.get('width',None)
         height=validated_data.get('height',None)
-
+        new_project=validated_data.get('new_project',None)
+        temp_global_design = validated_data.get('temp_global_design',None)
 
         if social_media_create and src_page and source_json_file and width and height:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
@@ -380,8 +382,21 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             #     os.remove(thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
 
-        if validated_data.get('temp_global_design',None):
-            temp_global_design = validated_data.get('temp_global_design')
+
+
+        if temp_global_design and new_project:
+            width=temp_global_design.width
+            height=temp_global_design.height
+            json=temp_global_design.json
+            category=temp_global_design.category
+            user = self.context['request'].user
+            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+            json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+                                    "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+            CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
+            return new_proj
+
+        if temp_global_design:
             json_page = temp_global_design.json #
             page_len = len(instance.canvas_json_src.all())+1
             thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
