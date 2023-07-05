@@ -24,18 +24,18 @@
                 <h1 style="font-size:18px; line-height:20px; font-weight:bold;">Hi {{name}},</h1>
                   <p>You have been assigned to new tasks in <b>{{project}}</b>.</p>
                   <p>Task details can be found below,</p>
-                  <p>Job : {{job}}</p>
-                  <p>Rate : {{rate}}</p>
-                  <p>Deadline : {{deadline}}</p>
-                  <p>Work : {{work}}</p>
+                  <p>Job: {{job}}</p>
+                  <p>Rate: {{rate}}</p>
+                  <p>Deadline: {{deadline}}</p>
+                  <p>Work: {{work}}</p>
                 {% if files %}
                 {% for i in files %}
                 {% if i.unit == 'Word' %}
-                <p>File : {{i.file}},&emsp; Words : {{i.words}},&emsp; Billable Words : {{i.billable_word_count}}</p>
+                <p>File: {{i.file}},&emsp; Words : {{i.words}},&emsp; Billable Words : {{i.billable_word_count}}</p>
                 {% elif i.unit == 'Char' %}
-                <p>File : {{i.file}},&emsp;Characters : {{i.characters}},&emsp; Billable Charecters : {{i.billable_char_count}}</p>
+                <p>File: {{i.file}},&emsp;Characters : {{i.characters}},&emsp; Billable Charecters : {{i.billable_char_count}}</p>
                 {% else %}
-                <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
+                <p>File: {{i.file}},&emsp;Words : {{i.words}}</p>
                 {% endif %}
                 {% endfor %}
                 {% endif %}
