@@ -78,7 +78,7 @@ class ProjectManager(models.Manager):
             from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
             jobs = project.project_jobs_set.all()
             target_languages = [i.target_language_id for i in jobs]
-            query = ChoiceLists.objects.filter(user = project.ai_user).filter(language_id__in = target_languages)
+            query = ChoiceLists.objects.filter(user = project.ai_user).filter(language_id__in = target_languages).filter(is_default=True)
             print("Qr------------>",query)
             if query:
                 ch = [ChoiceListSelected.objects.get_or_create(project=project,choice_list=i) for i in query]
