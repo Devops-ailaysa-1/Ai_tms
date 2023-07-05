@@ -652,13 +652,14 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
     post_deadline = serializers.ReadOnlyField(source='proj_deadline')
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
+    projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
     projectpost_steps =ProjectPostStepsSerializer(many=True,required=False)
     projectpost_jobs=ProjectPostJobSerializer(many=True,required=False)
     bid_count = serializers.SerializerMethodField()
 
 
     class Meta:
-        fields = ('post_id', 'post_name','bid_count','post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', 'post_created_at')
+        fields = ('post_id', 'post_name','bid_count','post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','projectpost_content_type','apply', 'post_created_at')
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
