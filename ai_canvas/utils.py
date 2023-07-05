@@ -167,8 +167,15 @@ def thumbnail_create(json_str,formats):
 
 
 def export_download(json_str,format,multipliervalue):
+
     json_ = json.dumps(json_str)
-    data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
+    if format=="png":
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+    elif format=="jpeg":
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+    elif format =='svg':
+        data = {'json':json_ , 'format':'svg','multiplierValue':multipliervalue}
+        
 
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
     if thumb_image.status_code ==200:
@@ -176,9 +183,10 @@ def export_download(json_str,format,multipliervalue):
         b64_bytes = base64.b64decode(split_text_base64)
         im_file = io.BytesIO(b64_bytes)
         img = Image.open(im_file)
+
         output_buffer=io.BytesIO()
         print("Format____",format)
-        img.save(output_buffer, format=format, optimize=True, quality=85)
+        img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
         compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
