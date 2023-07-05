@@ -185,13 +185,11 @@ def export_download(json_str,format,multipliervalue):
     elif format =='svg':
         json_ = json.dumps(json_str)
         data = {'json':json_ ,'format':'svg'}
-
     elif format=='png-transparent':
         json_str['background']='transparent'
         json_str['backgroundImage']['fill']='transparent'
         json_str['backgroundImage']['globalCompositeOperation'] ='source-over'
         json_ = json.dumps(json_str)
-
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
  
     if thumb_image.status_code ==200:
