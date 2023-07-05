@@ -922,7 +922,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return Response({'msg':'deleted successfully'})
     
 def create_image(json_page,file_format,export_size,page_number,language):
- 
+    file_format = 'png' if file_format == 'png-transparent' else file_format
     base64_img=export_download(json_page,file_format,export_size)
     file_name="page_{}_{}.{}".format(str(page_number),language,file_format)
     return base64_img,file_name
@@ -944,6 +944,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
             for src_json in pages_list:
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
+                file_format = 'png' if file_format == 'png-transparent' else file_format
                 values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
@@ -978,16 +979,17 @@ def DesignerDownload(request):
             print("all languages with number of pages")
             with zipfile.ZipFile(buffer, mode="a") as archive:
                 for src_json in src_jsons:
-                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,file_format)
+                    format = 'png' if file_format == 'png-transparent' else file_format
+                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format)
                     path='{}/{}'.format(src_lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
-
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
                     for tar_json in tar_jsons:
                         values=export_download(tar_json.json,file_format,export_size)
-                        file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,file_format)
+                        format = 'png' if file_format == 'png-transparent' else file_format
+                        file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         # if type(values) == bytes:
                         archive.writestr(path,values)
