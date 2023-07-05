@@ -945,7 +945,6 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
                 file_format = 'png' if file_format == 'png-transparent' else file_format
-                print("2222",src_json.json)
                 values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
@@ -983,14 +982,11 @@ def DesignerDownload(request):
                     format = 'png' if file_format == 'png-transparent' else file_format
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format)
                     path='{}/{}'.format(src_lang,file_name)
-
-                    print("src_json.json",src_json.json)
                     values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
                     for tar_json in tar_jsons:
-                        print("tar_json.json",tar_json.json)
                         values=export_download(tar_json.json,file_format,export_size)
                         format = 'png' if file_format == 'png-transparent' else file_format
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format)

@@ -187,15 +187,16 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ ,'format':'svg'}
     elif format=='png-transparent':
         json_trans = copy.deepcopy(json_str)
-        print(json_str)
+        print("json_trans")
+        print(json_trans)
         json_trans['background']='transparent'
         json_trans['backgroundImage']['fill']='transparent'
         json_trans['backgroundImage']['globalCompositeOperation'] ='source-over'
         json_ = json.dumps(json_trans)
 
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
-        print("--------------------")
-        print(json_trans)
+        print("------------------------------")
+        print(json_)
         format='png'
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
  
