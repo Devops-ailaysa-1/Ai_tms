@@ -332,45 +332,45 @@ class CanvasDownloadFormatViewset(viewsets.ViewSet):
 
 
 from ai_canvas.utils import export_download
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def canvas_export_download(request):
-    format=request.POST.get('format')
-    multipliervalue=request.POST.get('multipliervalue')
-    canvas_design_id=request.POST.get('canvas_design_id')
-    can_des=CanvasDesign.objects.get(id=canvas_design_id)
-    file_path=f'{settings.MEDIA_ROOT}/{can_des.user.uid}/temp_download/'
-    try:
-        os.makedirs(file_path) #{design.file_name}
-    except FileExistsError:
-        pass
-    zip_path = f'{file_path}{can_des.file_name}.zip'
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def canvas_export_download(request):
+#     format=request.POST.get('format')
+#     multipliervalue=request.POST.get('multipliervalue')
+#     canvas_design_id=request.POST.get('canvas_design_id')
+#     can_des=CanvasDesign.objects.get(id=canvas_design_id)
+#     file_path=f'{settings.MEDIA_ROOT}/{can_des.user.uid}/temp_download/'
+#     try:
+#         os.makedirs(file_path) #{design.file_name}
+#     except FileExistsError:
+#         pass
+#     zip_path = f'{file_path}{can_des.file_name}.zip'
  
     
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        can_src=can_des.canvas_json_src.all()
-        for src_json_file in can_src:
-            print("src_json_file---> CanvasSourceJsonFiles")
-            src_json=can_des.canvas_translate.all()
-            if src_json_file.json:
-                compressed_data_img=export_download(json_str=src_json_file.json,format=format,multipliervalue=multipliervalue)
-                src_lang=src_json[0].source_language.language_locale_name.strip() if src_json[0] else can_des.file_name
+#     with zipfile.ZipFile(zip_path, 'w') as zipf:
+#         can_src=can_des.canvas_json_src.all()
+#         for src_json_file in can_src:
+#             print("src_json_file---> CanvasSourceJsonFiles")
+#             src_json=can_des.canvas_translate.all()
+#             if src_json_file.json:
+#                 compressed_data_img=export_download(json_str=src_json_file.json,format=format,multipliervalue=multipliervalue)
+#                 src_lang=src_json[0].source_language.language_locale_name.strip() if src_json[0] else can_des.file_name
  
-                src_file_name=src_lang+'.{}'.format(format)
-                zipf.writestr(src_file_name, compressed_data_img)
-            if src_json:
-                zipf.write(file_path, 'source_target/' , zipfile.ZIP_DEFLATED )
-                for j in src_json:
-                    form=".{}".format(format)
-                    print("src_json",j.source_language,'---',j.target_language)
-                    if j.canvas_json_tar.last():
-                        tar_json_file=j.canvas_json_tar.last()
-                        if tar_json_file:
-                            compressed_data_img=export_download(json_str=tar_json_file.json,format=format,multipliervalue=multipliervalue)
-                            zipf.writestr('source_target/'+j.target_language.language_locale_name.strip()+form, compressed_data_img)
+#                 src_file_name=src_lang+'.{}'.format(format)
+#                 zipf.writestr(src_file_name, compressed_data_img)
+#             if src_json:
+#                 zipf.write(file_path, 'source_target/' , zipfile.ZIP_DEFLATED )
+#                 for j in src_json:
+#                     form=".{}".format(format)
+#                     print("src_json",j.source_language,'---',j.target_language)
+#                     if j.canvas_json_tar.last():
+#                         tar_json_file=j.canvas_json_tar.last()
+#                         if tar_json_file:
+#                             compressed_data_img=export_download(json_str=tar_json_file.json,format=format,multipliervalue=multipliervalue)
+#                             zipf.writestr('source_target/'+j.target_language.language_locale_name.strip()+form, compressed_data_img)
                         
-        download_path = f'{settings.MEDIA_URL}{can_des.user.uid}/temp_download/{can_des.file_name}.zip'
-    return JsonResponse({"url":download_path},status=200)                
+#         download_path = f'{settings.MEDIA_URL}{can_des.user.uid}/temp_download/{can_des.file_name}.zip'
+#     return JsonResponse({"url":download_path},status=200)                
 
 
 # @api_view(["GET"])
@@ -963,6 +963,8 @@ def DesignerDownload(request):
     canvas=CanvasDesign.objects.get(id=canvas_id)
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
     page_src=[]
+    file_format = file_format.replace(" ","-") if file_format else ""
+    print("file_format",file_format)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
