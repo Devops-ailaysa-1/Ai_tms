@@ -110,13 +110,15 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
+                    print("-----------------------------------")
+                    print(i)
                     fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
 
-                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    font_size=32
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    # font_size=32
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
                 if i['type'] == 'group':
@@ -129,9 +131,11 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text'] =  tar_word
                     
-                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    font_size=34
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    print("---------------------------------------")
+                    # font_size=34
+                    print(i)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
  
                     # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
@@ -140,7 +144,6 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                         canva_group(i['objects'])
         canvas_result[lang] = canvas_json_copy
     return canvas_result
-
 
 
 def thumbnail_create(json_str,formats):
