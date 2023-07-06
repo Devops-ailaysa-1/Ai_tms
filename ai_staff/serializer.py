@@ -8,7 +8,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
                     PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
-                    ImageGeneratorResolution,DesignShape,ImageCategories)
+                    ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer

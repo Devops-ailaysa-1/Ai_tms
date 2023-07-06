@@ -966,7 +966,6 @@ def DesignerDownload(request):
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
     page_src=[]
     file_format = file_format.replace(" ","-") if file_format else ""
-    print("file_format",file_format)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
