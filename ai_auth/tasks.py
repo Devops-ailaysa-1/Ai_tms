@@ -914,7 +914,7 @@ def record_api_usage(provider,service,uid,email,usage):
 from ai_glex import models as glex_model
 from tablib import Dataset
 @task
-def update_words_from_template(file_ids):
+def update_words_from_template_task(file_ids):
     print("File Ids--->",file_ids)
     for i in file_ids:
         instance = glex_model.GlossaryFiles.objects.get(id=i)

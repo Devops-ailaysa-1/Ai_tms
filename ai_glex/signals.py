@@ -1,9 +1,28 @@
 from ai_glex import models as glex_model
 from tablib import Dataset
+import pandas as pd
+from ai_auth.tasks import update_words_from_template_task
+
+
+def count_entries(file_path):
+    df = pd.read_excel(file_path) 
+    print("Df-------->",df)
+    num_entries = len(df) 
+    print("Num Entries--------->",num_entries)
+    return num_entries
+
 
 def update_words_from_template(sender, instance, *args, **kwargs):
     print("Ins--->",instance)
-    glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
+    #glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
+    #print("File--------->",instance.file)
+    # entries = count_entries(instance.file)
+    # print("Entries------------>",entries)
+    # if entries > 50000:
+    #     update_words_from_template_task.apply_async(([instance.id],))
+    #     print("Celery Called")
+    # else:
+    glossary_obj = instance.project.glossary_project
     dataset = Dataset()
     imported_data = dataset.load(instance.file.read(), format='xlsx')
     if instance.source_only == False and instance.job.source_language != instance.job.target_language:

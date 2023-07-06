@@ -55,7 +55,9 @@ from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,
                             Customer,Invoice,Product,TaxRate,Account,Coupon
 import stripe
 from django.conf import settings
-from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import (Countries, CurrencyBasedOnCountry, IndianStates, 
+                            SupportType,JobPositions,SupportTopics,Role, 
+                            OldVendorPasswords,Suggestion,SuggestionType)
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -392,10 +394,11 @@ class ContactPricingCreateView(viewsets.ViewSet):
 
 def send_email(subject,template,context):
     content = render_to_string(template, context)
-    file =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
-    if file:
-        msg.attach(file.name, file.read(), file.content_type)
+    file_ =context.get('file')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
+    if file_:
+        name = os.path.basename(file_.path)
+        msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -1336,7 +1339,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 
-
+from .models import CarrierSupport
 class CarrierSupportCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
@@ -1355,10 +1358,13 @@ class CarrierSupportCreateView(viewsets.ViewSet):
         time = date.today()
         template = 'carrier_support_email.html'
         subject='Regarding Job Hiring'
-        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'file':cv_file,'message':message}
+        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'message':message}
         serializer = CarrierSupportSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save()
+            ins = CarrierSupport.objects.get(id=serializer.data.get('id'))
+            if ins.cv_file:
+                context.update({'file':ins.cv_file})
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1381,10 +1387,13 @@ class GeneralSupportCreateView(viewsets.ViewSet):
         today = date.today()
         template = 'general_support_email.html'
         subject='Regarding General Support'
-        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'file':support_file,'message':message}
+        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'message':message}
         serializer = GeneralSupportSerializer(data={**request.POST.dict(),'support_file':support_file})
         if serializer.is_valid():
             serializer.save()
+            ins = GeneralSupport.objects.get(id=serializer.data.get('id'))
+            if ins.support_file:
+                context.update({'file':ins.support_file})
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2484,6 +2493,37 @@ def oso_test_querys(request):
     # print(fil)
     return JsonResponse({"msg":"sucess"},status=200)
 
+
+
+from .models import CoCreateForm
+from .serializers import CoCreateFormSerializer
+class CoCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        name = request.POST.get("name")
+        suggestion_type = request.POST.get("suggestion_type")
+        suggestion = request.POST.get("suggestion")
+        try:sug_type = SuggestionType.objects.get(id=suggestion_type).type_of_suggestion
+        except:sug_type = None
+        try:sug = Suggestion.objects.get(id=suggestion).suggestion
+        except: sug = None
+        email = request.POST.get("email")
+        description = request.POST.get("description")
+        app_suggestion_file = request.FILES.get('app_suggestion_file')
+        # time =datetime.now(pytz.timezone('Asia/Kolkata'))
+        time = date.today()
+        template = 'cocreate_email.html'
+        subject='Regarding App Suggestion'
+        context = {'email': email,'name':name,'suggestion_type':sug_type,'suggestion':sug,'date':time,'description':description}
+        serializer = CoCreateFormSerializer(data={**request.POST.dict(),'app_suggestion_file':app_suggestion_file})
+        if serializer.is_valid():
+            serializer.save()
+            ins = CoCreateForm.objects.get(id=serializer.data.get('id'))
+            if ins.app_suggestion_file:
+                context.update({'file':ins.app_suggestion_file})
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
