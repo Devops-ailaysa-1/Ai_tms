@@ -54,6 +54,7 @@ def json_src_change(json_src ,req_host,instance):
                 # print("src_url",i['src']) 
         if i['type']== 'textbox':
             i['isTranslate']=True
+            i['temp_text']=i['text']
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         else:
