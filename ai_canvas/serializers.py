@@ -157,7 +157,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         data = {**validated_data ,'user':user}
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
-        
+ 
         # print("instance.file_name",instance.file_name)
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
@@ -167,6 +167,23 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             else:
                 instance.file_name='Untitled project' 
             instance.save()
+
+        if source_json_file and social_media_create and width and height:
+            print("source_json_file-----------------------------")
+            print(source_json_file)
+            source_json_file=json_src_change(source_json_file,req_host,instance)
+            thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
+            can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
+            src_json=can_json.json
+            src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
+                                   "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
+            can_json.json=src_json
+            print("canvas_json")
+            print(can_json.json)
+            can_json.save()
+            instance.save()
+            return instance
+
 
         if social_media_create and width and height:
             basic_jsn=copy.copy(basic_json)
@@ -199,21 +216,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
           
-        if source_json_file:
-            print("source_json_file")
-            print(source_json_file)
-            source_json_file=json_src_change(source_json_file,req_host,instance)
-            thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
-            can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
-            src_json=can_json.json
-            src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
-                                   "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
-            can_json.json=src_json
-            print("canvas_json")
-            print(can_json.json)
-            can_json.save()
-            instance.save()
-            return instance
+
 
     def update(self, instance, validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
