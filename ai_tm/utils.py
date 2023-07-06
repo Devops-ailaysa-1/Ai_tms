@@ -356,7 +356,7 @@ def tm_fetch_extract(
 
 
 
-
+#--------------------------------------------------yet to test--------------------------------------------------------------------------------------------------------#
 
 
 
@@ -572,6 +572,10 @@ def tm_fetch_extract(
 #                         tk_wc.tm_75_84, tk_wc.tm_50_74, tk_wc.tm_101, tk_wc.tm_102, tk_wc.raw_total)
     
 #     write_data_rows(workbook, worksheet, 8, pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw)
+
+#     # Initializing word count values
+#     pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw = \
+#     0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 #     proj_row =9
 #     worksheet.write(f'A{proj_row}', "Char",common_format)

@@ -614,7 +614,7 @@ class CommentSerializer(serializers.ModelSerializer):
     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
     class Meta:
         model = Comment
-        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user',)
+        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
 
 class FilterSerializer(serializers.Serializer):
     status_list = serializers.JSONField(

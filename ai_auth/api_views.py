@@ -22,7 +22,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
@@ -55,7 +55,9 @@ from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,
                             Customer,Invoice,Product,TaxRate,Account,Coupon
 import stripe
 from django.conf import settings
-from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import (Countries, CurrencyBasedOnCountry, IndianStates, 
+                            SupportType,JobPositions,SupportTopics,Role, 
+                            OldVendorPasswords,Suggestion,SuggestionType)
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -63,7 +65,7 @@ from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name,company_members_list
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
-from ai_vendor.models import VendorsInfo,VendorLanguagePair
+from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorOnboardingInfo
 from django.db import transaction
 from django.contrib.sites.shortcuts import get_current_site
 #for soc
@@ -87,6 +89,7 @@ from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
 from django_oso.auth import authorize, authorize_model
 import os
+from ai_auth.reports import AilaysaReport
 
 logger = logging.getLogger('django')
 
@@ -392,9 +395,9 @@ class ContactPricingCreateView(viewsets.ViewSet):
 def send_email(subject,template,context):
     content = render_to_string(template, context)
     file_ =context.get('file')
-    name = os.path.basename(file_.path)
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
+        name = os.path.basename(file_.path)
         msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
@@ -2251,7 +2254,7 @@ def ai_social_callback(request):
         user_type = user_state.get('socialaccount_user_state',None)
         if user_type!=None:
                 if user_type == 'vendor':
-                    required.append('language_pair')
+                    required.append('service_provider_type')
 
 
         resp_data.update({"required_details":required})
@@ -2302,9 +2305,10 @@ class UserDetailView(viewsets.ViewSet):
 
     def create(self,request):
         country = request.POST.get('country',None)
-        source_lang = request.POST.get('source_language',None)
-        target_lang = request.POST.get('target_language',None)
-        cv_file = request.FILES.get('cv_file',None)
+        # source_lang = request.POST.get('source_language',None)
+        # target_lang = request.POST.get('target_language',None)
+        service_provider_type = request.POST.get('service_provider_type',None)
+        # cv_file = request.FILES.get('cv_file',None)
         state = request.POST.get('state',None)
         user = request.user
 
@@ -2319,7 +2323,7 @@ class UserDetailView(viewsets.ViewSet):
 
         user_type = user_state.get('socialaccount_user_state',None)
         if user_type == 'vendor':
-            if not (source_lang and target_lang):
+            if not (service_provider_type):
                 return Response({"error": "language_pair_required"},status=400)
 
         #user_pricing = user_state.get('socialaccount_user_state',None)
@@ -2353,15 +2357,26 @@ class UserDetailView(viewsets.ViewSet):
                         logger.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
 
-                if source_lang and target_lang:
-                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
-                    user_obj.is_vendor=True
-                    user_obj.save()
-                    sub=subscribe_vendor(user_obj)
+                # if source_lang and target_lang:
+                #     VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang,primary_pair=True)
+                #     user_obj.is_vendor=True
+                #     user_obj.save()
+                #     sub=subscribe_vendor(user_obj)
 
-                if cv_file:
-                    VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
-                    VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+                if service_provider_type:
+                    if service_provider_type == 'agency':
+                        sub = subscribe_lsp(user_obj)
+                        user_obj.is_agency = True
+                    elif service_provider_type == 'freelancer':
+                        sub = subscribe_vendor(user_obj)
+                    user_obj.is_vendor = True
+                    user_obj.save() 
+                    VendorOnboardingInfo.objects.create(user=user_obj,onboarded_as_vendor=True)
+
+
+                # if cv_file:
+                #     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
+                #     VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
 
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
@@ -2476,3 +2491,58 @@ def oso_test_querys(request):
     return JsonResponse({"msg":"sucess"},status=200)
 
 
+
+from .models import CoCreateForm
+from .serializers import CoCreateFormSerializer
+class CoCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        name = request.POST.get("name")
+        suggestion_type = request.POST.get("suggestion_type")
+        suggestion = request.POST.get("suggestion")
+        try:sug_type = SuggestionType.objects.get(id=suggestion_type).type_of_suggestion
+        except:sug_type = None
+        try:sug = Suggestion.objects.get(id=suggestion).suggestion
+        except: sug = None
+        email = request.POST.get("email")
+        description = request.POST.get("description")
+        app_suggestion_file = request.FILES.get('app_suggestion_file')
+        # time =datetime.now(pytz.timezone('Asia/Kolkata'))
+        time = date.today()
+        template = 'cocreate_email.html'
+        subject='Regarding App Suggestion'
+        context = {'email': email,'name':name,'suggestion_type':sug_type,'suggestion':sug,'date':time,'description':description}
+        serializer = CoCreateFormSerializer(data={**request.POST.dict(),'app_suggestion_file':app_suggestion_file})
+        if serializer.is_valid():
+            serializer.save()
+            ins = CoCreateForm.objects.get(id=serializer.data.get('id'))
+            if ins.app_suggestion_file:
+                context.update({'file':ins.app_suggestion_file})
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def reports_dashboard(request):
+    repo = AilaysaReport()
+    users = repo.get_users()
+    countries = repo.user_and_countries(users)
+    paid_users = repo.paid_users(users)
+    subs_info = repo.user_subscription_plans(users)
+    data = {}
+    data_sub = dict()
+    data["total_users"] = users.count()
+    data["total_languages"]=len(repo.total_languages_used())
+    data["total_coutries"] =len(countries)
+    data["paid_users"]=paid_users.count()
+    print(subs_info)
+    for sub in subs_info[0]:
+        data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
+        # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
+
+    for sub in subs_info[1]:
+        data_sub[f"{sub.get('plan__product__name')} Trial"]=sub.get('plan__product__name__count')
+    data["subscriptions"] = data_sub
+
+    return JsonResponse(data,status=200)

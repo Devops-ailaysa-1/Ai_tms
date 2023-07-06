@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import numpy as np
 from collections import Counter,OrderedDict
-from ai_workspace.models import Project
+from ai_workspace.models import Project,Job
 from djstripe.models import Subscription,Charge
 import logging
 from django.db.models import Count
@@ -134,6 +134,24 @@ class AilaysaReport:
         if res_err.count()>0:
             logger.error("users have more than one active subscriptions")
         return res
+    
+    def user_subscription_plans(self,users):
+        subs_info_active = Subscription.objects.filter(Q(customer__subscriber__in=users)&Q(status__in=['active']
+            )).values('plan__product__name').annotate(Count('plan__product__name'))
+        subs_info_trial = Subscription.objects.filter(Q(customer__subscriber__in=users)&Q(status__in=['trialing']
+            )).values('plan__product__name').annotate(Count('plan__product__name'))
+        return subs_info_active,subs_info_trial
+    
+    def total_languages_used(self,users=None):
+        jobs1 = Job.objects.filter(source_language__isnull=False).values('target_language__language'
+                ).distinct().values_list('source_language__language',flat=True)
+        jobs2 = Job.objects.filter(target_language__isnull=False).values('target_language__language'
+                ).distinct().values_list('target_language__language',flat=True)
+
+        job1 = list(jobs1)
+        job2 = list(jobs2)
+        return set(job1+job2)
+
 
     def users_details(self,users,proj_details,user_credits_ls,subs_details):
         
