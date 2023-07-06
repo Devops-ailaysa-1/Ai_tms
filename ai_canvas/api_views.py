@@ -910,7 +910,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         if social_media_name_id:
-            queryset = SocialMediaSize.objects.get(id=social_media_name_id)
+            queryset = SocialMediaSize.objects.filter(id=social_media_name_id)
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name")  
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
