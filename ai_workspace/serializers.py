@@ -727,8 +727,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# tasks = Task.objects.create_tasks_of_files_and_jobs(
 				# 	files=files, jobs=jobs, project=project, klass=Task)
 				task_assign = TaskAssign.objects.assign_task(project=project)
-				ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-				print("CH-Sel------------>",ch_selected)
+				#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+				#print("CH-Sel------------>",ch_selected)
 				objls_is_allowed(task_assign,"create",user)
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
@@ -815,8 +815,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
-		ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-		print("CH-Sel------------>",ch_selected)
+		#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+		#print("CH-Sel------------>",ch_selected)
 
 		return  project
 
