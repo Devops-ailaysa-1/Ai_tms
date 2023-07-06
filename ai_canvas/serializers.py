@@ -298,8 +298,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if duplicate and src_page:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
-            
-            
+    
         if tar_page and canvas_translation and target_canvas_json:
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
@@ -320,8 +319,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                      
                     if res[tar_lang.locale.first().locale_code]:
-                        tar_json_form=res[tar_lang.locale.first().locale_code]
-                        
+                        tar_json_form=res[tar_lang.locale.first().locale_code]             
                         tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
                         can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
                                                              json=tar_json_form,page_no=src_json_file.page_no)
@@ -373,8 +371,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
             #     os.remove(thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
-
-
 
         if temp_global_design and new_project:
             width=temp_global_design.width

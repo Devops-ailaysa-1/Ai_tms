@@ -15,9 +15,11 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
- 
+from zipfile import ZipFile
+import io
 from ai_staff.serializer import FontFamilySerializer ,SocialMediaSizeSerializer
- 
+import os, urllib
+from django.http import JsonResponse, Http404, HttpResponse
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
@@ -419,8 +421,7 @@ from ai_canvas.utils import export_download
 
 #########################################################################################################################################
 
-import os, urllib
-from django.http import JsonResponse, Http404, HttpResponse
+
 
 
 mime_type={'svg':'image/svg+xml',
@@ -907,7 +908,11 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
     def list(self,request):
-        queryset = SocialMediaSize.objects.all().order_by("social_media_name")  
+        social_media_name_id=request.query_params.get('social_media_name_id',None)
+        if social_media_name_id:
+            queryset = SocialMediaSize.objects.get(id=social_media_name_id)
+        else:
+            queryset = SocialMediaSize.objects.all().order_by("social_media_name")  
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -927,8 +932,6 @@ def create_image(json_page,file_format,export_size,page_number,language):
     file_name="page_{}_{}.{}".format(str(page_number),language,format)
     return base64_img,file_name
 
-from zipfile import ZipFile
-import io
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     if len(pages_list)==1:
@@ -948,7 +951,6 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
- 
     return response
 
 
