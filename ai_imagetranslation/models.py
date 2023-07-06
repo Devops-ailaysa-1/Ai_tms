@@ -49,6 +49,8 @@ class ImageTranslate(models.Model):
     source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
+
  
 
 def user_directory_path_image_translate_thumbnail(instance, filename):

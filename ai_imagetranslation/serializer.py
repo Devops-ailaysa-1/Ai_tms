@@ -7,10 +7,11 @@ from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
 import copy,os
-from ai_canvas.utils import convert_image_url_to_file
+from ai_canvas.utils import convert_image_url_to_file 
 from ai_imagetranslation.utils import background_remove
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
+
 HOST_NAME=os.getenv('HOST_NAME')
 
 def create_thumbnail_img_load(base_dimension,image):
@@ -131,23 +132,33 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
             representation['source_language']=instance.source_language.language.id  
+        if representation.get('thumbnail' , None):
+            image_path=instance.image.path
+            im = Image.open(image_path)
+            thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+            instance.thumbnail=thumb_nail
+            instance.save()
+            representation['thumbnail']=instance.thumbnail
         return representation
     
     @staticmethod
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        return width,height
+        thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        return width,height,thumb_nail
     
     def create(self, validated_data):
         user=self.context['request'].user
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
             instance=ImageTranslate.objects.create(**data)
-            width,height=self.image_shape(instance.image.path)
+            width,height,thumb_nail=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
+            instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
+            
             instance.save()
             return instance
             
