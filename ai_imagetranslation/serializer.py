@@ -103,8 +103,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
-    inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
-                                                        required=False,write_only=True)
+    inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
     bounding_box_target_update=serializers.JSONField(required=False)
     bounding_box_source_update=serializers.JSONField(required=False)
     target_update_id=serializers.IntegerField(required=False)
@@ -132,31 +131,31 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
             representation['source_language']=instance.source_language.language.id  
-        if representation.get('thumbnail' , None):
-            image_path=instance.image.path
-            im = Image.open(image_path)
-            thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
-            instance.thumbnail=thumb_nail
-            instance.save()
-            representation['thumbnail']=instance.thumbnail
+        # if representation.get('thumbnail' , None):
+        #     image_path=instance.image.path
+        #     im = Image.open(image_path)
+        #     thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        #     instance.thumbnail=thumb_nail
+        #     instance.save()
+        #     representation['thumbnail']=instance.thumbnail
         return representation
     
     @staticmethod
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
-        return width,height,thumb_nail
+        # thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        return width,height#,thumb_nail
     
     def create(self, validated_data):
         user=self.context['request'].user
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
             instance=ImageTranslate.objects.create(**data)
-            width,height,thumb_nail=self.image_shape(instance.image.path)
+            width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
-            instance.thumbnail=thumb_nail
+            # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             
             instance.save()
