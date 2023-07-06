@@ -383,6 +383,7 @@ def vendor_lang_sheet():
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
     worksheet.write('H1','Reverse',header)
+    worksheet.set_column(0, 7, 30)
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
