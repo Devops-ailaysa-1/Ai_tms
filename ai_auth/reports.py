@@ -136,9 +136,9 @@ class AilaysaReport:
         return res
     
     def user_subscription_plans(self,users):
-        subs_info_active = Subscription.objects.filter(Q(customer__subscriber__in=users)&~Q(status__in=['active']
+        subs_info_active = Subscription.objects.filter(Q(customer__subscriber__in=users)&Q(status__in=['active']
             )).values('plan__product__name').annotate(Count('plan__product__name'))
-        subs_info_trial = Subscription.objects.filter(Q(customer__subscriber__in=users)&~Q(status__in=['trialing']
+        subs_info_trial = Subscription.objects.filter(Q(customer__subscriber__in=users)&Q(status__in=['trialing']
             )).values('plan__product__name').annotate(Count('plan__product__name'))
         return subs_info_active,subs_info_trial
     
