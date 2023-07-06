@@ -14,7 +14,8 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
+                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -24,7 +25,8 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
-                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,ImageCategoriesSerializer)
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,
+                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -722,6 +724,72 @@ class SupportTopicsView(viewsets.ViewSet):
         queryset = SupportTopics.objects.all()
         topic = get_object_or_404(queryset, pk=pk)
         topic.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+class SuggestionTypeView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = SuggestionType.objects.all()
+        serializer = SuggestionTypeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SuggestionTypeSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SuggestionType.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SuggestionTypeSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SuggestionType.objects.all()
+        suggestion_type = get_object_or_404(queryset, pk=pk)
+        suggestion_type.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SuggestionView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Suggestion.objects.all()
+        serializer = SuggestionSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SuggestionSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Suggestion.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SuggestionSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Suggestion.objects.all()
+        suggestion = get_object_or_404(queryset, pk=pk)
+        suggestion.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
