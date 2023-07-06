@@ -117,7 +117,29 @@ class CanvasTemplateViewset(viewsets.ViewSet):
             return Response({'msg':'deleted successfully'},status=200)
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
-        
+
+
+def image_check(image_path):
+    if image_path.endswith(".svg"):
+        return False
+    else:
+        return True
+
+class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+    
+    def list(self, request):
+        ids=[canvas_in.id for canvas_in in CanvasUserImageAssets.objects.filter(user=request.user.id) if image_check(canvas_in.image.path)]
+        print("ids",ids)
+        queryset=CanvasUserImageAssets.objects.filter(id__in=ids)
+        # queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('-id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+
+
 class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20

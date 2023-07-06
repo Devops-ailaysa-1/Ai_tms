@@ -59,8 +59,9 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         except ImageTranslate.DoesNotExist:
             raise Http404
 
-    def get(self, request):
-        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+    def list(self, request):
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id') 
+        print("test")
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -117,7 +118,7 @@ from ai_canvas.api_views import CustomPagination
 class ImageInpaintCreationListView(ListAPIView,CustomPagination):
     queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
-
+    pagination_class = CustomPagination
     # def get_queryset(self):
     #     # Specify the fields to include in the serialized representation
     #     fields = ['id','image', 'width', 'field3']

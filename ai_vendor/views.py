@@ -371,9 +371,7 @@ def vendor_lang_sheet():
         a='A{}'.format(i+2)
         worksheet2.write(a,languages[i])
 
-    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]} ) 
- 
-
+    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]}) 
     worksheet.write('A1', 'Source Language',header)
     worksheet.write('B1', 'Target Language',header)
     worksheet.write('C1', 'Currency',header)
@@ -382,6 +380,7 @@ def vendor_lang_sheet():
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
     worksheet.write('H1','Reverse',header)
+    worksheet.set_column(0, 7, 30)
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
