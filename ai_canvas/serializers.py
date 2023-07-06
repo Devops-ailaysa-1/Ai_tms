@@ -200,6 +200,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
           
         if source_json_file:
+            print("source_json_file")
+            print(source_json_file)
             source_json_file=json_src_change(source_json_file,req_host,instance)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
@@ -207,7 +209,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json.json=src_json
+            print("canvas_json")
+            print(can_json.json)
             can_json.save()
+            instance.save()
             return instance
 
     def update(self, instance, validated_data):

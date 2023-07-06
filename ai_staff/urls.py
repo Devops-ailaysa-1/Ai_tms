@@ -18,7 +18,8 @@ router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
 router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
 router.register(r'roles',api_views.TeamRoleView,basename='team-role')
-
+router.register(r'suggestion',api_views.SuggestionView,basename='suggestion')
+router.register(r'suggestion-type',api_views.SuggestionTypeView,basename='suggestion-type')
 router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')

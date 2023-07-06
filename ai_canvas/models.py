@@ -244,3 +244,5 @@ class CanvasSourceUpdate(models.Model):
         source_text= "" if not self.source_text else self.source_text
         # translate_text= "" if not self.translate_text else self.translate_text
         return self.text_id+"--"+source_text+"--"+prev_text
+    
+

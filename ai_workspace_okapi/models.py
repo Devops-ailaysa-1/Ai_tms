@@ -609,6 +609,8 @@ class ChoiceLists(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     language=models.ForeignKey(Languages,related_name='choicelist_lang',on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
@@ -647,6 +649,8 @@ class SelflearningAsset(models.Model):
     edited_word=models.CharField(max_length=100,null=True,blank=True)
     occurance=models.IntegerField(default=1,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
     # def __str__(self) -> str:
     #     return self.source_word+'--'+self.edited_word
@@ -656,6 +660,7 @@ class SelflearningAsset(models.Model):
 class ChoiceListSelected(models.Model):
     project = models.ForeignKey("ai_workspace.Project", on_delete=models.CASCADE,related_name='choicelist_project')
     choice_list = models.ForeignKey(ChoiceLists,on_delete=models.CASCADE,related_name='choicelist')
+    
 
     class Meta:
         unique_together = ("project", "choice_list")

@@ -6,7 +6,11 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
                     TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
+<<<<<<< HEAD
                     ApiProvider,ApiService ,ImageGeneratorResolution,DocumentType,ImageCategories,FontData,FontFamily,FontLanguage,SocialMediaSize,DesignShape)
+=======
+                    ApiProvider,ApiService ,ImageGeneratorResolution,DocumentType,Suggestion,SuggestionType)
+>>>>>>> origin/v4-merged-production
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -76,6 +80,8 @@ admin.site.register(MTLanguageLocaleVoiceSupport)
 # admin.site.register(SubscriptionFeatures)
 admin.site.register(CreditsAddons)
 admin.site.register(CreditAddonPrice)
+admin.site.register(Suggestion)
+admin.site.register(SuggestionType)
 #admin.site.register(IndianStates)
 # admin.site.register(StripeTaxId)
 admin.site.register(JobPositions)

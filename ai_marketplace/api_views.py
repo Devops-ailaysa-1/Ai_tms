@@ -148,6 +148,11 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         # except:
         #     return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def retrieve(self, request, pk):
+        query = ProjectboardDetails.objects.get(id=pk)
+        serializer = ProjectPostSerializer(query, many=False, context={'request': request})
+        return Response(serializer.data)
+
     def create(self, request):
         template = request.POST.get('is_template',None)
         customer = request.user.team.owner if request.user.team else request.user
@@ -165,7 +170,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             # serializer.data.get('id'),
             # ))
             return Response(serializer.data)
-        return Response(serializer.errors)
+        return Response(serializer.errors, status=400)
 
     def update(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -192,6 +197,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)

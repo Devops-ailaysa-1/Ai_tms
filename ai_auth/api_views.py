@@ -55,7 +55,9 @@ from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,
                             Customer,Invoice,Product,TaxRate,Account,Coupon
 import stripe
 from django.conf import settings
-from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import (Countries, CurrencyBasedOnCountry, IndianStates, 
+                            SupportType,JobPositions,SupportTopics,Role, 
+                            OldVendorPasswords,Suggestion,SuggestionType)
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -392,9 +394,9 @@ class ContactPricingCreateView(viewsets.ViewSet):
 def send_email(subject,template,context):
     content = render_to_string(template, context)
     file_ =context.get('file')
-    name = os.path.basename(file_.path)
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
+        name = os.path.basename(file_.path)
         msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
@@ -2490,4 +2492,35 @@ def oso_test_querys(request):
     # print(fil)
     return JsonResponse({"msg":"sucess"},status=200)
 
+
+
+from .models import CoCreateForm
+from .serializers import CoCreateFormSerializer
+class CoCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        name = request.POST.get("name")
+        suggestion_type = request.POST.get("suggestion_type")
+        suggestion = request.POST.get("suggestion")
+        try:sug_type = SuggestionType.objects.get(id=suggestion_type).type_of_suggestion
+        except:sug_type = None
+        try:sug = Suggestion.objects.get(id=suggestion).suggestion
+        except: sug = None
+        email = request.POST.get("email")
+        description = request.POST.get("description")
+        app_suggestion_file = request.FILES.get('app_suggestion_file')
+        # time =datetime.now(pytz.timezone('Asia/Kolkata'))
+        time = date.today()
+        template = 'cocreate_email.html'
+        subject='Regarding App Suggestion'
+        context = {'email': email,'name':name,'suggestion_type':sug_type,'suggestion':sug,'date':time,'description':description}
+        serializer = CoCreateFormSerializer(data={**request.POST.dict(),'app_suggestion_file':app_suggestion_file})
+        if serializer.is_valid():
+            serializer.save()
+            ins = CoCreateForm.objects.get(id=serializer.data.get('id'))
+            if ins.app_suggestion_file:
+                context.update({'file':ins.app_suggestion_file})
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

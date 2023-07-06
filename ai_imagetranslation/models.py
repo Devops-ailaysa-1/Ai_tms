@@ -112,3 +112,20 @@ class BackgroundRemovel(models.Model):
     def __str__(self) -> str:
         return self.image_json_id+'----'+self.image_url
     
+
+# def user_directory_path_image_object_removel(instance, filename):
+#     return '{0}/{1}/{2}'.format(instance.user.uid,"object_removel",filename)
+
+# class ObjectRemovel(models.Model):
+#     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+#     image_json_id=models.CharField(max_length=100,blank=True,null=True)
+#     image_url=models.URLField(blank=True,null=True)
+#     canvas_json=models.JSONField(blank=True,null=True)
+#     image=models.FileField(upload_to=user_directory_path_image_object_removel,blank=True,null=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+#     resultant_image=models.FileField(upload_to=user_directory_path_image_object_removel,blank=True,null=True)
+
+
+#     def __str__(self) -> str:
+#         return self.image_json_id+'----'+self.image_url

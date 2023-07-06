@@ -55,6 +55,24 @@ resource ai_workspace::Project{
 
 }
 
+resource ai_tm::TmxFileNew{
+    permissions=["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "Agency Editor" if "Agency Reviewer";
+    "Project owner"if "Agency Project owner";
+    "Agency Project owner" if "Agency Admin";
+}
+
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
 # ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id,role__role__name:role_name).count() != 0;
@@ -71,7 +89,7 @@ and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,r
 
 # For models without task obj
 has_role(actor: ai_auth::AiUser, role_name: String, resource:Resource) if
-resource.__class__ in [ai_workspace::Project,ai_workspace::Job] 
+resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_tm::TmxFileNew] 
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
 
 

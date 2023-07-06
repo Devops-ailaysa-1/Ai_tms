@@ -295,10 +295,23 @@ class StripeTaxIdSerializer(serializers.ModelSerializer):
         read_only_fields = ('id','created_at','updated_at')
 
 
+class SuggestionTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SuggestionType
+        fields = "__all__"
+
+class SuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Suggestion
+        fields = "__all__"
+
+
 class SupportTopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupportTopics
         fields = "__all__"
+
+
 
 class JobPositionSerializer(serializers.ModelSerializer):
     class Meta:
