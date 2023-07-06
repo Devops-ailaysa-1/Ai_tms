@@ -471,7 +471,3 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
-
-
-
-

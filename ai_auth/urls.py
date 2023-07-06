@@ -22,6 +22,7 @@ router.register(r'tax-info',api_views.UserTaxInfoView,basename="tax-info")
 router.register(r'billing-address',api_views.BillingAddressView,basename="billing-address")
 router.register(r'aiuser-profile',api_views.AiUserProfileView,basename="aiuser-profile")
 router.register(r'carrier-support',api_views.CarrierSupportCreateView,basename="carrier-support")
+router.register(r'co-create',api_views.CoCreateView,basename="co-create")
 router.register(r'general-support',api_views.GeneralSupportCreateView,basename="general-support")
 router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basename="vendor-onboarding")
 router.register(r'team',api_views.TeamCreateView,basename="team")
@@ -74,12 +75,11 @@ urlpatterns+= [
      path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
      path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback'),
      path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details'),
-     path('oso-test/',api_views.oso_test,name='oso-test'),
-     path('oso-test-query/',api_views.oso_test_querys,name='oso-test-query')    
+    #  path('oso-test-query/',api_views.oso_test_querys,name='oso-test-query'),
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
      # path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
-
+    path('reports-dashboard/',api_views.reports_dashboard,name='reports-dashboard') 
 ]

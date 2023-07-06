@@ -400,6 +400,19 @@ class SupportTopics(ParanoidModel):
     topic = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class SuggestionType(ParanoidModel):
+    type_of_suggestion = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Suggestion(ParanoidModel):
+    suggestion = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
     
 class ModelGPTName(models.Model):
     model_name = models.CharField(max_length=40, null=True, blank=True)

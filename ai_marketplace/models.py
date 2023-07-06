@@ -16,7 +16,7 @@ from ai_auth.signals import create_postjob_id
 # Create your models here.
 
 
-class ProjectboardDetails(models.Model):#stephen
+class ProjectboardDetails(models.Model):
     project=models.ForeignKey(Project, on_delete=models.CASCADE,null=True,blank=True,related_name="proj_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
