@@ -990,7 +990,6 @@ def DesignerDownload(request):
                         format = 'png' if file_format == 'png-transparent' else file_format
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
-                        # if type(values) == bytes:
                         archive.writestr(path,values)
             res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
             return res
@@ -1020,10 +1019,8 @@ def DesignerDownload(request):
     
     elif (page_number_list or all_page) and file_format:
         src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
-      
         res=download__page(src_pages,file_format,export_size,page_number_list,"source",canvas.file_name)
         return res
-
     else:
         return Response({"page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
         

@@ -12,7 +12,8 @@ import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-
+import cv2
+from ai_imagetranslation.serializer import create_thumbnail_img_load
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = LanguagesLocale
@@ -128,11 +129,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'next_page':{'write_only':True},
             'duplicate':{'write_only':True},
             'social_media_create':{'write_only':True},
-            'update_new_textbox':{'write_only':True},
-
-        }
-
-    
+            'update_new_textbox':{'write_only':True},}
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
@@ -169,17 +166,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
 
         if source_json_file and social_media_create and width and height:
-            print("source_json_file-----------------------------")
-            print(source_json_file)
             source_json_file=json_src_change(source_json_file,req_host,instance)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             src_json=can_json.json
             src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
-            can_json.json=src_json
-            print("canvas_json")
-            print(can_json.json)
+            can_json.json=src_json    
             can_json.save()
             instance.save()
             return instance
@@ -191,8 +184,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['backgroundImage']['height']=int(height)
             thumbnail_src=self.thumb_create(json_str=basic_jsn,formats='png',multiplierValue=1) 
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
-                                    "project_category_label":social_media_create.social_media_name,
-                                    "project_category_id":social_media_create.id}
+                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             instance.height=int(width)
             instance.width=int(height)
@@ -206,8 +198,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['backgroundImage']['height']=int(social_media_create.height)
             thumbnail_src=self.thumb_create(json_str=basic_jsn,formats='png',multiplierValue=1) 
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,
-                                    "projectType": "design","project_category_label":social_media_create.social_media_name,
-                                    "project_category_id":social_media_create.id}
+                                    "projectType": "design","project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             instance.height=int(social_media_create.height)
@@ -252,7 +243,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.height=int(height)
             instance.save()
             return instance
-
 
         if social_media_create and src_page and source_json_file:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
@@ -343,8 +333,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if canvas_translation_target and tar_page:
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
-            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,
-                                        formats='png',multiplierValue=1)
+            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1)
             # thumbnail should be update if json file is updated
             canvas_trans.thumbnail=canvas_translation_tar_thumb
             canvas_trans.export_file=canvas_translation_tar_export
@@ -354,13 +343,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     # print("outside----->json, canvas_translation_target")
                 canvas_trans.json = target_json_file
             canvas_trans.save()
-            # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
-            #     os.remove(thumbnail_page_path)
  
-        # for source json file and thumbnail update
-        # if source_json_file:
-        #     source_json_file=json_sr_url_change(source_json_file,instance)
-        #     instance.s
 
         if source_json_file and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
@@ -411,17 +394,18 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,json=json_page,page_no=page_len)
 
-        if validated_data.get('my_temp',None):
-            my_temp = validated_data.get('my_temp')
-            my_temp_pages = my_temp.my_template_page.all()
-            page_len = len(instance.canvas_json_src.all())
-            for my_temp_page in my_temp_pages:
-                thumbnail_page = my_temp_page.my_template_thumbnail
-                # export_page = my_temp_page.my_template_export
-                json_page = my_temp_page.my_template_json
-                page_len+=1
-                CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
-                                                     json=json_page,page_no=page_len)
+
+        # if validated_data.get('my_temp',None):
+        #     my_temp = validated_data.get('my_temp')
+        #     my_temp_pages = my_temp.my_template_page.all()
+        #     page_len = len(instance.canvas_json_src.all())
+        #     for my_temp_page in my_temp_pages:
+        #         thumbnail_page = my_temp_page.my_template_thumbnail
+        #         # export_page = my_temp_page.my_template_export
+        #         json_page = my_temp_page.my_template_json
+        #         page_len+=1
+        #         CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
+        #                                              json=json_page,page_no=page_len)
         return super().update(instance=instance, validated_data=validated_data)
 
 
@@ -444,7 +428,7 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
             
         #     data['project_category']
         return data
-from ai_imagetranslation.serializer import create_thumbnail_img_load
+
 class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
@@ -466,7 +450,6 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
          
 
     def create(self, validated_data):
-        import cv2
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
         instance = CanvasUserImageAssets.objects.create(**data)
@@ -508,17 +491,11 @@ class SocialMediaSizeValueSerializer(serializers.ModelSerializer):
         model=SocialMediaSize
         fields=('id','social_media_name','width','height')
 
-
-
-
 class TemplateTagSerializer(serializers.ModelSerializer):
     class Meta:
         model=TemplateTag
         fields=('id','tag_name')
         
-
-
-
 
 class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
