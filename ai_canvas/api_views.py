@@ -27,9 +27,7 @@ import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
 from ai_canvas.utils import convert_image_url_to_file,paginate_items
-
-
-
+from ai_canvas.utils import export_download
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
@@ -222,10 +220,15 @@ class CanvasDesignViewset(viewsets.ViewSet):
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
         
+class CustomPagination(PageNumberPagination):
+    page_size = 20 
+    page_size_query_param = 'page_size'
 
-class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
+
+class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     pagination_class = CanvasDesignListViewsetPagination
     permission_classes = [IsAuthenticated,]
+
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
         print("request.user.id--------------------->>>>",request.user.id , request.user)
@@ -292,6 +295,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
 
 class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     pagination_class = MyTemplateDesignPagination
+    page_size = 20
     permission_classes = [IsAuthenticated,]
     def list(self,request):
         queryset = MyTemplateDesign.objects.filter(user=request.user.id).order_by('-id')
@@ -333,7 +337,7 @@ class CanvasDownloadFormatViewset(viewsets.ViewSet):
 
 
 
-from ai_canvas.utils import export_download
+
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
 # def canvas_export_download(request):
@@ -618,9 +622,7 @@ class FontFileViewset(viewsets.ViewSet):
 
 
 
-class CustomPagination(PageNumberPagination):
-    page_size = 20 
-    page_size_query_param = 'page_size'
+
      
 import django_filters
 
