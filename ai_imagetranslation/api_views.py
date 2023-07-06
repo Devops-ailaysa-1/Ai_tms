@@ -113,8 +113,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 
-
-class ImageInpaintCreationListView(ListAPIView):
+from ai_canvas.api_views import CustomPagination
+class ImageInpaintCreationListView(ListAPIView,CustomPagination):
     queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
 
