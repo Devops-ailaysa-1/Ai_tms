@@ -1,15 +1,9 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
-<<<<<<< HEAD
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
- 
-import logging ,os  
-=======
                      BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
 from django.core import serializers
 import logging ,os ,json
 from rest_framework import status
->>>>>>> origin/v4-merged-production
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
