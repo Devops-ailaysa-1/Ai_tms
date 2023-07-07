@@ -1178,28 +1178,28 @@ class MT_RawAndTM_View(views.APIView):
         print(project)
         return project
 
-    # @staticmethod   
-    # def asset_replace(request,translation,segment_id):
-    #     project=MT_RawAndTM_View.get_project(request,segment_id)
-    #     choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
-    #     choice=[choice.choice_list.id for choice in choice_selected]
+    @staticmethod   
+    def asset_replace(request,translation,segment_id):
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+        choice=[choice.choice_list.id for choice in choice_selected]
    
-    #     word=word_tokenize(translation)
-    #     suggestion={}
+        word=word_tokenize(translation)
+        suggestion={}
 
-    #     #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
-    #     choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
-    #     print(choicelist,"+++++++++++")
-    #     if choicelist:
-    #         print("choicelist")
-    #         for word in word: 
-    #             choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-    #             choice = choice[:5]
-    #             if choice:
-    #                 replace_word=choice.first().edited_word
-    #                 translation=translation.replace(word,replace_word) 
-    #                 suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
-    #                 suggestion[replace_word].insert(0,word)  
+        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+        print(choicelist,"+++++++++++")
+        if choicelist:
+            print("choicelist")
+            for word in word: 
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                choice = choice[:5]
+                if choice:
+                    replace_word=choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)  
         # elif def_choice:
         #     print("default_choice--------->",def_choice)
         #     for word in word:
@@ -1251,12 +1251,12 @@ class MT_RawAndTM_View(views.APIView):
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
                 # print('data normal=-----------',data['mt_raw'])
-                #rep=data['mt_raw']
+                rep=data['mt_raw']
                 # #list option assets
                 # replace asset auto
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
 
         
                 # print('rep----------',asset_rep)
@@ -1276,14 +1276,14 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                # # rep=data['mt_raw']
+                # rep=data['mt_raw']
 
                 # #list option assets
                 # # replace asset auto
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-                # print('rep----------',asset_rep)
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
+                print('rep----------',asset_rep)
 
 
 
