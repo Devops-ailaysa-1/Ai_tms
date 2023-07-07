@@ -172,6 +172,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json=can_json.json
             src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
+            
             can_json.json=src_json    
             can_json.save()
             instance.save()
@@ -186,6 +187,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
+            json=can_json.json
+            for i in json['objects']:
+                if 'textbox' == i['type']:
+                    i['user_text']=i['text']
+            can_json.json=json
+            can_json.save()
             instance.height=int(width)
             instance.width=int(height)
             # instance.file_name=social_media_create.social_media_name
@@ -288,8 +295,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             src_json_page['background']="rgba(255,255,255,0.1)"
             thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
-            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
-            
+            can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
+            json=can_json.json
+            for i in json['objects']:
+                if 'textbox' == i['type']:
+                    i['user_text']=i['text']
+            can_json.json=json
+            can_json.save()
             for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
