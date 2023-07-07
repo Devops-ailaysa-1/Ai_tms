@@ -92,7 +92,7 @@ from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
-from ai_auth.utils import filter_authorize
+from ai_auth.utils import filter_authorize,authorize_list
 from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
@@ -1172,29 +1172,37 @@ class MT_RawAndTM_View(views.APIView):
                 return self.get_task_assign_data(split_seg.segment_id)
 
     @staticmethod
-    def get_project(request,segment_id):
+    def get_project_by_segment(request,segment_id):
         project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        print(project)
+        return project
+     
+    @staticmethod
+    def get_project_by_split_segment(request,segment_id):
+        project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_split_segment_set=segment_id).first()
         print(project)
         return project
 
     @staticmethod   
-    def asset_replace(request,translation,segment_id):
-        project=MT_RawAndTM_View.get_project(request,segment_id)
-        choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
-        choice=[choice.choice_list.id for choice in choice_selected]
-   
+    def asset_replace(request,translation,project): 
+        try:
+            # choice=ChoiceListSelected.objects.filter(project__id=project.id)          
+            # choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+            choice=ChoiceListSelected.objects.get(project__id=project.id)
+            choicelist=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
+        except:
+            choicelist=False
         word=word_tokenize(translation)
         suggestion={}
 
-        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
-        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))       
         print(choicelist,"+++++++++++")
         if choicelist:
             print("choicelist")
             for word in word: 
-                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-                choice = choice[:5]
+                choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
+                    print(choice, "*****************")
                     replace_word=choice.first().edited_word
                     translation=translation.replace(word,replace_word) 
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
@@ -1251,9 +1259,10 @@ class MT_RawAndTM_View(views.APIView):
 
                 # print('data normal=-----------',data['mt_raw'])
                 rep=data['mt_raw']
+                project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 # #list option assets
                 # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project)
                 data['mt_raw']=asset_rep
                 data['options']=asset_list
 
@@ -1275,11 +1284,11 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                # rep=data['mt_raw']
-
+                rep=data['mt_raw']
+                project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 # #list option assets
                 # # replace asset auto
-                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project)
                 data['mt_raw']=asset_rep
                 data['options']=asset_list
                 print('rep----------',asset_rep)
@@ -1972,7 +1981,7 @@ class ProgressView(views.APIView):
         #     return Response(ser.errors)
         # return Response({'page_size':obj.page_size})
 
-class SegmentSizeView(viewsets.ViewSet):
+class SegmentSizeView(viewsets.ViewSet): #User setting custom number of segments per page
     permission_classes = [IsAuthenticated]
     def list(self,request):
         try:
@@ -2086,8 +2095,12 @@ class CommentView(viewsets.ViewSet):
 
     def list(self, request):
         objs = self.get_list_of_objects(request)
+        print(type(objs))
         print("user",request.user)
-        objs = filter_authorize(request, objs, user=request.user, action="read")
+        if type(objs)==list:
+            objs = authorize_list(objs, action="read",user=request.user )
+        else:
+            objs = filter_authorize(request, objs, user=request.user, action="read")  
         print("objs",objs)
         ser = CommentSerializer(objs, many=True)
         return Response(ser.data, status=200)
@@ -2108,6 +2121,7 @@ class CommentView(viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
+        # authorize(request, resource=obj, actor=request.user, action="read")  #
         return Response(CommentSerializer(obj).data, status=200)
 
     def update(self, request, pk=None):
@@ -2154,8 +2168,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
 
     def post(self, request, document_id, segment_id):
         status_list = request.data.get("status_list", [])
-        page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
-        page_size = page_size if page_size else 20
+        query = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id)
+        page_size = query.last().page_size if query else 20
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         segs = doc.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
@@ -3068,28 +3082,34 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
-        project=MT_RawAndTM_View.get_project(request,segment_id)
-        try:
-            # choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
-            choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
-            choice=[choice.choice_list.id for choice in choice_selected]
-            choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
-            self_learning=SelflearningAsset.objects.filter(choice_list__in=choicelist)
-            # self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
-        except:
-            self_learning=None
-        if segment_id:
-            seg = get_object_or_404(Segment,id=segment_id)
-
+        if segment_id: 
             if split_check(segment_id):
-                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
+                seg = get_object_or_404(Segment,id=segment_id) 
+                seg_his=SegmentHistory.objects.filter(segment=seg)             
+                if len(seg_his)>=2:
+                   raw_mt=seg_his[len(seg_his)-2].target
+                else:                   
+                    raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
                 mt_edited=seg.target
                 print("raw_mt normal>>>>>>",raw_mt)
             else:
-                split_seg = SplitSegment.objects.get(segment=seg)
-                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                mt_edited=seg.target
+                project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
+                split_seg=get_object_or_404(SplitSegment,id=segment_id)
+                seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
+                if len(seg_his)>=2:
+                   raw_mt=seg_his[len(seg_his)-2].target 
+                else:
+                    raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                    print(2)
+                mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
+
+            choice=ChoiceListSelected.objects.filter(project__id=project.id).first()
+            if choice:
+                self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
+            else:
+                self_learning=None
 
             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
@@ -3115,16 +3135,25 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         choice_list_id=request.POST.get('choice_list_id',None)
         source=request.POST.get('source_word',None)
         edited=request.POST.get('edited_word',None)
-        if doc_id:
+        if doc_id:                                               
             doc=get_object_or_404(Document,id=doc_id)
             lang=get_object_or_404(Languages,id=doc.target_language_id)
             user=self.request.user
-            choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
-            if created == False:
-               choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name=lang.language)
+            choice_list=ChoiceListSelected.objects.filter(project_id=doc.project).first()
+            print(choice_list,'------------')
+            if choice_list:
+                choice_list=get_object_or_404(ChoiceLists,id=choice_list.choice_list.id)
+            else:
+                choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name="my choicelist_"+lang.language)  
+                if created == False:
+                    choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name="my choicelist_"+lang.language) 
+                # data = {"project":doc.project, "choice_list":choice_list.id} 
+                # serializer = ChoiceListSelectedSerializer(data=data,many=False)
+                # if serializer.is_valid():
+                #     serializer.save()  
+            ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
         else:
-            choice_list=get_object_or_404(ChoiceLists,id=choice_list_id)
-        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
+           ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list_id}) 
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
@@ -3150,8 +3179,9 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     @staticmethod
     def seq_match_seg_diff(words1,words2,self_learning):
-        s1=words1.split()
-        target=re.sub(rf'</?\d+>', "", words2)
+        source = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words1)
+        s1=source.split()
+        target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
         s2=target.split()
         assets={}
         print(s1,s2)

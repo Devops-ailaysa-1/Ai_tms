@@ -22,7 +22,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
@@ -89,6 +89,7 @@ from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
 from django_oso.auth import authorize, authorize_model
 import os
+from ai_auth.reports import AilaysaReport
 
 logger = logging.getLogger('django')
 
@@ -402,6 +403,17 @@ def send_email(subject,template,context):
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 
+def send_email_with_multiple_files(subject,template,context):
+    content = render_to_string(template, context)
+    files_ =context.get('files')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
+    if files_:
+        for i in files_:
+            path = i.app_suggestion_file.path
+            name = os.path.basename(path)
+            msg.attach(name, i.app_suggestion_file.file.read())
+    msg.content_subtype = 'html'
+    msg.send()
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -2508,19 +2520,43 @@ class CoCreateView(viewsets.ViewSet):
         except: sug = None
         email = request.POST.get("email")
         description = request.POST.get("description")
-        app_suggestion_file = request.FILES.get('app_suggestion_file')
+        app_suggestion_file = request.FILES.getlist('app_suggestion_file')
         # time =datetime.now(pytz.timezone('Asia/Kolkata'))
         time = date.today()
         template = 'cocreate_email.html'
         subject='Regarding App Suggestion'
         context = {'email': email,'name':name,'suggestion_type':sug_type,'suggestion':sug,'date':time,'description':description}
-        serializer = CoCreateFormSerializer(data={**request.POST.dict(),'app_suggestion_file':app_suggestion_file})
+        serializer = CoCreateFormSerializer(data={**request.POST.dict(),'cocreate_file':app_suggestion_file})
         if serializer.is_valid():
             serializer.save()
             ins = CoCreateForm.objects.get(id=serializer.data.get('id'))
-            if ins.app_suggestion_file:
-                context.update({'file':ins.app_suggestion_file})
-            send_email(subject,template,context)
+            if ins.cocreate_file.all():
+                context.update({'files':ins.cocreate_file.all()})
+            send_email_with_multiple_files(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def reports_dashboard(request):
+    repo = AilaysaReport()
+    users = repo.get_users()
+    countries = repo.user_and_countries(users)
+    paid_users = repo.paid_users(users)
+    subs_info = repo.user_subscription_plans(users)
+    data = {}
+    data_sub = dict()
+    data["total_users"] = users.count()
+    data["total_languages"]=len(repo.total_languages_used())
+    data["total_coutries"] =len(countries)
+    data["paid_users"]=paid_users.count()
+    print(subs_info)
+    for sub in subs_info[0]:
+        data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
+        # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
+
+    for sub in subs_info[1]:
+        data_sub[f"{sub.get('plan__product__name')} Trial"]=sub.get('plan__product__name__count')
+    data["subscriptions"] = data_sub
+
+    return JsonResponse(data,status=200)
