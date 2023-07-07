@@ -1574,7 +1574,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         extra = {'assignment_id':assignment_id,'files':files}
         final =[]
         task_assign_detail = data.pop('task_assign_detail')
-        task_assign_detail = json.loads(task_assign_detail)
+        task_assign_detail = json.loads(task_assign_detail)    #
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
         # For authorization

@@ -92,7 +92,7 @@ from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
-from ai_auth.utils import filter_authorize
+from ai_auth.utils import filter_authorize,authorize_list
 from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
@@ -2096,9 +2096,12 @@ class CommentView(viewsets.ViewSet):
 
     def list(self, request):
         objs = self.get_list_of_objects(request)
-        print(objs)
+        print(type(objs))
         print("user",request.user)
-        objs = filter_authorize(request, objs, user=request.user, action="read")
+        if type(objs)==list:
+            objs = authorize_list(objs, action="read",user=request.user )
+        else:
+            objs = filter_authorize(request, objs, user=request.user, action="read")  
         print("objs",objs)
         ser = CommentSerializer(objs, many=True)
         return Response(ser.data, status=200)
