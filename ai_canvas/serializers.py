@@ -187,12 +187,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
-            json=can_json.json
-            for i in json['objects']:
-                if 'textbox' == i['type']:
-                    i['user_text']=i['text']
-            can_json.json=json
-            can_json.save()
+            # json=can_json.json
+            # for i in json['objects']:
+            #     if 'textbox' == i['type']:
+            #         i['user_text']=i['text']
+            # can_json.json=json
+            # can_json.save()
             instance.height=int(width)
             instance.width=int(height)
             # instance.file_name=social_media_create.social_media_name
@@ -255,6 +255,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
+            for i in source_json_file['objects']:
+                if 'textbox' == i['type'] and "temp_text" not in i.keys():
+                    i['temp_text']=i['text']
             can_src.json=source_json_file
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)
