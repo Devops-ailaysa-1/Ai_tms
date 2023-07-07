@@ -148,6 +148,11 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         # except:
         #     return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def retrieve(self, request, pk):
+        query = ProjectboardDetails.objects.get(id=pk)
+        serializer = ProjectPostSerializer(query, many=False, context={'request': request})
+        return Response(serializer.data)
+
     def create(self, request):
         template = request.POST.get('is_template',None)
         customer = request.user.team.owner if request.user.team else request.user

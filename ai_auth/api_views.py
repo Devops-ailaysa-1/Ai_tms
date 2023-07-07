@@ -22,7 +22,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
@@ -89,6 +89,7 @@ from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
 from django_oso.auth import authorize, authorize_model
 import os
+from ai_auth.reports import AilaysaReport
 
 logger = logging.getLogger('django')
 
@@ -2524,3 +2525,27 @@ class CoCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def reports_dashboard(request):
+    repo = AilaysaReport()
+    users = repo.get_users()
+    countries = repo.user_and_countries(users)
+    paid_users = repo.paid_users(users)
+    subs_info = repo.user_subscription_plans(users)
+    data = {}
+    data_sub = dict()
+    data["total_users"] = users.count()
+    data["total_languages"]=len(repo.total_languages_used())
+    data["total_coutries"] =len(countries)
+    data["paid_users"]=paid_users.count()
+    print(subs_info)
+    for sub in subs_info[0]:
+        data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
+        # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
+
+    for sub in subs_info[1]:
+        data_sub[f"{sub.get('plan__product__name')} Trial"]=sub.get('plan__product__name__count')
+    data["subscriptions"] = data_sub
+
+    return JsonResponse(data,status=200)

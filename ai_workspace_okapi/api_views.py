@@ -1982,7 +1982,7 @@ class ProgressView(views.APIView):
         #     return Response(ser.errors)
         # return Response({'page_size':obj.page_size})
 
-class SegmentSizeView(viewsets.ViewSet):
+class SegmentSizeView(viewsets.ViewSet): #User setting custom number of segments per page
     permission_classes = [IsAuthenticated]
     def list(self,request):
         try:
@@ -2166,8 +2166,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
 
     def post(self, request, document_id, segment_id):
         status_list = request.data.get("status_list", [])
-        page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
-        page_size = page_size if page_size else 20
+        query = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id)
+        page_size = query.last().page_size if query else 20
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         segs = doc.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
