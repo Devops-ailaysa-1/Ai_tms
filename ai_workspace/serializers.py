@@ -728,7 +728,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	files=files, jobs=jobs, project=project, klass=Task)
 				task_assign = TaskAssign.objects.assign_task(project=project)
 				ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-				print("CH-Sel------------>",ch_selected)
 				objls_is_allowed(task_assign,"create",user)
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
@@ -816,8 +815,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
 		ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-		print("CH-Sel------------>",ch_selected)
-
 		return  project
 
 	# def to_representation(self, value):
