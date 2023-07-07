@@ -11,13 +11,13 @@ class CanvasCatagories(models.Model):
 
 
 class CanvasTemplates(models.Model):
-    file_name =  models.CharField(max_length=50,null=True,blank=True) 
+    file_name =  models.CharField(max_length=2000,null=True,blank=True) 
     template_json = models.JSONField()
     thumbnail=models.FileField(upload_to='aidesign_templates/thumbnails/',blank=True,null=True)
     width = models.IntegerField(null=True,blank=True)
     height = models.IntegerField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 
 def user_directory_path_canvas_source_json_thumbnails(instance, filename):
@@ -26,7 +26,7 @@ def user_directory_path_canvas_source_json_thumbnails(instance, filename):
 def user_directory_path_canvas_source_json_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design.user.uid, "aidesign/design/aidesign_exports_source/exports/",filename)
 
-def user_directory_path_canvas_image_assets(instance, filename):  
+def user_directory_path_canvas_image_assets(instance, filename): ###
     return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/assets/aidesign_assets/images/",filename)
 
 def user_directory_path_canvas_target_json_thumbnails(instance, filename):
@@ -35,12 +35,19 @@ def user_directory_path_canvas_target_json_thumbnails(instance, filename):
 def user_directory_path_canvas_target_json_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_trans_json.canvas_design.user.uid, "aidesign/design/aidesign_exports_target/exports/",filename)
 
+def user_directory_path_canvas_user_imageassets(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/assets/aidesign_assets/thumbnail",filename)
+
+
 class CanvasUserImageAssets(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    image_name =  models.CharField(max_length=50,null=True,blank=True)
+    image_name =  models.CharField(max_length=2000,null=True,blank=True)
     image= models.FileField(upload_to=user_directory_path_canvas_image_assets,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    height=models.IntegerField(null=True,blank=True)
+    width=models.IntegerField(null=True,blank=True)
+    thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
 
 class CanvasDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -48,10 +55,12 @@ class CanvasDesign(models.Model):
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True)
 
     class Meta:
         ordering = ('updated_at',)
+
 
 class CanvasSourceJsonFiles(models.Model):
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_json_src', on_delete=models.CASCADE)
@@ -67,6 +76,7 @@ class CanvasSourceJsonFiles(models.Model):
 
 
 class CanvasTranslatedJson(models.Model):
+    # canvas_src_json=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_src',on_delete=models.CASCADE,null=True,blank=True)
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
     target_language=models.ForeignKey(LanguagesLocale,related_name='target', on_delete=models.CASCADE)
@@ -89,25 +99,58 @@ class CanvasTargetJsonFiles(models.Model):
     class Meta:
         ordering = ('page_no',)
 
-# #########template design##############
+# #########global template design##############
+
+
 
 class TemplateGlobalDesign(models.Model):
-    file_name=models.CharField(max_length=50,null=True,blank=True) 
+    template_name=models.CharField(max_length=50,null=True,blank=True)
+    category=models.ForeignKey(SocialMediaSize,related_name='template_global_categoty', on_delete=models.CASCADE)
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
-    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
-    user_name=models.CharField(max_length=100,null=True,blank=True)
-
-class TemplatePage(models.Model):
-    template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+    # user_name=models.CharField(max_length=100,null=True,blank=True)
+    is_pro=models.BooleanField()
+    is_published=models.BooleanField()
+    description=models.CharField(max_length=600,blank=True,null=True)
     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-    json_page=models.JSONField(null=True,default=dict)
-    page_no=models.IntegerField()
-    class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+    json=models.JSONField(blank=True , null=True)
+    template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
+
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
+class TemplateTag(models.Model):
+    tag_name=models.CharField(max_length=500,null=True,blank=True)
+    global_template=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_page', on_delete=models.CASCADE)
+    def __str__(self) -> str:
+        if self.tag_name:
+            return self.tag_name
+        else:
+            return ""
+
+
+
+# class GlobalTemplateTags(models.Model):
+#     tag_name=models.ForeignKey(TemplateTag,related_name='template_global_tag_name', on_delete=models.CASCADE)
+#     template_design=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_tag', on_delete=models.CASCADE)
+
+#     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+ 
+
+
+# class TemplatePage(models.Model):
+#     template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+#     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
+#     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
+#     json_page=models.JSONField(null=True,default=dict)
+#     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
+    # page_no=models.IntegerField()
+    # class Meta:
+    #     constraints = [
+    #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
 
 
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
@@ -118,7 +161,6 @@ def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
 
 class MyTemplateDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
@@ -130,11 +172,11 @@ class MyTemplateDesignPage(models.Model):
     my_template_thumbnail=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
     my_template_export=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_exports,blank=True,null=True)
     my_template_json=models.JSONField(null=True,default=dict)
-    page_no=models.IntegerField()
-    class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['my_template_design','page_no'], name="%(app_label)s_%(class)s_unique")
-        ]
+    # page_no=models.IntegerField()
+    # class Meta:
+    #     constraints = [
+    #     models.UniqueConstraint(fields=['my_template_design','page_no'], name="%(app_label)s_%(class)s_unique")
+    #     ]
 
 def user_directory_path_canvas_source_image_assets(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "aidesign/assets/sourceimage/",filename)
@@ -157,15 +199,17 @@ def user_directory_path_font_file(instance, filename):
 
 class FontFile(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    name=models.CharField(max_length=200,blank=True,null=True)
+    name=models.CharField(max_length=2000,blank=True,null=True)
     font_family=models.FileField(upload_to=user_directory_path_font_file,blank=True,null=True)
 
     def __str__(self) -> str:
         return self.name
     
 
-
-
+ 
+class ThirdpartyImageMedium(models.Model):
+    image = models.FileField(upload_to="aidesign/thirdpartyimage",blank=True,null=True)
+ 
 
 
 def user_directory_path_canvas_image_medium(filename):
@@ -181,4 +225,24 @@ def user_directory_path_canvas_image_medium(filename):
 #     def __str__(self) -> str:
 #         return self.image_name+" "+self.api_name
 
+
+class CanvasDownloadFormat(models.Model):
+    format_name=models.CharField(max_length=200,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.format_name
+    
+
+class CanvasSourceUpdate(models.Model):
+    text_id=models.CharField(max_length=300,null=True,blank=True)
+    # translate_text=models.CharField(max_length=2000,null=True,blank=True)
+    source_text=models.CharField(max_length=2000,null=True,blank=True)
+    prev_text=models.CharField(max_length=2000,null=True,blank=True)
+
+    def __str__(self) -> str:
+        prev_text= "" if not self.prev_text else self.prev_text
+        source_text= "" if not self.source_text else self.source_text
+        # translate_text= "" if not self.translate_text else self.translate_text
+        return self.text_id+"--"+source_text+"--"+prev_text
+    
 

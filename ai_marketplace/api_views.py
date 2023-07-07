@@ -148,6 +148,11 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         # except:
         #     return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def retrieve(self, request, pk):
+        query = ProjectboardDetails.objects.get(id=pk)
+        serializer = ProjectPostSerializer(query, many=False, context={'request': request})
+        return Response(serializer.data)
+
     def create(self, request):
         template = request.POST.get('is_template',None)
         customer = request.user.team.owner if request.user.team else request.user
@@ -165,7 +170,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             # serializer.data.get('id'),
             # ))
             return Response(serializer.data)
-        return Response(serializer.errors)
+        return Response(serializer.errors, status=400)
 
     def update(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -192,6 +197,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -693,7 +699,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com').exclude(is_active=False)
+                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com').exclude(is_active=False).exclude(deactivate=True)
         if max_price and min_price and count_unit and currency:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):
@@ -894,7 +900,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
             target_lang_name = Languages.objects.get(id=target_lang).language if target_lang != None else None
             queryset = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                         .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                        .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(id__in=users)
+                        .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(id__in=users).exclude(is_active=False).exclude(deactivate=True)
             if queryset:
                 ser = GetVendorListBasedonProjectSerializer(queryset.first(),many=False,context={'request':request,'sl':source_lang,'tl':target_lang})
                 users.append(queryset.first().id)

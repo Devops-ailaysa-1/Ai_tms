@@ -15,6 +15,7 @@ import cv2,requests,base64,io
 from PIL import Image
 import numpy as np
 from io import BytesIO
+ 
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
 
 
@@ -246,7 +247,7 @@ def background_merge(u2net_result,original_img):
     img_io = io.BytesIO()
     u2net_result.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
-    print(type(img_byte_arr))
+    # print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
  
 
@@ -266,6 +267,9 @@ def background_remove(image_path):
     y0=cv2.resize(res, (image_w, image_h))
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
+
+ 
+
 
     # else:
     #     image_text_details=creating_image_bounding_box(image_details.image.path)

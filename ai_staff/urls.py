@@ -18,7 +18,8 @@ router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
 router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
 router.register(r'roles',api_views.TeamRoleView,basename='team-role')
-
+router.register(r'suggestion',api_views.SuggestionView,basename='suggestion')
+router.register(r'suggestion-type',api_views.SuggestionTypeView,basename='suggestion-type')
 router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')
@@ -27,6 +28,7 @@ router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-ton
 router.register(r'font-data',api_views.FontDataViewset ,basename='fontdata')
 router.register(r'font-language',api_views.FontLanguageViewset,basename='fontlanguage')
 router.register(r'design-shape',api_views.DesignShapeViewset,basename='design_shape')
+router.register(r'image-cat',api_views.ImageCategoriesViewset,basename='imag-cat')
  
 urlpatterns = router.urls
 
@@ -72,7 +74,7 @@ urlpatterns += [
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
-     path('social-media-size/', api_views.SocialMediaSizeViewset_ser.as_view({'get': 'list'}), name='socialmediasize'),
+      
      path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
 #    path('design-shape/',api_views.DesignShapeViewset.as_view({'get':'list'})),
 ]

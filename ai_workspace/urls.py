@@ -101,7 +101,8 @@ urlpatterns += [
 	path('stop_task/',api_views.stop_task),
 	path('bulk_task_accept/',api_views.bulk_task_accept),
 	path('all_proj_lists/',api_views.CombinedProjectListView.as_view({'get':'list'})),
-	path('toolkit_lists/',api_views.ToolkitList.as_view({'get':'list'})),
+	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
+	#path('toolkit_lists/',api_views.ToolkitList.as_view({'get':'list'})),
 ]
 # views urls adding for local testing
 urlpatterns += [

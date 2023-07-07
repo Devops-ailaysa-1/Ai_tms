@@ -7,7 +7,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,ImageGeneratorResolution,DesignShape)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
+                    ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -294,10 +295,23 @@ class StripeTaxIdSerializer(serializers.ModelSerializer):
         read_only_fields = ('id','created_at','updated_at')
 
 
+class SuggestionTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SuggestionType
+        fields = "__all__"
+
+class SuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Suggestion
+        fields = "__all__"
+
+
 class SupportTopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupportTopics
         fields = "__all__"
+
+
 
 class JobPositionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -483,3 +497,9 @@ class DesignShapeSerializer(serializers.ModelSerializer):
         instance.shape_name=validated_data.get('shape_name',instance.shape_name)
         instance.save()
         return instance
+    
+
+class ImageCategoriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageCategories
+        fields = '__all__'

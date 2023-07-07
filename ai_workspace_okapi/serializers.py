@@ -474,6 +474,42 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
+from .models import SelflearningAsset,ChoiceLists,ChoiceListSelected
+class SelflearningAssetSerializer (serializers.ModelSerializer):
+    class Meta():
+        model=SelflearningAsset
+        fields="__all__"
+
+    def create(self,validated_data):
+        choicelist = validated_data.get('choice_list',None)
+        edited = validated_data.get('edited_word',None)
+        source = validated_data.get('source_word',None)
+        # user = validated_data.get('user',None)
+        print(choicelist,"++++++++++++++++")
+
+        slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choicelist,source_word=source)
+        print(slf_lrn_list)
+        if  slf_lrn_list.filter(edited_word=edited):
+            ins = slf_lrn_list.filter(edited_word=edited).last()
+            ins.occurance +=1
+            ins.save()         
+        else:
+            if slf_lrn_list.count() >= 5:
+                first_out=slf_lrn_list.first().delete()
+            ins=SelflearningAsset.objects.create(choice_list=choicelist,source_word=source,edited_word=edited,occurance=1)  
+        return ins
+
+
+class ChoiceListsSerializer (serializers.ModelSerializer):
+    class Meta():
+        model=ChoiceLists
+        fields="__all__"
+
+class ChoiceListSelectedSerializer (serializers.ModelSerializer):
+    class Meta():
+        model=ChoiceListSelected
+        fields="__all__"
+
 
 
 
@@ -539,6 +575,8 @@ class MT_RawSerializer(serializers.ModelSerializer):
         print("mt_raw------>>",validated_data["mt_raw"])
         print("inside ____mt--------------------------------")
         instance = MT_RawTranslation.objects.create(**validated_data)
+
+        #word update in mt_raw
         #instance=self.slf_learning_word_update(instance,doc)
         return instance
 
@@ -576,9 +614,10 @@ class SegmentPageSizeSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CommentSerializer(serializers.ModelSerializer):
+    commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
     class Meta:
         model = Comment
-        fields = "__all__"
+        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
 
 class FilterSerializer(serializers.Serializer):
     status_list = serializers.JSONField(

@@ -114,8 +114,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
         total_tokens=token_usage['total_tokens']
-        completion_tokens=token_usage['completion_tokens']
-        print("CompletionTokens------->",completion_tokens)
+        completion_tokens=token_usage.get('completion_tokens',None)
+        #print("CompletionTokens------->",completion_tokens)
         no_of_outcome = instance.response_copies
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
@@ -302,6 +302,8 @@ class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
         #     'created_by':{'write_only':True},
         # }
 
+ 
+
 class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
     class Meta:
@@ -376,16 +378,25 @@ class CustomizationSettingsSerializer(serializers.ModelSerializer):
         fields=('id','user','append','new_line','src','tar','mt_engine',)
 
     def get_src(self,obj):
-        user = self.context.get('request').user
-        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if self.context.get('request'):
+            user = self.context.get('request').user.id
+        else:
+            user = self.context.get('user')
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user_id = user)
+        print("Qr------------>",queryset.last())
         if queryset:
-            source = queryset.last().customization.user_text_lang_id
-            return source
+            try:
+                source = queryset.last().customization.user_text_lang_id
+                return source
+            except: return None
         return None
 
     def get_tar(self,obj):
-        user = self.context.get('request').user
-        queryset = TranslateCustomizeDetails.objects.filter(customization__user = user)
+        if self.context.get('request'):
+            user = self.context.get('request').user.id
+        else:
+            user = self.context.get('user')
+        queryset = TranslateCustomizeDetails.objects.filter(customization__user_id = user)
         if queryset:
             target = queryset.last().target_language_id
             return target

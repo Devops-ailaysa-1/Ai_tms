@@ -7,30 +7,53 @@ from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
 import copy,os
+from ai_canvas.utils import convert_image_url_to_file 
+from ai_imagetranslation.utils import background_remove
+from ai_canvas.template_json import img_json,basic_json
+from ai_canvas.models import CanvasUserImageAssets
 
 HOST_NAME=os.getenv('HOST_NAME')
+
+def create_thumbnail_img_load(base_dimension,image):
+    wpercent = (base_dimension/float(image.size[0]))
+    hsize = int((float(image.size[1])*float(wpercent)))
+    img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
+    img=convert_image_url_to_file(image_url=img,no_pil_object=False)
+    return img
+
 
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
-        fields = ('id','image','file_name','types','height','width')
-        
-    def create(self,validated_data):
-        user=self.context['request'].user
-        data={**validated_data ,'user':user}
-        instance=Imageload.objects.create(**data)
-        file_name=instance.image.name.split('/')[-1]
-        types=file_name.split(".")[-1]
-        instance.file_name=file_name
-        instance.types=types
-        im=Image.open(instance.image.path)
-        width,height=im.size
-        instance.height=height
-        instance.width=width
+        fields = ('id','image','file_name','types','height','width','thumbnail')
+    
+    # def to_representation(self, instance):
+    #     data=super().to_representation(instance)
+    #     if not data.get('thumbnail',None):
+    #         im = Image.open(instance.image.path)
+    #         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+    #         instance.save()
+    #     return super().to_representation(instance)
+
+
+
+    def create(self, validated_data):
+        user =  self.context['request'].user
+        data = {**validated_data ,'user':user}
+        instance =  Imageload.objects.create(**data)
+        file_name = instance.image.name.split('/')[-1]
+        types = file_name.split(".")[-1]
+        instance.file_name = file_name
+        instance.types = types
+        im = Image.open(instance.image.path)
+        width, height = im.size
+        instance.height = height
+        instance.width = width
+        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
         return instance
 
-from ai_canvas.template_json import img_json,basic_json
+
 
 # class TargetInpaintimageSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -51,7 +74,7 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
         if not representation.get('thumbnail',None):
             if instance.target_canvas_json:
                 target_canvas_json=instance.target_canvas_json
-                print("target_canvas_json",target_canvas_json)
+                # print("target_canvas_json",target_canvas_json)
                 if isinstance(target_canvas_json,dict) and  'backgroundImage' in target_canvas_json.keys():
                     target_canvas_json_bs64=thumbnail_create(json_str=target_canvas_json,formats='png')
                     name=instance.source_image.project_name
@@ -80,8 +103,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
-    inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
-                                                        required=False,write_only=True)
+    inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
     bounding_box_target_update=serializers.JSONField(required=False)
     bounding_box_source_update=serializers.JSONField(required=False)
     target_update_id=serializers.IntegerField(required=False)
@@ -92,29 +114,38 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     export=serializers.FileField(required=False)
     source_language=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required= False)
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
-    # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
-    mask_json_target=serializers.JSONField(required=False)
+    canvas_asset_image_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required=False,write_only=True)
 
-    target_update_id=serializers.IntegerField(required=False)
+    # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
+    
     class Meta:
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
-            'target_language','target_canvas_json','target_update_id','thumbnail','export','image_to_translate_id','created_at','updated_at','mask_json_target')
- 
+            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
+            'created_at','updated_at')
+        #,'image_id')
         
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
             representation['source_language']=instance.source_language.language.id  
+        # if representation.get('thumbnail' , None):
+        #     image_path=instance.image.path
+        #     im = Image.open(image_path)
+        #     thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        #     instance.thumbnail=thumb_nail
+        #     instance.save()
+        #     representation['thumbnail']=instance.thumbnail
         return representation
     
     @staticmethod
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        return width,height
+        # thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        return width,height#,thumb_nail
     
     def create(self, validated_data):
         user=self.context['request'].user
@@ -124,7 +155,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
+            # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
+            
             instance.save()
             return instance
             
@@ -132,7 +165,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         src_lang = validated_data.get('source_language' ,None)
         inpaint_creation_target_lang = validated_data.get('inpaint_creation_target_lang' ,None)
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
+        canvas_asset_image_id=validated_data.get('canvas_asset_image_id' ,None)
         mask_json=validated_data.get('mask_json')
+
+        if canvas_asset_image_id:
+            instance.image=canvas_asset_image_id.image
+            instance.height=canvas_asset_image_id.height
+            instance.width=canvas_asset_image_id.width
+            instance.save()
+
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
             width , height = self.image_shape(instance.image)
@@ -207,38 +248,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         export=validated_data.get('export',None)
 
 
-        # if target_update_id and mask_json:
-        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
-        #     img_tar.mask_json=mask_json
-        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
-        #     img_tar.mask=mask
-        #     img_tar.save()
-        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
-        #     content=image_content(inpaint_out_image)
-        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
-        #     img_tar.inpaint_image=inpaint_image_file
-        #     img_tar.save()
-        #     text_box_list_new=[]
-        #     for text_box in text_box_list:
-        #         txt_box=copy.deepcopy(text_box)
-        #         if 'text' in txt_box:
-        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
-        #                                              target_lang_code=img_tar.target_language.locale_code)
-        #             txt_box['text']=translate_bbox
-        #         text_box_list_new.append(txt_box)
-        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
-        #     obj_list=can_tar_json['objects']
-        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
-        #     can_tar_json['objects']=obj_list+text_box_list_new
-        #     img_tar.target_canvas_json=can_tar_json
-        #     img_tar.save()
-        #     return instance
         
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
                 instance.mask_json=mask_json
-                print(instance.inpaint_image)
+                # print(instance.inpaint_image)
                 instance.save()
             else:
                 instance.mask_json=mask_json
@@ -290,7 +304,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             im_cre.save()
             
         if bounding_box_source_update:
-            instance.source_bounding_box=bounding_box_source_update
+            instance.source_bounding_box = bounding_box_source_update
             instance.save()
             
         if source_canvas_json:
@@ -298,8 +312,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
              instance.save()
              
         if target_canvas_json and target_update_id:
-            im_cre=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
-            im_cre.target_canvas_json=target_canvas_json
+            im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
+            im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
 
@@ -308,8 +322,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 # class ImageloadRetrieveLSerializer(serializers.ModelSerializer):
 #     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
 
-from ai_canvas.utils import convert_image_url_to_file
-from ai_imagetranslation.utils import background_remove
+
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
     class Meta:
@@ -323,8 +336,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
-        if canvas_json:
-             
+        if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
             image_path_create=convert_image_url_to_file(instance.image_url)
@@ -339,3 +351,36 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.canvas_json =tar_json
             instance.save()
             return instance
+        
+class ObjectRemovelSerializer(serializers.ModelSerializer):
+    pass
+
+
+
+        # if target_update_id and mask_json:
+        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
+        #     img_tar.mask_json=mask_json
+        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+        #     img_tar.mask=mask
+        #     img_tar.save()
+        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
+        #     content=image_content(inpaint_out_image)
+        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+        #     img_tar.inpaint_image=inpaint_image_file
+        #     img_tar.save()
+        #     text_box_list_new=[]
+        #     for text_box in text_box_list:
+        #         txt_box=copy.deepcopy(text_box)
+        #         if 'text' in txt_box:
+        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+        #                                              target_lang_code=img_tar.target_language.locale_code)
+        #             txt_box['text']=translate_bbox
+        #         text_box_list_new.append(txt_box)
+        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
+        #     obj_list=can_tar_json['objects']
+        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
+        #     can_tar_json['objects']=obj_list+text_box_list_new
+        #     img_tar.target_canvas_json=can_tar_json
+        #     img_tar.save()
+        #     return instance

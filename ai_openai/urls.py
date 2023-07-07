@@ -25,8 +25,11 @@ urlpatterns += [
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
     path('article/',api_views.generate),
+    path('image_history/<pk>/',api_views.ImageGeneratorPromptDelete.as_view()),
+    path('download_ai_image_generated_file/<int:id>/',api_views.download_ai_image_generated_file),
  
     # path('stream_article/',api_views.PostStreamView.as_view()),
+    path('credit_blog_check/',api_views.credit_check_blog),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

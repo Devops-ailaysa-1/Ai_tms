@@ -81,9 +81,6 @@ extcolors = "^1.0.0"
 opencv-contrib-python = "4.7.0.72"
 tiktoken = "0.4.0"
 channels-redis = "^4.1.0"
-extcolors = "^1.0.0"
-opencv-contrib-python = "4.7.0.72"
-tiktoken = "0.4.0"
 
 [tool.poetry.dev-dependencies]
 

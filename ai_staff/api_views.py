@@ -14,7 +14,8 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
+                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -24,7 +25,8 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
-                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer)
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,
+                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -725,6 +727,72 @@ class SupportTopicsView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+
+class SuggestionTypeView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = SuggestionType.objects.all()
+        serializer = SuggestionTypeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SuggestionTypeSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SuggestionType.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SuggestionTypeSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SuggestionType.objects.all()
+        suggestion_type = get_object_or_404(queryset, pk=pk)
+        suggestion_type.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SuggestionView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Suggestion.objects.all()
+        serializer = SuggestionSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SuggestionSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Suggestion.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SuggestionSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Suggestion.objects.all()
+        suggestion = get_object_or_404(queryset, pk=pk)
+        suggestion.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class JobPositionsView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
     def list(self,request):
@@ -952,24 +1020,15 @@ class ImageGeneratorResolutionViewset(viewsets.ViewSet):
 
 
 
-class SocialMediaSizeViewset_ser(viewsets.ViewSet):
- 
-    def list(self,request):
-        queryset = SocialMediaSize.objects.all()
-        serializer = SocialMediaSizeSerializer(queryset,many=True)
-        return Response(serializer.data)
-    
-
-
 class DesignShapePagination(PageNumberPagination):
-    page_size = 20 
+    page_size = 30 
     page_size_query_param = 'page_size'
 
 class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
-    page_size = 20
+    page_size = 30
     pagination_class = DesignShapePagination
     def list(self,request):
-        queryset = DesignShape.objects.all()
+        queryset = DesignShape.objects.all().order_by('id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignShapeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -991,6 +1050,16 @@ class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         shape=request.FILES.get('shape')
         serializer = DesignShapeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+
+
+class ImageCategoriesViewset(viewsets.ViewSet):
+    def create(self,request):
+        serializer = ImageCategoriesSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

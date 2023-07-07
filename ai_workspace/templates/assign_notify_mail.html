@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Task assign detail in Ailaysa</title>
+    <title>Task Assign Vendor Status in Ailaysa</title>
 </head>
 <body style="width:100%; height:100%; margin:0; padding:32px; font: normal normal normal 14px/21px Arial,sans-serif; color:#333; background-color:none; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
        <table class="email-wrapper" style="width:100%; height:100%; margin:auto; padding:0; text-align:center; vertical-align:middle; border-spacing:0; border-collapse:collapse;"><tr><td>
@@ -21,26 +21,10 @@
         </thead>
         <tbody class="email-body"><tr><td style="text-align:left;">
             <div style="padding:21px 32px; background-color:#fff;">
-                <h1 style="font-size:18px; line-height:20px; font-weight:bold;">Hi {{name}},</h1>
-                  <p>You have been assigned to new tasks in <b>{{project}}</b>.</p>
-                  <p>Task details can be found below,</p>
-                  <p>Job: {{job}}</p>
-                  <p>Rate: {{rate}}</p>
-                  <p>Deadline: {{deadline}}</p>
-                  <p>Work: {{work}}</p>
-                {% if files %}
-                {% for i in files %}
-                {% if i.unit == 'Word' %}
-                <p>File: {{i.file}},&emsp; Words : {{i.words}},&emsp; Billable Words : {{i.billable_word_count}}</p>
-                {% elif i.unit == 'Char' %}
-                <p>File: {{i.file}},&emsp;Characters : {{i.characters}},&emsp; Billable Charecters : {{i.billable_char_count}}</p>
-                {% else %}
-                <p>File: {{i.file}},&emsp;Words : {{i.words}}</p>
-                {% endif %}
-                {% endfor %}
-                {% endif %}
+                <h1 style="font-size:18px; line-height:20px; font-weight:bold;">Dear User,</h1>
+                  <p>{{message}}</p>
+                  <p>Log in <a href="https://www.ailaysa.com/">Ailaysa</a> to know more details</p>
             </div>
-            <p>Log in <a href="https://www.ailaysa.com/">Ailaysa</a> to approve rates and start the task</p>
         </td></tr></tbody>
 
         <tfoot class="email-footer" style="text-align:center; font-weight:normal;"><tr><td style="padding-top:32px;">

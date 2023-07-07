@@ -328,6 +328,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = get_res_path(params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
+            print("doc_req_res_params",json.dumps(res_paths))
+
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
@@ -1023,6 +1025,8 @@ class MT_RawAndTM_View(views.APIView):
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
+        
+    
 
     @staticmethod
     def get_split_data(request, segment_id, mt_params):
@@ -1065,6 +1069,10 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                
+                print(translation)
+                # translation=MT_RawAndTM_View.asset_replace(translation)
+
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1074,8 +1082,12 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                
+                # translation=MT_RawAndTM_View.asset_replace(translation)
+
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
         else:
@@ -1159,9 +1171,50 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
+    @staticmethod
+    def get_project(request,segment_id):
+        project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        print(project)
+        return project
+
+    @staticmethod   
+    def asset_replace(request,translation,segment_id):
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+        choice=[choice.choice_list.id for choice in choice_selected]
+   
+        word=word_tokenize(translation)
+        suggestion={}
+
+        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))
+        choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+        print(choicelist,"+++++++++++")
+        if choicelist:
+            print("choicelist")
+            for word in word: 
+                choice=SelflearningAsset.objects.filter(choice_list__in=choicelist).filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                choice = choice[:5]
+                if choice:
+                    replace_word=choice.first().edited_word
+                    translation=translation.replace(word,replace_word) 
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word)  
+        # elif def_choice:
+        #     print("default_choice--------->",def_choice)
+        #     for word in word:
+        #         default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+        #         d_choice = default_choice[:5]
+        #         print("Dchoice------->",d_choice)
+        #         if d_choice:
+        #             replace_word=d_choice.first().edited_word
+        #             translation=translation.replace(word,replace_word) 
+        #             suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
+        #             suggestion[replace_word].insert(0,word)
+        
+        # print(translation)
+        return translation,suggestion
 
     def get(self, request, segment_id):
-
             tm_only = {
                         "segment": segment_id,
                         "mt_raw": "",
@@ -1196,6 +1249,17 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
 
+                # print('data normal=-----------',data['mt_raw'])
+                rep=data['mt_raw']
+                # #list option assets
+                # replace asset auto
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
+
+        
+                # print('rep----------',asset_rep)
+
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
 
@@ -1210,9 +1274,42 @@ class MT_RawAndTM_View(views.APIView):
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
-                # tm_data = self.get_tm_data(request, segment_id)
+                
+                # rep=data['mt_raw']
+
+                # #list option assets
+                # # replace asset auto
+                asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,segment_id)
+                data['mt_raw']=asset_rep
+                data['options']=asset_list
+                print('rep----------',asset_rep)
+
+
+
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
+            
+"""
+
+
+
+def word_change():
+    # segment=request.POST.get('segment',None)
+    # tar_lang=request.POST.get('target_language',None)
+    segment="This apple size is small so he provide multiple apples"
+    tar_lang=17
+    word=word_tokenize(segment)
+    for word in word:
+        assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id =946) & Q(source_word__iexact = word))
+        if assets:
+            edited_word=assets.last().edited_word
+            # print(edited_word)
+            segment=segment.replace(word,edited_word)         
+    print(segment)
+"""
+        # return JsonResponse(result,status=status.HTTP_200_OK)
+
+
     # def get(self, request, segment_id):
     #
     #     # Getting MT params
@@ -1962,11 +2059,11 @@ class CommentView(viewsets.ViewSet):
             if split_check(id):
                 print("normal")
                 segment = get_object_or_404(Segment.objects.all(), id=id)                
-                return segment.segment_comments_set.all()
+                return segment.segment_comments_set.order_by('id')
             else:
                 print("split")
                 split_segment = SplitSegment.objects.get(id=id)
-                return split_segment.split_segment_comments_set.all()
+                return split_segment.split_segment_comments_set.order_by('id')
 
 
         if by=="document":
@@ -1974,11 +2071,11 @@ class CommentView(viewsets.ViewSet):
             comments_list=[]
             for segment in document.segments.all():
                 if segment.is_split!=True:
-                    comments_list.extend(segment.segment_comments_set.all())
+                    comments_list.extend(segment.segment_comments_set.order_by('id'))
                 else:
                     split_seg = SplitSegment.objects.filter(segment_id=segment.id)
                     for i in  split_seg:
-                        comments_list.extend(i.split_segment_comments_set.all())
+                        comments_list.extend(i.split_segment_comments_set.order_by('id'))
             return comments_list
 
             # return [ comment
@@ -1999,10 +2096,10 @@ class CommentView(viewsets.ViewSet):
         seg = request.POST.get('segment')
         comment = request.POST.get('comment')
         if split_check(seg):
-            ser = CommentSerializer(data=request.POST.dict(), )
+            ser = CommentSerializer(data={**request.POST.dict(), "commented_by": request.user.id} )
         else:
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
-            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg})
+            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg,'commented_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             with transaction.atomic():
                 ser.save()
@@ -2016,16 +2113,34 @@ class CommentView(viewsets.ViewSet):
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
         authorize(request, resource=obj, actor=request.user, action="update")
-        ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
-        if ser.is_valid(raise_exception=True):
-            ser.save()    
-            return Response(ser.data, status=202)
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+                if ser.is_valid(raise_exception=True):
+                    ser.save()    
+                    return Response(ser.data, status=202)
+                return Response(ser.errors)
+            else:
+                return Response({'msg':'You do not have permission to edit'},status=403)
+        else:
+            ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+            if ser.is_valid(raise_exception=True):
+                ser.save()    
+                return Response(ser.data, status=202)
+            return Response(ser.errors)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
         authorize(request, resource=obj, actor=request.user, action="delete")
-        obj.delete()
-        return  Response({},204)
+        if obj.commented_by:
+            if obj.commented_by == request.user:
+                obj.delete()
+                return  Response({},204)
+            else:
+                return Response({'msg':'You do not have permission to edit'},status=403)
+        else:
+            obj.delete()
+            return  Response({},204)
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
@@ -2400,11 +2515,12 @@ def paraphrasing_for_non_english(request):
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
     doc_obj = Document.objects.get(id=doc_id)
     project = doc_obj.job.project
     user = doc_obj.doc_credit_debit_user
-    subj_fields =  [i.subject.name for i in project.proj_subject.all()]
-    content_fields = [i.content_type.name for i in project.proj_content_type.all()]
+    #subj_fields =  [i.subject.name for i in project.proj_subject.all()]
+    #content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
     initial_credit = user.credit_balance.get("total_left")
@@ -2415,11 +2531,12 @@ def paraphrasing_for_non_english(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt(clean_sentence,subj_fields,content_fields)
+        prompt = get_prompt(option,clean_sentence)#,subj_fields,content_fields) 
         print("Pr--------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         print("Resp--------->",result_prompt)
         para_sentence = result_prompt["choices"][0]["message"]["content"]
+        #para_sentence = re.search(r'(?:.*:\s*)?(.*)$', result).group(1).strip()
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
@@ -2430,7 +2547,7 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("Tsg------->",tags)
-        return Response({'paraphrase':rewrited ,'tag':tags})
+        return Response({'result':rewrited ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2445,7 +2562,7 @@ def paraphrasing_for_non_english(request):
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
-
+from .utils import get_general_prompt
 
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
@@ -2453,6 +2570,7 @@ def paraphrasing(request):
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
     doc_id = request.POST.get('doc_id')
+    option = request.POST.get('option')
     doc_obj = Document.objects.get(id=doc_id)
     user = doc_obj.doc_credit_debit_user
     #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
@@ -2464,14 +2582,16 @@ def paraphrasing(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
+        prompt = get_general_prompt(option,clean_sentence)
+        print("Prompt------------->",prompt)
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("tag-->",tags)
-        return Response({'paraphrase':para_sentence ,'tag':tags})
+        return Response({'result':para_sentence ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2782,50 +2902,51 @@ def get_tags(seg):
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
 
-from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
+
+from ai_workspace_okapi.serializers import SegmentDiffSerializer,SelflearningAssetSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
 from ai_workspace_okapi.utils import do_compare_sentence
 from django.db.models.signals import post_save ,pre_save
 
-class SelflearningAssetViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get_object(self, pk):
-        try:
-            return SelflearningAsset.objects.get(id=pk)
-        except SelflearningAsset.DoesNotExist:
-            raise Http404
+# class SelflearningAssetViewset(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated,]
+#     def get_object(self, pk):
+#         try:
+#             return SelflearningAsset.objects.get(id=pk)
+#         except SelflearningAsset.DoesNotExist:
+#             raise Http404
 
-    def create(self,request):
-        serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+#     def create(self,request):
+#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
     
-    def list(self, request):
-        target_language=request.query_params.get('target_language', None)
-        if target_language:
-            target_language=Languages.objects.get(id=target_language)
-            queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
-        else:
-            queryset = SelflearningAsset.objects.filter(user=request.user.id)
-        serializer=SelflearningAssetSerializer(queryset,many=True)
-        return Response(serializer.data)
+#     def list(self, request):
+#         target_language=request.query_params.get('target_language', None)
+#         if target_language:
+#             target_language=Languages.objects.get(id=target_language)
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+#         else:
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
+#         serializer=SelflearningAssetSerializer(queryset,many=True)
+#         return Response(serializer.data)
 
-    def retrieve(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj)
-        return Response(serializer.data)
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj)
+#         return Response(serializer.data)
     
-    def update(self,request,pk):
-        obj =self.get_object(pk)
-        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors,status=400)
+#     def update(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
 
 class SegmentDiffViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -2887,7 +3008,9 @@ def segment_difference(sender, instance, *args, **kwargs):
     elif len(seg_his)==1:
         if hasattr(instance.segment,'seg_mt_raw'):
             target_segment =instance.segment.seg_mt_raw.mt_raw  
-        else:target_segment=instance.temp_target
+        elif instance.segment.temp_target:
+            target_segment=instance.segment.temp_target
+        else:target_segment = None
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  
@@ -2908,3 +3031,266 @@ def segment_difference(sender, instance, *args, **kwargs):
                     print("seg_diff_created")
 
 post_save.connect(segment_difference, sender=SegmentHistory)
+
+
+
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from .serializers import SelflearningAssetSerializer,ChoiceListSelectedSerializer,ChoiceListsSerializer
+from rest_framework.response import Response
+from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment,ChoiceLists,ChoiceListSelected
+from ai_staff.models import Languages
+from rest_framework import status
+from nltk import word_tokenize
+from django_filters.rest_framework import DjangoFilterBackend
+import difflib
+from rest_framework.pagination import PageNumberPagination
+from django.core.exceptions import ValidationError
+
+
+class SelflearningView(viewsets.ViewSet, PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size = 20
+    search_fields = ['source_word','edited_word']
+    ordering_fields = ['id','source_word','edited_word']
+
+    @staticmethod
+    def get_object(request,id):
+        asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=request.user)
+        return  asset
+
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self,request):
+        segment_id=request.GET.get('segment_id',None)
+        project=MT_RawAndTM_View.get_project(request,segment_id)
+        try:
+            # choice_selected=get_object_or_404(ChoiceListSelected,project__id=project.id)
+            choice_selected=ChoiceListSelected.objects.filter(project__id=project.id)
+            choice=[choice.choice_list.id for choice in choice_selected]
+            choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
+            self_learning=SelflearningAsset.objects.filter(choice_list__in=choicelist)
+            # self_learning=SelflearningAsset.objects.filter(choice_list=choice_selected.choice_list.id)
+        except:
+            self_learning=None
+        if segment_id:
+            seg = get_object_or_404(Segment,id=segment_id)
+
+            if split_check(segment_id):
+                raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt normal>>>>>>",raw_mt)
+            else:
+                split_seg = SplitSegment.objects.get(segment=seg)
+                raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                mt_edited=seg.target
+                print("raw_mt split>>>>>>>",raw_mt)
+
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
+            print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+            if asset:
+                return Response(asset,status=status.HTTP_200_OK)
+            return Response({},status=status.HTTP_200_OK)
+        else:
+            assets = SelflearningAsset.objects.filter(choice_list__user=request.user).order_by('-id')
+            queryset = self.filter_queryset(assets)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            response = self.get_paginated_response(serializer.data)
+            print(response)
+            return  response
+
+    def retrieve(self,request,pk):
+        obj =self.get_object(request,pk)
+        serializer=SelflearningAssetSerializer(obj)
+        return Response(serializer.data)
+
+    def create(self,request): 
+        doc_id=request.POST.get('document_id',None)
+        choice_list_id=request.POST.get('choice_list_id',None)
+        source=request.POST.get('source_word',None)
+        edited=request.POST.get('edited_word',None)
+        if doc_id:
+            doc=get_object_or_404(Document,id=doc_id)
+            lang=get_object_or_404(Languages,id=doc.target_language_id)
+            user=self.request.user
+            choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name=lang.language)
+            if created == False:
+               choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name=lang.language)
+        else:
+            choice_list=get_object_or_404(ChoiceLists,id=choice_list_id)
+        ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
+
+    def update(self,request,pk):
+        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
+        edited=request.POST.get('edited_word',None)
+        slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
+        if slf:
+            return Response({"msg": 'choice list already exists'}, status=400)
+        else:
+            ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+            if ser.is_valid():
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
+
+    def delete(self,request,pk):
+        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
+        ins.delete()
+        return  Response(status=204)
+    
+    @staticmethod
+    def seq_match_seg_diff(words1,words2,self_learning):
+        s1=words1.split()
+        target=re.sub(rf'</?\d+>', "", words2)
+        s2=target.split()
+        assets={}
+        print(s1,s2)
+        matcher=difflib.SequenceMatcher(None,s1,s2 )
+        print(matcher.get_opcodes())
+        for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+            if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
+                source=" ".join(s1[i1:i2])
+                edited=" ".join(s2[j1:j2])
+                if self_learning:
+                    if not self_learning.filter(source_word=source ,edited_word=edited): 
+                        assets[source]=edited
+                else:
+                    assets[source]=edited
+        print("------------------",assets)  
+        return assets
+
+
+class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size = 10
+    search_fields = ['name']
+    ordering_fields = ['id','name','language']
+
+    @staticmethod
+    def get_object(request,id):
+        asset = get_object_or_404(ChoiceLists, id=id,user=request.user)
+        return  asset
+
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self,request):
+        project = request.GET.get('project',None)
+        choice=request.GET.get('choice_list_id',None)
+        if choice:
+            ch_list=self.get_object(request,choice)
+            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+            queryset = self.filter_queryset(self_learning)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
+        elif project:
+            project=get_object_or_404(Project,id=project)
+            lang=project.get_target_languages
+            ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=self.request.user)
+            queryset = self.filter_queryset(ch_list)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self) 
+            choice_serializer=ChoiceListsSerializer(pagin_tc,many=True)
+            return self.get_paginated_response(choice_serializer.data)
+        else:       
+            ch_list=ChoiceLists.objects.filter(user=self.request.user)
+            queryset = self.filter_queryset(ch_list)
+            pagin_tc = self.paginate_queryset(queryset, request , view=self)
+            serializer = ChoiceListsSerializer(pagin_tc, many=True)
+            return self.get_paginated_response(serializer.data)
+            # choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+            # return Response(choice_serializer.data)
+
+    def retrieve(self,request,pk):
+        ch_list =self.get_object(request,pk)
+        choice_serializer=ChoiceListsSerializer(ch_list,many=False)
+        return Response(choice_serializer.data)
+
+    def create(self,request): 
+        lang=request.POST.get('language',None)
+        name=request.POST.get('name',None)
+        lang=get_object_or_404(Languages,id=lang)
+
+        user=self.request.user
+        choice_serializer= ChoiceListsSerializer(data={'name':name,'language':lang.id,'user':user.id})
+        if choice_serializer.is_valid():
+            choice_serializer.save()
+            return Response(choice_serializer.data)
+        return Response(choice_serializer.errors)
+
+    def update(self,request,pk):
+        obj=self.get_object(request,pk)
+        print(obj,"object")
+        ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
+
+    def delete(self,request,pk):
+        ins=self.get_object(request,pk)
+        ins.delete()
+        return  Response(status=204)
+    
+
+class Choicelistselectedview(viewsets.ModelViewSet):
+    queryset = ChoiceListSelected.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChoiceListSelectedSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 10
+
+    def get_object(self,request,ids):
+        pk = self.kwargs.get("pk", 0)
+        try:
+            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=self.request.user)
+        except:
+            raise Http404
+        return obj
+    
+    def list(self,request):
+        project_id = request.GET.get('project')
+        if not project_id:
+            return Response({"msg":"project_id required"})
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request, resource=project, actor=request.user, action="read")
+        choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=self.request.user)
+        Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
+        return Response(Choice_selected_ser.data)
+
+    def create(self,request):
+        project_id = request.POST.get('project')
+        choice_list=request.POST.getlist('choice_list')
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request, resource=project, actor=request.user, action="read")
+        if choice_list:
+            data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
+            serializer = ChoiceListSelectedSerializer(data=data,many=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        choicelist_selected=request.query_params.get("remove_ids")
+        ids= choicelist_selected.split(",")
+        obj=self.get_object(request,ids)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    

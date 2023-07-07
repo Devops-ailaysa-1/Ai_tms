@@ -9,7 +9,8 @@ from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
-                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,CampaignUsers)
+                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
+                            CampaignUsers,CoCreateForm)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -49,7 +50,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     target_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     cv_file = serializers.FileField(required=False,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
-    is_agency = serializers.NullBooleanField()
+    is_agency = serializers.CharField(required=False,allow_null=True)
 
     class Meta:
         model = AiUser
@@ -67,7 +68,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             print("Errors---->",list(e))
             raise serializers.ValidationError({"error":list(e)})
         return super().run_validation(data)
-
 
     def vendor_signup():
         pass
@@ -98,23 +98,34 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         cv_file = self.validated_data.get('cv_file',None)
         is_agency = self.validated_data.get('is_agency',None)
 
+        print("Agency----->",is_agency)
 
-        if source_language and target_language:
-            VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
-            user.is_vendor = True
-            user.save()
-            if is_agency:    
+        if 'is_agency' in self.validated_data:
+            if is_agency == 'True':
                 sub = subscribe_lsp(user)
                 user.is_agency = True
-                user.save()
-            else:
+            elif is_agency == 'False':
                 sub = subscribe_vendor(user)
-            if not cv_file:
-                VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
-            else:
-                VendorsInfo.objects.create(user=user,cv_file = cv_file)
-                VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
-                VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
+            user.is_vendor = True
+            user.save() 
+            VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
+
+        # if source_language and target_language:
+        #     VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language,primary_pair=True)
+        #     user.is_vendor = True
+        #     user.save()
+        #     if is_agency:    
+        #         sub = subscribe_lsp(user)
+        #         user.is_agency = True
+        #         user.save()
+        #     else:
+        #         sub = subscribe_vendor(user)
+        #     if not cv_file:
+        #         VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
+        #     else:
+        #         VendorsInfo.objects.create(user=user,cv_file = cv_file)
+        #         VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
+        #         VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
             
         if campaign:
             ## users from campaign pages
@@ -138,31 +149,40 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
     password_reset_form_class = SendInviteForm
 
-# class AiLoginSerializer(LoginSerializer):
-#     def validate(self, attrs):
-#         username = attrs.get('username')
-#         email = attrs.get('email')
-#         password = attrs.get('password')
-#         user = self.get_auth_user(username, email, password)
-#
-#         if user:
-#             if user.deactivate == True:
-#                 msg = _('User is deactivated.')
-#                 raise exceptions.ValidationError(msg)
-#
-#         if not user:
-#             msg = _('Unable to log in with provided credentials.')
-#             raise exceptions.ValidationError(msg)
-#
-#         # Did we get back an active user?
-#         self.validate_auth_user_status(user)
-#
-#         # If required, is the email verified?
-#         if 'dj_rest_auth.registration' in settings.INSTALLED_APPS:
-#             self.validate_email_verification_status(user)
-#
-#         attrs['user'] = user
-#         return attrs
+class AiLoginSerializer(LoginSerializer):
+    def validate(self, attrs):
+        # username = attrs.get('username')
+        # email = attrs.get('email')
+        # password = attrs.get('password')
+        # user = self.get_auth_user(username, email, password)
+
+        # if user:
+        #     if user.deactivate == True:
+        #         msg = _('User is deactivated.')
+        #         raise exceptions.ValidationError(msg)
+
+        # if not user:
+        #     msg = _('Unable to log in with provided credentials.')
+        #     raise exceptions.ValidationError(msg)
+
+        # # Did we get back an active user?
+        # self.validate_auth_user_status(user)
+
+        # # If required, is the email verified?
+        # if 'dj_rest_auth.registration' in settings.INSTALLED_APPS:
+        #     self.validate_email_verification_status(user)
+
+        # attrs['user'] = user
+        attrs = super().validate(attrs)
+        user = attrs['user']
+        if user:
+            if user.last_login==None:
+                user.first_login = True
+            elif user.first_login==True:
+                user.first_login=False
+            user.save()
+
+        return attrs
 
 class AiPasswordChangeSerializer(PasswordChangeSerializer):
        def save(self):
@@ -337,7 +357,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
 
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','is_social',*extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social',*extra_fields)
         read_only_fields = ('email',)
 
     def get_is_social(self,obj):
@@ -486,6 +506,15 @@ class GeneralSupportSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneralSupport
         fields = "__all__"
+
+
+class CoCreateFormSerializer(serializers.ModelSerializer):
+    app_suggestion_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
+    class Meta:
+        model = CoCreateForm
+        fields = "__all__"
+
+
 
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:

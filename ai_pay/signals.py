@@ -61,4 +61,5 @@ create_po_file= Signal()
 def _create_po_file(sender, instance, created, *args, **kwargs):
     from ai_pay.api_views import po_generate_pdf
     if instance.po_file == None:
-        po_generate_pdf(instance)
+        pass
+        # po_generate_pdf(instance)

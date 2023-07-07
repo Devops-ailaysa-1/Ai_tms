@@ -224,7 +224,10 @@ quickemailverification
 extcolors
 opencv-contrib-python==4.7.0.72
 opencv-python
-markdown2==2.4.8
+markdown2==2.4.8s
 fonttools
 tiktoken==0.4.0
 tkinter
+ptvsd
+pygame
+

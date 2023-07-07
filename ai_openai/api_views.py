@@ -1,9 +1,11 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
+                     BlogKeywordGenerate,Blogtitle,BlogOutline,
+                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse)
+import logging ,os         
 from django.core import serializers
 import logging ,os ,json
 from rest_framework import status
+ 
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
@@ -362,7 +364,7 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         obj = CustomizationSettings.objects.get(id = pk, user=user)
         if not obj:
             return Response({"msg":"No detail"})
-        serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict()},partial=True)
+        serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict(),'user':user.id},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
@@ -370,7 +372,7 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        obj = CustomizationSettings.objects.filter(id = pk, user=user)
+        obj = CustomizationSettings.objects.filter(id = pk, user=request.user)
         if not obj:
             return Response({"msg":"No detail"})
         obj.delete()
@@ -431,6 +433,22 @@ class AiImageHistoryViewset(generics.ListAPIView):
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_img__created_by__in=project_managers)|Q(gen_img__user=owner))
         return queryset
+
+
+class ImageGeneratorPromptDelete(generics.DestroyAPIView):
+    queryset = ImageGeneratorPrompt.objects.all()
+    serializer_class = ImageGeneratorPromptSerializer
+    lookup_field = 'pk'
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_ai_image_generated_file(request,id):
+    try:
+        file = ImageGenerationPromptResponse.objects.get(id=id).generated_image 
+        return download_file(file.path)
+    except:
+        return Response({'msg':'Requested file not exists'},status=401)
 
 
 
@@ -761,6 +779,38 @@ class BlogArticleViewset(viewsets.ViewSet):
 #             return Response(serializer.data)
 #         return Response(serializer.errors)
         
+
+
+@api_view(["GET"])
+def credit_check_blog(request):
+    blog_id=request.GET.get('blog_id')
+    blog_creation=BlogCreation.objects.get(id=blog_id)
+    initial_credit = blog_creation.user.credit_balance.get("total_left")
+    #initial_credit = user.credit_balance.get("total_left")
+    if blog_creation.user_language_code != 'en':
+        credits_required = 2000
+    else:
+        credits_required = 200
+    if initial_credit < credits_required:
+        return Response({'msg':'Insufficient Credits'}, status=400)
+    else:
+        return Response({'msg':'Credits to generate articles are available'},status=200)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # def customize_response(customize ,user_text,tone,request):
 #     if customize.prompt or customize.customize == "Text completion":
 #         initial_credit = request.user.credit_balance.get("total_left")
@@ -858,6 +908,25 @@ def blog_crt(request):
     instance.document = tt
     return Response({'id':tt.id})
 
+
+
+@api_view(["GET"])
+def credit_check_blog(request):
+    if request.method=='GET':
+        blog_id=request.query_params.get('blog_id')
+        blog_creation=BlogCreation.objects.get(id=blog_id)
+        initial_credit = request.user.credit_balance.get("total_left")
+        if blog_creation.user_language_code != 'en':
+            credits_required = 2000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        else:
+            return Response({'msg':'sufficient Credits'},code=200)
+
+            
+
 @api_view(["GET"])
 def generate_article(request):
     if request.method=='GET':
@@ -866,8 +935,7 @@ def generate_article(request):
         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
         outline_list=request.query_params.get('outline_section_list')
         blog_creation=request.query_params.get('blog_creation')
-        print("outline_list",outline_list)
-        print("blog_creation",blog_creation)
+ 
         blog_creation=BlogCreation.objects.get(id=blog_creation)
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
@@ -962,10 +1030,11 @@ def generate_article(request):
                                     consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                     token_usage=num_tokens_from_string(str_cont)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                                    print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable_credits_for_article_gen:
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
-                                        AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                        #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' #####
@@ -977,10 +1046,11 @@ def generate_article(request):
                                         consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                         token_usage=num_tokens_from_string(str_cont)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                                        print("StrContent------------->",str_cont) 
                                         if initial_credit >= consumable_credits_for_article_gen:
                                             print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
-                                            AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                            #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
@@ -991,6 +1061,8 @@ def generate_article(request):
                                 arr.append(word)
                     else:
                         token_usage=num_tokens_from_string(prompt)
+                        print("prompt",prompt)
+                        print("tot_us",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("finished")
                         # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article

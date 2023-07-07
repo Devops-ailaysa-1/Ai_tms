@@ -278,7 +278,7 @@ REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
     'PASSWORD_CHANGE_SERIALIZER': 'ai_auth.serializers.AiPasswordChangeSerializer',
-    # 'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
+    'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
 }
 
 PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
@@ -486,3 +486,4 @@ INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
 
 EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
+ 

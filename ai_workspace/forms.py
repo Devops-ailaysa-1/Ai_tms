@@ -105,7 +105,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         billable_char_count = i.billable_char_count if i.billable_char_count!=None else i.task_assign.task.task_char_count
         if i.task_assign.task.job.project.project_type_id == 3:
             out = []
-        elif i.mtpe_count_unit.unit == 'Word' or i.mtpe_count_unit.unit == 'Hour' or i.mtpe_count_unit.unit == 'Total':
+        elif i.mtpe_count_unit.unit == 'Word' or i.mtpe_count_unit.unit == 'Hour' or i.mtpe_count_unit.unit == 'Fixed':
             out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"billable_word_count":billable_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"billable_char_count":billable_char_count,"unit":i.mtpe_count_unit.unit}]
@@ -125,15 +125,20 @@ def task_assign_detail_mail(Receiver,assignment_id):
     print("assign detail mailsent>>")
 
 
-def task_assign_ven_status_mail(task_assign,task_ven_status):
-    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'step':task_assign.step.name,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project}
-    email = task_assign.task_assign_info.assigned_by.email
+def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reason):
+    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'step':task_assign.step.name,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project, 'reason':change_request_reason}
+    receiver = task_assign.task_assign_info.assigned_by
+    receivers =  receiver.team.get_project_manager if receiver.team else [] 
+    receivers.append(task_assign.task_assign_info.assigned_by)
+    emails = [i.email for i in [*set(receivers)]]
+    print("Emails-------------->",emails)
+   
 
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
-        'Task Assign Vendor Status',None,
+        'Task Assign Service Provider Status',None,
         settings.DEFAULT_FROM_EMAIL,
-        [email],
+        emails,
         html_message=msg_html,
     )
     print("assign vendor status-->>>")

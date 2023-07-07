@@ -3,6 +3,7 @@ from ai_canvas.models import SourceImageAssetsCanvasTranslate
 from django import core
 from ai_workspace_okapi.utils import get_translation
 import os
+import pygame
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 HOST_NAME=os.getenv("HOST_NAME")
@@ -10,10 +11,11 @@ import json ,base64
 from fontTools.ttLib import TTFont
 import os
 import shutil
+import io,re
+from PIL import Image ,ImageFont
 
 
-
-from PIL import ImageFont
+ 
 
 def calculate_font_size(box_width, box_height,text,font_size):
     while True:
@@ -49,29 +51,34 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-                print("src_url",i['src'])
+                # print("src_url",i['src']) 
+        if i['type']== 'textbox':
+            i['isTranslate']=True
+            i['temp_text']=i['text']
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         else:
             break
     return json_src
 
-import pygame
 
-def calculate_textbox_dimensions(text,font_size):
+
+def calculate_textbox_dimensions(text,font_size,bold,italic): #
     font_size=int(font_size)
     pygame.init()
-    font = pygame.font.SysFont(r"", font_size)
+    # font=0
+    font = pygame.font.SysFont("Arial.ttf", font_size) #,bold=bold,italic=italic
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
     pygame.quit()
     return textbox_width, textbox_height
 
+
 def calculate_font_size(box_width, box_height, text,font_size):
     font_size=int(font_size)
     while True:
-        font = ImageFont.truetype(r"NotoSans-Regular.ttf",font_size)
+        font = ImageFont.truetype("NotoSans-Regular.ttf",font_size)
         text_width, text_height = font.getbbox(text)[2:]
         if text_width <= box_width and text_height <= box_height:
             break
@@ -89,8 +96,8 @@ def canva_group(_dict,src_lang ,lang):
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
-    print("canvas_json")
-    print(canvas_json)
+    # print("canvas_json")
+    # print(canvas_json)
     false = False
     null = 'null'
     true = True
@@ -106,12 +113,17 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
+                    
+                    # if 'isTranslate' in i.keys():
+                    #     i['isTranslate']=True   
+                    # fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    canvas_json_copy['objects'][count]['fontSize']=font_size
+                    canvas_json_copy['objects'][count]['rawMT']=tar_word
+                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+
+                    # canvas_json_copy['objects'][count]['fontSize']=font_size
  
                 if i['type'] == 'group':
                     canva_group(i['objects'])
@@ -119,21 +131,20 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
+                    # fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
-                    canvas_json_copy['objects'][count]['text'] =  tar_word
-                    
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    canvas_json_copy['objects'][count]['fontSize']=font_size
- 
+                    canvas_json_copy['objects'][count]['text']=tar_word
+                    canvas_json_copy['objects'][count]['rawMT']=tar_word
+                    # if 'isTranslate' in i.keys():
+                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    # canvas_json_copy['objects'][count]['fontSize']=font_size
                     # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
                     # canvas_json_copy['fontSize']=fontSize
                     if i['type'] == 'group':
                         canva_group(i['objects'])
         canvas_result[lang] = canvas_json_copy
     return canvas_result
-
 
 
 def thumbnail_create(json_str,formats):
@@ -157,22 +168,52 @@ def thumbnail_create(json_str,formats):
     else:
         return ValidationError("error in node server")
 
-import io
-from PIL import Image
-
+url_pattern = r'xlink:href="([^"]+)"'
+def svg_convert_base64(response_text):
+    matches = re.findall(url_pattern, response_text)
+    for match in matches:
+        response = requests.get(match)
+        format=match.split(".")[-1]
+        image_data = response.content
+        base64_data = base64.b64encode(image_data).decode('utf-8')
+        response_text = response_text.replace(match, f'data:image/{format};base64,{base64_data}')
+    return response_text
+    
+    
+import copy
 def export_download(json_str,format,multipliervalue):
-    json_ = json.dumps(json_str)
-    data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
-
+    if format in ["png","jpeg"]:
+        json_ = json.dumps(json_str)
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+     
+    elif format =='svg':
+        json_ = json.dumps(json_str)
+        data = {'json':json_ ,'format':'svg'}
+    elif format=='png-transparent':
+        json_trans = copy.deepcopy(json_str)
+        json_trans['background']='transparent'
+        json_trans['backgroundImage']['fill']='transparent'
+        json_trans['backgroundImage']['globalCompositeOperation'] ='source-over'
+        for i in json_trans['objects']:
+            if 'globalCompositeOperation' in i.keys():
+                i['globalCompositeOperation']='source-over'
+        json_ = json.dumps(json_trans)
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+        print("------------------------------")
+        format='png'
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+ 
     if thumb_image.status_code ==200:
-        split_text_base64 = thumb_image.text.split(",")[-1]
-        b64_bytes = base64.b64decode(split_text_base64)
-        im_file = io.BytesIO(b64_bytes)
-        img = Image.open(im_file)
-        output_buffer=io.BytesIO()
-        img.save(output_buffer, format=format, optimize=True, quality=85)
-        compressed_data=output_buffer.getvalue()
+        if format=='svg':
+            compressed_data=svg_convert_base64(thumb_image.text)
+        else:
+            im_file = io.BytesIO(base64.b64decode(thumb_image.text.split(",")[-1]))
+            img = Image.open(im_file)
+            output_buffer=io.BytesIO()
+            if format=='jpeg':
+                img = img.convert('RGB')
+            img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
+            compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
         return ValidationError("error in node server")
@@ -189,17 +230,21 @@ def install_font(font_path):
     destination_file_path=os.path.join(destination_path, font_filename)
     shutil.copy(font_path,destination_file_path)
     os.system("fc-cache -f -v")
-    print(f"Font '{family_name}' installed successfully!")
+    # print(f"Font '{family_name}' installed successfully!")
     return family_name
 
-
-
-def convert_image_url_to_file(image_url):
-    im=Image.open(requests.get(image_url, stream=True).raw)
+def convert_image_url_to_file(image_url,no_pil_object=True):
     img_io = io.BytesIO()
-    im.save(img_io, format='PNG')
-    img_byte_arr = img_io.getvalue()
-    return core.files.File(core.files.base.ContentFile(img_byte_arr),image_url.split('/')[-1])
+    if no_pil_object:
+        im=Image.open(requests.get(image_url, stream=True).raw)
+        im.save(img_io, format='PNG')
+        img_byte_arr = img_io.getvalue()
+        return core.files.File(core.files.base.ContentFile(img_byte_arr),image_url.split('/')[-1])
+    else:
+        im=image_url
+        im.save(img_io, format='PNG')
+        img_byte_arr = img_io.getvalue()
+        return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
 
 
 def json_sr_url_change(json,instance):
@@ -214,3 +259,13 @@ def json_sr_url_change(json,instance):
     return json
 
 
+
+def paginate_items(items, page_number, items_per_page):
+    total_items = len(items)
+    total_pages = (total_items + items_per_page - 1) // items_per_page
+    if page_number < 1 or page_number > total_pages:
+        raise ValueError("Invalid page number")
+    start_index = (page_number - 1) * items_per_page
+    end_index = start_index + items_per_page
+    paginated_items = items[start_index:end_index]
+    return paginated_items, total_pages
