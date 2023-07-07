@@ -310,7 +310,7 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
-                    print("data----------->",serializer.data)
+                    #print("data----------->",serializer.data)
                 queryset = BidPropasalDetails.objects.filter(projectpost_id= post_id).all()
                 serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response({"msg":"Bid Posted","data":serializer.data})
