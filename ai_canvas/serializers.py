@@ -84,6 +84,13 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
             data['export_file'] = "media/"+instance.export_file.name
         return data
 
+
+def get_or_none(classmodel, **kwargs):
+    try:
+        return classmodel.objects.get(**kwargs)
+    except classmodel.DoesNotExist:
+        return None
+
 class CanvasDesignSerializer(serializers.ModelSerializer):
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
@@ -256,11 +263,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
-            # for i in source_json_file['objects']:
-            #     print(list(i.keys()))
-            #     if 'textbox' == i['type'] and "temp_text" not in i.keys():
-            #         print("1212")
-            #         i['temp_text']=i['text']
             can_src.json=source_json_file
             # print("-------------------------")
             instance.width=int(social_media_create.width)
@@ -274,8 +276,20 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             text_box=""
             json=canvas_src_pages.json
             for i in json['objects']:
-                if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
+
+                if (i['type']=='textbox') and get_or_none(TextboxUpdate,text_id=i['name'],canvas=instance):
+                    text_box_instance=TextboxUpdate.objects.get(text_id=i['name'],canvas=instance)
+                    if text_box_instance.text != i['name']:
+                        text_box_instance.text=i['name']
+                        text_box_instance.save()
+                        text_box=i
+                        print("same, change to current",text_box)
+
+                elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
+                    TextboxUpdate.objects.create(canvas=instance,text=text_box,text_id=i['name'])
+                    print("new text box need to create",text_box)
+
                 if text_box and ("text" in text_box.keys()):
                     text=text_box['text']
                     canvas_tar_lang=instance.canvas_translate.all()
