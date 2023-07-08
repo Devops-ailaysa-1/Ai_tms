@@ -255,13 +255,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
-            for i in source_json_file['objects']:
-                print(list(i.keys()))
-                if 'textbox' == i['type'] and "temp_text" not in i.keys():
-                    print("1212")
-                    i['temp_text']=i['text']
-            can_src.json=source_json_file
-            print("-------------------------")
+            # for i in source_json_file['objects']:
+            #     print(list(i.keys()))
+            #     if 'textbox' == i['type'] and "temp_text" not in i.keys():
+            #         print("1212")
+            #         i['temp_text']=i['text']
+            # can_src.json=source_json_file
+            # print("-------------------------")
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)
             can_src.save()
