@@ -222,20 +222,31 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
           
-    def update_text_box_target(self,instance,text_box):
+    def update_text_box_target(self,instance,text_box,is_append):
         text=text_box['text']
+        text_id=text_box['name']
         canvas_tar_lang=instance.canvas_translate.all()
         for tar_json in canvas_tar_lang:
             src=tar_json.source_language.locale_code
             tar=tar_json.target_language.locale_code
             for j in tar_json.canvas_json_tar.all():
                 json=j.json
-                copy_txt_box=copy.copy(text_box)
-                trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                copy_txt_box['text']=trans_text    
-                obj_list=json['objects']
-                obj_list.append(copy_txt_box)
-                j.save()
+                if is_append:
+                    copy_txt_box=copy.copy(text_box)
+                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                    copy_txt_box['text']=trans_text    
+                    obj_list=json['objects']
+                    obj_list.append(copy_txt_box)
+                    j.save()
+                    print("change for new textbox",trans_text)
+
+                else:
+                    for tar_jsn in json['objects']:
+                        if 'text_box' == tar_jsn['type'] and text_id == tar_jsn['name']:
+                            tar_jsn['text']=get_translation(1,source_string=tar_jsn['text'],source_lang_code=src,target_lang_code=tar)
+                            print("instant change of existing text_box",tar_jsn['text'])
+                    j.save()
+
  
 
     def update(self, instance, validated_data):
@@ -294,33 +305,17 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 if (i['type']=='textbox') and get_or_none(TextboxUpdate,text_id=i['name'],canvas=instance):
                     text_box_instance=TextboxUpdate.objects.get(text_id=i['name'],canvas=instance)
                     if text_box_instance.text != i['text']:
-                        print(text_box_instance.text,i['text'])
                         text_box_instance.text=i['text']
                         text_box_instance.save()
                         text_box=i
-                        print("same, change to current",text_box)
 
                 elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
                     TextboxUpdate.objects.create(canvas=instance,text=text_box['text'],text_id=text_box['name'])
                     is_append=0
-                    print("new text box need to create",text_box)
-
+                    
                 if text_box and ("text" in text_box.keys()):
-                    self.update_text_box_target(instance,text_box)
-                    # text=text_box['text']
-                    # canvas_tar_lang=instance.canvas_translate.all()
-                    # for tar_json in canvas_tar_lang:
-                    #     src=tar_json.source_language.locale_code
-                    #     tar=tar_json.target_language.locale_code
-                    #     for j in tar_json.canvas_json_tar.all():
-                    #         json=j.json
-                    #         copy_txt_box=copy.copy(text_box)
-                    #         trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                    #         copy_txt_box['text']=trans_text    
-                    #         obj_list=json['objects']
-                    #         obj_list.append(copy_txt_box)
-                    #         j.save()
+                    self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
             canvas_src_pages.save()
             return instance
