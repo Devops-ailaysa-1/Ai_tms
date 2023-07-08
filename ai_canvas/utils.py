@@ -53,6 +53,7 @@ def json_src_change(json_src ,req_host,instance):
         print("type",i['type'])
         if i['type']== 'textbox':
             i['isTranslate']=True
+            print(i.keys())
             if 'temp_text' not in i.keys():
                 i['temp_text']=i['text']
         if 'objects' in i.keys():

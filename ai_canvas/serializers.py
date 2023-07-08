@@ -256,6 +256,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             for i in source_json_file['objects']:
+                print(list(i.keys()))
                 if 'textbox' == i['type'] and "temp_text" not in i.keys():
                     print("1212")
                     i['temp_text']=i['text']
