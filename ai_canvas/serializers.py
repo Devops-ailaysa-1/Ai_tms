@@ -246,7 +246,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         print("type--",tar_jsn['type'])
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
                             print("tar_jsn--------------------------",tar_jsn['name'])
-                            tar_jsn['text']=get_translation(1,source_string=tar_jsn['text'],source_lang_code=src,target_lang_code=tar)
+                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
                             print("instant change of existing text_box",tar_jsn['text'])
                     j.save()
 
