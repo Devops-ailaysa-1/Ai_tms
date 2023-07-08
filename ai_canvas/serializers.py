@@ -174,7 +174,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
 
         if source_json_file and social_media_create and width and height:
-            source_json_file=json_src_change(source_json_file,req_host,instance)
+            source_json_file=json_src_change(source_json_file,req_host,instance,text_box_save=False)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             src_json=can_json.json
@@ -360,7 +360,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
                 # trans_json.canvas_src_json
                 for count,src_json_file in enumerate(source_json_files_all):
-                    src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
+                    src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                     src_json_file.save()
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                      
@@ -383,7 +383,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
-                    target_json_file = json_src_change(target_json_file.json,req_host,instance)
+                    target_json_file = json_src_change(target_json_file.json,req_host,instance,text_box_save=False)
                     # print("outside----->json, canvas_translation_target")
                 canvas_trans.json = target_json_file
             canvas_trans.save()
@@ -393,7 +393,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
             if '' not in source_json_file:
                 source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
-            # source_json_file = json_src_change(source_json_file,req_host,instance)
+            
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
             print("this function dont want to exec")

@@ -37,7 +37,7 @@ def calculate_font_size(box_width, box_height,text,font_size):
 #         return [translated_text['translatedText'] for translated_text in source_string_list]
 
 
-def json_src_change(json_src ,req_host,instance):
+def json_src_change(json_src ,req_host,instance,text_box_save):
     req_host_url = str(req_host)
     for i in json_src['objects']:
         if 'src' in i.keys():
@@ -53,7 +53,8 @@ def json_src_change(json_src ,req_host,instance):
          
         if i['type']== 'textbox':
             i['isTranslate']=True
-            TextboxUpdate.objects.create(canvas=instance,text=i['text'],text_id=i['name'])
+            if text_box_save:
+                TextboxUpdate.objects.create(canvas=instance,text=i['text'],text_id=i['name'])
             # if 'temp_text' not in i.keys():
             #     i['temp_text']=i['text']
         if 'objects' in i.keys():
