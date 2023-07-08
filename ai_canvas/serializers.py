@@ -259,6 +259,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 if 'textbox' == i['type'] and "temp_text" not in i.keys():
                     i['temp_text']=i['text']
             can_src.json=source_json_file
+            print("-------------------------")
+            print(can_src)
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)
             can_src.save()
@@ -299,12 +301,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json_page['background']="rgba(255,255,255,0.1)"
             thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
-            json=can_json.json
-            for i in json['objects']:
-                if 'textbox' == i['type']:
-                    i['user_text']=i['text']
-            can_json.json=json
-            can_json.save()
+            # json=can_json.json
+            # for i in json['objects']:
+            #     if 'textbox' == i['type']:
+            #         i['user_text']=i['text']
+            # can_json.json=json
+            # can_json.save()
             for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
