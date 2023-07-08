@@ -240,7 +240,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
 
-        if social_media_create and src_page and source_json_file and width and height:
+        if social_media_create and src_page and source_json_file and width and height: ##########################this one same fun below 
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
@@ -257,10 +257,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_id']=social_media_create.id
             for i in source_json_file['objects']:
                 if 'textbox' == i['type'] and "temp_text" not in i.keys():
+                    print("1212")
                     i['temp_text']=i['text']
             can_src.json=source_json_file
             print("-------------------------")
-            print(can_src)
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)
             can_src.save()
@@ -300,13 +300,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             src_json_page['background']="rgba(255,255,255,0.1)"
             thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
-            can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
-            # json=can_json.json
-            # for i in json['objects']:
-            #     if 'textbox' == i['type']:
-            #         i['user_text']=i['text']
-            # can_json.json=json
-            # can_json.save()
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
+ 
             for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
@@ -367,6 +362,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # source_json_file = json_src_change(source_json_file,req_host,instance)
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
+            print("this function dont want to exec")
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
             # print("inside----->>> src json and src page")
             # thumbnail_path=canva_source.thumbnail.path
