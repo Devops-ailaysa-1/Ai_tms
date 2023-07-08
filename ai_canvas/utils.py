@@ -39,8 +39,7 @@ def calculate_font_size(box_width, box_height,text,font_size):
 
 def json_src_change(json_src ,req_host,instance):
     req_host_url = str(req_host)
-    src_obj = json_src['objects']
-    for i in src_obj:
+    for i in json_src['objects']:
         if 'src' in i.keys():
             image_url = i['src']
             image_extention ="."+image_url.split('.')[-1]
@@ -51,14 +50,14 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-                # print("src_url",i['src']) 
+        print("type",i['type'])
         if i['type']== 'textbox':
             i['isTranslate']=True
             i['temp_text']=i['text']
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
-        else:
-            break
+        # else:
+        #     break
     return json_src
 
 
