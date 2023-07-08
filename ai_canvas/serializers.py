@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,CanvasDownloadFormat,TemplateTag)#TemplatePage
+                            TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -260,7 +261,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             #     if 'textbox' == i['type'] and "temp_text" not in i.keys():
             #         print("1212")
             #         i['temp_text']=i['text']
-            # can_src.json=source_json_file
+            can_src.json=source_json_file
             # print("-------------------------")
             instance.width=int(social_media_create.width)
             instance.height=int(social_media_create.height)

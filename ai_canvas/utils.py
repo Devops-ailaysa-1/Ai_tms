@@ -1,5 +1,5 @@
 import requests 
-from ai_canvas.models import SourceImageAssetsCanvasTranslate
+from ai_canvas.models import SourceImageAssetsCanvasTranslate,TextboxUpdate
 from django import core
 from ai_workspace_okapi.utils import get_translation
 import os
@@ -50,12 +50,12 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-        print("type",i['type'])
+         
         if i['type']== 'textbox':
             i['isTranslate']=True
-            print(i.keys())
-            if 'temp_text' not in i.keys():
-                i['temp_text']=i['text']
+            TextboxUpdate.objects.create(canvas=instance,text=i['text'],text_id=i['name'])
+            # if 'temp_text' not in i.keys():
+            #     i['temp_text']=i['text']
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         # else:
