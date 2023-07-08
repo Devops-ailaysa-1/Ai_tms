@@ -53,7 +53,8 @@ def json_src_change(json_src ,req_host,instance):
         print("type",i['type'])
         if i['type']== 'textbox':
             i['isTranslate']=True
-            i['temp_text']=i['text']
+            if 'temp_text' not in i['text']:
+                i['temp_text']=i['text']
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance)
         # else:
@@ -95,8 +96,6 @@ def canva_group(_dict,src_lang ,lang):
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
-    # print("canvas_json")
-    # print(canvas_json)
     false = False
     null = 'null'
     true = True

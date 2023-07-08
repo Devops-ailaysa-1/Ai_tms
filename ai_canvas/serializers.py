@@ -378,9 +378,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         elif thumbnail_src and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            # thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
-            # print("thumbnail_page_path------>",thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
+ 
             thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
             canva_source.thumbnail = thumbnail_src
             canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
