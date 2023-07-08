@@ -279,8 +279,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
                 if (i['type']=='textbox') and get_or_none(TextboxUpdate,text_id=i['name'],canvas=instance):
                     text_box_instance=TextboxUpdate.objects.get(text_id=i['name'],canvas=instance)
-                    if text_box_instance.text != i['name']:
-                        text_box_instance.text=i['name']
+                    if text_box_instance.text != i['text']:
+                        print(text_box_instance.text,i['text'])
+                        text_box_instance.text=i['text']
                         text_box_instance.save()
                         text_box=i
                         print("same, change to current",text_box)
@@ -289,6 +290,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     text_box=i
                     TextboxUpdate.objects.create(canvas=instance,text=text_box,text_id=i['name'])
                     print("new text box need to create",text_box)
+                else:
+                    print("no chane")
 
                 if text_box and ("text" in text_box.keys()):
                     text=text_box['text']
