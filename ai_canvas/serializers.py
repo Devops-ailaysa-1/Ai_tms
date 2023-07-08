@@ -242,6 +242,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
                 else:
                     for tar_jsn in json['objects']:
+                        print("tar_jsn--------------------------",tar_jsn['name'])
                         if 'text_box' == tar_jsn['type'] and text_id == tar_jsn['name']:
                             tar_jsn['text']=get_translation(1,source_string=tar_jsn['text'],source_lang_code=src,target_lang_code=tar)
                             print("instant change of existing text_box",tar_jsn['text'])
@@ -289,9 +290,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            # print("-------------------------")
-            instance.width=int(social_media_create.width)
-            instance.height=int(social_media_create.height)
+ 
+            # instance.width=int(social_media_create.width)
+            # instance.height=int(social_media_create.height)
             can_src.save()
             instance.save()
             return instance
@@ -301,7 +302,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             text_box=""
             json=canvas_src_pages.json
             for i in json['objects']:
-                is_append=1
+                is_append=0
                 if (i['type']=='textbox') and get_or_none(TextboxUpdate,text_id=i['name'],canvas=instance):
                     text_box_instance=TextboxUpdate.objects.get(text_id=i['name'],canvas=instance)
                     if text_box_instance.text != i['text']:
@@ -312,7 +313,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
                     TextboxUpdate.objects.create(canvas=instance,text=text_box['text'],text_id=text_box['name'])
-                    is_append=0
+                    is_append=1
                     
                 if text_box and ("text" in text_box.keys()):
                     self.update_text_box_target(instance,text_box,is_append)
