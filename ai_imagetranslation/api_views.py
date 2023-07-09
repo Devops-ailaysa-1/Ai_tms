@@ -61,13 +61,13 @@ class ImageTranslateFilter(django_filters.FilterSet):
         fields = ['project_name','types']
 
 from rest_framework import filters
- 
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend,filters.OrderingFilter]
-    filterset_class = ImageTranslateFilter
- 
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ('project_name','types')
+    search_fields = ['project_name','types']
     page_size=20
     def get_object(self, pk):
         try:
