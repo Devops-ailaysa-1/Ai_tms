@@ -77,11 +77,11 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     def list(self, request):
         project_name= request.query_params.get('project_name',None)
         types=request.query_params.get('types',None)
+
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id') 
         if project_name or types:
-            print("give project")
             queryset = ImageTranslateFilter(request.GET, queryset=queryset)
-        else:
-            queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id') 
+        
 
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
