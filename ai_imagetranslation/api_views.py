@@ -52,20 +52,21 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
 
 ###image upload for inpaint processs
 import django_filters
- 
+import rest_framework
 class ImageTranslateFilter(django_filters.FilterSet):
+    project_name = rest_framework.CharFilter(field_name='project_name', lookup_expr='icontains')
+    types=rest_framework.CharFilter(field_name='types', lookup_expr='icontains')
     class Meta:
         model = ImageTranslate
-        fields = {
-            'project_name': ['exact', 'contains'],
-            'types': ['exact', 'contains'],
-        }
+        fields = ['project_name','types']
 
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
- 
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ImageTranslateFilter
  
     page_size=20
     def get_object(self, pk):
@@ -75,14 +76,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             raise Http404
 
     def list(self, request):
-        project_name= request.query_params.get('project_name',None)
-        types=request.query_params.get('types',None)
-
-        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id') 
-        if project_name or types:
-            queryset = ImageTranslateFilter(request.GET, queryset=queryset)
-        
-
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
