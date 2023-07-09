@@ -144,7 +144,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        print(width, height)
         # thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
         return width,height#,thumb_nail
     
@@ -152,7 +151,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
-            print(validated_data.get('image'))
             instance=ImageTranslate.objects.create(**data)
             width,height=self.image_shape(instance.image.path)
             instance.width=width
