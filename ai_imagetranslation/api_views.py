@@ -54,18 +54,18 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
 import django_filters
 import rest_framework
 class ImageTranslateFilter(django_filters.FilterSet):
-    project_name = rest_framework.CharFilter(field_name='project_name', lookup_expr='icontains')
-    types=rest_framework.CharFilter(field_name='types', lookup_expr='icontains')
+    project_name = django_filters.CharFilter(field_name='project_name', lookup_expr='icontains')
+    types=django_filters.CharFilter(field_name='types', lookup_expr='icontains')
     class Meta:
         model = ImageTranslate
         fields = ['project_name','types']
 
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+ 
 from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend,filters.OrderingFilter]
     filterset_class = ImageTranslateFilter
  
     page_size=20
