@@ -152,8 +152,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
-            image=validated_data.get('image')
-            print(image)
+            print(validated_data.get('image'))
             instance=ImageTranslate.objects.create(**data)
             width,height=self.image_shape(instance.image.path)
             instance.width=width
