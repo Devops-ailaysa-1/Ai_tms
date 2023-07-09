@@ -353,7 +353,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if canvas_translation_tar_lang and src_lang:
 
             source_json_files_all=instance.canvas_json_src.all()
-            print("====",source_json_file)
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
                     if text['type']== 'textbox':
@@ -367,10 +366,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
                  ####list of all canvas src json 
                 # trans_json.canvas_src_json
-                print("++++++++++++++++++++++++++++++++++++++",len(source_json_files_all))
                 for count,src_json_file in enumerate(source_json_files_all):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                     src_json_file.save()
+                    print("-----------------------",src_json_file.json)
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                      
                     if res[tar_lang.locale.first().locale_code]:
