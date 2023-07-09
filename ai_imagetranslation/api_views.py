@@ -84,6 +84,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     
     def list(self, request):
         queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
