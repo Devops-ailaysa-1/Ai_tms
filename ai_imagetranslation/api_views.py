@@ -50,6 +50,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ###image upload for inpaint processs
+from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -96,7 +97,10 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         if serializer.is_valid():
             print(serializer.data)
             serializer.save()
-            return Response(serializer.data)
+            response=JsonResponse(serializer.data)
+            response.status_code = 200
+            response["Custom-Header"] = "Value"
+            return response
         else:
             return Response(serializer.errors)
         
