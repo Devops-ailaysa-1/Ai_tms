@@ -50,7 +50,7 @@ def json_src_change(json_src ,req_host,instance,text_box_save):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-        if i['type']== 'textbox':
+        if i['type']== 'textbox': ####to check the type of object from canvas_json
             i['isTranslate']=True
             if text_box_save:
                 TextboxUpdate.objects.create(canvas=instance,text=i['text'],text_id=i['name'])
