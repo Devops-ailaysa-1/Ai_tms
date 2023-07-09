@@ -93,6 +93,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             data={'image':im_details.image}
             print("data",data)
             serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+            print(serializer)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
