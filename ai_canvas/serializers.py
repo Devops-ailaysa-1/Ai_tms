@@ -359,6 +359,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
                 source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
                 # trans_json.canvas_src_json
+                print("++++++++++++++++++++++++++++++++++++++",len(source_json_files_all))
                 for count,src_json_file in enumerate(source_json_files_all):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                     src_json_file.save()
