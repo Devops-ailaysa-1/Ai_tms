@@ -92,7 +92,9 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
              im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
              data={'image':im_details.image}
              serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+             
         if serializer.is_valid():
+            print(serializer.data)
             serializer.save()
             return Response(serializer.data)
         else:

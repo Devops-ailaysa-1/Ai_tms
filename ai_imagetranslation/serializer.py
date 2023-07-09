@@ -160,6 +160,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.types=str(validated_data.get('image')).split('.')[-1]
             print(instance.types)
             instance.save()
+            print("saved instance")
             return instance
             
     def update(self, instance, validated_data):
