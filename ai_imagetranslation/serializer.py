@@ -155,9 +155,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
+            print(instance.height,instance.width)
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
-            
+            print(instance.types)
             instance.save()
             return instance
             
