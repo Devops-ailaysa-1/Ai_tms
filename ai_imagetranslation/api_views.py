@@ -75,7 +75,13 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             return ImageTranslate.objects.get(id=pk)
         except ImageTranslate.DoesNotExist:
             raise Http404
-
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
     def list(self, request):
         queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
