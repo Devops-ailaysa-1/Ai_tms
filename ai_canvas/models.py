@@ -248,7 +248,7 @@ class CanvasSourceUpdate(models.Model):
 
 class TextboxUpdate(models.Model):
     canvas=models.ForeignKey(CanvasDesign,related_name='canvas_text_box', on_delete=models.CASCADE)
-    canvas_src=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_text_box_src', on_delete=models.CASCADE)
+    # canvas_src=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_text_box_src', on_delete=models.CASCADE)
     text_id=models.CharField(max_length=1000,null=True,blank=True)
     text=models.CharField(max_length=1000,null=True,blank=True)
 
