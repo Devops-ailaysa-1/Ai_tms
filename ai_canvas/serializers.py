@@ -351,13 +351,20 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
+            
+            source_json_files_all=trans_json.canvas_design.canvas_json_src.all()
+            for count,src_json_file in enumerate(source_json_files_all):
+                for text in src_json_file.json['objects']:
+                    if text['type']== 'textbox':
+                        TextboxUpdate.objects.create(canvas=instance,canvas_src=src_json_file,text=text['text'],text_id=text['name'])
+
             for count,tar_lang in enumerate(canvas_translation_tar_lang):
 
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
                 trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
-                source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
+                 ####list of all canvas src json 
                 # trans_json.canvas_src_json
                 print("++++++++++++++++++++++++++++++++++++++",len(source_json_files_all))
                 for count,src_json_file in enumerate(source_json_files_all):
