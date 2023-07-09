@@ -130,7 +130,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
-            representation['source_language']=instance.source_language.language.id  
+            representation['source_language']=instance.source_language.language.id 
+        if representation.get('image',None):
+            representation['image']=instance.image.url
+        if representation.get('mask',None):
+            representation['mask']=instance.mask.url
+        if representation.get('inpaint_image',None):
+            representation['inpaint_image']=instance.inpaint_image.url  #
+        if representation.get('create_inpaint_pixel_location',None):
+            representation['create_inpaint_pixel_location']=instance.create_inpaint_pixel_location.url
         # if representation.get('thumbnail' , None):
         #     image_path=instance.image.path
         #     im = Image.open(image_path)
