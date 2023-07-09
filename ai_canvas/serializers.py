@@ -352,7 +352,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if canvas_translation_tar_lang and src_lang:
 
-            source_json_files_all=trans_json.canvas_design.canvas_json_src.all()
+            source_json_files_all=instance.canvas_json_src.all()
+            print("====",source_json_file)
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
                     if text['type']== 'textbox':
