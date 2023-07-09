@@ -6,6 +6,7 @@ from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
 from ai_canvas.models import CanvasUserImageAssets
+
 ###image_upload
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -50,9 +51,13 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ###image upload for inpaint processs
+from django_filters.rest_framework import DjangoFilterBackend 
+from rest_framework.filters import SearchFilter, OrderingFilter
 from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    search_fields = ['project_name__contains','types']
     page_size=20
     def get_object(self, pk):
         try:
