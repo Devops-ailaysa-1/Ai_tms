@@ -65,8 +65,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ('project_name','types')
+    ffilter_backends = (filters.SearchFilter,)
     search_fields = ['project_name','types']
     page_size=20
     def get_object(self, pk):
