@@ -1032,7 +1032,6 @@ def create_image(json_page,file_format,export_size,page_number,language):
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     if len(pages_list)==1:
-        print("single___page",pages_list[0].json)
         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)

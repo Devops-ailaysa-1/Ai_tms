@@ -143,13 +143,75 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 from rest_framework.decorators import api_view,permission_classes
+from ai_canvas.utils import export_download
+from ai_canvas.api_views import download_file_canvas,mime_type,create_image
+import io
+from django import core
+from zipfile import ZipFile
+
+
+def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
+    if len(pages_list)==1:
+        print("single___page",pages_list[0].json)
+        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        
+    else:
+        print("multiple___page")
+        buffer=io.BytesIO()
+        with ZipFile(buffer, mode="a") as archive:
+            for src_json in pages_list:
+                file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+                path='{}/{}'.format(lang,file_name)
+                file_format = 'png' if file_format == 'png-transparent' else file_format
+                values=export_download(src_json.json,file_format,export_size)
+                archive.writestr(path,values)
+        response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+    return response
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def image_translation_project_view(request):
     image_id=request.query_params.get('image_id')
+    language=request.query_params.get('language',0)
+    export_size=request.query_params.get('export_size',1)
+    file_format=request.query_params.get('file_format')
+ 
+    language = int(language) if language else None
+    file_format = file_format.replace(" ","-") if file_format else ""
     image_download={}
-    if image_id:
-        image_instance=ImageTranslate.objects.get(id=image_id)
+    image_instance=ImageTranslate.objects.get(id=image_id)
+    if language==0:
+        buffer=io.BytesIO()
+        with ZipFile(buffer, mode="a") as archive:
+            format = 'png' if file_format == 'png-transparent' else file_format
+            file_name = '{}.{}'.format(image_instance.source_language.language.language,format)
+            src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size )
+            archive.writestr(file_name,src_image_json)
+            for tar_json in image_instance.s_im.all():
+                tar_lang=tar_json.target_language.language.language
+                file_name = '{}.{}'.format(tar_lang,format)
+                tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
+                archive.writestr(file_name,tar_image_json)
+        res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=image_instance.project_name+'.zip')
+        return res
+    
+    elif language == image_instance.source_language.id:
+        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,lang)
+        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        return response
+    
+    elif language != image_instance.source_language.id:
+        tar_inst=image_instance.s_im.get(target_language__language__id=language)
+        img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,lang)
+        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        return response
+    else:
         image_download[image_instance.source_language.language.language] =image_instance.source_language.id
         for i in image_instance.s_im.all():
             image_download[i.target_language.language.language]=i.target_language.language.id
