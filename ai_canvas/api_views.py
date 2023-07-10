@@ -993,8 +993,8 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     page_size = 20
     filter_backends = [DjangoFilterBackend]
  
-    search_fields =['category__template_name','social_media_name','category__description','category__template_lang__language',
-                    'category__template_global_page__tag_name']
+    search_fields =['template_global_categoty__template_name','social_media_name','template_global_categoty__description',
+                    'template_global_categoty__template_lang__language','template_global_categoty__template_global_page__tag_name']
 
 
     def list(self,request):
