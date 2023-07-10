@@ -165,8 +165,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         print("temp_global_design",temp_global_design)
         print("new_project",new_project)
         if temp_global_design and new_project:
-            width=temp_global_design.width
-            height=temp_global_design.height
+            width=temp_global_design.category.width
+            height=temp_global_design.category.height
             json=temp_global_design.json
             category=temp_global_design.category
             thumbnail=temp_global_design.thumbnail_page
