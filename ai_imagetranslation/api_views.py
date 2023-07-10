@@ -200,14 +200,14 @@ def image_translation_project_view(request):
         return res
     
     elif language == image_instance.source_language.id:
-        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,lang)
+        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     
     elif language and language != image_instance.source_language.id:
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
-        img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,lang)
+        img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
