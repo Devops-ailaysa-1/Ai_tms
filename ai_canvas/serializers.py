@@ -173,7 +173,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
-            CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
+            CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1)
             return new_proj  ###returned
         else:
             data = {**validated_data ,'user':user}
