@@ -34,7 +34,8 @@ from django.core.paginator import Paginator
 import uuid
 import urllib.request
 from django import core 
-
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 HOST_NAME=os.getenv("HOST_NAME")
  
 
@@ -139,9 +140,12 @@ class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
         return response
 
 
+ 
 class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
+    search_fields =['image_name']
+
     def get_object(self, pk):
         try:
             return CanvasUserImageAssets.objects.get(id=pk)
@@ -160,10 +164,17 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     
     def list(self, request):
         queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
@@ -247,8 +258,7 @@ class CustomPagination(PageNumberPagination):
 
 
 
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
+ 
 
 class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     pagination_class = CanvasDesignListViewsetPagination
@@ -338,8 +348,11 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     pagination_class = MyTemplateDesignPagination
     page_size = 20
     permission_classes = [IsAuthenticated,]
+    search_fields =['file_name',]
+
     def list(self,request):
         queryset = MyTemplateDesign.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -352,7 +365,13 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset   
+    
     def destroy(self,request,pk):
         MyTemplateDesign.objects.get(id=pk).delete()
         return Response({'msg':'deleted'})
@@ -572,8 +591,10 @@ def instant_canvas_translation(request):
 class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
-    def get(self, request):
+    search_fields = ['txt_temp__text_keywords']
+    def list(self, request):
         queryset=TextTemplate.objects.all()
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer=TextTemplateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -598,6 +619,12 @@ class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset 
     
     def update(self,request,pk):
         query_set=TextTemplate.objects.get(id = pk)
@@ -946,8 +973,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
+ 
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination

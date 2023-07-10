@@ -1024,11 +1024,19 @@ class DesignShapePagination(PageNumberPagination):
     page_size = 30 
     page_size_query_param = 'page_size'
 
+
+
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
 class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     page_size = 30
     pagination_class = DesignShapePagination
+    search_fields =['shape_name']
+
     def list(self,request):
         queryset = DesignShape.objects.all().order_by('id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignShapeSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -1046,6 +1054,12 @@ class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset   
     
     def create(self,request):
         shape=request.FILES.get('shape')

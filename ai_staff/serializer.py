@@ -488,6 +488,8 @@ class DesignShapeSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         instance= DesignShape.objects.create(**validated_data)
+        instance.shape_name = instance.shape.name.split("/")[-1].split(".")[0]
+        instance.save()
         return instance
     
     def update(self, instance, validated_data):
