@@ -1173,7 +1173,11 @@ class UpdateTaskCreditStatus(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
-    return Response({"credits_left": request.user.credit_balance,}, status=200)
+    pr_managers = request.user.team.get_project_manager if request.user.team else []
+    if request.user.is_internal_member == True and request.user in pr_managers:
+        user = request.user.team.owner
+    else: user = request.user
+    return Response({"credits_left": user.credit_balance}, status=200)
 
 ######### Tasks Assign to vendor #################
 class TaskView(APIView):
@@ -1570,7 +1574,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         extra = {'assignment_id':assignment_id,'files':files}
         final =[]
         task_assign_detail = data.pop('task_assign_detail')
-        task_assign_detail = json.loads(task_assign_detail)
+        task_assign_detail = json.loads(task_assign_detail)    #
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
         # For authorization

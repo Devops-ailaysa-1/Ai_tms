@@ -6,6 +6,7 @@ from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
 from ai_canvas.models import CanvasUserImageAssets
+
 ###image_upload
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -50,18 +51,40 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ###image upload for inpaint processs
+import django_filters
+import rest_framework
+class ImageTranslateFilter(django_filters.FilterSet):
+    project_name = django_filters.CharFilter(field_name='project_name', lookup_expr='icontains')
+    types=django_filters.CharFilter(field_name='types', lookup_expr='icontains')
+    class Meta:
+        model = ImageTranslate
+        fields = ['project_name','types']
+
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['project_name','types']
+    search_fields =['types']
+ 
     page_size=20
     def get_object(self, pk):
         try:
             return ImageTranslate.objects.get(id=pk)
         except ImageTranslate.DoesNotExist:
             raise Http404
-
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
     def list(self, request):
-        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id') 
-        print("test")
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageTranslateSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -92,9 +115,13 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
              im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
              data={'image':im_details.image}
              serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+             
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            response=JsonResponse(serializer.data)
+            response.status_code = 200
+            response["Custom-Header"] = "Value"
+            return response
         else:
             return Response(serializer.errors)
         

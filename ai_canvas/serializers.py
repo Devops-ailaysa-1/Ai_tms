@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,CanvasDownloadFormat,TemplateTag)#TemplatePage
+                            TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -82,6 +83,13 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
         if instance.export_file:
             data['export_file'] = "media/"+instance.export_file.name
         return data
+
+
+def get_or_none(classmodel, **kwargs):
+    try:
+        return classmodel.objects.get(**kwargs)
+    except classmodel.DoesNotExist:
+        return None
 
 class CanvasDesignSerializer(serializers.ModelSerializer):
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
@@ -166,12 +174,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
 
         if source_json_file and social_media_create and width and height:
-            source_json_file=json_src_change(source_json_file,req_host,instance)
+            source_json_file=json_src_change(source_json_file,req_host,instance,text_box_save=False)
             thumbnail_src=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             src_json=can_json.json
             src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
+            
             can_json.json=src_json    
             can_json.save()
             instance.save()
@@ -186,6 +195,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
+            # json=can_json.json
+            # for i in json['objects']:
+            #     if 'textbox' == i['type']:
+            #         i['user_text']=i['text']
+            # can_json.json=json
+            # can_json.save()
             instance.height=int(width)
             instance.width=int(height)
             # instance.file_name=social_media_create.social_media_name
@@ -207,7 +222,35 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
           
+    def update_text_box_target(self,instance,text_box,is_append):
+        text=text_box['text']
+        text_id=text_box['name']
+        print("text_id",text_id)
+        canvas_tar_lang=instance.canvas_translate.all()
+        for tar_json in canvas_tar_lang:
+            src=tar_json.source_language.locale_code
+            tar=tar_json.target_language.locale_code
+            for j in tar_json.canvas_json_tar.all():
+                json=j.json
+                if is_append:
+                    copy_txt_box=copy.copy(text_box)
+                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                    copy_txt_box['text']=trans_text    
+                    obj_list=json['objects']
+                    obj_list.append(copy_txt_box)
+                    j.save()
+                    print("change for new textbox",trans_text)
 
+                else:
+                    for tar_jsn in json['objects']:
+                        print("type--",tar_jsn['type'])
+                        if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
+                            print("tar_jsn--------------------------",tar_jsn['name'])
+                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                            print("instant change of existing text_box",tar_jsn['text'])
+                    j.save()
+
+ 
 
     def update(self, instance, validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
@@ -233,7 +276,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
 
-        if social_media_create and src_page and source_json_file and width and height:
+        if social_media_create and src_page and source_json_file and width and height: ##########################this one same fun below 
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
@@ -249,8 +292,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            instance.width=int(social_media_create.width)
-            instance.height=int(social_media_create.height)
+ 
+            # instance.width=int(social_media_create.width)
+            # instance.height=int(social_media_create.height)
             can_src.save()
             instance.save()
             return instance
@@ -260,22 +304,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             text_box=""
             json=canvas_src_pages.json
             for i in json['objects']:
-                if (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
+                is_append=0
+                if (i['type']=='textbox') and get_or_none(TextboxUpdate,text_id=i['name'],canvas=instance):
+                    text_box_instance=TextboxUpdate.objects.get(text_id=i['name'],canvas=instance)
+                    if text_box_instance.text != i['text']:
+                        text_box_instance.text=i['text']
+                        text_box_instance.save()
+                        text_box=i
+                        print("existing textbox is updated")
+
+                elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
+                    TextboxUpdate.objects.create(canvas=instance,text=text_box['text'],text_id=text_box['name'])
+                    is_append=1
+                    print("no existing textbox is updated")
+                    
                 if text_box and ("text" in text_box.keys()):
-                    text=text_box['text']
-                    canvas_tar_lang=instance.canvas_translate.all()
-                    for tar_json in canvas_tar_lang:
-                        src=tar_json.source_language.locale_code
-                        tar=tar_json.target_language.locale_code
-                        for j in tar_json.canvas_json_tar.all():
-                            json=j.json
-                            copy_txt_box=copy.copy(text_box)
-                            trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                            copy_txt_box['text']=trans_text    
-                            obj_list=json['objects']
-                            obj_list.append(copy_txt_box)
-                            j.save()
+                    print("function call")
+                    self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
             canvas_src_pages.save()
             return instance
@@ -289,7 +335,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json_page['background']="rgba(255,255,255,0.1)"
             thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
-            
+ 
             for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
@@ -305,17 +351,25 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
+
+            source_json_files_all=instance.canvas_json_src.all()
+            for count,src_json_file in enumerate(source_json_files_all):
+                for text in src_json_file.json['objects']:
+                    if text['type']== 'textbox':
+                        TextboxUpdate.objects.create(canvas=instance,text=text['text'],text_id=text['name'])
+
             for count,tar_lang in enumerate(canvas_translation_tar_lang):
 
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
                 trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
-                source_json_files_all=trans_json.canvas_design.canvas_json_src.all() ####list of all canvas src json 
+                 ####list of all canvas src json 
                 # trans_json.canvas_src_json
                 for count,src_json_file in enumerate(source_json_files_all):
-                    src_json_file.json=json_src_change(src_json_file.json,req_host,instance)
+                    src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                     src_json_file.save()
+                    print("-----------------------",src_json_file.json)
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                      
                     if res[tar_lang.locale.first().locale_code]:
@@ -337,7 +391,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
-                    target_json_file = json_src_change(target_json_file.json,req_host,instance)
+                    target_json_file = json_src_change(target_json_file.json,req_host,instance,text_box_save=False)
                     # print("outside----->json, canvas_translation_target")
                 canvas_trans.json = target_json_file
             canvas_trans.save()
@@ -347,9 +401,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
             if '' not in source_json_file:
                 source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
-            # source_json_file = json_src_change(source_json_file,req_host,instance)
+            
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
+            print("this function dont want to exec")
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
             # print("inside----->>> src json and src page")
             # thumbnail_path=canva_source.thumbnail.path
@@ -361,9 +416,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         elif thumbnail_src and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            # thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
-            # print("thumbnail_page_path------>",thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
+ 
             thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
             canva_source.thumbnail = thumbnail_src
             canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src

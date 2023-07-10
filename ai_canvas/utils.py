@@ -1,5 +1,5 @@
 import requests 
-from ai_canvas.models import SourceImageAssetsCanvasTranslate
+from ai_canvas.models import SourceImageAssetsCanvasTranslate,TextboxUpdate
 from django import core
 from ai_workspace_okapi.utils import get_translation
 import os
@@ -37,10 +37,9 @@ def calculate_font_size(box_width, box_height,text,font_size):
 #         return [translated_text['translatedText'] for translated_text in source_string_list]
 
 
-def json_src_change(json_src ,req_host,instance):
+def json_src_change(json_src ,req_host,instance,text_box_save):
     req_host_url = str(req_host)
-    src_obj = json_src['objects']
-    for i in src_obj:
+    for i in json_src['objects']:
         if 'src' in i.keys():
             image_url = i['src']
             image_extention ="."+image_url.split('.')[-1]
@@ -51,14 +50,14 @@ def json_src_change(json_src ,req_host,instance):
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
                 i['src'] = 'https://'+req_host_url+src_img_assets_can.img.url #
-                # print("src_url",i['src']) 
-        if i['type']== 'textbox':
+        if i['type']== 'textbox': ####to check the type of object from canvas_json
             i['isTranslate']=True
-            i['temp_text']=i['text']
+            # if text_box_save:
+            #     TextboxUpdate.objects.create(canvas=instance,text=i['text'],text_id=i['name'])
+
         if 'objects' in i.keys():
-            json_src_change(i,req_host,instance)
-        else:
-            break
+            json_src_change(i,req_host,instance,text_box_save=True)
+ 
     return json_src
 
 
@@ -96,13 +95,11 @@ def canva_group(_dict,src_lang ,lang):
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
-    # print("canvas_json")
-    # print(canvas_json)
     false = False
     null = 'null'
     true = True
     languages = languages.split(",")
-    canvas_json_copy =canvas_json
+    canvas_json_copy =copy.deepcopy(canvas_json)
     # fontSize=canvas_json_copy['fontSize']
     # height=canvas_json_copy['height']
     # width=canvas_json_copy['width']
@@ -113,9 +110,6 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
                 if i['type']== 'textbox':
                     text = i['text'] 
-                    
-                    # if 'isTranslate' in i.keys():
-                    #     i['isTranslate']=True   
                     # fontSize=canvas_json_copy['objects'][count]['fontSize']
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
@@ -135,7 +129,6 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
                     canvas_json_copy['objects'][count]['rawMT']=tar_word
-                    # if 'isTranslate' in i.keys():
                     # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     # canvas_json_copy['objects'][count]['fontSize']=font_size
@@ -182,10 +175,10 @@ def svg_convert_base64(response_text):
     
 import copy
 def export_download(json_str,format,multipliervalue):
-    if format in ["png","jpeg"]:
+    if format in ["png","jpeg","pdf"]:
         json_ = json.dumps(json_str)
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
-     
+    
     elif format =='svg':
         json_ = json.dumps(json_str)
         data = {'json':json_ ,'format':'svg'}

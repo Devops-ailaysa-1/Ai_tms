@@ -246,3 +246,17 @@ class CanvasSourceUpdate(models.Model):
         return self.text_id+"--"+source_text+"--"+prev_text
     
 
+class TextboxUpdate(models.Model):
+    canvas=models.ForeignKey(CanvasDesign,related_name='canvas_text_box', on_delete=models.CASCADE)
+    # canvas_src=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_text_box_src', on_delete=models.CASCADE,default=1)
+    text_id=models.CharField(max_length=1000,null=True,blank=True)
+    text=models.CharField(max_length=1000,null=True,blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['canvas', 'text_id'], name="%(app_label)s_%(class)s_unique")]
+
+    def __str__(self) -> str:
+        if self.text and self.text_id:
+            return self.text and self.text_id
+        else:
+            return ""

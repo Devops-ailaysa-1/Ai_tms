@@ -454,7 +454,8 @@ mime_type={'svg':'image/svg+xml',
         'jpeg':'image/jpeg',
         'jpg':'image/jpeg',
         'zip':'application/zip',
-        'png-transparent':'image/png'}
+        'png-transparent':'image/png',
+        'pdf':'application/pdf'}
 
 def download_file_canvas(file_path,mime_type,name):
     print(mime_type)
