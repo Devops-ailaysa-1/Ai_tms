@@ -240,27 +240,35 @@ class CanvasDesignViewset(viewsets.ViewSet):
         can_src = request.query_params.get('can_src',None)
         can_tar = request.query_params.get('can_tar',None)
         page_no =request.query_params.get('page_no',None)
-        try:
-            obj = CanvasDesign.objects.get(id=pk)
-            if can_src and page_no:
-                CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
-                can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
-                for count,i in enumerate(can_page):
-                    i.page_no = page_no-count
-                    i.save()
+         
+        obj = CanvasDesign.objects.get(id=pk)
+        print(obj)
+        if can_src and page_no:
+            can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
+            CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
+            
+            print("can_page",can_page)
+            cot=0
+            for count,i in enumerate(can_page):
+                i.page_no = page_no-cot
+                i.save()
+                cot+=1
+                print("src__count",count)
 
-            elif can_tar and page_no:
-                CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
-                can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
-                for count,i in enumerate(can_page):
-                    i.page_no = page_no-count
-                    i.save()
-            else:
-                obj.delete()
-            return Response({'msg':'deleted successfully'},status=200)
-        except:
-            return Response({'msg':'deletion unsuccessfull'},status=400)
-        
+        elif can_tar and page_no:
+            can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
+            CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
+            
+            print("can_page",can_page)
+            cot=0
+            for count,i in enumerate(can_page):
+                i.page_no = page_no-cot
+                i.save()
+                print("tar___count",count)
+        else:
+            obj.delete()
+        return Response({'msg':'deleted successfully'},status=200)
+ 
 class CustomPagination(PageNumberPagination):
     page_size = 20 
     page_size_query_param = 'page_size'
