@@ -247,23 +247,21 @@ class CanvasDesignViewset(viewsets.ViewSet):
             CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
             can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
             print("can_page",can_page)
-            cot=0
-            for count,i in enumerate(can_page):
-                i.page_no =int(page_no)-cot+1
+            for i in can_page:
+                print(i.page_no)
+                i.page_no =int(page_no)-1
                 i.save()
-                cot+=1
-                print("src__count",count)
+ 
             return Response({'msg':'deleted successfully'},status=200)
 
         elif can_tar and page_no:
             CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
             can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
             print("can_page",can_page)
-            cot=0
-            for count,i in enumerate(can_page):
-                i.page_no =int(page_no)-cot+1
+            for i in can_page:
+                i.page_no =int(page_no)-1
                 i.save()
-                print("tar___count",count)
+ 
             return Response({'msg':'deleted successfully'},status=200)
         else:
             obj.delete()
