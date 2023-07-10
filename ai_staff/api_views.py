@@ -1035,7 +1035,7 @@ class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     search_fields =['shape_name']
 
     def list(self,request):
-        queryset = DesignShape.objects.all().order_by('-id')
+        queryset = DesignShape.objects.all()
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignShapeSerializer(pagin_tc,many=True)
