@@ -246,18 +246,38 @@ class CustomPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
 
 
+
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
 class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     pagination_class = CanvasDesignListViewsetPagination
     permission_classes = [IsAuthenticated,]
+    search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
+    filter_backends = [DjangoFilterBackend]
 
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
-        print("request.user.id--------------------->>>>",request.user.id , request.user)
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasDesignListSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
     
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    # def get_queryset(self):
+    #     queryset = super().get_queryset()
+    #     search = self.request.query_params.get('search')
+    #     if search:
+    #         queryset = queryset.filter(file_name__icontains=search) \
+    #             # | queryset.filter(canvas_translate__source_language__language__language=search) | \
+    #                     # queryset.filter(canvas_translate__target_language__language__language=search)
+    #     return queryset
 
 
 # class TemplateGlobalDesignViewset(viewsets.ViewSet ,PageNumberPagination):

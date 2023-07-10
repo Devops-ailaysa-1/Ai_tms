@@ -157,11 +157,28 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         width=validated_data.get('width',None)
         height=validated_data.get('height',None)
         update_new_textbox=validated_data.pop('update_new_textbox',None)
+        temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
-        data = {**validated_data ,'user':user}
-        instance=CanvasDesign.objects.create(**data)
-        self.instance=instance
+        
+
+        print("temp_global_design",temp_global_design)
+        print("new_project",new_project)
+        if temp_global_design and new_project:
+            width=temp_global_design.width
+            height=temp_global_design.height
+            json=temp_global_design.json
+            category=temp_global_design.category
+            user = self.context['request'].user
+            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+            json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+                                    "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+            CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
+            return new_proj  ###returned
+        else:
+            data = {**validated_data ,'user':user}
+            instance=CanvasDesign.objects.create(**data)
+            self.instance=instance
  
         # print("instance.file_name",instance.file_name)
         if not instance.file_name:
@@ -425,17 +442,17 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             #     os.remove(thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
 
-        if temp_global_design and new_project:
-            width=temp_global_design.width
-            height=temp_global_design.height
-            json=temp_global_design.json
-            category=temp_global_design.category
-            user = self.context['request'].user
-            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
-            json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
-                                    "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
-            CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
-            return new_proj
+        # if temp_global_design and new_project:
+        #     width=temp_global_design.width
+        #     height=temp_global_design.height
+        #     json=temp_global_design.json
+        #     category=temp_global_design.category
+        #     user = self.context['request'].user
+        #     new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+        #     json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+        #                             "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+        #     CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
+        #     return new_proj
 
         if temp_global_design:
             json_page = temp_global_design.json #
