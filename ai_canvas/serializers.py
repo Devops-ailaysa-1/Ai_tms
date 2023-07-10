@@ -169,7 +169,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             height=temp_global_design.height
             json=temp_global_design.json
             category=temp_global_design.category
-            thumbnail=temp_global_design.thumbnail
+            thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
