@@ -249,7 +249,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             print("can_page",can_page)
             for i in can_page:
                 print(i.page_no)
-                i.page_no =int(page_no)-1
+                i.page_no = int(i.page_no)-1
                 i.save()
  
             return Response({'msg':'deleted successfully'},status=200)
@@ -259,7 +259,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
             print("can_page",can_page)
             for i in can_page:
-                i.page_no =int(page_no)-1
+                i.page_no =int(i.page_no)-1
                 i.save()
  
             return Response({'msg':'deleted successfully'},status=200)
