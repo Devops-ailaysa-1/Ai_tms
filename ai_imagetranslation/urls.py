@@ -9,6 +9,7 @@ router.register(r'imagetranslate' , api_views.ImageTranslateViewset ,basename= '
 router.register(r'backgroundremove' , api_views.BackgroundRemovelViewset ,basename= 'background-remove')
 urlpatterns =  router.urls
 
-urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),]
+urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),
+              path('image-download',api_views.image_translation_project_view,name="image_download")]
 urlpatterns+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

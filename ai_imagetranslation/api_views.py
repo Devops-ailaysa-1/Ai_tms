@@ -140,7 +140,24 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         query_obj = ImageTranslate.objects.get(id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
+
+from rest_framework.decorators import api_view,permission_classes
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def image_translation_project_view(request):
+    image_id=request.query_params.get('image_id')
+    image_download={}
+    if image_id:
+        image_instance=ImageTranslate.objects.get("image_id")
+        image_download[image_instance.source_language.id] = image_instance.source_language.language.language
+        for i in image_instance.s_im.all():
+            image_download[i.target_language.language.language]=i.target_language.id
+        lang={**{"All":0},**image_download}
+        return Response(lang)
+
+
+
 
 from ai_canvas.api_views import CustomPagination
 class ImageInpaintCreationListView(ListAPIView,CustomPagination):
