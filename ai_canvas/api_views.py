@@ -244,8 +244,17 @@ class CanvasDesignViewset(viewsets.ViewSet):
             obj = CanvasDesign.objects.get(id=pk)
             if can_src and page_no:
                 CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
+                can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
+                for count,i in enumerate(can_page):
+                    i.page_no = page_no-count
+                    i.save()
+
             elif can_tar and page_no:
                 CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
+                can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
+                for count,i in enumerate(can_page):
+                    i.page_no = page_no-count
+                    i.save()
             else:
                 obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
@@ -255,10 +264,6 @@ class CanvasDesignViewset(viewsets.ViewSet):
 class CustomPagination(PageNumberPagination):
     page_size = 20 
     page_size_query_param = 'page_size'
-
-
-
- 
 
 class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     pagination_class = CanvasDesignListViewsetPagination
