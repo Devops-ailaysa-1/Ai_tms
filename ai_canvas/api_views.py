@@ -249,10 +249,11 @@ class CanvasDesignViewset(viewsets.ViewSet):
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
-                i.page_no =int(page_no)-cot
+                i.page_no =int(page_no)-cot+1
                 i.save()
                 cot+=1
                 print("src__count",count)
+            return Response({'msg':'deleted successfully'},status=200)
 
         elif can_tar and page_no:
             CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
@@ -260,12 +261,13 @@ class CanvasDesignViewset(viewsets.ViewSet):
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
-                i.page_no =int(page_no)-cot
+                i.page_no =int(page_no)-cot+1
                 i.save()
                 print("tar___count",count)
+            return Response({'msg':'deleted successfully'},status=200)
         else:
             obj.delete()
-        return Response({'msg':'deleted successfully'},status=200)
+            return Response({'msg':'deleted successfully'},status=200)
  
 class CustomPagination(PageNumberPagination):
     page_size = 20 
