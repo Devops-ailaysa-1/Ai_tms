@@ -244,9 +244,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
         obj = CanvasDesign.objects.get(id=pk)
         print(obj)
         if can_src and page_no:
-            can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
             CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
-            
+            can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
@@ -256,9 +255,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
                 print("src__count",count)
 
         elif can_tar and page_no:
-            can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
             CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
-            
+            can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
