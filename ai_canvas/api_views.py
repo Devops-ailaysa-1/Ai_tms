@@ -237,15 +237,15 @@ class CanvasDesignViewset(viewsets.ViewSet):
         return Response(serializer.errors,status=400)
         
     def destroy(self,request,pk):
-        can_src = request.query_params.get('can_src',None)
-        can_tar = request.query_params.get('can_tar',None)
-        page_no =request.query_params.get('page_no',None)
+        src_page_no = request.query_params.get('src_page_no',None)
+        tar_page_no = request.query_params.get('tar_page_no',None)
+ 
          
         obj = CanvasDesign.objects.get(id=pk)
-        print(obj)
-        if can_src and page_no:
-            CanvasSourceJsonFiles.objects.get(id=can_src,page_no=page_no).delete()
-            can_page=CanvasSourceJsonFiles.objects.filter(page_no__gt=page_no)
+        
+        if src_page_no:
+            can_get=CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
+            can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             print("can_page",can_page)
             for i in can_page:
                 print(i.page_no)
@@ -254,9 +254,9 @@ class CanvasDesignViewset(viewsets.ViewSet):
  
             return Response({'msg':'deleted successfully'},status=200)
 
-        elif can_tar and page_no:
-            CanvasTargetJsonFiles.objects.get(id=can_tar,page_no=page_no).delete()
-            can_page=CanvasTargetJsonFiles.objects.filter(page_no__gt=page_no)
+        elif tar_page_no:
+            can_get=CanvasTargetJsonFiles.objects.get(canvas_design=obj,page_no=tar_page_no).delete()
+            can_page=CanvasTargetJsonFiles.objects.filter(canvas_design=obj,page_no__gt=tar_page_no)
             print("can_page",can_page)
             for i in can_page:
                 i.page_no =int(i.page_no)-1
