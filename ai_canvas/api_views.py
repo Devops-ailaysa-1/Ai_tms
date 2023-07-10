@@ -908,7 +908,7 @@ def image_list(request):
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(all_cat_req,image_cats))
 
-    print("image_cats",image_cats)
+ 
     data=process_pixabay(results=results,image_cats=image_cats)
     paginate=Paginator(data,6)  ###no of item in single page
     fin_dat=paginate.get_page(page)
@@ -946,17 +946,25 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
-
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination
     page_size = 20
+    filter_backends = [DjangoFilterBackend]
+ 
+    search_fields =['category__template_name','social_media_name','category__description','category__template_lang__language',
+                    'category__template_global_page__tag_name']
+
+
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         if social_media_name_id:
             queryset = SocialMediaSize.objects.filter(id=social_media_name_id)
         else:
-            queryset = SocialMediaSize.objects.all().order_by("social_media_name")  
+            queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -965,6 +973,12 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
     
     def destroy(self,request,pk):
         TemplateGlobalDesign.objects.get(id=pk).delete()

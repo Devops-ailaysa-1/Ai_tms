@@ -162,8 +162,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         
 
-        print("temp_global_design",temp_global_design)
-        print("new_project",new_project)
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -237,7 +235,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             instance.height=int(social_media_create.height)
             instance.width=int(social_media_create.width)
-            # instance.file_name=social_media_create.social_media_name
+            instance.file_name=social_media_create.social_media_name
             instance.save()
             return instance
           
@@ -264,12 +262,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     for tar_jsn in json['objects']:
                         print("type--",tar_jsn['type'])
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
-                            print("tar_jsn--------------------------",tar_jsn['name'])
                             tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                            print("instant change of existing text_box",tar_jsn['text'])
                     j.save()
 
- 
 
     def update(self, instance, validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
@@ -330,13 +325,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         text_box_instance.text=i['text']
                         text_box_instance.save()
                         text_box=i
-                        print("existing textbox is updated")
+ 
 
                 elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
                     TextboxUpdate.objects.create(canvas=instance,text=text_box['text'],text_id=text_box['name'])
                     is_append=1
-                    print("no existing textbox is updated")
+ 
                     
                 if text_box and ("text" in text_box.keys()):
                     print("function call")
@@ -388,7 +383,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 for count,src_json_file in enumerate(source_json_files_all):
                     src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                     src_json_file.save()
-                    print("-----------------------",src_json_file.json)
+ 
                     res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                      
                     if res[tar_lang.locale.first().locale_code]:

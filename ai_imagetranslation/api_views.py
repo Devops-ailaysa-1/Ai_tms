@@ -51,23 +51,24 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 ###image upload for inpaint processs
-import django_filters
-import rest_framework
-class ImageTranslateFilter(django_filters.FilterSet):
-    project_name = django_filters.CharFilter(field_name='project_name', lookup_expr='icontains')
-    types=django_filters.CharFilter(field_name='types', lookup_expr='icontains')
-    class Meta:
-        model = ImageTranslate
-        fields = ['project_name','types']
 
+
+# class ImageTranslateFilter(django_filters.FilterSet):
+#     project_name = django_filters.CharFilter(field_name='project_name', lookup_expr='icontains')
+#     types=django_filters.CharFilter(field_name='types', lookup_expr='icontains')
+#     class Meta:
+#         model = ImageTranslate
+#         fields = ['project_name','types']
+ 
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
+
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
     filterset_fields =['project_name','types']
-    search_fields =['types','project_name','source_language','source_image__target_language']
+    search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
  
     page_size=20
     def get_object(self, pk):
