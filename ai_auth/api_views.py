@@ -2548,7 +2548,7 @@ def reports_dashboard(request):
     data_sub = dict()
     data["total_users"] = users.count()
     data["total_languages"]=len(repo.total_languages_used())
-    data["total_coutries"] =len(countries)
+    data["total_countries"] =len(countries)
     data["paid_users"]=paid_users.count()
     print(subs_info)
     for sub in subs_info[0]:
