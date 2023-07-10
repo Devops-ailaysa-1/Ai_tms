@@ -250,7 +250,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
-                i.page_no = page_no-cot
+                i.page_no =int(page_no)-cot
                 i.save()
                 cot+=1
                 print("src__count",count)
@@ -262,7 +262,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             print("can_page",can_page)
             cot=0
             for count,i in enumerate(can_page):
-                i.page_no = page_no-cot
+                i.page_no =int(page_no)-cot
                 i.save()
                 print("tar___count",count)
         else:
