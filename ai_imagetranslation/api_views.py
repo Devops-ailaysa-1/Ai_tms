@@ -152,7 +152,7 @@ def image_translation_project_view(request):
         image_instance=ImageTranslate.objects.get(id=image_id)
         image_download[image_instance.source_language.language.language] =image_instance.source_language.id
         for i in image_instance.s_im.all():
-            image_download[i.target_language.language.language]=i.target_language.id
+            image_download[i.target_language.language.language]=i.target_language.language.id
         lang={**{"All":0},**image_download}
         return Response(lang)
 
