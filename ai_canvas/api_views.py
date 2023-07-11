@@ -240,36 +240,36 @@ class CanvasDesignViewset(viewsets.ViewSet):
         src_page_no = request.query_params.get('src_page_no',None)
         tar_page_no = request.query_params.get('tar_page_no',None)
         tar_lang = request.query_params.get('tar_lang',None)
-        print("src_page_no",src_page_no)
-        print("tar_page_no",tar_page_no)
-        print("tar_lang",tar_lang)
         obj = CanvasDesign.objects.get(id=pk)
         
         if src_page_no:
             CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
-            for i in can_page:
-                updated_page_no=int(i.page_no)-1
-                src_json=copy.deepcopy(i.json)
-                i.page_no = updated_page_no
-                src_json['projectid']['page']=updated_page_no
-                src_json['projectid']['pages']=len(can_page)
-                i.json=src_json
-                i.save()
+            if can_page:
+                for i in can_page:
+                    updated_page_no=int(i.page_no)-1
+                    src_json=copy.deepcopy(i.json)
+                    i.page_no = updated_page_no
+                    src_json['projectid']['page']=updated_page_no
+                    src_json['projectid']['pages']=len(can_page)
+                    print("==================================")
+                    print(src_json)
+                    i.json=src_json
+                    i.save()
             return Response({'msg':'deleted successfully'},status=200)
 
-        elif tar_page_no and tar_lang:
-            CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no=tar_page_no).delete()
-            can_page=CanvasTargetJsonFiles.objects.filter(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no__gt=tar_page_no)
-            for i in can_page:
-                updated_page_no=int(i.page_no)-1
-                tar_json=copy.deepcopy(i.json)
-                i.page_no = updated_page_no
-                tar_json['projectid']['page']=updated_page_no
-                tar_json['projectid']['pages']=len(can_page)
-                i.json=tar_json
-                i.save()
-            return Response({'msg':'deleted successfully'},status=200)
+        # elif tar_page_no and tar_lang:
+        #     CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no=tar_page_no).delete()
+        #     can_page=CanvasTargetJsonFiles.objects.filter(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no__gt=tar_page_no)
+        #     for i in can_page:
+        #         updated_page_no=int(i.page_no)-1
+        #         tar_json=copy.deepcopy(i.json)
+        #         i.page_no = updated_page_no
+        #         tar_json['projectid']['page']=updated_page_no
+        #         tar_json['projectid']['pages']=len(can_page)
+        #         i.json=tar_json
+        #         i.save()
+            # return Response({'msg':'deleted successfully'},status=200)
         else:
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
