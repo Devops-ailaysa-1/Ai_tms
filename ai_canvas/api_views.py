@@ -200,7 +200,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 ###########################################################################
-
+import copy
 class CanvasDesignViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
 
@@ -248,22 +248,27 @@ class CanvasDesignViewset(viewsets.ViewSet):
         if src_page_no:
             CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
-            print("can_page",can_page)
             for i in can_page:
-                print(i.page_no)
-                i.page_no = int(i.page_no)-1
+                updated_page_no=int(i.page_no)-1
+                src_json=copy.deepcopy(i.json)
+                i.page_no = updated_page_no
+                src_json['projectid']['page']=updated_page_no
+                src_json['projectid']['pages']=len(can_page)
+                i.json=src_json
                 i.save()
- 
             return Response({'msg':'deleted successfully'},status=200)
 
         elif tar_page_no and tar_lang:
             CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no=tar_page_no).delete()
             can_page=CanvasTargetJsonFiles.objects.filter(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no__gt=tar_page_no)
-            print("can_page",can_page)
             for i in can_page:
-                i.page_no =int(i.page_no)-1
+                updated_page_no=int(i.page_no)-1
+                tar_json=copy.deepcopy(i.json)
+                i.page_no = updated_page_no
+                tar_json['projectid']['page']=updated_page_no
+                tar_json['projectid']['pages']=len(can_page)
+                i.json=tar_json
                 i.save()
- 
             return Response({'msg':'deleted successfully'},status=200)
         else:
             obj.delete()
