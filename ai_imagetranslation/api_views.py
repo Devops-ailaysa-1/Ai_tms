@@ -158,25 +158,25 @@ def create_image(json_page,file_format,export_size,page_number,language):
     return base64_img,file_name
 
 
-def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
-    if len(pages_list)==1:
-        print("single___page",pages_list[0].json)
-        img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
-        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
-        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
+#     if len(pages_list)==1:
+#         print("single___page",pages_list[0].json)
+#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         
-    else:
-        print("multiple___page")
-        buffer=io.BytesIO()
-        with ZipFile(buffer, mode="a") as archive:
-            for src_json in pages_list:
-                file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
-                path='{}/{}'.format(lang,file_name)
-                # file_format = 'png' if file_format == 'png-transparent' else file_format
-                values=export_download(src_json.json,file_format,export_size)
-                archive.writestr(path,values)
-        response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
-    return response
+#     else:
+#         print("multiple___page")
+#         buffer=io.BytesIO()
+#         with ZipFile(buffer, mode="a") as archive:
+#             for src_json in pages_list:
+#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+#                 path='{}/{}'.format(lang,file_name)
+#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
+#                 values=export_download(src_json.json,file_format,export_size)
+#                 archive.writestr(path,values)
+#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+#     return response
 
 
 
@@ -209,14 +209,16 @@ def image_translation_project_view(request):
         return res
     
     elif language == image_instance.source_language.id:
-        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
+        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,
+                                       image_instance.source_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     
     elif language and language != image_instance.source_language.id:
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
-        img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
+        img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,
+                                       image_instance.s_im.get(target_language_id=language).target_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response

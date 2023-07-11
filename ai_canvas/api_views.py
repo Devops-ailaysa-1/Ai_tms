@@ -132,7 +132,7 @@ class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
     
     def list(self, request):
         ids=[canvas_in.id for canvas_in in CanvasUserImageAssets.objects.filter(user=request.user.id) if image_check(canvas_in.image.path)]
-        queryset=CanvasUserImageAssets.objects.filter(id__in=ids)
+        queryset=CanvasUserImageAssets.objects.filter(id__in=ids).order_by("-id")
         # queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
