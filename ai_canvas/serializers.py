@@ -524,13 +524,13 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             if extension=='jpg':
                 extension='jpeg'
             
-            img = cv2.imread(instance.image.path,)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.imread(instance.image.path)
+            img_bgr_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             if extension !='svg':
                 height,width,_ = img.shape
                 content= image_content(img)
                 im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
-                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.fromarray(img))
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.fromarray(img_bgr_rgb))
                 instance.image = im
                 instance.height=height
                 instance.width=width
