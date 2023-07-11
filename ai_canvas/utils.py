@@ -192,9 +192,10 @@ def export_download(json_str,format,multipliervalue):
             if 'globalCompositeOperation' in i.keys():
                 i['globalCompositeOperation']='source-over'
         json_ = json.dumps(json_trans)
-        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
-        print("------------------------------")
         format='png'
+        data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
+         
+        
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
  
     if thumb_image.status_code ==200:

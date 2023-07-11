@@ -144,10 +144,18 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
 
 from rest_framework.decorators import api_view,permission_classes
 from ai_canvas.utils import export_download
-from ai_canvas.api_views import download_file_canvas,mime_type,create_image
+from ai_canvas.api_views import download_file_canvas,mime_type
 import io
 from django import core
 from zipfile import ZipFile
+
+
+def create_image(json_page,file_format,export_size,page_number,language):
+    file_format_ext = 'png' if file_format == 'png-transparent' else file_format
+
+    base64_img=export_download(json_page,file_format,export_size)
+    file_name="page_{}_{}.{}".format(str(page_number),language,file_format_ext)
+    return base64_img,file_name
 
 
 def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
@@ -193,6 +201,7 @@ def image_translation_project_view(request):
             archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
+                print("file_name",file_name)
                 file_name = '{}.{}'.format(tar_lang,format_exe)
                 tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
                 archive.writestr(file_name,tar_image_json)
