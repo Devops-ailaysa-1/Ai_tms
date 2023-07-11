@@ -271,7 +271,15 @@ class CanvasDesignViewset(viewsets.ViewSet):
         obj = CanvasDesign.objects.get(id=pk)
         
         if src_page_no:
-            CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
+            can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)
+            if len(can_src_del)==1:
+                can_inst=can_src_del[0]
+                json=copy.deepcopy(can_inst.json)
+                json['objects']=[]
+                can_inst.json=json
+                can_inst.save()
+            else:
+                can_src_del.get(page_no=int(src_page_no)).delete()
             can_page_last=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
             page_no_update(can_page=can_page_last,is_update=True,page_len=total_page)
