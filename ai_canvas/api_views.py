@@ -201,7 +201,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
 ###########################################################################
 import copy
-def page_no_update(can_page,update_page_no):
+def page_no_update(can_page,update_page_no,page_len):
     if can_page:
         for i in can_page:
             updated_page_no=int(i.page_no)-1
@@ -209,7 +209,7 @@ def page_no_update(can_page,update_page_no):
             i.page_no = updated_page_no
             if update_page_no:
                 src_json['projectid']['page']=updated_page_no
-            src_json['projectid']['pages']=len(can_page)
+            src_json['projectid']['pages']=page_len
             print("==================================")
             print(src_json)
             i.json=src_json
@@ -261,9 +261,10 @@ class CanvasDesignViewset(viewsets.ViewSet):
         if src_page_no:
             CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
-            page_no_update(can_page=can_page,update_page_no=True)
+            total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
+            page_no_update(can_page=can_page,update_page_no=True,page_len=total_page)
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__lt=src_page_no)
-            page_no_update(can_page=can_page,update_page_no=False)
+            page_no_update(can_page=can_page,update_page_no=False,page_len=total_page)
             return Response({'msg':'deleted successfully'},status=200)
 
         
