@@ -204,15 +204,28 @@ import copy
 def page_no_update(can_page,is_update,page_len):
     if can_page:
         for i in can_page:
-            updated_page_no=int(i.page_no)-1
             src_json=copy.deepcopy(i.json)
-            i.page_no = updated_page_no
             if is_update:
+                updated_page_no=int(i.page_no)-1
+                print("is__update",i)
+                i.page_no = updated_page_no
                 updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
+            else:
+                print("no_update")
             src_json['projectid']['pages']=page_len
             i.json=src_json
             i.save()
+
+# def len_page_update(can_page,page_len):
+#     if can_page:
+#         for i in can_page:
+#             updated_page_no=int(i.page_no)-1
+#             src_json=copy.deepcopy(i.json)
+#             i.page_no = updated_page_no
+#             src_json['projectid']['pages']=page_len
+#             i.json=src_json
+#             i.save()
 
 
 
@@ -259,11 +272,11 @@ class CanvasDesignViewset(viewsets.ViewSet):
         
         if src_page_no:
             CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
-            can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
+            can_page_last=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
-            page_no_update(can_page=can_page,is_update=True,page_len=total_page)
-            can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__lt=src_page_no)
-            page_no_update(can_page=can_page,is_update=False,page_len=total_page)
+            page_no_update(can_page=can_page_last,is_update=True,page_len=total_page)
+            can_page_first=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__lt=src_page_no)
+            page_no_update(can_page=can_page_first,is_update=False,page_len=total_page)
             return Response({'msg':'deleted successfully'},status=200)
 
         
