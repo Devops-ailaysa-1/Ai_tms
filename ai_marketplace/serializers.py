@@ -22,6 +22,10 @@ from  django.utils import timezone
 from ai_auth.tasks import check_dict
 from ai_auth.validators import file_size
 from ai_vendor.models import SavedVendor
+from notifications.signals import notify
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.conf import settings
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
     # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
@@ -118,9 +122,6 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
             # }
         }
 
-    def send_msg(self,objs):
-        pass
-
 
     def get_job_id(self,obj):
         tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
@@ -167,7 +168,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         print("Rres-------->",res)
         created_objs = [i[0] for i in res if i[1]==True]
         print("obj--------->",created_objs)
-        self.send_msg(created_objs)
+        send_msg(created_objs)
         return res
 
     def update(self, instance, data):
@@ -1022,33 +1023,43 @@ class GetTalentSerializer(serializers.Serializer):
 
 
 
-def msg_send_vendor_accept(bid_objects):
+def send_msg(bid_objects):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
-    sender = task_assign.assign_to
-    receivers = []
-    receiver =  task_assign.task_assign_info.assigned_by
-    receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
-    print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
-    receivers.append(task_assign.task_assign_info.assigned_by)
-    if receiver.team:
-        receivers.append(task_assign.task_assign_info.assigned_by.team.owner)
-    receivers = [*set(receivers)]
-    print("Receivers in vendoraccept----------->",receivers)
-    for i in receivers:
-        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
-        if thread_ser.is_valid():
-            thread_ser.save()
-            thread_id = thread_ser.data.get('id')
-        else:
-            thread_id = thread_ser.errors.get('thread_id')
-        print("Thread--->",thread_id)
-        print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
-        if input == 'task_accepted':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
-        elif input == 'change_request':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request with the following message and waiting for your response.\n Message: "+reason
-        print("Msg--------->",message)
-    if thread_id:
-        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-        notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+    for obj in bid_objects:
+        sender = obj.vendor
+        receivers = []
+        receiver =  obj.projectpost.customer
+        receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
+        receivers.append(receiver)
+        if receiver.team:
+            receivers.append(receiver.team.owner)
+        receivers = [*set(receivers)]
+        print("Receivers in msg_send----------->",receivers)
+        for i in receivers:
+            thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+            if thread_ser.is_valid():
+                thread_ser.save()
+                thread_id = thread_ser.data.get('id')
+            else:
+                thread_id = thread_ser.errors.get('thread_id')
+            print("Thread--->",thread_id)
+            message = "Project-Post named "+ obj.projectpost.proj_name +" with job "+obj.bidpostjob.source_target_pair_names+" received bids from vendor "+obj.vendor.email+"."
+            #message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
+
+            print("Msg--------->",message)
+            if thread_id:
+                msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+                notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+        context = {'message':message}	
+        Receiver_emails = [i.email for i in [*set(receivers)]]	
+        print("Rece-------->",Receiver_emails)		
+        msg_html = render_to_string("assign_notify_mail.html", context)
+        send_mail(
+            "Regarding Bid Info",None,
+            settings.DEFAULT_FROM_EMAIL,
+            Receiver_emails,
+            #['thenmozhivijay20@gmail.com',],
+            html_message=msg_html,
+        )
+        print("bid submitted by vendor detail sent to customer>>")	
