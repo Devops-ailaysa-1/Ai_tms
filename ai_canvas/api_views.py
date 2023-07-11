@@ -261,9 +261,9 @@ class CanvasDesignViewset(viewsets.ViewSet):
             CanvasSourceJsonFiles.objects.get(canvas_design=obj,page_no=int(src_page_no)).delete()
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
-            page_no_update(can_page=can_page,update_page_no=True,page_len=total_page)
+            page_no_update(can_page=can_page,is_update=True,page_len=total_page)
             can_page=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__lt=src_page_no)
-            page_no_update(can_page=can_page,update_page_no=False,page_len=total_page)
+            page_no_update(can_page=can_page,is_update=False,page_len=total_page)
             return Response({'msg':'deleted successfully'},status=200)
 
         
@@ -524,7 +524,6 @@ mime_type={'svg':'image/svg+xml',
         'pdf':'application/pdf'}
 
 def download_file_canvas(file_path,mime_type,name):
-    print(mime_type)
     response = HttpResponse(file_path, content_type=mime_type)
     response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(name)
     response['X-Suggested-Filename'] = name
