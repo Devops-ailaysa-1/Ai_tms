@@ -294,6 +294,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
+
             can_src.json=source_json_file
             can_src.save()
             instance.width=int(width)
@@ -303,10 +304,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if social_media_create and src_page and source_json_file:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
+            
             can_src.json=source_json_file
- 
+            can_src.thumbnail=thumbnail
             # instance.width=int(social_media_create.width)
             # instance.height=int(social_media_create.height)
             can_src.save()
@@ -334,7 +337,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
  
                     
                 if text_box and ("text" in text_box.keys()):
-                    print("function call")
                     self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
             canvas_src_pages.save()
