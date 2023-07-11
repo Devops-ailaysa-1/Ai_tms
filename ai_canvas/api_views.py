@@ -1044,14 +1044,14 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
     format_ext = 'png' if file_format == 'png-transparent' else file_format
     if len(pages_list)==1:
         img_res=export_download(pages_list[0].json,file_format,export_size)
-        file_name="page_{}_{}.{}".format(str(export_size,pages_list[0].page_no),lang,format_ext)
+        file_name="page_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:
         buffer=io.BytesIO()
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
-                file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+                file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                 path='{}/{}'.format(lang,file_name)
                 # file_format = 'png' if file_format == 'png-transparent' else file_format
                 values=export_download(src_json.json,file_format,export_size)
