@@ -164,7 +164,7 @@ def image_download__page(pages_list,file_format,export_size,lang,projecct_file_n
             for src_json in pages_list:
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
-                file_format = 'png' if file_format == 'png-transparent' else file_format
+                # file_format = 'png' if file_format == 'png-transparent' else file_format
                 values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
@@ -186,14 +186,14 @@ def image_translation_project_view(request):
     image_instance=ImageTranslate.objects.get(id=image_id)
     if language==0:
         buffer=io.BytesIO()
-        with ZipFile(buffer, mode="a") as archive:
-            format = 'png' if file_format == 'png-transparent' else file_format
-            file_name = '{}.{}'.format(image_instance.source_language.language.language,format)
+        format_exe = 'png' if file_format == 'png-transparent' else file_format
+        with ZipFile(buffer, mode="a") as archive:  
+            file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
             src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size )
             archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
-                file_name = '{}.{}'.format(tar_lang,format)
+                file_name = '{}.{}'.format(tar_lang,format_exe)
                 tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
                 archive.writestr(file_name,tar_image_json)
         res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')

@@ -1038,9 +1038,10 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         return Response({'msg':'deleted successfully'})
     
 def create_image(json_page,file_format,export_size,page_number,language):
-    format = 'png' if file_format == 'png-transparent' else file_format
+    file_format_ext = 'png' if file_format == 'png-transparent' else file_format
+
     base64_img=export_download(json_page,file_format,export_size)
-    file_name="page_{}_{}.{}".format(str(page_number),language,format)
+    file_name="page_{}_{}.{}".format(str(page_number),language,file_format_ext)
     return base64_img,file_name
 
 
@@ -1057,7 +1058,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
             for src_json in pages_list:
                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
                 path='{}/{}'.format(lang,file_name)
-                file_format = 'png' if file_format == 'png-transparent' else file_format
+                # file_format = 'png' if file_format == 'png-transparent' else file_format
                 values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
@@ -1087,11 +1088,10 @@ def DesignerDownload(request):
         if language==0: #all languages with number of pages
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
             buffer=io.BytesIO()
-            print("all languages with number of pages")
             with zipfile.ZipFile(buffer, mode="a") as archive:
+                format_ext = 'png' if file_format == 'png-transparent' else file_format
                 for src_json in src_jsons:
-                    format = 'png' if file_format == 'png-transparent' else file_format
-                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format)
+                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
                     path='{}/{}'.format(src_lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
@@ -1099,8 +1099,7 @@ def DesignerDownload(request):
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
                     for tar_json in tar_jsons:
                         values=export_download(tar_json.json,file_format,export_size)
-                        format = 'png' if file_format == 'png-transparent' else file_format
-                        file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format)
+                        file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')

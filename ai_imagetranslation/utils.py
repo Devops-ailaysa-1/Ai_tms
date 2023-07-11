@@ -15,7 +15,9 @@ import cv2,requests,base64,io
 from PIL import Image
 import numpy as np
 from io import BytesIO
- 
+from ai_canvas.template_json import textbox_json
+import copy
+import uuid,math
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
 
 
@@ -44,9 +46,7 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
     # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
     return [i[0] for i in extracted_color[0]][::-1] #if i[0]!=(0,0,0)
 
-from ai_canvas.template_json import textbox_json
-import copy
-import uuid,math
+
 def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
     # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
