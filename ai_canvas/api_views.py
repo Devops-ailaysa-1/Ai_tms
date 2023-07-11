@@ -210,8 +210,6 @@ def page_no_update(can_page,update_page_no,page_len):
             if update_page_no:
                 src_json['projectid']['page']=updated_page_no
             src_json['projectid']['pages']=page_len
-            print("==================================")
-            print(src_json)
             i.json=src_json
             i.save()
 

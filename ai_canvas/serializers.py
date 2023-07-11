@@ -524,7 +524,8 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             if extension=='jpg':
                 extension='jpeg'
             
-            img = cv2.imread(instance.image.path)
+            img = cv2.imread(instance.image.path,)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             if extension !='svg':
                 height,width,_ = img.shape
                 content= image_content(img)
