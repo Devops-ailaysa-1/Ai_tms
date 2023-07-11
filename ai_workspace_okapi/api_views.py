@@ -2384,8 +2384,10 @@ def spellcheck(request):
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
     out,res = [],[]
+    print("LangCode--------------->",lang_code)
     try:
         if lang_code == 'en':
+            print("Inside Try")
             lang = lang_code
             dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
             aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
@@ -2393,14 +2395,21 @@ def spellcheck(request):
             punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
             tknzr = TweetTokenizer()
             nltk_tokens = tknzr.tokenize(tar)
-            tokens_new = [word for word in nltk_tokens if word not in punctuation]
-            print(tokens_new)
-            for word in tokens_new:
+            words = [word for word in nltk_tokens if word not in punctuation]
+            print('wrd-------------->',words)
+            # batch_size = 300  
+            # num_batches = len(words) // batch_size + 1
+            # for i in range(num_batches):
+            #     start = i * batch_size
+            #     end = (i + 1) * batch_size
+            #     batch = words[start:end]
+            #     print("batch---------------->",batch)
+            for word in words:
                 suggestions=[]
                 if hobj.spell(word)==False:
-                     suggestions.extend(hobj.suggest(word))
-                     out=[{"word":word,"Suggested Words":suggestions}]
-                     res.extend(out)
+                    suggestions.extend(hobj.suggest(word))
+                    out=[{"word":word,"Suggested Words":suggestions}]
+                    res.extend(out)
             return JsonResponse({"result":res},safe=False)
         else:
             spellchecker=SpellcheckerLanguages.objects.get(language_id=lang_id).spellchecker.spellchecker_name
