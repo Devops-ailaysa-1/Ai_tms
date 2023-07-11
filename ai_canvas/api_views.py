@@ -1044,7 +1044,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
     format_ext = 'png' if file_format == 'png-transparent' else file_format
     if len(pages_list)==1:
         img_res=export_download(pages_list[0].json,file_format,export_size)
-        file_name="page_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
+        file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:
@@ -1096,7 +1096,6 @@ def DesignerDownload(request):
                     for tar_json in tar_jsons:
                         values=export_download(tar_json.json,file_format,export_size)
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
-                        print(file_name)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
