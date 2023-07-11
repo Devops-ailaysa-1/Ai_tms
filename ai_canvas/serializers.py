@@ -292,10 +292,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if social_media_create and src_page and source_json_file and width and height: ##########################this one same fun below 
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
-
             can_src.json=source_json_file
+            can_src.thumbnail=thumbnail
             can_src.save()
             instance.width=int(width)
             instance.height=int(height)
