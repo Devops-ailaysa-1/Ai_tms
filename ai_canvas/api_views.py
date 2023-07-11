@@ -56,7 +56,7 @@ params = {
             'image_type':'photo+illustration',
             'orientation':'all',
             'per_page':10,
-            'safesearch':False
+            'safesearch':True
         }
 
 
@@ -201,14 +201,14 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
 ###########################################################################
 import copy
-def page_no_update(can_page,update_page_no,page_len):
+def page_no_update(can_page,is_update,page_len):
     if can_page:
         for i in can_page:
             updated_page_no=int(i.page_no)-1
             src_json=copy.deepcopy(i.json)
             i.page_no = updated_page_no
-            if update_page_no:
-                update_page_no = 1 if update_page_no < 1 else update_page_no
+            if is_update:
+                updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
             src_json['projectid']['pages']=page_len
             i.json=src_json
@@ -849,18 +849,18 @@ def req_thread(category=None,page=None,search=None):
     if category:
         params['q']=category
         params['catagory']=category
-        params['safesearch']=False
+        params['safesearch']=True
     if page:
         params['page']=page
         params['per_page']=20
-        params['safesearch']=False
+        params['safesearch']=True
     if search:
         params['q']=search
-        params['safesearch']=False
+        params['safesearch']=True
     if category and search:
         params['catagory']=category
         params['q']=search
-        params['safesearch']=False
+        params['safesearch']=True
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if pixa_bay.status_code==200:
         return pixa_bay.json()
@@ -878,7 +878,7 @@ def pixa_image_url(image_url):
 
 def all_cat_req(category):
     params = {'key':pixa_bay_api_key,'order':'popular','image_type':'photo',
-            'orientation':'all','per_page':10,'safesearch':False}
+            'orientation':'all','per_page':10,'safesearch':True}
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
