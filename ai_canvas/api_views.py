@@ -56,7 +56,7 @@ params = {
             'image_type':'photo+illustration',
             'orientation':'all',
             'per_page':10,
-            'safesearch':True
+            'safesearch':False
         }
 
 
@@ -849,18 +849,18 @@ def req_thread(category=None,page=None,search=None):
     if category:
         params['q']=category
         params['catagory']=category
-        params['safesearch']=True
+        params['safesearch']=False
     if page:
         params['page']=page
         params['per_page']=20
-        params['safesearch']=True
+        params['safesearch']=False
     if search:
         params['q']=search
-        params['safesearch']=True
+        params['safesearch']=False
     if category and search:
         params['catagory']=category
         params['q']=search
-        params['safesearch']=True
+        params['safesearch']=False
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers)
     if pixa_bay.status_code==200:
         return pixa_bay.json()
@@ -878,7 +878,7 @@ def pixa_image_url(image_url):
 
 def all_cat_req(category):
     params = {'key':pixa_bay_api_key,'order':'popular','image_type':'photo',
-            'orientation':'all','per_page':10,'safesearch':True}
+            'orientation':'all','per_page':10,'safesearch':False}
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 

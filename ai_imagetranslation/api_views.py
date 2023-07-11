@@ -201,7 +201,6 @@ def image_translation_project_view(request):
             archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
-                print("file_name",file_name)
                 file_name = '{}.{}'.format(tar_lang,format_exe)
                 tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
                 archive.writestr(file_name,tar_image_json)

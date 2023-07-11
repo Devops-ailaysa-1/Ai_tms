@@ -242,7 +242,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     def update_text_box_target(self,instance,text_box,is_append):
         text=text_box['text']
         text_id=text_box['name']
-        print("text_id",text_id)
         canvas_tar_lang=instance.canvas_translate.all()
         for tar_json in canvas_tar_lang:
             src=tar_json.source_language.locale_code
@@ -329,14 +328,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         text_box_instance.text=i['text']
                         text_box_instance.save()
                         text_box=i
- 
-
                 elif (i['type']=='textbox') and ("isTranslate" in i.keys()) and (i['isTranslate'] == False):
                     text_box=i
                     TextboxUpdate.objects.create(canvas=instance,text=text_box['text'],text_id=text_box['name'])
                     is_append=1
- 
-                    
                 if text_box and ("text" in text_box.keys()):
                     self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
