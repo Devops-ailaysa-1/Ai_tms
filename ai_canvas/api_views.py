@@ -273,12 +273,17 @@ class CanvasDesignViewset(viewsets.ViewSet):
         if src_page_no:
             can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)
             if len(can_src_del)==1:
+                print("single page")
                 can_inst=can_src_del[0]
                 json=copy.deepcopy(can_inst.json)
                 json['objects']=[]
+                json['backgroundImage']['fill']="rgba(255,255,255,1)"
+                json['backgroundImage']['backgroundColor']=''
+                print(json)
                 can_inst.json=json
                 can_inst.save()
             else:
+                print("multiple_ page")
                 can_src_del.get(page_no=int(src_page_no)).delete()
             can_page_last=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
