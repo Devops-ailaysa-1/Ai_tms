@@ -279,8 +279,9 @@ class CanvasDesignViewset(viewsets.ViewSet):
                 json['objects']=[]
                 json['backgroundImage']['fill']="rgba(255,255,255,1)"
                 json['backgroundImage']['backgroundColor']=''
-                print(json)
                 can_inst.json=json
+                thumbnail=CanvasDesignSerializer().thumb_create(json_str=json,formats='png',multiplierValue=1) 
+                can_inst.thumbnail=thumbnail
                 can_inst.save()
             else:
                 print("multiple_ page")
