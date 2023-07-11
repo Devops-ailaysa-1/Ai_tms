@@ -208,6 +208,7 @@ def page_no_update(can_page,update_page_no,page_len):
             src_json=copy.deepcopy(i.json)
             i.page_no = updated_page_no
             if update_page_no:
+                update_page_no = 1 if update_page_no < 1 else update_page_no
                 src_json['projectid']['page']=updated_page_no
             src_json['projectid']['pages']=page_len
             i.json=src_json
