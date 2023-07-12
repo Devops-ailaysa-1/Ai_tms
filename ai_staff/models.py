@@ -660,10 +660,20 @@ class ImageCategories(models.Model):
         return self.category
     
 
+
+
 class DesignShape(models.Model):
+    types = (
+        (1, "Outline"),
+        (2, "Shape"),
+        (3, "Line"))
     shape_name=models.CharField(max_length=200,blank=True ,null=True)
     shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
+    types=models.CharField(max_length=300,null=True,blank=True,choices=types)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.shape_name
 
  
