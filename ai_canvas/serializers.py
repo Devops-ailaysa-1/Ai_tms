@@ -745,7 +745,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 data['my_template_thumbnail'] = template_page_first.my_template_thumbnail.url
             else:
                 data['my_template_thumbnail'] = None
-        if not instance.get("project_category",None):
+        if not instance.project_category:
             instance.project_category_id = 32
             instance.save()
             data['project_category']=instance.project_category_id
