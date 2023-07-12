@@ -166,6 +166,7 @@ class MyTemplateDesign(models.Model):
     height=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True)
      
 class MyTemplateDesignPage(models.Model):
     my_template_design=models.ForeignKey(MyTemplateDesign,related_name='my_template_page', on_delete=models.CASCADE)
