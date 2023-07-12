@@ -745,10 +745,10 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 data['my_template_thumbnail'] = template_page_first.my_template_thumbnail.url
             else:
                 data['my_template_thumbnail'] = None
-        if not instance.project_category:
-            instance.project_category_id = 32
-            instance.save()
-            data['project_category']=instance.project_category_id
+        # if not instance.project_category:
+        #     instance.project_category_id = 32
+        #     instance.save()
+        #     data['project_category']=instance.project_category_id
         return data
 
     def create(self, validated_data):
@@ -786,21 +786,16 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                                                     my_template_json=my_template_json )
                 
         
-        # if template_global_id:
-        #     file_name=template_global_id.file_name
-        #     width=template_global_id.width
-        #     height=template_global_id.height
-        #     template_globl_pag_inst = template_global_id.template_globl_pag.all()
-        #     my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
-        #     if any(template_globl_pag_inst):
-        #         for glob_pag in template_globl_pag_inst:
-        #             my_template_thumbnail = glob_pag.thumbnail_page
-        #             # my_template_export=glob_pag.export_page
-        #             my_template_json=glob_pag.json_page
-        #             # page_no=glob_pag.page_no
-        #             MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-        #                                                 my_template_json=my_template_json )
- 
+        if template_global_id:
+            file_name=template_global_id.file_name
+            width=template_global_id.width
+            height=template_global_id.height
+            project_category=template_global_id.category
+            my_template_thumbnail=template_global_id.thumbnail_page
+            my_template_json=template_global_id.json
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+            MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                                                     my_template_json=my_template_json )
                 
         return my_temp_design
 
