@@ -1051,15 +1051,16 @@ def send_msg(bid_objects):
             if thread_id:
                 msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
                 notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-        context = {'message':message}	
-        Receiver_emails = [i.email for i in [*set(receivers)]]	
-        print("Rece-------->",Receiver_emails)		
-        msg_html = render_to_string("assign_notify_mail.html", context)
-        send_mail(
-            "Regarding Bid Info",None,
-            settings.DEFAULT_FROM_EMAIL,
-            Receiver_emails,
-            #['thenmozhivijay20@gmail.com',],
-            html_message=msg_html,
-        )
+            context = {'message':message}	
+            Receiver_emails = [i.email]	
+            print("Rece-------->",Receiver_emails)
+            print("Ccontext---------->",context)		
+            msg_html = render_to_string("assign_notify_mail.html", context)
+            send_mail(
+                "Regarding Bid Info",None,
+                settings.DEFAULT_FROM_EMAIL,
+                Receiver_emails,
+                #['thenmozhivijay20@gmail.com',],
+                html_message=msg_html,
+            )
         print("bid submitted by vendor detail sent to customer>>")	
