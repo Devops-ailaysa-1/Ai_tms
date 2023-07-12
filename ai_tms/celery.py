@@ -26,11 +26,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
         'args': (),
     },
-    'invoice-sync': {
-        'task': 'ai_auth.tasks.sync_invoices_and_charges',
-        'schedule': crontab(hour=12, minute=00),
-        'args': (30,),
-    },
+    # 'invoice-sync': {
+    #     'task': 'ai_auth.tasks.sync_invoices_and_charges',
+    #     'schedule': crontab(hour=12, minute=00),
+    #     'args': (30,),
+    # },
     'renew-credits': {
         'task': 'ai_auth.tasks.renewal_list',
         'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
