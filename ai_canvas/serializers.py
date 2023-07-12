@@ -731,8 +731,8 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
     tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    trans_page_no = serializers.serializers.IntegerField(required=False) 
-    src_page_no= serializers.serializers.IntegerField(required=False) 
+    trans_page_no = serializers.IntegerField(required=False) 
+    src_page_no= serializers.IntegerField(required=False) 
     class Meta:
         model = MyTemplateDesign
         fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no')
