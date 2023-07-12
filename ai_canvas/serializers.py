@@ -530,16 +530,16 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                 instance.height=height
                 instance.width=width
                 instance.save()
-                # if any([True if i>2048 else False for i in [width, height]]):
-                #     scale_val = min([2048/width, 2048/ height])
-                #     new_width = round(scale_val*width)
-                #     new_height = round(scale_val*height)
-                #     im = cv2.resize(im ,(new_height,new_width))
-                #     content= image_content(im)
-                #     instance.thumbnail=Image.fromarray(im)
-                #     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
-                #     instance.image = im
-                #     instance.save()
+                if any([True if i>2048 else False for i in [width, height]]):
+                    scale_val = min([2048/width, 2048/ height])
+                    new_width = round(scale_val*width)
+                    new_height = round(scale_val*height)
+                    im = cv2.resize(im ,(new_height,new_width))
+                    content= image_content(im)
+                    instance.thumbnail=Image.fromarray(im)
+                    im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
+                    instance.image = im
+                    instance.save()
         return instance
     
 ####################################################################################################
