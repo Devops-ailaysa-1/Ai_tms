@@ -1039,13 +1039,13 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
 
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
-        search=request.query_params.get('search',None)
-        if search:
-            queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
-        elif social_media_name_id and search:
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
-        else:
-            queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
+        # search=request.query_params.get('search',None)
+        # if search:
+        #     queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
+        # elif social_media_name_id and search:
+        #     queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
+        # else:
+        queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         print("qu",queryset)
         queryset_2 = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
