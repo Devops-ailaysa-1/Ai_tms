@@ -16,6 +16,7 @@ from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlo
 from django.db.models import Q,F
 from itertools import chain
 from zipfile import ZipFile
+from django.db.models import Q
 import io
 from ai_staff.serializer import FontFamilySerializer ,SocialMediaSizeSerializer
 import os, urllib
@@ -1026,7 +1027,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
-from django.db.models import Q
+
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination
