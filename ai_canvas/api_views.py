@@ -1026,7 +1026,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
- 
+from django.db.models import Q
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination
@@ -1040,8 +1040,13 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         if social_media_name_id:
-            print("search------>",request.query_params.get('search',None))
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id) #,template_global_categoty__isnull=False
+            search=request.query_params.get('search',None)
+            #,template_global_categoty__isnull=False
+            if search:
+                queryset = SocialMediaSize.objects.filter(Q(id=social_media_name_id) | Q(template_global_categoty__template_global_page__tag_name__icontains=search)) #,template_global_categoty__isnull=False
+                print("query_set",queryset)
+            else:
+                queryset = SocialMediaSize.objects.filter(id=social_media_name_id)
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         queryset = self.filter_queryset(queryset)
