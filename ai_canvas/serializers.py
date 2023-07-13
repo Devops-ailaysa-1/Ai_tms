@@ -304,14 +304,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if social_media_create and src_page and source_json_file:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
+            # thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             
             can_src.json=source_json_file
-            can_src.thumbnail=thumbnail
-            # instance.width=int(social_media_create.width)
-            # instance.height=int(social_media_create.height)
+            #can_src.thumbnail=thumbnail #thumb
+ 
             can_src.save()
             instance.save()
             return instance
@@ -397,9 +396,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if canvas_translation_target and tar_page:
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
-            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1)
-            # thumbnail should be update if json file is updated
-            canvas_trans.thumbnail=canvas_translation_tar_thumb
+            # canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
+   
+            # canvas_trans.thumbnail=canvas_translation_tar_thumb ##thumb
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
@@ -417,12 +416,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
             print("this function dont want to exec")
-            thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
-            # print("inside----->>> src json and src page")
-            # thumbnail_path=canva_source.thumbnail.path
-            # thumbnail_name=thumbnail_path.split("/")[-1]
-            canva_source.thumbnail = thumbnail_src
-            # canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
+            # thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
+            # canva_source.thumbnail = thumbnail_src ##thumb
             canva_source.save()
  
 
