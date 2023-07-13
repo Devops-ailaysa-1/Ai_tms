@@ -289,18 +289,21 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
 
-        if social_media_create and src_page and source_json_file and width and height: ##########################this one same fun below 
+        if social_media_create and src_page and source_json_file and width and height : ##########################this one same fun below 
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             # thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            # can_src.thumbnail=thumbnail #thumb
+            can_src.thumbnail=thumbnail if thumbnail_src else can_src.thumbnail #thumb
             can_src.save()
             instance.width=int(width)
             instance.height=int(height)
             instance.save()
             return instance
+        
+
+
 
         if social_media_create and src_page and source_json_file:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
@@ -309,6 +312,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_id']=social_media_create.id
             
             can_src.json=source_json_file
+            can_src.thumbnail=thumbnail if thumbnail_src else can_src.thumbnail
             #can_src.thumbnail=thumbnail #thumb
  
             can_src.save()
@@ -335,6 +339,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
             canvas_src_pages.save()
+             
             return instance
 
         if next_page:
@@ -399,6 +404,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
    
             # canvas_trans.thumbnail=canvas_translation_tar_thumb ##thumb
+            canvas_trans.thumbnail=thumbnail if thumbnail_src else canvas_trans.thumbnail
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
@@ -416,18 +422,23 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file=json_sr_url_change(source_json_file,instance)
             canva_source.json = source_json_file
             print("this function dont want to exec")
+            
             # thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             # canva_source.thumbnail = thumbnail_src ##thumb
+            canva_source.thumbnail=thumbnail if thumbnail_src else canva_source.thumbnail
             canva_source.save()
  
-
-        elif thumbnail_src and src_page:
-            canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+###
+        # elif thumbnail_src and src_page:
+        #     canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
  
-            thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
-            canva_source.thumbnail = thumbnail_src
-            canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
-            canva_source.save()   
+        #     thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
+        #     canva_source.thumbnail = thumbnail_src
+        #     canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
+        #     canva_source.save()   
+
+###
+
             # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
             #     os.remove(thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
@@ -449,19 +460,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             page_len = len(instance.canvas_json_src.all())+1
             thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,json=json_page,page_no=page_len)
-
-
-        # if validated_data.get('my_temp',None):
-        #     my_temp = validated_data.get('my_temp')
-        #     my_temp_pages = my_temp.my_template_page.all()
-        #     page_len = len(instance.canvas_json_src.all())
-        #     for my_temp_page in my_temp_pages:
-        #         thumbnail_page = my_temp_page.my_template_thumbnail
-        #         # export_page = my_temp_page.my_template_export
-        #         json_page = my_temp_page.my_template_json
-        #         page_len+=1
-        #         CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
-        #                                              json=json_page,page_no=page_len)
         return super().update(instance=instance, validated_data=validated_data)
 
 
