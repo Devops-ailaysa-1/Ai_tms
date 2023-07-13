@@ -259,3 +259,23 @@ class TextboxUpdate(models.Model):
             return self.text and self.text_id
         else:
             return ""
+
+
+
+class EmojiCategory(models.Model):
+    name=models.CharField(max_length=200,null=True,blank=True)
+    
+    def __str__(self) -> str:
+        if self.name:
+            return self.name
+        else:
+            return ""
+        
+class EmojiData(models.Model):
+    emoji_cat=models.ForeignKey(EmojiCategory,on_delete=models.CASCADE)
+    emoji_name=models.CharField(max_length=300,null=True,blank=True)
+    data=models.CharField(max_length=3000,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.emoji_name
+    
