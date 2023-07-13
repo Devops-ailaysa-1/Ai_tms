@@ -295,7 +295,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            can_src.thumbnail=thumbnail if thumbnail_src else can_src.thumbnail #thumb
+            can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail #thumb
             can_src.save()
             instance.width=int(width)
             instance.height=int(height)
@@ -312,7 +312,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_file['projectid']['project_category_id']=social_media_create.id
             
             can_src.json=source_json_file
-            can_src.thumbnail=thumbnail if thumbnail_src else can_src.thumbnail
+            can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail
             #can_src.thumbnail=thumbnail #thumb
  
             can_src.save()
@@ -404,7 +404,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
    
             # canvas_trans.thumbnail=canvas_translation_tar_thumb ##thumb
-            canvas_trans.thumbnail=thumbnail if thumbnail_src else canvas_trans.thumbnail
+            canvas_trans.thumbnail=thumbnail_src if thumbnail_src else canvas_trans.thumbnail
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
@@ -425,7 +425,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             
             # thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             # canva_source.thumbnail = thumbnail_src ##thumb
-            canva_source.thumbnail=thumbnail if thumbnail_src else canva_source.thumbnail
+            canva_source.thumbnail=thumbnail_src if thumbnail_src else canva_source.thumbnail
             canva_source.save()
  
 ###
