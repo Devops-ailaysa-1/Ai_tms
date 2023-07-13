@@ -225,13 +225,16 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):
             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
         lang_pair = lang_pair.union(query)
     res={}
-    for object in lang_pair:
-        tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.target_lang.language
-        print(object.user.fullname)
-        if object.user_id in res:
-            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+    for obj in lang_pair:
+        tt = obj.source_lang.language if obj.source_lang_id == obj.target_lang_id else obj.target_lang.language
+        print(obj.user.fullname)
+        if obj.user_id in res:
+            res[obj.user_id].get('lang').append({'source':obj.source_lang.language,'target':tt})
         else:
-            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':instance.proj_deadline,'bid_deadline':instance.bid_deadline}
+            res[obj.user_id]={'name':obj.user.fullname,'user_email':obj.user.email,'lang':[{'source':obj.source_lang.language,'target':tt}],\
+            'project_deadline':instance.proj_deadline.date().strftime("%d-%m-%Y"),'bid_deadline':instance.bid_deadline.date().strftime('%d-%m-%Y'),\
+            'proj_post_title':instance.proj_name,'posted_by':instance.customer.fullname}
+    print("Res----------->",res)
     auth_forms.vendor_notify_post_jobs(res)
     print("mailsent")
 

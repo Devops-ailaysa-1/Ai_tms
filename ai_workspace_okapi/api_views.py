@@ -45,6 +45,10 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
+import nltk
+import json
+from nltk import word_tokenize
+from nltk.util import ngrams
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wiktionaryparser import WiktionaryParser
@@ -1184,44 +1188,42 @@ class MT_RawAndTM_View(views.APIView):
         print(project)
         return project
 
+    @staticmethod
+    def get_words_list(sent):
+        punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+        tokens=word_tokenize(sent)
+        target = [word for word in tokens if word not in punctuation]
+        words=[]
+        tg_word = [word for word in target] 
+        unigram = ngrams(tg_word , 1)
+        words.extend(list(" ".join(i) for i in unigram))
+        bigrams = ngrams(tg_word , 2)
+        words.extend(list(" ".join(i) for i in bigrams))
+        trigrams = ngrams(tg_word , 3)
+        words.extend(list(" ".join(i) for i in trigrams))
+        print(words)
+        return words
+
     @staticmethod   
     def asset_replace(request,translation,project): 
-        try:
-            # choice=ChoiceListSelected.objects.filter(project__id=project.id)          
-            # choicelist=ChoiceLists.objects.filter(Q(id__in=choice)&Q(user=request.user))
-            choice=ChoiceListSelected.objects.get(project__id=project.id)
-            choicelist=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
-        except:
-            choicelist=False
-        word=word_tokenize(translation)
+        choice=ChoiceListSelected.objects.filter(project__id=project.id)
+        choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
+        words = MT_RawAndTM_View.get_words_list(translation)
         suggestion={}
-
-        #def_choice=SelflearningAsset.objects.filter(Q(choice_list__is_default=True)&Q(choice_list__user=request.user))       
-        print(choicelist,"+++++++++++")
         if choicelist:
-            print("choicelist")
-            for word in word: 
+            for word in words: 
                 choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
                     print(choice, "*****************")
                     replace_word=choice.first().edited_word
-                    translation=translation.replace(word,replace_word) 
+                    pattern = r'\b{}\b'.format(word)
+                    translation= re.sub(pattern, replace_word, translation)
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
-                    suggestion[replace_word].insert(0,word)  
-        # elif def_choice:
-        #     print("default_choice--------->",def_choice)
-        #     for word in word:
-        #         default_choice=def_choice.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-        #         d_choice = default_choice[:5]
-        #         print("Dchoice------->",d_choice)
-        #         if d_choice:
-        #             replace_word=d_choice.first().edited_word
-        #             translation=translation.replace(word,replace_word) 
-        #             suggestion[replace_word]=[i.edited_word for i in d_choice if  i.edited_word != replace_word]
-        #             suggestion[replace_word].insert(0,word)
+                    suggestion[replace_word].insert(0,word) 
         
-        # print(translation)
+        print(translation)
         return translation,suggestion
+
 
     def get(self, request, segment_id):
             tm_only = {
@@ -2382,8 +2384,10 @@ def spellcheck(request):
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
     out,res = [],[]
+    print("LangCode--------------->",lang_code)
     try:
         if lang_code == 'en':
+            print("Inside Try")
             lang = lang_code
             dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
             aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
@@ -2391,14 +2395,21 @@ def spellcheck(request):
             punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
             tknzr = TweetTokenizer()
             nltk_tokens = tknzr.tokenize(tar)
-            tokens_new = [word for word in nltk_tokens if word not in punctuation]
-            print(tokens_new)
-            for word in tokens_new:
+            words = [word for word in nltk_tokens if word not in punctuation]
+            print('wrd-------------->',words)
+            # batch_size = 300  
+            # num_batches = len(words) // batch_size + 1
+            # for i in range(num_batches):
+            #     start = i * batch_size
+            #     end = (i + 1) * batch_size
+            #     batch = words[start:end]
+            #     print("batch---------------->",batch)
+            for word in words:
                 suggestions=[]
                 if hobj.spell(word)==False:
-                     suggestions.extend(hobj.suggest(word))
-                     out=[{"word":word,"Suggested Words":suggestions}]
-                     res.extend(out)
+                    suggestions.extend(hobj.suggest(word))
+                    out=[{"word":word,"Suggested Words":suggestions}]
+                    res.extend(out)
             return JsonResponse({"result":res},safe=False)
         else:
             spellchecker=SpellcheckerLanguages.objects.get(language_id=lang_id).spellchecker.spellchecker_name
