@@ -16,7 +16,6 @@ from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlo
 from django.db.models import Q,F
 from itertools import chain
 from zipfile import ZipFile
-from django.db.models import Q
 import io
 from ai_staff.serializer import FontFamilySerializer ,SocialMediaSizeSerializer
 import os, urllib
@@ -1027,7 +1026,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
-
+from django.db.models import Q
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination
@@ -1042,16 +1041,11 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         search=request.query_params.get('search',None)
         if search:
-            
-            queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search) 
-            print("search",search)
-            print("queryset",queryset)
+            queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
         elif social_media_name_id and search:
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search) 
-            print("social_media_name_id and search",social_media_name_id and search)
-            print("query",queryset)
+            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
         else:
-            queryset = SocialMediaSize.objects.all().filter(template_global_categoty__isnull=False).order_by("social_media_name")
+            queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         print("qu",queryset)
         queryset_2 = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
@@ -1074,6 +1068,8 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         TemplateGlobalDesign.objects.get(id=pk).delete()
         return Response({'msg':'deleted successfully'})
     
+ 
+
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = 'png' if file_format == 'png-transparent' else file_format
