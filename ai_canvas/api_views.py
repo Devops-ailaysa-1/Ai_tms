@@ -1094,7 +1094,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
 
-
+from rest_framework import serializers
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def DesignerDownload(request):
@@ -1120,7 +1120,6 @@ def DesignerDownload(request):
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
             buffer=io.BytesIO()
             with zipfile.ZipFile(buffer, mode="a") as archive:
-                
                 for src_json in src_jsons:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
                     path='{}/{}'.format(src_lang,file_name)
@@ -1133,8 +1132,12 @@ def DesignerDownload(request):
                         file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
-            res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
-            return res
+            if buffer.getvalue():
+                res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
+                return res
+            else:
+                print(buffer.getvalue())
+                raise serializers.ValidationError({'msg':'Something went wrong'}, code=400)
 
         if language==src_code:
             src_pages=canvas_src_json if all_page else canvas.canvas_json_src.filter(page_no__in=page_number_list)
