@@ -12,7 +12,15 @@ from django.http import JsonResponse
 ###image_upload
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
- 
+
+from rest_framework.decorators import api_view,permission_classes
+from ai_canvas.utils import export_download
+from ai_canvas.api_views import download_file_canvas,mime_type
+import io
+from django import core
+from zipfile import ZipFile
+
+
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -140,44 +148,13 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         query_obj = ImageTranslate.objects.get(id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-from rest_framework.decorators import api_view,permission_classes
-from ai_canvas.utils import export_download
-from ai_canvas.api_views import download_file_canvas,mime_type
-import io
-from django import core
-from zipfile import ZipFile
-
-
+    
 def create_image(json_page,file_format,export_size,page_number,language):
     file_format_ext = 'png' if file_format == 'png-transparent' else file_format
 
     base64_img=export_download(json_page,file_format,export_size)
     file_name="page_{}_{}.{}".format(str(page_number),language,file_format_ext)
     return base64_img,file_name
-
-
-# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
-#     if len(pages_list)==1:
-#         print("single___page",pages_list[0].json)
-#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
-#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
-#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
-        
-#     else:
-#         print("multiple___page")
-#         buffer=io.BytesIO()
-#         with ZipFile(buffer, mode="a") as archive:
-#             for src_json in pages_list:
-#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
-#                 path='{}/{}'.format(lang,file_name)
-#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
-#                 values=export_download(src_json.json,file_format,export_size)
-#                 archive.writestr(path,values)
-#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
-#     return response
-
 
 
 @api_view(['GET'])
@@ -276,3 +253,24 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+
+
+# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
+#     if len(pages_list)==1:
+#         print("single___page",pages_list[0].json)
+#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        
+#     else:
+#         print("multiple___page")
+#         buffer=io.BytesIO()
+#         with ZipFile(buffer, mode="a") as archive:
+#             for src_json in pages_list:
+#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+#                 path='{}/{}'.format(lang,file_name)
+#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
+#                 values=export_download(src_json.json,file_format,export_size)
+#                 archive.writestr(path,values)
+#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+#     return response

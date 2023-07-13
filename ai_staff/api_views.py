@@ -31,6 +31,10 @@ from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
 from rest_framework.pagination import PageNumberPagination 
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
+
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
@@ -1026,8 +1030,7 @@ class DesignShapePagination(PageNumberPagination):
 
 
 
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
+
 
 class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
     page_size = 30

@@ -255,8 +255,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     obj_list=json['objects']
                     obj_list.append(copy_txt_box)
                     j.save()
-                    print("change for new textbox",trans_text)
-
                 else:
                     for tar_jsn in json['objects']:
                         print("type--",tar_jsn['type'])
@@ -289,32 +287,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
 
-        if social_media_create and src_page and source_json_file and width and height : ##########################this one same fun below 
-            can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+        if social_media_create and width and height: ##########################this one same fun below  ####custome resize
+            # can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            can_srcs=CanvasSourceJsonFiles.objects.filter(canvas_design=instance)
+            for can_src in can_srcs:
+                source_json_file=copy.deepcopy(can_src.json)
+                source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
+                source_json_file['projectid']['project_category_id']=social_media_create.id
+                source_json_file['backgroundImage']['width']=int(width)
+                source_json_file['backgroundImage']['height']=int(height)
+                can_src.json=source_json_file
+                can_src.save()
             # thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
-            source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
-            source_json_file['projectid']['project_category_id']=social_media_create.id
+            # source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
+            # source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail #thumb
-            can_src.save()
+            # can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail #thumb
             instance.width=int(width)
             instance.height=int(height)
-            instance.save()
-            return instance
-        
-
-
-
-        if social_media_create and src_page and source_json_file:
-            can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            # thumbnail=self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
-            source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
-            source_json_file['projectid']['project_category_id']=social_media_create.id
-            
-            can_src.json=source_json_file
-            can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail
-            #can_src.thumbnail=thumbnail #thumb
- 
             can_src.save()
             instance.save()
             return instance
@@ -339,7 +329,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     self.update_text_box_target(instance,text_box,is_append)
                     i['isTranslate']=True
             canvas_src_pages.save()
-             
             return instance
 
         if next_page:
@@ -367,17 +356,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
-
             source_json_files_all=instance.canvas_json_src.all()
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
                     if text['type']== 'textbox':
-                        TextboxUpdate.objects.create(canvas=instance,text=text['text'],text_id=text['name'])
+                        TextboxUpdate.objects.get_or_create(canvas=instance,text=text['text'],text_id=text['name'])
 
             for count,tar_lang in enumerate(canvas_translation_tar_lang):
 
-                trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
-                                                               target_language=tar_lang.locale.first())
+                trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
                 trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
                 trans_json_project['projectid']['langNo']=trans_json.source_language.id
                  ####list of all canvas src json 
@@ -399,11 +386,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         can_tar_ins.json=tar_json_pro
                         can_tar_ins.save()
 
-        if canvas_translation_target and tar_page:
+        if canvas_translation_target and tar_page:         ######################Target__update
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
-            # canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
+            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
    
-            # canvas_trans.thumbnail=canvas_translation_tar_thumb ##thumb
+            canvas_trans.thumbnail=canvas_translation_tar_thumb ##thumb
             canvas_trans.thumbnail=thumbnail_src if thumbnail_src else canvas_trans.thumbnail
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
@@ -413,19 +400,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 canvas_trans.json = target_json_file
             canvas_trans.save()
  
-
-        if source_json_file and src_page:
-            canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
-            if '' not in source_json_file:
-                source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
-            
+        if source_json_file and src_page: ########################## source__update
+            canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            # if '' not in source_json_file:
+            #     source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             source_json_file=json_sr_url_change(source_json_file,instance)
-            canva_source.json = source_json_file
-            print("this function dont want to exec")
-            
-            # thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
-            # canva_source.thumbnail = thumbnail_src ##thumb
-            canva_source.thumbnail=thumbnail_src if thumbnail_src else canva_source.thumbnail
+            canva_source.json = source_json_file           
+            thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
+            canva_source.thumbnail = thumbnail_src ##thumb
+ 
             canva_source.save()
  
 ###
@@ -511,7 +494,6 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             extension=instance.image.path.split('.')[-1]
             if extension=='jpg':
                 extension='jpeg'
-            
             img = cv2.imread(instance.image.path)
             # img_bgr_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             if extension !='svg':
@@ -612,6 +594,154 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
         if template is not None:
             return data
 
+class MyTemplateDesignPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyTemplateDesignPage
+        fields = '__all__'
+
+class MyTemplateDesignSerializer(serializers.ModelSerializer):
+    template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
+    canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
+    tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
+    trans_page_no = serializers.IntegerField(required=False) 
+    src_page_no= serializers.IntegerField(required=False) 
+    class Meta:
+        model = MyTemplateDesign
+        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        template_page_first = MyTemplateDesignPage.objects.filter(my_template_design = instance).first()
+        if template_page_first:
+            if template_page_first.my_template_thumbnail:
+                data['my_template_thumbnail'] = template_page_first.my_template_thumbnail.url
+            else:
+                data['my_template_thumbnail'] = None
+        # if not instance.project_category:
+        #     instance.project_category_id = 32
+        #     instance.save()
+        #     data['project_category']=instance.project_category_id
+        return data
+
+    def create(self, validated_data):
+        template_global_id = validated_data.pop('template_global_id',None)
+        canvas_design_id = validated_data.pop('canvas_design_id',None)
+        canvas_trans_id = validated_data.pop('canvas_trans_id',None)
+        trans_page_no=validated_data.pop('trans_page_no',None)
+        src_page_no=validated_data.pop('src_page_no',None)
+        tar_lang=validated_data.pop('tar_lang',None)
+        user = self.context['request'].user
+        if canvas_design_id:
+            file_name=canvas_design_id.file_name
+            width=canvas_design_id.width
+            height=canvas_design_id.height
+            project_category=canvas_design_id.project_category
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+
+            if trans_page_no and tar_lang:
+                canvas_target=CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=canvas_design_id,
+                                                                canvas_trans_json__target_language=tar_lang,page_no=trans_page_no)
+                canvas_target.json=copy.copy(canvas_trans_id.json)
+                my_template_json.pop('projectid',None)
+                my_template_thumbnail=canvas_target.thumbnail
+                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                                                     my_template_json=my_template_json )
+ 
+            elif src_page_no:
+                canvas_source  = canvas_design_id.canvas_json_src.get(page_no=src_page_no)
+                my_template_thumbnail = canvas_source.thumbnail
+                my_template_json=copy.copy(canvas_source.json)
+                my_template_json.pop('projectid',None)
+                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                                                    my_template_json=my_template_json )
+        if template_global_id:
+            file_name=template_global_id.file_name
+            width=template_global_id.width
+            height=template_global_id.height
+            project_category=template_global_id.category
+            my_template_thumbnail=template_global_id.thumbnail_page
+            my_template_json=template_global_id.json
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+            MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
+                                                     my_template_json=my_template_json )
+                
+        return my_temp_design
+
+class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
+    my_template_page = MyTemplateDesignPageSerializer(many=True)
+    class Meta:
+        model = MyTemplateDesign
+        fields = ('id','width','height','my_template_page',)
+
+
+class TemplateKeywordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TemplateKeyword
+        fields = ('id' ,'text_template', 'text_keywords', )
+        read_only_fields = ('id','text_template',)
+   
+class TextTemplateSerializer(serializers.ModelSerializer):
+    text_template_json = serializers.JSONField(required = False)
+    txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') 
+    text_keywords = serializers.ListField(required = True,write_only = True)
+    class Meta:
+        model = TextTemplate
+        fields = ('id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords')
+        
+    def create(self, validated_data):
+        text_keywords=validated_data.pop('text_keywords') 
+        text_temp = TextTemplate.objects.create(**validated_data)
+        if text_keywords:
+            for keyword in text_keywords:
+                TemplateKeyword.objects.create(text_template = text_temp ,text_keywords =keyword  )
+        return text_temp
+    
+    def update(self, instance, validated_data):
+        template_keyword=TemplateKeywordSerializer()
+        if validated_data.get('text_thumbnail'):
+            instance.text_thumbnail = validated_data.get('text_thumbnail')
+            instance.save()
+        if validated_data.get('text_template_json'):
+            instance.text_template_json = validated_data.get('text_template_json')
+            instance.save()
+        if validated_data.get('text_keywords'):
+            txt_temp = validated_data.pop('text_keywords')
+            [TemplateKeyword.objects.create(text_template=instance,text_keywords = key) for key in  txt_temp]
+        return instance
+
+
+
+
+class FontFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=FontFile
+        fields='__all__'
+
+    def to_representation(self, instance):
+        rep=super().to_representation(instance)
+        if rep.get('font_family',None):
+            rep['font_family']=instance.font_family.url
+        if not rep.get('name'):
+            family_name=install_font(instance.font_family.path)
+            rep['name']=family_name
+            instance.name=family_name
+            instance.save()
+        return rep
+
+    def create(self, validated_data):
+ 
+        instance=FontFile.objects.create(**validated_data)
+        if instance.font_family:
+            family_name=install_font(instance.font_family.path)
+            instance.name=family_name
+            instance.save()
+        return instance
+
+
+class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=CanvasDownloadFormat
+        fields='__all__'
 
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
 #     template_name = serializers.CharField(required= True)
@@ -713,158 +843,3 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = TemplateGlobalDesign
 #         fields = ('id','file_name','width','height','template_globl_pag',) #,'user_name'
-
-
-class MyTemplateDesignPageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MyTemplateDesignPage
-        fields = '__all__'
-
-class MyTemplateDesignSerializer(serializers.ModelSerializer):
-    template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
-    canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
-    tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    trans_page_no = serializers.IntegerField(required=False) 
-    src_page_no= serializers.IntegerField(required=False) 
-    class Meta:
-        model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no')
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        template_page_first = MyTemplateDesignPage.objects.filter(my_template_design = instance).first()
-        if template_page_first:
-            if template_page_first.my_template_thumbnail:
-                data['my_template_thumbnail'] = template_page_first.my_template_thumbnail.url
-            else:
-                data['my_template_thumbnail'] = None
-        # if not instance.project_category:
-        #     instance.project_category_id = 32
-        #     instance.save()
-        #     data['project_category']=instance.project_category_id
-        return data
-
-    def create(self, validated_data):
-        template_global_id = validated_data.pop('template_global_id',None)
-        canvas_design_id = validated_data.pop('canvas_design_id',None)
-        canvas_trans_id = validated_data.pop('canvas_trans_id',None)
-        trans_page_no=validated_data.pop('trans_page_no',None)
-        src_page_no=validated_data.pop('src_page_no',None)
-        tar_lang=validated_data.pop('tar_lang',None)
-        user = self.context['request'].user
-        if canvas_design_id:
-            file_name=canvas_design_id.file_name
-            width=canvas_design_id.width
-            height=canvas_design_id.height
-            project_category=canvas_design_id.project_category
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
-
-            if trans_page_no and tar_lang:
-                canvas_target=CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=canvas_design_id,
-                                                                canvas_trans_json__target_language=tar_lang,page_no=trans_page_no)
-                canvas_target.json=copy.copy(canvas_trans_id.json)
-                my_template_json.pop('projectid',None)
-                my_template_thumbnail=canvas_target.thumbnail
-                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                     my_template_json=my_template_json )
- 
-            elif src_page_no:
-                canvas_source  = canvas_design_id.canvas_json_src.get(page_no=src_page_no)
-                 
-                my_template_thumbnail = canvas_source.thumbnail
-                my_template_json=copy.copy(canvas_source.json)
-                my_template_json.pop('projectid',None)
- 
-                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                    my_template_json=my_template_json )
-                
-        
-        if template_global_id:
-            file_name=template_global_id.file_name
-            width=template_global_id.width
-            height=template_global_id.height
-            project_category=template_global_id.category
-            my_template_thumbnail=template_global_id.thumbnail_page
-            my_template_json=template_global_id.json
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
-            MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                     my_template_json=my_template_json )
-                
-        return my_temp_design
-
-class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
-    my_template_page = MyTemplateDesignPageSerializer(many=True)
-    class Meta:
-        model = MyTemplateDesign
-        fields = ('id','width','height','my_template_page',)
-
-
-class TemplateKeywordSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TemplateKeyword
-        fields = ('id' ,'text_template', 'text_keywords', )
-        read_only_fields = ('id','text_template',)
-   
-class TextTemplateSerializer(serializers.ModelSerializer):
-    text_template_json = serializers.JSONField(required = False)
-    txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') 
-    text_keywords = serializers.ListField(required = True,write_only = True)
-    class Meta:
-        model = TextTemplate
-        fields = ('id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords')
-        
-    def create(self, validated_data):
-        text_keywords=validated_data.pop('text_keywords') 
-        text_temp = TextTemplate.objects.create(**validated_data)
-        if text_keywords:
-            for keyword in text_keywords:
-                TemplateKeyword.objects.create(text_template = text_temp ,text_keywords =keyword  )
-        return text_temp
-    
-    def update(self, instance, validated_data):
-        template_keyword=TemplateKeywordSerializer()
-        if validated_data.get('text_thumbnail'):
-            instance.text_thumbnail = validated_data.get('text_thumbnail')
-            instance.save()
-        if validated_data.get('text_template_json'):
-            instance.text_template_json = validated_data.get('text_template_json')
-            instance.save()
-        if validated_data.get('text_keywords'):
-            txt_temp = validated_data.pop('text_keywords')
-            [TemplateKeyword.objects.create(text_template=instance,text_keywords = key) for key in  txt_temp]
-        return instance
-
-
-
-
-class FontFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=FontFile
-        fields='__all__'
-
-    def to_representation(self, instance):
-        rep=super().to_representation(instance)
-        if rep.get('font_family',None):
-            rep['font_family']=instance.font_family.url
-        if not rep.get('name'):
-            family_name=install_font(instance.font_family.path)
-            rep['name']=family_name
-            instance.name=family_name
-            instance.save()
-        return rep
-
-    def create(self, validated_data):
- 
-        instance=FontFile.objects.create(**validated_data)
-        if instance.font_family:
-            family_name=install_font(instance.font_family.path)
-            instance.name=family_name
-            instance.save()
-        return instance
-
-
-class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=CanvasDownloadFormat
-        fields='__all__'
-

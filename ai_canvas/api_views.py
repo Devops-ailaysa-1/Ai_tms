@@ -1043,7 +1043,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         if search:
             queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
         elif social_media_name_id and search:
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() #,template_global_categoty__isnull=False
+            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         print("qu",queryset)
