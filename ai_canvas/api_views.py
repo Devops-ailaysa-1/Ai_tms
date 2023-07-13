@@ -1043,7 +1043,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
             search=request.query_params.get('search',None)
             #,template_global_categoty__isnull=False
             if search:
-                queryset = SocialMediaSize.objects.get(id=social_media_name_id).filter(template_global_categoty__template_global_page__tag_name__icontains=search) #,template_global_categoty__isnull=False
+                queryset = SocialMediaSize.objects.filter(id=social_media_name_id).filter(template_global_categoty__template_global_page__tag_name__icontains=search) #,template_global_categoty__isnull=False
                  
 
                 print("query_set",queryset)
