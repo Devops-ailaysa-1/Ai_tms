@@ -101,8 +101,6 @@ class CanvasTargetJsonFiles(models.Model):
 
 # #########global template design##############
 
-
-
 class TemplateGlobalDesign(models.Model):
     template_name=models.CharField(max_length=50,null=True,blank=True)
     category=models.ForeignKey(SocialMediaSize,related_name='template_global_categoty', on_delete=models.CASCADE)

@@ -302,7 +302,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
             # source_json_file['projectid']['project_category_id']=social_media_create.id
             can_src.json=source_json_file
-            # can_src.thumbnail=thumbnail_src if thumbnail_src else can_src.thumbnail #thumb
             instance.width=int(width)
             instance.height=int(height)
             can_src.save()
@@ -408,7 +407,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canva_source.json = source_json_file           
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             canva_source.thumbnail = thumbnail_src ##thumb
- 
             canva_source.save()
  
 ###
@@ -460,9 +458,7 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
         if instance.canvas_translate.all():
             data['translate_available'] = True
-
-        # if not instance.project_category:
-            
+        # if not instance.project_category:     
         #     data['project_category']
         return data
 

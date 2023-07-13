@@ -1047,8 +1047,8 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         print("qu",queryset)
-        queryset = self.filter_queryset(queryset)
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        queryset_2 = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
         # print("data----->>>",serializer.data)
         response = self.get_paginated_response(serializer.data)
