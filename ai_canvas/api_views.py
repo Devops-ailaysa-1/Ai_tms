@@ -1041,9 +1041,14 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         search=request.query_params.get('search',None)
         if search:
-            queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
+            
+            queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search) 
+            print("search",search)
+            print("queryset",queryset)
         elif social_media_name_id and search:
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
+            queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search) 
+            print("social_media_name_id and search",social_media_name_id and search)
+            print("query",queryset)
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         print("qu",queryset)
@@ -1068,8 +1073,6 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         TemplateGlobalDesign.objects.get(id=pk).delete()
         return Response({'msg':'deleted successfully'})
     
- 
-
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = 'png' if file_format == 'png-transparent' else file_format
