@@ -1034,8 +1034,9 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     filter_backends = [DjangoFilterBackend]
  
     search_fields =['template_global_categoty__template_name','social_media_name','template_global_categoty__description',
-                    'template_global_categoty__template_lang__language','template_global_categoty__template_global_page__tag_name']
-
+                    'template_global_categoty__template_lang__language','template_global_categoty__template_global_page__tag_name__icontains']
+# template_global_categoty__template
+#     ...: _global_page__tag_name__icontains
 
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
