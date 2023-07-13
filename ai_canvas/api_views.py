@@ -1133,10 +1133,13 @@ def DesignerDownload(request):
                         path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             if buffer.getvalue():
+                if not canvas.file_name:
+                    can_obj=CanvasDesign.objects.filter(user=request.user.id,file_name__icontains='Untitled project')
+                    canvas.file_name='Untitled project ({})'.format(str(len(can_obj)+1)) if can_obj else 'Untitled project'
+                    canvas.save()
                 res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
                 return res
             else:
-                print(buffer.getvalue())
                 raise serializers.ValidationError({'msg':'Something went wrong'}, code=400)
 
         if language==src_code:

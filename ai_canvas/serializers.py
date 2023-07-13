@@ -180,9 +180,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance=CanvasDesign.objects.create(**data)
             self.instance=instance
  
-        # print("instance.file_name",instance.file_name)
+         
         if not instance.file_name:
-            can_obj=CanvasDesign.objects.filter(file_name__icontains='Untitled project')
+            can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')
             # print("can_obj",can_obj)
             if can_obj:
                 instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
