@@ -1201,17 +1201,19 @@ class MT_RawAndTM_View(views.APIView):
         words.extend(list(" ".join(i) for i in bigrams))
         trigrams = ngrams(tg_word , 3)
         words.extend(list(" ".join(i) for i in trigrams))
-        print(words)
         return words
 
     @staticmethod   
     def asset_replace(request,translation,project): 
         choice=ChoiceListSelected.objects.filter(project__id=project.id)
+        print("choice--------->",choice, choice.last())
         choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
+        print("Choicelist----------->",choicelist)
         words = MT_RawAndTM_View.get_words_list(translation)
         suggestion={}
         if choicelist:
             for word in words: 
+                print("Word---------->",word)
                 choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
                     print(choice, "*****************")
