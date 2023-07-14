@@ -247,11 +247,16 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         
     def create(self,request):
         # canvas_json=request.POST.get('canvas_json')
-
+        preview_json=request.POST.get('preview_json',None)
         serializer = BackgroundRemovelSerializer(data=request.data,context={'request':request})  
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
+            src=data['canvas_json']['src']
+            brs=data['canvas_json']['brs']
+            preview_json['src']=src
+            preview_json['brs']=brs
+            data['preview_json']=preview_json
             return Response(data)
         else:
             return Response(serializer.errors)
