@@ -66,7 +66,7 @@ def calculate_textbox_dimensions(text,font_size,bold,italic): #
     font_size=int(font_size)
     pygame.init()
     # font=0
-    font = pygame.font.SysFont("Arial.ttf", font_size) #,bold=bold,italic=italic
+    font = pygame.font.SysFont(r"Arial.ttf", font_size) #,bold=bold,italic=italic
     text_surface = font.render(text, True, (0, 0, 0))  # Render the text on a surface
     textbox_width = text_surface.get_width()
     textbox_height = text_surface.get_height()
