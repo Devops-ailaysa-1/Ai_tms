@@ -61,7 +61,6 @@ class CanvasDesign(models.Model):
     class Meta:
         ordering = ('updated_at',)
 
-
 class CanvasSourceJsonFiles(models.Model):
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_json_src', on_delete=models.CASCADE)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_source_json_thumbnails,blank=True,null=True)
