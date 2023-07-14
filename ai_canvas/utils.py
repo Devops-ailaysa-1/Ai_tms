@@ -100,7 +100,6 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     true = True
     languages = languages.split(",")
     canvas_json_copy =copy.deepcopy(canvas_json)
-    fontSize=canvas_json_copy['fontSize']
     height=canvas_json_copy['height']
     width=canvas_json_copy['width']
     canvas_result = {}
