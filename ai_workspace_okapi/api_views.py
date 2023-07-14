@@ -3145,9 +3145,9 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if choice_list:
                 choice_list=get_object_or_404(ChoiceLists,id=choice_list.choice_list.id)
             else:
-                choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang,name="my choicelist_"+lang.language)  
+                choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
                 if created == False:
-                    choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang,name="my choicelist_"+lang.language) 
+                    choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language) 
                 # data = {"project":doc.project, "choice_list":choice_list.id} 
                 # serializer = ChoiceListSelectedSerializer(data=data,many=False)
                 # if serializer.is_valid():
