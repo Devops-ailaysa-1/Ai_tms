@@ -10,6 +10,6 @@ class IsBiUser(permissions.BasePermission):
 class IsBiAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         user=BiUser.objects.get(bi_user=request.user)
-        if user.bi_role==3:
+        if user.bi_role=="ADMIN":
             return True
         
