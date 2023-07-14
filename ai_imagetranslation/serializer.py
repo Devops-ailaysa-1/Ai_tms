@@ -345,6 +345,8 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
+        preview_json=validated_data.pop('preview_json',None)
+        print(type(preview_json))
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
