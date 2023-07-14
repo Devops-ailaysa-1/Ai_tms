@@ -361,7 +361,9 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             tar_json['brs']=3
             instance.canvas_json =tar_json
             instance.save()
-            return instance
+            preview_json['src']=HOST_NAME+instance.image.url
+            preview_json['brs']=3
+            return {**instance,"preview_json":preview_json}
         
 class ObjectRemovelSerializer(serializers.ModelSerializer):
     pass
