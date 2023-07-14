@@ -236,7 +236,7 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
 
     def get(self, request):
         query_set = BackgroundRemovel.objects.filter(user=request.user.id).order_by('id')
-        serializer = BackgroundRemovelSerializer(query_set ,many =True)
+        serializer = BackgroundRemovelSerializer(query_set,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
@@ -250,7 +250,9 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         serializer = BackgroundRemovelSerializer(data=request.data,context={'request':request})  
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            data=serializer.data
+            data['preview_json']=data['canvas_json']
+            return Response(data)
         else:
             return Response(serializer.errors)
 
