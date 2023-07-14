@@ -22,6 +22,7 @@ router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily
 router.register(r'social-media',api_views.SocialMediaSizeViewset ,basename='socialmediasize')
 router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV2,basename='template__global')
 router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
+router.register(r'emoji-noto',api_views.EmojiDataViewset,basename='emoji-list')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls

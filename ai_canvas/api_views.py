@@ -5,13 +5,13 @@ from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFami
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
-                              ThirdpartyImageMedium,CanvasDownloadFormat) #TemplatePage
+                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -35,6 +35,7 @@ import uuid
 import urllib.request
 from django import core 
 from rest_framework import filters
+from rest_framework import serializers
 from django_filters.rest_framework import DjangoFilterBackend
 HOST_NAME=os.getenv("HOST_NAME")
  
@@ -742,12 +743,7 @@ class FontFileViewset(viewsets.ViewSet):
         query_set.delete()
         return Response(status=204)
 
-
-
-
-     
 import django_filters
-
 class FontFamilyFilter(django_filters.FilterSet):
     font_search = django_filters.CharFilter(field_name='font_family_name', label='renamed_field')
 
@@ -764,8 +760,6 @@ class FontFamilyFilter(django_filters.FilterSet):
 class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
-
-
     def lang_fil(self,request):
         f_lang=FontLanguage.objects.get(id=request.GET['language'])
         f_d=FontData.objects.filter(font_lang=f_lang)
@@ -1094,7 +1088,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
 
-from rest_framework import serializers
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def DesignerDownload(request):
@@ -1171,4 +1165,33 @@ def DesignerDownload(request):
         return res
     else:
         return Response({"page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
-        
+    
+ 
+class EmojiDataViewset(viewsets.ViewSet,PageNumberPagination):
+    # pagination_class = CustomPagination
+    page_size = 60
+    page_size_query_param = 'page_size'
+    search_fields=['emoji_name']
+    def list(self,request):
+        queryset = EmojiData.objects.all() 
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = EmojiDataSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+    
+
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset 
+    
+ 
+
+ 
+ 

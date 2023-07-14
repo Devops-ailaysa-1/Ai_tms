@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
-                            CanvasDownloadFormat,TemplateTag,TextboxUpdate)#TemplatePage
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory ,EmojiData)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -102,8 +102,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     canvas_translation_target = serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all(),required=False,write_only=True)
     canvas_translation_tar_thumb = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     canvas_translation_tar_export = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
-    canvas_translation_tar_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
-                                                        required=False,write_only=True)
+    canvas_translation_tar_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
     src_page = serializers.IntegerField(required=False,write_only=True)
     src_lang = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False,write_only=True)
     tar_page = serializers.IntegerField(required=False,write_only=True)
@@ -741,15 +740,22 @@ class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
 
 
 
-from ai_canvas.models import EmojiCategory ,EmojiData
-
-
 class EmojiCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model=EmojiCategory
         fields='__all__'
 
-        
+
+class EmojiDataSerializer(serializers.ModelSerializer):
+    cat_data=EmojiCategorySerializer(many=True,required=False,source='emoji_cat_data')
+    class Meta:
+        model=EmojiData
+        fields=('id','emoji_cat','emoji_name','data','cat_data')
+
+
+
+
+
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
 #     template_name = serializers.CharField(required= True)
 #     # template_globl_pag = TemplatePageSerializer(many = True,required=False)
