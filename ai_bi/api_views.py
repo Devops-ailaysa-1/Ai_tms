@@ -194,8 +194,7 @@ class BiuserManagement(viewsets.ModelViewSet):
                     return Response(serializer.data,status=200)
             except IntegrityError as e:
                 print("Intergrity error",str(e))
-                return Response(str(e))
-                return JsonResponse({"msg":str(e)})
+                return Response(status=400)
         return Response( serializer.errors)
 
     def retrieve(self, request, pk):
