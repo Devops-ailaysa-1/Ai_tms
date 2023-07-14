@@ -3213,7 +3213,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
 
 class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    page_size = 10
+    page_size = 20
+    ordering = ('-id')
     search_fields = ['name']
     ordering_fields = ['id','name','language']
 
