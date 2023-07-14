@@ -3280,6 +3280,7 @@ def task_segments_save(request):
     target_text = request.POST.get('target_text',None)
     simplified_text = request.POST.get('simplified_text')
     shortened_text = request.POST.get('shortened_text')
+    rewrite_text = request.POST.get('rewrite_text')
     mt_engine_id = request.POST.get('mt_engine',None)
     source_text = request.POST.get('source_text')
     apply_all = request.POST.get('apply_all',None)
@@ -3312,6 +3313,13 @@ def task_segments_save(request):
         if not inst_cust_obj:
             inst_cust_obj = inst_create(express_obj,'Shorten')
         inst_cust_obj.final_result = shortened_text
+        inst_cust_obj.save()
+
+    elif rewrite_text:
+        inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Rewrite').last()
+        if not inst_cust_obj:
+            inst_cust_obj = inst_create(express_obj,'Rewrite')
+        inst_cust_obj.final_result = rewrite_text
         inst_cust_obj.save()
 
     elif ((source_text) or (source_text and mt_engine_id)):
@@ -3739,7 +3747,7 @@ def instant_translation_custom(request):
     from ai_openai.api_views import customize_response
     task = request.POST.get('task')
     output_list = []
-    option = request.POST.get('option')#Shorten#Simplify
+    option = request.POST.get('option')#Shorten#Simplify#Rewrite
     customize = AiCustomize.objects.get(customize = option)
     exp_obj = ExpressProjectDetail.objects.get(task_id = task)
     user = exp_obj.task.job.project.ai_user
