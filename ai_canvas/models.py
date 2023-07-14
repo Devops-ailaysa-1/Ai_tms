@@ -272,11 +272,9 @@ class EmojiCategory(models.Model):
             return ""
         
 class EmojiData(models.Model):
-    emoji_cat=models.ForeignKey(EmojiCategory,on_delete=models.CASCADE)
+    emoji_cat=models.ForeignKey(EmojiCategory,on_delete=models.CASCADE,related_name='emoji_cat_data')
     emoji_name=models.CharField(max_length=300,null=True,blank=True)
     data=models.TextField()
-
-    
     def __str__(self) -> str:
         return self.emoji_name
     

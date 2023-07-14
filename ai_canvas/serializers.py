@@ -739,6 +739,17 @@ class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
         model=CanvasDownloadFormat
         fields='__all__'
 
+
+
+from ai_canvas.models import EmojiCategory ,EmojiData
+
+
+class EmojiCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model=EmojiCategory
+        fields='__all__'
+
+        
 # class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
 #     template_name = serializers.CharField(required= True)
 #     # template_globl_pag = TemplatePageSerializer(many = True,required=False)
