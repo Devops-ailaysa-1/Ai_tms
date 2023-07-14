@@ -7,7 +7,8 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter() #
 router.register(r"countries_info", api_views.Countries_listview, basename="Countries_by_user")
 router.register(r"language_info", api_views.language_listview, basename="language_info_byjob")
-router.register(r"aiuser_info", api_views.Aiuser_listview, basename="user_info")
+router.register(r"aiuser_info", api_views.AiUserListview, basename="user_info")
+router.register(r"user_management", api_views.BiuserManagement, basename="user-management")
 
 
 
