@@ -15,7 +15,8 @@ class BiUserSerializer(serializers.ModelSerializer):
     role=serializers.SerializerMethodField()
     class Meta:
         model  = BiUser
-        fields =("id","bi_role","name","role")
+        fields =("id","bi_user","bi_role","name","role")
+        read_only_fields = ("name","role")
 
     def get_name(self,obj):
         return obj.bi_user.fullname
