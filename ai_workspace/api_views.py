@@ -2271,7 +2271,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
     destination_blob_name = filename
-
+    
     upload_blob(bucket_name, source_file_name, destination_blob_name)
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
