@@ -4,13 +4,13 @@ from django.db import models
 from ai_auth.models import AiUser
 
 class BiUser(models.Model):
-    TECHNICAL=1
-    FINANCE=2
-    ADMIN=3
+    # TECHNICAL=1
+    # FINANCE=2
+    # ADMIN=3
     ROLE_CHOICES = (
-        (TECHNICAL, 'technical'),
-        (FINANCE, 'finance'),
-        (ADMIN,"admin"),
+        ("TECHNICAL", 'TECHNICAL'),
+        ("FINANCE", 'FINANCE'),
+        ("ADMIN","ADMIN"),
     )
     bi_user=models.OneToOneField(AiUser,related_name="bi_user", on_delete=models.CASCADE)
-    bi_role = models.IntegerField( choices=ROLE_CHOICES)
+    bi_role = models.CharField(max_length=250, choices=ROLE_CHOICES)

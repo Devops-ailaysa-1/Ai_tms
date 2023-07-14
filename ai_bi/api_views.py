@@ -182,7 +182,7 @@ class BiuserManagement(viewsets.ModelViewSet):
         country=request.POST.get("country",101)
         email=request.POST.get("email",None)
         password=request.POST.get("password",None)
-        role=request.POST.get("role",1)
+        role=request.POST.get("role","TECHNICAL")
         with transaction.atomic():
             try:
                 email, user,password=create_user(name,email,country,password)

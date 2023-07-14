@@ -12,14 +12,14 @@ class AiUserSerializer(serializers.ModelSerializer):
 
 class BiUserSerializer(serializers.ModelSerializer):
     name=serializers.SerializerMethodField()
-    role=serializers.SerializerMethodField()
+    # role=serializers.SerializerMethodField()
     class Meta:
         model  = BiUser
-        fields =("id","bi_user","bi_role","name","role")
-        read_only_fields = ("name","role")
+        fields =("id","bi_user","bi_role","name")
+        read_only_fields = ("name",)
 
     def get_name(self,obj):
         return obj.bi_user.fullname
 
-    def get_role(self,obj):
-        return obj.get_bi_role_display()
+    # def get_role(self,obj):
+    #     return obj.get_bi_role_display()
