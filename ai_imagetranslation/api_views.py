@@ -252,11 +252,9 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             data=serializer.data
-            # src=data['canvas_json']['src']
-            # brs=data['canvas_json']['brs']
-            # preview_json['src']=src
-            # preview_json['brs']=brs
-            # data['preview_json']=preview_json
+            preview_json['src']=data['canvas_json']['src']
+            preview_json['brs']=data['canvas_json']['brs']
+            data['preview_json']=preview_json
             return Response(data)
         else:
             return Response(serializer.errors)
