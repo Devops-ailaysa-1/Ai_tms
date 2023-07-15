@@ -1051,13 +1051,13 @@ def send_msg(bid_objects):
             if thread_id:
                 msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
                 notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-            context = {'message':message}	
+            context = {'name':i.fullname,'lang_pair':obj.bidpostjob.source_target_pair_names,'sp':obj.vendor.email,'service':obj.bid_step.name, 'amount':obj.bid_amount}	
             Receiver_emails = [i.email]	
             print("Rece-------->",Receiver_emails)
             print("Ccontext---------->",context)		
-            msg_html = render_to_string("assign_notify_mail.html", context)
+            msg_html = render_to_string("bid_alert_email.html", context)
             send_mail(
-                "Regarding Bid Info",None,
+                "You received a bid from Ailaysa Marketplace",None,
                 settings.DEFAULT_FROM_EMAIL,
                 Receiver_emails,
                 #['thenmozhivijay20@gmail.com',],

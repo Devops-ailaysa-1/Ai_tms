@@ -278,7 +278,7 @@ def vendor_notify_post_jobs(detail):
         email = context.get('user_email')
         msg_html = render_to_string("job_alert_email.html",context)
         tt = send_mail(
-            'Available jobs alert from ailaysa',None,
+            'You have got a job opportunity with Ailaysa Marketplace!',None,
             settings.DEFAULT_FROM_EMAIL,
             #['thenmozhivijay20@gmail.com'],
             [email],
