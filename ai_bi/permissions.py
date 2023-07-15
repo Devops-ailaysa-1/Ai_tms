@@ -1,8 +1,15 @@
 from rest_framework import permissions
+from ai_bi.models import BiUser
 
-
-class BIuser(permissions.BasePermission):
-
+class IsBiUser(permissions.BasePermission):
+    
     def has_permission(self, request, view):
-        if request.user.is_staff or request.user.is_superuser:
+        if BiUser.objects.get(bi_user=request.user):
             return True
+
+class IsBiAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user=BiUser.objects.get(bi_user=request.user)
+        if user.bi_role=="ADMIN":
+            return True
+        
