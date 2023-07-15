@@ -110,8 +110,6 @@ class BackgroundRemovel(models.Model):
     preview_json=models.JSONField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
-
-
     def __str__(self) -> str:
         return self.image_json_id+'----'+self.image_url
     
