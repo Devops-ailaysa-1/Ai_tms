@@ -107,6 +107,7 @@ class BackgroundRemovel(models.Model):
     image_url=models.URLField(blank=True,null=True)
     canvas_json=models.JSONField(blank=True,null=True)
     image=models.FileField(upload_to=user_directory_path_image_background_removel,blank=True,null=True)
+    preview_json=models.JSONField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 

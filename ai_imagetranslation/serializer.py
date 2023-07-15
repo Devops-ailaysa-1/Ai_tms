@@ -333,7 +333,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
-    preview_json=serializers.JSONField(required=False)
+    # preview_json=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json')
@@ -345,7 +345,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
-        preview_json=validated_data.pop('preview_json',None)
+        preview_json=validated_data.get('preview_json',None)
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
@@ -356,8 +356,11 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.image=back_ground_create
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
+            preview_json=copy.deepcopy(preview_json)
             tar_json['src']=HOST_NAME+instance.image.url
             tar_json['brs']=3
+            preview_json['src']=HOST_NAME+instance.image.url
+            preview_json['brs']=3
             instance.canvas_json =tar_json
             instance.save()
             return instance
