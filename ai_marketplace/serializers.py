@@ -22,6 +22,10 @@ from  django.utils import timezone
 from ai_auth.tasks import check_dict
 from ai_auth.validators import file_size
 from ai_vendor.models import SavedVendor
+from notifications.signals import notify
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.conf import settings
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
     # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
@@ -118,6 +122,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
             # }
         }
 
+
     def get_job_id(self,obj):
         tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
         pr = obj.bidpostjob.projectpost.project
@@ -160,6 +165,10 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         res = [BidPropasalDetails.objects.get_or_create(bidpostjob=i.get('bidpostjob'),vendor_id=data.get('vendor_id'),bid_step=i.get('bid_step'),\
                 defaults={**data,'bidpostjob':i.get('bidpostjob'),'mtpe_rate':i.get('mtpe_rate'),'mtpe_hourly_rate':i.get('mtpe_hourly_rate'),\
                             'mtpe_count_unit':i.get('mtpe_count_unit'),'currency':i.get('currency')}) for i in service]
+        print("Rres-------->",res)
+        created_objs = [i[0] for i in res if i[1]==True]
+        print("obj--------->",created_objs)
+        send_msg(created_objs)
         return res
 
     def update(self, instance, data):
@@ -1008,3 +1017,50 @@ class GetTalentSerializer(serializers.Serializer):
             if i.get("status")=="Invite Accepted":
                 tt.append(i)
         return tt
+
+
+
+
+
+
+def send_msg(bid_objects):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    for obj in bid_objects:
+        sender = obj.vendor
+        receivers = []
+        receiver =  obj.projectpost.customer
+        receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
+        receivers.append(receiver)
+        if receiver.team:
+            receivers.append(receiver.team.owner)
+        receivers = [*set(receivers)]
+        print("Receivers in msg_send----------->",receivers)
+        for i in receivers:
+            thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+            if thread_ser.is_valid():
+                thread_ser.save()
+                thread_id = thread_ser.data.get('id')
+            else:
+                thread_id = thread_ser.errors.get('thread_id')
+            print("Thread--->",thread_id)
+            message = "Project-Post named "+ obj.projectpost.proj_name +" with job "+obj.bidpostjob.source_target_pair_names+" received bids from vendor "+obj.vendor.email+"."
+            #message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
+
+            print("Msg--------->",message)
+            if thread_id:
+                msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+                notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+            context = {'proj_post_title':obj.projectpost.proj_name,'name':i.fullname,'lang_pair':obj.bidpostjob.source_target_pair_names,'sp':obj.vendor.email,'service':obj.bid_step.name, 'amount':obj.bid_amount}	
+            Receiver_emails = [i.email]	
+            print("Rece-------->",Receiver_emails)
+            print("Ccontext---------->",context)		
+            msg_html = render_to_string("bid_alert_email.html", context)
+            send_mail(
+                "You received a bid from Ailaysa Marketplace",None,
+                settings.DEFAULT_FROM_EMAIL,
+                Receiver_emails,
+                #['thenmozhivijay20@gmail.com',],
+                html_message=msg_html,
+            )
+        print("bid submitted by vendor detail sent to customer>>")	

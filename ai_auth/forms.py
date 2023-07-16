@@ -278,7 +278,7 @@ def vendor_notify_post_jobs(detail):
         email = context.get('user_email')
         msg_html = render_to_string("job_alert_email.html",context)
         tt = send_mail(
-            'Available jobs alert from ailaysa',None,
+            'You have got a job opportunity with Ailaysa Marketplace!',None,
             settings.DEFAULT_FROM_EMAIL,
             #['thenmozhivijay20@gmail.com'],
             [email],
@@ -287,19 +287,19 @@ def vendor_notify_post_jobs(detail):
         print("available job alert mail sent>>")
 
 
-def vendor_notify_post_jobs(detail):
-    #pass
-    for i in detail:
-        context = detail.get(i)
-        email = context.get('user_email')
-        msg_html = render_to_string("job_alert_email.html",context)
-        send_mail(
-            'Available jobs alert from ailaysa',None,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            html_message=msg_html,
-        )
-        print("available job alert mail sent>>")
+# def vendor_notify_post_jobs(detail):
+#     #pass
+#     for i in detail:
+#         context = detail.get(i)
+#         email = context.get('user_email')
+#         msg_html = render_to_string("job_alert_email.html",context)
+#         send_mail(
+#             'Available jobs alert from ailaysa',None,
+#             settings.DEFAULT_FROM_EMAIL,
+#             [email],
+#             html_message=msg_html,
+#         )
+#         print("available job alert mail sent>>")
 
 
 

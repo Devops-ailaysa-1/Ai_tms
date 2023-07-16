@@ -500,14 +500,15 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
 
 
 class ChoiceListsSerializer (serializers.ModelSerializer):
-    class Meta():
-        model=ChoiceLists
-        fields="__all__"
+
+    class Meta:
+        model = ChoiceLists
+        fields = "__all__"
 
 class ChoiceListSelectedSerializer (serializers.ModelSerializer):
-    class Meta():
-        model=ChoiceListSelected
-        fields="__all__"
+    class Meta:
+        model = ChoiceListSelected
+        fields = "__all__"
 
 
 

@@ -475,7 +475,7 @@ class GeneralSupport(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 def cocreate_file_path(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.email,"app_suggestion_file",filename)
+    return '{0}/{1}/{2}'.format(instance.co_create.email,"app_suggestion_file",filename)
 
 
 class CoCreateForm(models.Model):
@@ -484,14 +484,18 @@ class CoCreateForm(models.Model):
     suggestion_type = models.ForeignKey(SuggestionType,on_delete=models.CASCADE)
     suggestion = models.ForeignKey(Suggestion,on_delete=models.CASCADE)
     description = models.TextField(max_length=5000)
-    app_suggestion_file = models.FileField(upload_to=cocreate_file_path, blank=True, null=True)
+    #app_suggestion_file = models.FileField(upload_to=cocreate_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class CoCreateFiles(models.Model):
+    co_create = models.ForeignKey(CoCreateForm,on_delete=models.CASCADE,blank=True, null=True, related_name='cocreate_file')
+    app_suggestion_file = models.FileField(upload_to=cocreate_file_path, blank=True, null=True)
 
 
 
 class Team(models.Model):
-    name = models.CharField(max_length=50,unique=True)
+    name = models.CharField(max_length=50)#,unique=True)
     owner = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='team_owner')
     description = models.TextField(max_length=1000,blank=True,null=True)
 

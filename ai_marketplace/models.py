@@ -56,8 +56,6 @@ class ProjectboardDetails(models.Model):
     def get_steps_name(self):
         return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
 
-
-
     @property
     def get_jobs(self):
         return [job for job in self.projectpost_jobs.all()]
@@ -65,10 +63,11 @@ class ProjectboardDetails(models.Model):
     @property
     def get_steps(self):
         return [obj.steps for obj in self.projectpost_steps.all()]
-
+    
     @property
-    def get_steps_name(self):
-        return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
+    def get_services(self):
+        return [obj.steps.name for obj in self.projectpost_steps.all()]
+
 
 class ProjectPostJobDetails(models.Model):
     postjob_id = models.CharField(max_length=191,blank=True,null=True)
@@ -236,6 +235,9 @@ class BidPropasalDetails(models.Model):
     edited_count =  models.IntegerField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
+    class Meta:
+        unique_together = ['bidpostjob', 'vendor','bid_step']
+
     @property
     def filename(self):
         if self.sample_file:
@@ -244,8 +246,10 @@ class BidPropasalDetails(models.Model):
         else:
             return None
 
-    class Meta:
-        unique_together = ['bidpostjob', 'vendor','bid_step']
+    @property
+    def bid_amount(self):
+        from ai_marketplace.api_views import unit_price_float_format
+        return str(unit_price_float_format(self.mtpe_rate)) + ' / ' +self.mtpe_count_unit.unit
 
 User = get_user_model()
 
