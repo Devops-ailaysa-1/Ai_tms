@@ -338,7 +338,7 @@ def back_groung_rm_json_update():
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:
         model=BackgroundRemovePreviewimg
-        fields='__all__'
+        fields=('id','image_url')
 
 
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
@@ -370,8 +370,10 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
             preview_json=copy.deepcopy(preview_json)
-            tar_json['src']=preview_json['src']=HOST_NAME+instance.image.url
-            tar_json['brs']=preview_json['brs']=3
+            tar_json['src']=HOST_NAME+instance.image.url
+            tar_json['brs']=3
+            preview_json['brs']=3
+            preview_json['src']=HOST_NAME+instance.image.url
             instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
             instance.canvas_json =tar_json
             instance.save()
