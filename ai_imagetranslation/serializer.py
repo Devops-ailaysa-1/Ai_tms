@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewjson)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -335,16 +335,16 @@ def back_groung_rm_json_update():
     pass
 
 
-class BackgroundRemovePreviewjsonSerializer(serializers.ModelSerializer):
+class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:
-        model=BackgroundRemovePreviewjson
+        model=BackgroundRemovePreviewimg
         fields='__all__'
 
 
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
     preview_json=serializers.JSONField(required=False)
-    back_ground_rm_preview_im=BackgroundRemovePreviewjsonSerializer(many=True)
+    back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True)
 
     class Meta:
         model=BackgroundRemovel
