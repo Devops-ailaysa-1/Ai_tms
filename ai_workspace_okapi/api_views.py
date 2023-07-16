@@ -1263,7 +1263,7 @@ class MT_RawAndTM_View(views.APIView):
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
                 # print('data normal=-----------',data['mt_raw'])
-                rep=data['mt_raw']
+                #rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 
                 # #list option assets
@@ -1292,7 +1292,7 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                rep=data['mt_raw']
+                #rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 # #list option assets
                 # # replace asset auto
