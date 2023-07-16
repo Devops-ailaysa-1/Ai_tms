@@ -10,7 +10,7 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
-                            CampaignUsers,CoCreateForm)
+                            CampaignUsers,CoCreateForm,CoCreateFiles)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -508,13 +508,32 @@ class GeneralSupportSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CoCreateFormSerializer(serializers.ModelSerializer):
-    app_suggestion_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
+class CoCreateFilesSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CoCreateForm
+        model = CoCreateFiles
         fields = "__all__"
 
 
+
+class CoCreateFormSerializer(serializers.ModelSerializer):
+    cocreate_file = CoCreateFilesSerializer(many=True,required=False)
+    #app_suggestion_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
+    class Meta:
+        model = CoCreateForm
+        fields = ('id','name','email','suggestion_type','suggestion','description','cocreate_file','created_at','updated_at')
+
+
+    def run_validation(self, data):
+        if data.get('cocreate_file'):
+           data['cocreate_file'] = [{'app_suggestion_file':file} for file in data['cocreate_file']]
+        return super().run_validation(data)
+
+    def create(self,data):
+        files = data.pop("cocreate_file",[])
+        ins = CoCreateForm.objects.create(**data)
+        if files:
+            tt = [CoCreateFiles.objects.create(**sug_file,co_create = ins ) for sug_file in files]
+        return ins
 
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:

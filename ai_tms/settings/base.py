@@ -147,6 +147,7 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
+    "ai_bi"
 ]
 
 

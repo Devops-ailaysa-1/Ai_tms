@@ -74,6 +74,7 @@ from django.http import JsonResponse,HttpResponse
 from ai_workspace_okapi.utils import download_file
 from django_oso.auth import authorize
 
+
 # Create your views here.
 
 
@@ -165,10 +166,10 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
         if serializer.is_valid():
             serializer.save()
-            # print("ID------------------->",serializer.data.get('id'))
-            # shortlisted_vendor_list_send_email_new.apply_async((
-            # serializer.data.get('id'),
-            # ))
+            print("ID------------------->",serializer.data.get('id'))
+            shortlisted_vendor_list_send_email_new.apply_async((
+            serializer.data.get('id'),
+            ))
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
@@ -310,6 +311,7 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
+                    #print("data----------->",serializer.data)
                 queryset = BidPropasalDetails.objects.filter(projectpost_id= post_id).all()
                 serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response({"msg":"Bid Posted","data":serializer.data})
