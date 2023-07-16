@@ -212,7 +212,7 @@ def existing_vendor_onboard_check():
 
 
 @task
-def shortlisted_vendor_list_send_email_new(projectpost_id):
+def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
     instance = ProjectboardDetails.objects.get(id=projectpost_id)
