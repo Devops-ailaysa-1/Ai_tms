@@ -263,7 +263,6 @@ class TextboxUpdate(models.Model):
 
 class EmojiCategory(models.Model):
     name=models.CharField(max_length=200,null=True,blank=True)
-    
     def __str__(self) -> str:
         if self.name:
             return self.name

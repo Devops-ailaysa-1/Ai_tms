@@ -740,17 +740,32 @@ class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
 
 
 
+
+class EmojiDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=EmojiData
+        fields='__all__'
+
 class EmojiCategorySerializer(serializers.ModelSerializer):
+    cat_data=serializers.SerializerMethodField()
     class Meta:
         model=EmojiCategory
         fields='__all__'
 
+    def get_cat_data(self,obj):
+        return EmojiData.objects.filter(emoji_cat=obj)[:30].values_list('data',flat=True)
 
-class EmojiDataSerializer(serializers.ModelSerializer):
-    cat_data=EmojiCategorySerializer(many=True,required=False,source='emoji_cat_data')
-    class Meta:
-        model=EmojiData
-        fields=('id','emoji_cat','emoji_name','data','cat_data')
+
+# class EmojiDataSerializer(serializers.ModelSerializer):
+#     cat_data=EmojiCategorySerializer(many=True,required=False,source='emoji_cat_data')
+    
+#     class Meta:
+#         model=EmojiData
+#         fields=('id','emoji_cat','emoji_name','data','cat_data')
+
+#     def get_cat_data(self,obj):
+#         return EmojiCategory
+    
 
 
 
