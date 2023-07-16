@@ -114,6 +114,15 @@ class BackgroundRemovel(models.Model):
         return self.image_json_id+'----'+self.image_url
     
 
+class BackgroundRemovePreviewimg(models.Model):
+    back_ground_remove=models.ForeignKey(BackgroundRemovel,on_delete=models.CASCADE,related_name="back_ground_rm_preview_im")
+    image_url=models.URLField(blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.image_url
+
 # def user_directory_path_image_object_removel(instance, filename):
 #     return '{0}/{1}/{2}'.format(instance.user.uid,"object_removel",filename)
 

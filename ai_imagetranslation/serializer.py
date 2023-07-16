@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewjson)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -331,12 +331,24 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 #     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
 
 
+def back_groung_rm_json_update():
+    pass
+
+
+class BackgroundRemovePreviewjsonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=BackgroundRemovePreviewjson
+        fields='__all__'
+
+
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
-    # preview_json=serializers.JSONField(required=False)
+    preview_json=serializers.JSONField(required=False)
+    back_ground_rm_preview_im=BackgroundRemovePreviewjsonSerializer(many=True)
+
     class Meta:
         model=BackgroundRemovel
-        fields=('id','image_json_id','image_url','image','canvas_json','preview_json')
+        fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im')
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
                       'image':{'write_only':True},
@@ -346,6 +358,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
         preview_json=validated_data.get('preview_json',None)
+
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
@@ -357,16 +370,20 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
             preview_json=copy.deepcopy(preview_json)
-            tar_json['src']=HOST_NAME+instance.image.url
-            tar_json['brs']=3
-            preview_json['src']=HOST_NAME+instance.image.url
-            preview_json['brs']=3
+            tar_json['src']=preview_json['src']=HOST_NAME+instance.image.url
+            tar_json['brs']=preview_json['brs']=3
+            instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
             instance.canvas_json =tar_json
             instance.save()
             return instance
-        
-class ObjectRemovelSerializer(serializers.ModelSerializer):
-    pass
+    
+    def update(self, instance, validated_data):
+        image_url=validated_data.get('image_url',None)
+        if image_url:
+            instance.back_ground_rm_preview_im.create(image_url=image_url)
+        return instance
+
+
 
 
 
