@@ -506,7 +506,7 @@ def seq_match_seg_diff(words1,words2):
 def get_general_prompt(opt,sent):
 
     if opt == "Rewrite":
-        prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+        prompt = '''Paraphrase the given text. Text: {} '''.format(sent)
 
     elif opt == "Simplify":
         prompt = '''Simplify the given text. Text: {}'''.format(sent)
