@@ -1051,7 +1051,7 @@ def send_msg(bid_objects):
             if thread_id:
                 msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
                 notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-            context = {'name':i.fullname,'lang_pair':obj.bidpostjob.source_target_pair_names,'sp':obj.vendor.email,'service':obj.bid_step.name, 'amount':obj.bid_amount}	
+            context = {'proj_post_title':obj.projectpost.proj_name,'name':i.fullname,'lang_pair':obj.bidpostjob.source_target_pair_names,'sp':obj.vendor.email,'service':obj.bid_step.name, 'amount':obj.bid_amount}	
             Receiver_emails = [i.email]	
             print("Rece-------->",Receiver_emails)
             print("Ccontext---------->",context)		

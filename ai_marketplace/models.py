@@ -249,7 +249,7 @@ class BidPropasalDetails(models.Model):
     @property
     def bid_amount(self):
         from ai_marketplace.api_views import unit_price_float_format
-        return str(unit_price_float_format(self.mtpe_rate)) + '/ ' +self.mtpe_count_unit.unit
+        return str(unit_price_float_format(self.mtpe_rate)) + ' / ' +self.mtpe_count_unit.unit
 
 User = get_user_model()
 
