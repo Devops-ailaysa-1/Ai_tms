@@ -344,7 +344,7 @@ class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
 class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
     preview_json=serializers.JSONField(required=False)
-    back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True)
+    back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
 
     class Meta:
         model=BackgroundRemovel
