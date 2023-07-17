@@ -1173,18 +1173,25 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
     page_size_query_param = 'page_size'
     search_fields=['emoji_name']
     def list(self,request):
-        catagory_name=request.query_params.get('catagory_name')
-        if catagory_name:
-            queryset= EmojiData.objects.filter(emoji_cat__name=catagory_name)
+        catagory_id=request.query_params.get('catagory_id')
+        search=request.query_params.get('search')
+        if catagory_id:
+            queryset= EmojiData.objects.filter(emoji_cat__id=catagory_id)
+            queryset = self.filter_queryset(queryset)
         else:
-            queryset = EmojiCategory.objects.all() 
-        queryset = self.filter_queryset(queryset)
+            if search:
+                queryset=EmojiCategory.objects.filter(emoji_cat_data__emoji_name__icontains=search)
+                
+            else:
+                queryset=EmojiCategory.objects.all()
+                self.search_fields=['name']
+                queryset = self.filter_queryset(queryset)
+        
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        if catagory_name:
-             serializer = EmojiDataSerializer(pagin_tc,many=True)
+        if catagory_id:
+            serializer = EmojiDataSerializer(pagin_tc,many=True)
         else:
             serializer = EmojiCategorySerializer(pagin_tc,many=True)
-
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
             response.data["next"] = response.data["next"].replace("http://", "https://")
