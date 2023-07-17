@@ -1166,17 +1166,25 @@ def DesignerDownload(request):
     else:
         return Response({"page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
     
-    
+
 class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
     # pagination_class = CustomPagination
     page_size = 60
     page_size_query_param = 'page_size'
     search_fields=['emoji_name']
     def list(self,request):
-        queryset = EmojiCategory.objects.all() 
+        catagory_name=request.query_params.get('catagory_name')
+        if catagory_name:
+            queryset= EmojiData.objects.filter(emoji_cat__name=catagory_name)
+        else:
+            queryset = EmojiCategory.objects.all() 
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = EmojiCategorySerializer(pagin_tc,many=True)
+        if catagory_name:
+             serializer = EmojiDataSerializer(pagin_tc,many=True)
+        else:
+            serializer = EmojiCategorySerializer(pagin_tc,many=True)
+
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
             response.data["next"] = response.data["next"].replace("http://", "https://")

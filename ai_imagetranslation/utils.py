@@ -15,6 +15,7 @@ import cv2,requests,base64,io
 from PIL import Image
 import numpy as np
 from io import BytesIO
+from rest_framework import serializers
 from ai_canvas.template_json import textbox_json
 import copy
 import uuid,math
@@ -30,7 +31,7 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
             content = image_file.read()
         image = vision_v1.types.Image(content=content)
         response = client.text_detection(image = image)
-        texts = response.full_text_annotation
+        texts = response.text_annotations   #full_text_annotation
         return texts
 
 def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
@@ -177,7 +178,7 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 
 # from celery import shared_task
 # @shared_task(serializer='json')
-from rest_framework import serializers
+
 def inpaint_image_creation(image_details,inpaintparallel=False):
     # if hasattr(image_details,'image'):
     #     img_path=image_details.image.path
@@ -237,7 +238,6 @@ def background_merge(u2net_result,original_img):
     original_img=Image.fromarray(original_img).convert("RGBA")
     u2net_data=u2net_result.getdata()
     original_img=original_img.getdata()
-
     for i in range(u2net_data.size[0]*u2net_data.size[1]):
         if u2net_data[i][0]==0 and u2net_data[i][1]==0 and u2net_data[i][2]==0:
             newdata.append((255,255,255,0))
