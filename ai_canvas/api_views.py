@@ -409,8 +409,8 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
         queryset = MyTemplateDesign.objects.filter(user=request.user.id).values('id','width','height','my_template_page__my_template_thumbnail').order_by('-id')
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
-        response = self.get_paginated_response(serializer.data)
+        # serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(pagin_tc)
         return response
     
     def retrieve(self,request,pk):
