@@ -410,13 +410,14 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
-        response = self.get_paginated_response(pagin_tc)
+        response = self.get_paginated_response(serializer)
         return response
     
     def retrieve(self,request,pk):
-        queryset=MyTemplateDesign.objects.get(id=pk)
-        serializer =MyTemplateDesignSerializer(queryset)
-        return Response(serializer.data)
+        queryset=MyTemplateDesign.objects.filter(id=pk).values('id','width','height','file_name','project_category','created_at',
+                                                               'my_template_page').last()
+        # serializer =MyTemplateDesignSerializer(queryset)
+        return Response(queryset)
 
     def create(self,request):
         template_global_id = request.POST.get('template_global_id')
