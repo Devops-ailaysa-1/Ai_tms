@@ -18,15 +18,17 @@ from ai_bi.serializers import AiUserSerializer
 from ai_bi.permissions import IsBiUser,IsBiAdmin
 from rest_framework import response
 from rest_framework.decorators import permission_classes
-
+from ai_auth.utils import company_members_list
+from functools import reduce
+from operator import or_
 
 def get_users(is_vendor=False,period=None,test=False):
         if test:
             users= AiUser.objects.filter(~Q(email__icontains='deleted')&~Q(email='AnonymousUser')&~Q(is_staff=True) \
-                    &~Q(is_internal_member=True)&Q(is_vendor=is_vendor))
+                    &~Q(is_internal_member=True)&Q(is_vendor=is_vendor)&~reduce(or_,[Q(email__icontains=mail)for mail in company_members_list]))
         else:
             users= AiUser.objects.filter(~Q(email__icontains='deleted')&~Q(email='AnonymousUser')&~Q(is_staff=True) \
-                    &~Q(is_internal_member=True)&Q(is_vendor=is_vendor)&~Q(email__icontains="+"))
+                    &~Q(is_internal_member=True)&Q(is_vendor=is_vendor)&~Q(email__icontains="+")&~reduce(or_,[Q(email__icontains=mail)for mail in company_members_list]))
         if period != None:
             start_date = timezone.now()
             end_date =start_date + timedelta(period)
@@ -46,7 +48,7 @@ def reports_dashboard(request):
     data_sub = dict()
     data["total_users"] = users.count()
     data["total_languages"]=len(repo.total_languages_used())
-    data["total_coutries"] =len(countries)
+    data["total_countries"] =len(countries)
     data["paid_users"]=paid_users.count()
     print(subs_info)
     for sub in subs_info[0]:
@@ -110,7 +112,6 @@ class language_listview(viewsets.ModelViewSet):
         return response
     
 import django_filters  
-from dateutil.relativedelta import relativedelta
 
 class AiDateFilter(django_filters.FilterSet):
     date_joined = django_filters.DateTimeFilter()
@@ -119,7 +120,6 @@ class AiDateFilter(django_filters.FilterSet):
     class Meta:
         model = AiUser
         fields = {'date_joined': ['exact', 'lt', 'lte', 'gt', 'gte']}
-
 
     # def filter_by_month_name(self, queryset, name, value):
     #     # Filter the queryset based on the month name
