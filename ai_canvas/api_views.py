@@ -415,7 +415,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     
     def retrieve(self,request,pk):
         queryset=MyTemplateDesign.objects.get(id=pk)
-        serializer =MyTemplateDesignSerializer(queryset,many=True)
+        serializer =MyTemplateDesignSerializer(queryset)
         return Response(serializer.data)
 
     def create(self,request):
