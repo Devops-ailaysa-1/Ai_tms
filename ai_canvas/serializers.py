@@ -595,7 +595,7 @@ class MyTemplateDesignPageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class MyTemplateDesignSerializer(serializers.ModelSerializer):
-    my_template_page=MyTemplateDesignPageSerializer(many=True,required=False)
+    # my_template_page=MyTemplateDesignPageSerializer(many=True,required=False)
     template_global_id = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     canvas_design_id = serializers.PrimaryKeyRelatedField(queryset=CanvasDesign.objects.all(),required=False)
     tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
@@ -604,7 +604,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','my_template_page')
+        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no') #'my_template_page'
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -669,6 +669,9 @@ class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyTemplateDesign
         fields = ('id','width','height','my_template_page',)
+
+
+    
 
 
 class TemplateKeywordSerializer(serializers.ModelSerializer):
