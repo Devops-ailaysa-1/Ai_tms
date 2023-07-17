@@ -413,6 +413,11 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
         response = self.get_paginated_response(serializer.data)
         return response
     
+    def retrieve(self,request,pk):
+        queryset=MyTemplateDesign.objects.get(id=pk)
+        serializer =MyTemplateDesignSerializer(queryset,many=True)
+        return Response(serializer.data)
+
     def create(self,request):
         template_global_id = request.POST.get('template_global_id')
         serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request})
@@ -1020,7 +1025,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
         serializer=TemplateGlobalDesignSerializerV2(query_set )
         return Response(serializer.data)
     
-from django.db.models import Q
+
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     pagination_class = CustomPagination
