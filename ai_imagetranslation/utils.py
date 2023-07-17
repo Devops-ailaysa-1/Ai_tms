@@ -69,7 +69,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 textbox_['id']="text_"+(str(text_uuid))
                 count+=1
                 textbox_['name']=name
-                x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+                x,y,w,h=k.bounding_box.vertices[0].x ,k.bounding_box.vertices[1].y,k.bounding_box.vertices[2].x,k.bounding_box.vertices[3].y 
                 textbox_['left']=x
                 textbox_['top']=y
                 textbox_['width']=w-x
