@@ -31,7 +31,7 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
             content = image_file.read()
         image = vision_v1.types.Image(content=content)
         response = client.text_detection(image = image)
-        texts = response.text_annotations   #full_text_annotation
+        texts = response.full_text_annotation   #full_text_annotation
         return texts
 
 def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
