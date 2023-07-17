@@ -32,7 +32,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
