@@ -601,10 +601,10 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     trans_page_no = serializers.IntegerField(required=False) 
     src_page_no= serializers.IntegerField(required=False)
-    temp_thumb_image=serializers.CharField(source='my_template_page.my_template_thumbnail.url')
+    
     class Meta:
         model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','temp_thumb_image','my_template_page')
+        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','my_template_page')
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
