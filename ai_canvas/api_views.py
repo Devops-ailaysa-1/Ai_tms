@@ -406,7 +406,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     search_fields =['file_name',]
 
     def list(self,request):
-        queryset = MyTemplateDesign.objects.filter(user=request.user.id).order_by('-id')
+        queryset = MyTemplateDesign.objects.filter(user=request.user.id).values('id','width','height','my_template_thumbnail').order_by('-id')
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
