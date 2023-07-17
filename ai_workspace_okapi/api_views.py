@@ -1220,7 +1220,7 @@ class MT_RawAndTM_View(views.APIView):
                     replace_word=choice.first().edited_word
                     print("replace_word---------->",replace_word)
                     pattern = r'\b{}\b'.format(word)
-                    translation= re.sub(pattern, replace_word, translation)
+                    translation= re.sub(word, replace_word, translation)
                     print("Trans--------------->",translation)
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
                     suggestion[replace_word].insert(0,word) 
