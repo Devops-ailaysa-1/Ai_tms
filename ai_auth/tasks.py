@@ -212,12 +212,14 @@ def existing_vendor_onboard_check():
 
 
 @task
-def shortlisted_vendor_list_send_email_new(projectpost_id):
+def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
     instance = ProjectboardDetails.objects.get(id=projectpost_id)
     lang_pair = VendorLanguagePair.objects.none()
     jobs = instance.get_postedjobs
+    steps = instance.get_services
+    services = ', '.join(steps)
     for obj in jobs:
         if obj.src_lang_id == obj.tar_lang_id:
             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
@@ -233,7 +235,7 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):
         else:
             res[obj.user_id]={'name':obj.user.fullname,'user_email':obj.user.email,'lang':[{'source':obj.source_lang.language,'target':tt}],\
             'project_deadline':instance.proj_deadline.date().strftime("%d-%m-%Y"),'bid_deadline':instance.bid_deadline.date().strftime('%d-%m-%Y'),\
-            'proj_post_title':instance.proj_name,'posted_by':instance.customer.fullname}
+            'proj_post_title':instance.proj_name,'posted_by':instance.customer.fullname,'services':services}
     print("Res----------->",res)
     auth_forms.vendor_notify_post_jobs(res)
     print("mailsent")
