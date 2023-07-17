@@ -88,16 +88,16 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
-                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
-            textbox_['text']="".join(text_list).strip()
-            textbox_['fill']="rgb{}".format(tuple(final_color[0]))
-            # textbox_['angle']=arrival_angle
-            font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
-            textbox_['fontSize']=font
-            no_of_segments+=1
-            text_list=[]
-            text_box_list.append(textbox_)
+                text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
+                                                        "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
+                textbox_['text']="".join(text_list).strip()
+                textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+                # textbox_['angle']=arrival_angle
+                font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
+                textbox_['fontSize']=font
+                no_of_segments+=1
+                text_list=[]
+                text_box_list.append(textbox_)
     return text_and_bounding_results,text_box_list
  
 
