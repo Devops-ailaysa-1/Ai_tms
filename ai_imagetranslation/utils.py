@@ -58,7 +58,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     text_list=[]
     text_box_list=[]
     for i in  texts.pages:
-        x,y,w,h=i.bounding_box.vertices[0].x ,i.bounding_box.vertices[1].y,i.bounding_box.vertices[2].x,i.bounding_box.vertices[3].y 
+        # x,y,w,h=i.bounding_box.vertices[0].x ,i.bounding_box.vertices[1].y,i.bounding_box.vertices[2].x,i.bounding_box.vertices[3].y 
         for j in i.blocks:
             count=0
             text_uuid=uuid.uuid4()
@@ -67,7 +67,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             textbox_['id']="text_"+(str(text_uuid))
             count+=1
             textbox_['name']=name
-            # x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
             textbox_['left']=x
             textbox_['top']=y
             textbox_['width']=w-x
