@@ -1218,6 +1218,7 @@ class MT_RawAndTM_View(views.APIView):
                 if choice:
                     print(choice, "*****************")
                     replace_word=choice.first().edited_word
+                    print("replace_word---------->",replace_word)
                     pattern = r'\b{}\b'.format(word)
                     translation= re.sub(pattern, replace_word, translation)
                     print("Trans--------------->",translation)
