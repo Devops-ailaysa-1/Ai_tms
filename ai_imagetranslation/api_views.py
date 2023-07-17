@@ -109,8 +109,9 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         image = request.FILES.get('image')
         image_id =  request.POST.getlist('image_id')
         canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
-        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
-            return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+        print("canvas_asset_image_id",canvas_asset_image_id)
+        # if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+        #     return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         
         if image:
             serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 

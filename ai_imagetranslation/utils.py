@@ -58,6 +58,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     text_list=[]
     text_box_list=[]
     for i in  texts.pages:
+        x,y,w,h=i.bounding_box.vertices[0].x ,i.bounding_box.vertices[1].y,i.bounding_box.vertices[2].x,i.bounding_box.vertices[3].y 
         for j in i.blocks:
             count=0
             text_uuid=uuid.uuid4()
@@ -66,7 +67,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             textbox_['id']="text_"+(str(text_uuid))
             count+=1
             textbox_['name']=name
-            x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            # x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
             textbox_['left']=x
             textbox_['top']=y
             textbox_['width']=w-x
@@ -91,6 +92,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
                                                         "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
                 textbox_['text']="".join(text_list).strip()
+                print("text-------------->>","".join(text_list))
                 textbox_['fill']="rgb{}".format(tuple(final_color[0]))
                 # textbox_['angle']=arrival_angle
                 font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
