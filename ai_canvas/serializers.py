@@ -604,7 +604,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     temp_thumb_image=serializers.CharField(source='my_template_page.my_template_thumbnail.url')
     class Meta:
         model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','temp_thumb_image')
+        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','temp_thumb_image','my_template_page')
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
