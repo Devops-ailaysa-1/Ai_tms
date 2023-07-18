@@ -89,7 +89,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 print("text-------------->>","".join(text_list))
                 textbox_['fill']="rgb{}".format(tuple(final_color[0]))
                 font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
-                textbox_['fontSize']=font
+                textbox_['fontSize']=font-10
                 no_of_segments+=1
                 text_list=[]
                 text_box_list.append(textbox_)
