@@ -1187,43 +1187,45 @@ class MT_RawAndTM_View(views.APIView):
         print(project)
         return project
 
-    # @staticmethod
-    # def get_words_list(sent):
-    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-    #     tokens=word_tokenize(sent)
-    #     target = [word for word in tokens if word not in punctuation]
-    #     words=[]
-    #     tg_word = [word for word in target] 
-    #     unigram = ngrams(tg_word , 1)
-    #     words.extend(list(" ".join(i) for i in unigram))
-    #     bigrams = ngrams(tg_word , 2)
-    #     words.extend(list(" ".join(i) for i in bigrams))
-    #     trigrams = ngrams(tg_word , 3)
-    #     words.extend(list(" ".join(i) for i in trigrams))
-    #     return words
+    @staticmethod
+    def get_words_list(sent):
+        punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+        tokens=word_tokenize(sent)
+        target = [word for word in tokens if word not in punctuation]
+        words=[]
+        tg_word = [word for word in target] 
+        unigram = ngrams(tg_word , 1)
+        words.extend(list(" ".join(i) for i in unigram))
+        bigrams = ngrams(tg_word , 2)
+        words.extend(list(" ".join(i) for i in bigrams))
+        trigrams = ngrams(tg_word , 3)
+        words.extend(list(" ".join(i) for i in trigrams))
+        return words
 
-    # @staticmethod   
-    # def asset_replace(request,translation,project,lang): 
-    #     choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
-    #     print("choice--------->",choice, choice.last())
-    #     choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
-    #     print("Choicelist----------->",choicelist)
-    #     words = MT_RawAndTM_View.get_words_list(translation)
-    #     suggestion={}
-    #     if choicelist:
-    #         for word in words: 
-    #             print("Word---------->", word)
-    #             choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-    #             if choice:
-    #                 print(choice, "*****************")
-    #                 replace_word=choice.first().edited_word
-    #                 pattern = r'\b{}\b'.format(word)
-    #                 translation= re.sub(pattern, replace_word, translation)
-    #                 suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
-    #                 suggestion[replace_word].insert(0,word) 
+    @staticmethod   
+    def asset_replace(request,translation,project,lang): 
+        choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
+        print("choice--------->",choice, choice.last())
+        choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
+        print("Choicelist----------->",choicelist)
+        words = MT_RawAndTM_View.get_words_list(translation)
+        suggestion={}
+        if choicelist:
+            for word in words: 
+                print("Word---------->", word)
+                choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                if choice:
+                    print(choice, "*****************")
+                    replace_word=choice.last().edited_word
+                    print("replace_word---------->",replace_word)
+                    pattern = r'\b{}\b'.format(word)
+                    translation= re.sub(word, replace_word, translation)
+                    print("Trans--------------->",translation)
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word) 
         
-    #     print(translation)
-    #     return translation,suggestion
+        print(translation)
+        return translation,suggestion
 
 
     def get(self, request, segment_id):
@@ -1261,20 +1263,17 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                # print('data normal=-----------',data['mt_raw'])
-                rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 
                 # #list option assets
                 # replace asset auto
                 seg_obj = Segment.objects.get(id=segment_id)
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-
-        
-                # print('rep----------',asset_rep)
+                rep = data.get('mt_raw',None)
+                if rep:
+                    asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                    data['mt_raw']=asset_rep
+                    data['options']=asset_list
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
@@ -1291,18 +1290,15 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
-                # #list option assets
-                # # replace asset auto
                 seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                #asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-                # print('rep----------',asset_rep)
-
-
+                rep = data.get('mt_raw',None)
+                if rep:
+                    asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                    data['mt_raw']=asset_rep
+                    data['options']=asset_list
+                    print('rep----------',asset_rep)
 
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
