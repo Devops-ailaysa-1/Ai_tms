@@ -70,7 +70,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 textbox_['left']=x
                 textbox_['top']=y
                 textbox_['width']=w-x
-                textbox_['height']=h
+                textbox_['height']=h-y
                 final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
                 for a in k.words:
                     text_list.append(" ") 
