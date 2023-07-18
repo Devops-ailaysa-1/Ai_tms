@@ -71,6 +71,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             textbox_['top']=y
             textbox_['width']=w-x
             textbox_['height']=h
+            dx = j.bounding_box.vertices[1].x - j.bounding_box.vertices[0].x
+            dy = j.bounding_box.vertices[1].y- j.bounding_box.vertices[0].y
+            arrival_angle=math.degrees(math.atan2(dy, dx))
+            arrival_angle=(arrival_angle + 360) % 360
+            vertex=j.bounding_box.vertices
+            poly_line.append([[vertex[0].x ,vertex[0].y],[vertex[1].x,vertex[1].y],[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
             final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
             for k in j.paragraphs:
                 for a in k.words:
@@ -83,13 +89,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
             text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
-                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
-                                                    # "poly_line":poly_line}
+                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
             textbox_['text']="".join(text_list).strip()
-            print("text-------------->>","".join(text_list))
             textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+            # textbox_['angle']=arrival_angle
             font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
-            textbox_['fontSize']=font-10
+            textbox_['fontSize']=font-5
             no_of_segments+=1
             text_list=[]
             text_box_list.append(textbox_)
