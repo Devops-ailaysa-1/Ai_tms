@@ -284,11 +284,13 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
 
     def get(self, request):
-        if self.request.user.is_vendor == True:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        if user.is_vendor == True:
             try:
-                print(request.user.id)
+                print(user.id)
                 id = request.GET.get('id')
-                queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
+                queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=user.id)).distinct().order_by('-id').all()
                 pagin_tc = self.paginate_queryset(queryset, request , view=self)
                 serializer = BidPropasalDetailSerializer(pagin_tc,many=True,context={'request':request})
                 response = self.get_paginated_response(serializer.data)
@@ -302,11 +304,13 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def create(self, request):###########Need to check#############
-        if self.request.user.is_vendor == True:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        if user.is_vendor == True:
             post_id = request.POST.get('post_id')
             post = ProjectboardDetails.objects.get(id=post_id)
             sample_file=request.FILES.get('sample_file')
-            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id},context={'request':request})
+            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':user.id},context={'request':request})
             print(serializer.is_valid())
             if serializer.is_valid():
                 with transaction.atomic():
@@ -342,7 +346,9 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):############need to include currency conversion###############
-    if request.user.is_vendor == True:
+    pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else [] 
+    user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+    if user.is_vendor == True:
         projectpost = request.POST.get('projectpost')
         post = ProjectboardDetails.objects.get(id = projectpost)
         ser = PrimaryBidDetailSerializer(post,context={'request':request})
@@ -545,13 +551,17 @@ class AvailableJobsListView(generics.ListAPIView):
     # page_size = None
 
     def validate(self):
-        if self.request.user.is_vendor == False:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        if user.is_vendor == False:
             raise ValidationError({"error":"user is not a vendor"})
 
     def get_queryset(self):
         self.validate()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         present = timezone.now()
-        queryset= ProjectboardDetails.objects.filter(~Q(customer=self.request.user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
+        queryset= ProjectboardDetails.objects.filter(~Q(customer=user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
         print("@@@@@@@@@@@2",queryset)
         return queryset
 

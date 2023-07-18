@@ -126,7 +126,10 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
 
      def run_validation(self, data):
          print("Data--->",data)
-         data["user_id"] = self.context.get("request").user.id
+         request_user = self.context.get("request").user
+         pr_managers = request_user.team.get_project_manager if request_user.team and request_user.team.owner.is_agency else [] 
+         user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and request_user in pr_managers else request_user
+         data["user_id"] = user.id
          # if self.context['request']._request.method == 'POST':
          #     if "source_lang" in data and "target_lang" in data:
          #         tt = VendorLanguagePair.objects.filter(source_lang_id=data.get('source_lang'),target_lang_id=data.get('target_lang'),user_id=data['user_id'])
@@ -145,7 +148,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
-         data["user_id"] = self.context.get("request").user.id
+         #data["user_id"] = self.context.get("request").user.id
          if data.get('service'):
              data["service"] = json.loads(data["service"])
          if data.get("servicetype"):
