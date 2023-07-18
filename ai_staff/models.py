@@ -633,7 +633,7 @@ class FontCatagory(models.Model):
         return self.catagory_name
 
 class FontFamily(models.Model):
-    catagory=models.ForeignKey(FontCatagory,on_delete=models.CASCADE,related_name='font_catagory_family')
+    # catagory=models.ForeignKey(FontCatagory,on_delete=models.CASCADE,related_name='font_catagory_family')
     font_family_name = models.CharField(max_length=100 ,null=True , blank=True)
     name = models.CharField(max_length=100,null=True , blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
