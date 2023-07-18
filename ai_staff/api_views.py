@@ -992,6 +992,8 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         return Response(serializer.data) 
 
  
+
+ 
 class FontLanguageViewset(viewsets.ViewSet):
     def list(self, request):
         queryset = FontLanguage.objects.all()
