@@ -82,7 +82,7 @@ def calculate_font_size(box_width, box_height, text,font_size):
         if text_width <= box_width and text_height <= box_height:
             break
         font_size -= 1
-    return font_size
+    return font_size+15
 
 
 
