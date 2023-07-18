@@ -666,7 +666,6 @@ class FontFamilyFilter(django_filters.FilterSet):
             
     def filter_queryset(self,queryset):
         queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
-        print("queryset---->",queryset)
         return queryset
  
  
@@ -695,13 +694,16 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
             queryset=self.lang_fil(request)
         elif catagory:
             queryset=FontFamily.objects.filter(catagory__id=catagory)
+
+        elif catagory and font_search:
+            queryset=FontFamily.objects.filter(catagory__id=catagory)
+            filters = FontFamilyFilter(request.GET, queryset=queryset)
+            queryset = filters.qs
         else:
             font_file=FontFile.objects.filter(user=request.user)
             if font_file:
                 font_file=font_file.annotate(font_family_name=F("name"))
                 queryset=list(chain(font_file, queryset))
-                
-
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         
         serializer = FontFamilySerializer(pagin_tc,many=True)
