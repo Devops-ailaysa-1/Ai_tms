@@ -486,7 +486,7 @@ class IncompleteProjectListView(viewsets.ModelViewSet):
         queryset_2 = Project.objects.select_related('voice_proj_detail').filter(voice_proj_detail__project_type_sub_category_id=2).filter(project_jobs_set__target_language=None).values('id')
         queryset=Project.objects.filter(Q(ai_user=self.request.user)\
                     |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).\
-                    exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=self.request.user)).exclude(id__in=queryset_2).order_by('-id').distinct()
+                    exclude(Q(proj_detail__customer=self.request.user)).exclude(id__in=queryset_2).order_by('-id').distinct()
         return queryset
 
 
