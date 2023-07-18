@@ -69,8 +69,8 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
                 textbox_['left']=x
                 textbox_['top']=y
-                textbox_['width']=w-x
-                textbox_['height']=h-y
+                textbox_['width']=w#-x
+                textbox_['height']=h#-y
                 final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
                 for a in k.words:
                     text_list.append(" ") 
@@ -81,17 +81,17 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-                text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
-                                                        "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
-                                                        # "poly_line":poly_line}
-                textbox_['text']="".join(text_list).strip()
-                print("text-------------->>","".join(text_list))
-                textbox_['fill']="rgb{}".format(tuple(final_color[0]))
-                font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
-                textbox_['fontSize']=font-5
-                no_of_segments+=1
-                text_list=[]
-                text_box_list.append(textbox_)
+            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
+                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
+                                                    # "poly_line":poly_line}
+            textbox_['text']="".join(text_list).strip()
+            print("text-------------->>","".join(text_list))
+            textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+            font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
+            textbox_['fontSize']=font-5
+            no_of_segments+=1
+            text_list=[]
+            text_box_list.append(textbox_)
     return text_and_bounding_results,text_box_list
  
 
