@@ -17,14 +17,14 @@ from PIL import Image ,ImageFont
 
  
 
-def calculate_font_size(box_width, box_height,text,font_size):
-    while True:
-        font = ImageFont.truetype("arial.ttf", font_size)
-        text_width, text_height = font.getbbox(text)[2:]
-        if text_width <= box_width and text_height <= box_height:
-            break
-        font_size -= 1
-    return font_size
+# def calculate_font_size(box_width, box_height,text,font_size):
+#     while True:
+#         font = ImageFont.truetype("arial.ttf", font_size)
+#         text_width, text_height = font.getbbox(text)[2:]
+#         if text_width <= box_width and text_height <= box_height:
+#             break
+#         font_size -= 1
+#     return font_size
 
 # from google.cloud import translate_v2 as translate
 
@@ -113,11 +113,9 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
                     canvas_json_copy['objects'][count]['rawMT']=tar_word
-                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-
-                    # canvas_json_copy['objects'][count]['fontSize']=font_size
- 
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    canvas_json_copy['objects'][count]['fontSize']=font_size
                 if i['type'] == 'group':
                     canva_group(i['objects'])
         else:
@@ -128,11 +126,9 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
                     canvas_json_copy['objects'][count]['text']=tar_word
                     canvas_json_copy['objects'][count]['rawMT']=tar_word
-                    # text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    # font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    # canvas_json_copy['objects'][count]['fontSize']=font_size
-                    # fontSize=calculate_font_size(box_width=width, box_height=height,text=tar_word,font_size=fontSize)
-                    # canvas_json_copy['fontSize']=fontSize
+                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                    canvas_json_copy['objects'][count]['fontSize']=font_size
                     if i['type'] == 'group':
                         canva_group(i['objects'])
         canvas_result[lang] = canvas_json_copy

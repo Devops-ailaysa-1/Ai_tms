@@ -666,7 +666,6 @@ class FontFamilyFilter(django_filters.FilterSet):
             
     def filter_queryset(self,queryset):
         queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
-
         return queryset
  
  
@@ -683,8 +682,7 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         font_search=request.query_params.get('font_search',None)
         language=request.query_params.get('language',None)
         catagory=request.query_params.get('catagory',None)
-        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
-        
+        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')  
         if font_search and language:
             queryset=self.lang_fil(request)            
             filters = FontFamilyFilter(request.GET, queryset=queryset)
@@ -703,10 +701,7 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
             if font_file:
                 font_file=font_file.annotate(font_family_name=F("name"))
                 queryset=list(chain(font_file, queryset))
-                
-
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        
         serializer = FontFamilySerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
