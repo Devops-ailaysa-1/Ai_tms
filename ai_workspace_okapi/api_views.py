@@ -1219,7 +1219,7 @@ class MT_RawAndTM_View(views.APIView):
                     print(choice, "*****************")
                     replace_word=choice.last().edited_word
                     print("replace_word---------->",replace_word)
-                    pattern = r'\b{}\b'.format(word)
+                    #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
                     print("Trans--------------->",translation)
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
@@ -3328,4 +3328,68 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+
+
+
+@api_view(['GET'])
+def symspellcheck(request):
+    from symspellpy import SymSpell, Verbosity
+
     
+    tar = request.POST.get('target')
+    doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
+
+
+   
+    sym_spell = SymSpell()
+
+    
+    dictionary_paths = {
+        "en": "/ai_home/dictionaries/en.txt",
+        # "de": "path/to/german_dictionary.txt",
+        # "es": "path/to/spanish_dictionary.txt",
+        # Add more language dictionary paths here
+    }
+
+   
+    def load_dictionary(lang):
+        dictionary_path = dictionary_paths.get(lang)
+        if dictionary_path:
+            sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1)
+
+
+    def spell_check_large_text(text):
+
+        load_dictionary(lang_code)
+        max_edit_distance = 2
+        words = re.findall(r'\b\w+\b', text)
+        misspelled_words = []
+        processed_words = set()
+
+        for word in words:
+            if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
+                lowercase_word = word.lower()
+                word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
+                if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
+                    suggestion_words = [s.term for s in word_suggestions]
+                    misspelled_words.append((word, suggestion_words))
+                processed_words.add(lowercase_word)
+        
+        return misspelled_words
+
+    
+    suggestions = spell_check_large_text(tar)
+    return JsonResponse({"result":suggestions},safe=False)
+
+
+
