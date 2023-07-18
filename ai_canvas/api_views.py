@@ -694,7 +694,7 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         elif language:
             queryset=self.lang_fil(request)
         elif catagory:
-            queryset=FontFamily.objects.filter(catagory__id=2)
+            queryset=FontFamily.objects.filter(catagory__id=catagory)
         else:
             font_file=FontFile.objects.filter(user=request.user)
             if font_file:
