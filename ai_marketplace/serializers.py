@@ -134,6 +134,8 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
     def get_current_status(self,obj):
         user_ = self.context.get("request").user
+        pr_managers = user_.team.get_project_manager if user_.team and user_.team.owner.is_agency else [] 
+        user_admin = user_.team.owner if user_.team and user_.team.owner.is_agency and user_ in pr_managers else user_
         if obj.projectpost.closed_at != None:
             return "Projectpost Closed"
         elif obj.projectpost.deleted_at !=None:
@@ -141,7 +143,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         else:  ##############################Need to revise this##############################
             if obj.status_id == 3:
                 try:
-                    ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
+                    ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_admin).first()
                     return str(ht.get_status_display())
                 except:
                     return None
@@ -578,7 +580,9 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_bid_applied(self,obj):
         applied =[]
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
         jobs = obj.get_postedjobs
         for i in jobs:
             if i.bid_details.filter(vendor_id = vendor.id):
@@ -586,7 +590,9 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         return ProjectPostJobDetailSerializer(applied,many=True,context={'request':self.context.get("request")}).data
 
     def get_post_jobs(self,obj):
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
         jobs = obj.get_postedjobs
         matched_jobs=[]
         for i in jobs:

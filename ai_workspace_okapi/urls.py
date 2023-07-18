@@ -59,6 +59,7 @@ urlpatterns+=[
     path('get_wikipedia/', api_views.WikipediaWorkspace, name='get-wikipedia'),
     path('get_wiktionary/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
+    path('symspellcheck/', api_views.symspellcheck, name='symspellcheck'),
     path("segment_history/",api_views.get_segment_history,name='segment-history'),
     path('synonyms/',api_views.get_word_api, name ='synonyms'),
     path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
