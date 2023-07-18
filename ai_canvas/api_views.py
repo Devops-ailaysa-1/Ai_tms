@@ -65,7 +65,7 @@ class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
     def list(self, request):
-        queryset = Languages.objects.all()
+        queryset = Languages.objects.all().order_by('language')
         serializer = LanguagesSerializer(queryset,many=True)
         return Response(serializer.data)
 

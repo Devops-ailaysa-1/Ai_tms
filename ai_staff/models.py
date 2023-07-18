@@ -627,6 +627,12 @@ class ApiServiceList(models.Model):
     service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
 
 
+class FontLanguage(models.Model):
+    name = models.CharField(max_length=100 ,null=True,blank=True)
+    language  =  models.CharField(max_length=100 ,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+
 class FontCatagoryList(models.Model):
     catagory_name=models.CharField(max_length=200)
     def __str__(self) -> str:
@@ -638,10 +644,6 @@ class FontFamily(models.Model):
     name = models.CharField(max_length=100,null=True , blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
-class FontLanguage(models.Model):
-    name = models.CharField(max_length=100 ,null=True,blank=True)
-    language  =  models.CharField(max_length=100 ,null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
 class FontData(models.Model):
     font_lang = models.ForeignKey(FontLanguage,related_name='font_data_language', on_delete=models.CASCADE)

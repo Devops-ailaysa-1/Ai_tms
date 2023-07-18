@@ -15,7 +15,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
-                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion)
+                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,FontCatagoryList)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -26,7 +26,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,
-                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer)
+                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -991,6 +991,11 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         serializer = PromptSubCategoriesSerializer(query_set,many=True)
 #         return Response(serializer.data) 
 
+class FontCatagoryListViewset(viewsets.ViewSet):
+    def list(self, request):
+        queryset = FontCatagoryList.objects.all()
+        serializer = FontCatagoryListSerializer(queryset,many=True)
+        return Response(serializer.data)
  
 
  
@@ -1003,15 +1008,30 @@ class FontLanguageViewset(viewsets.ViewSet):
 class FontDataViewset(viewsets.ViewSet):
     def list(self, request):
         font_lang = request.query_params.get('font_lang')
+        catagory=request.query_params.get('catagory')
         if font_lang:
-            font_lang = FontLanguage.objects.get(id=font_lang)
-            queryset = FontData.objects.filter(font_lang=font_lang)
+            queryset = FontLanguage.objects.get(id=font_lang)
+            queryset = FontData.objects.filter(font_lang=queryset)
             serializer = FontDataSerializer(queryset,many=True)
             font_data = []
             for i in serializer.data:
                 if i['font_family']:
                     font_data.append(i['font_family']['font_family_name'])
             return Response({'font_list':font_data})
+        # elif catagory:
+        #     fnt_cat=FontCatagoryList.objects.get(id=catagory)
+        #     fnt_fam=FontFamily.objects.filter(catagory=fnt_cat)
+        #     ids=[]
+        #     for i in fnt_fam:
+        #         ids.extend(list(i.font_data_family.all().values_list('id',flat=True)))
+
+        #     queryset = FontData.objects.filter(id__in=ids)
+        #     serializer = FontDataSerializer(queryset,many=True)
+        #     font_data = []
+        #     for i in serializer.data:
+        #         if i['font_family']:
+        #             font_data.append(i['font_family']['font_family_name'])
+        #     return Response({'font_list':font_data})
         else:
             queryset = FontData.objects.all()
             serializer = FontDataSerializer(queryset,many=True)
@@ -1024,14 +1044,9 @@ class ImageGeneratorResolutionViewset(viewsets.ViewSet):
         serializer=ImageGeneratorResolutionSerializer(queryset,many=True)
         return Response(serializer.data)
 
-
-
 class DesignShapePagination(PageNumberPagination):
     page_size = 30 
     page_size_query_param = 'page_size'
-
-
-
 
 
 class DesignShapeViewset(viewsets.ViewSet,PageNumberPagination):
