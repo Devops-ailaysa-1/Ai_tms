@@ -627,10 +627,10 @@ class ApiServiceList(models.Model):
     service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
 
 
-# class FontCatagoryList(models.Model):
-#     catagory_name=models.CharField(max_length=200)
-#     def __str__(self) -> str:
-#         return self.catagory_name
+class FontCatagoryList(models.Model):
+    catagory_name=models.CharField(max_length=200)
+    def __str__(self) -> str:
+        return self.catagory_name
 
 class FontFamily(models.Model):
     # catagory=models.ForeignKey(FontCatagoryList,on_delete=models.CASCADE,related_name='font_catagory_family')
