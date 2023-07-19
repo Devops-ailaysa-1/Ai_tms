@@ -131,7 +131,8 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                     canvas_json_copy['objects'][count]['text']=tar_word
                     canvas_json_copy['objects'][count]['rawMT']=tar_word
                     if lang == 'ar':
-                        canvas_json_copy['objects'][count]['direction']='rtl'
+                        # canvas_json_copy['objects'][count]['direction']='rtl'
+                        canvas_json_copy['objects'][count]['textAlign']="right"
                     text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                     canvas_json_copy['objects'][count]['fontSize']=font_size
