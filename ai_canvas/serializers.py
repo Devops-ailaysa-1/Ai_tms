@@ -171,14 +171,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
-
             return new_proj  ###returned
         else:
             data = {**validated_data ,'user':user}
             instance=CanvasDesign.objects.create(**data)
             self.instance=instance
- 
-         
+
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')
             # print("can_obj",can_obj)
@@ -259,7 +257,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
                             tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
                     j.save()
-
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
@@ -408,7 +405,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
 
         if canvas_translation_tar_lang:
-            src_lang=instance.canvas_translate.last().source_language.locale_code
+            src_lang=instance.canvas_translate.last().source_language.language
             source_json_files_all=instance.canvas_json_src.all()
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
             return instance

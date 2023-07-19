@@ -161,13 +161,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance=ImageTranslate.objects.create(**data)
             width,height=self.image_shape(instance.image.path)
             instance.width=width
-            instance.height=height 
-            print(instance.height,instance.width)
-            # instance.thumbnail=thumb_nail
+            instance.height=height
             instance.types=str(validated_data.get('image')).split('.')[-1]
-            print(instance.types)
             instance.save()
-            print("saved instance")
+            if not instance.project_name:
+                img_trans_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
+                if img_trans_obj:
+                    instance.project_name='Untitled project ({})'.format(str(len(img_trans_obj)+1))
+                else:
+                    instance.project_name='Untitled project' 
+                instance.save()
             return instance
             
     def update(self, instance, validated_data):
