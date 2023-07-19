@@ -483,10 +483,13 @@ class IncompleteProjectListView(viewsets.ModelViewSet):
     filterset_class = IncompleteProjectListFilter
 
     def get_queryset(self):
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in pr_managers else self.request.user
         queryset_2 = Project.objects.select_related('voice_proj_detail').filter(voice_proj_detail__project_type_sub_category_id=2).filter(project_jobs_set__target_language=None).values('id')
-        queryset=Project.objects.filter(Q(ai_user=self.request.user)\
-                    |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).\
-                    exclude(Q(proj_detail__customer=self.request.user)).exclude(id__in=queryset_2).order_by('-id').distinct()
+        queryset = Project.objects.filter(Q(ai_user=user)\
+                    |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1)))\
+                    .filter(Q(proj_detail__isnull=True)|(Q(proj_detail__isnull=False) & Q(proj_detail__deleted_at__isnull=False)))\
+                    .exclude(id__in=queryset_2).order_by('-id').distinct()
         return queryset
 
 
