@@ -159,7 +159,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
-        
 
         if temp_global_design and new_project:
             width=temp_global_design.category.width
@@ -320,8 +319,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         height=validated_data.get('height',None)
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
-
-
 
         if social_media_create and width and height: ##########################this one same fun below  ####custome resize
             # can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
@@ -759,9 +756,6 @@ class CanvasDownloadFormatSerializer(serializers.ModelSerializer):
     class Meta:
         model=CanvasDownloadFormat
         fields='__all__'
-
-
-
 
 class EmojiDataSerializer(serializers.ModelSerializer):
     class Meta:
