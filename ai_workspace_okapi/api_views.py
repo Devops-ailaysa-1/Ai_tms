@@ -103,12 +103,17 @@ from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
+from symspellpy import SymSpell, Verbosity
+
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
 
 spring_host = os.environ.get("SPRING_HOST")
 
 END_POINT= settings.END_POINT
+
+
+
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -163,7 +168,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def trim_segments(doc_data):
-
         #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
@@ -1218,7 +1222,7 @@ class MT_RawAndTM_View(views.APIView):
                     print(choice, "*****************")
                     replace_word=choice.last().edited_word
                     print("replace_word---------->",replace_word)
-                    pattern = r'\b{}\b'.format(word)
+                    #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
                     print("Trans--------------->",translation)
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
@@ -3338,4 +3342,62 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    
+
+
+
+ 
+
+    # dictionary_path = dictionary_paths.get(lang)
+    # if dictionary_path:
+    #     sym_spell.load_dictionary(dictionary_path, term_index=0,count_index=1)
+    # return sym_spell
+# sym_spell=load_dictionary(lang_code)
+
+
+dictionary_paths = {
+    "en": "/ai_home/dictionaries/en.txt",
+    # "sq": "/ai_home/dictionaries/sq.txt",
+    # "es": "/ai_home/dictionaries/es.txt", 
+    # Add more language dictionary paths here
+}
+
+sym_spell = SymSpell()
+for lang_code,lang_path in dictionary_paths.items():
+    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+
+
+@api_view(['GET'])
+def symspellcheck(request):
+
+    tar = request.POST.get('target')
+    doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
+   
+
+    def spell_check_large_text(text):
+        max_edit_distance = 2
+        words = re.findall(r'\b\w+\b', text)
+        misspelled_words = []
+        processed_words = set()
+        for word in words:
+            if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
+                lowercase_word = word.lower()
+                word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
+                if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
+                    suggestion_words = [s.term for s in word_suggestions]
+                    misspelled_words.append((word, suggestion_words))
+                processed_words.add(lowercase_word)
+        return misspelled_words
+    suggestions = spell_check_large_text(tar)
+    return JsonResponse({"result":suggestions},safe=False)
+
+
+

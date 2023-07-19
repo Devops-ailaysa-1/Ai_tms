@@ -102,8 +102,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
 
     def get_queryset(self):
-        print(self.request.user)
-        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset=VendorLanguagePair.objects.filter(user_id=user.id).all()
         return queryset
 
     def list(self,request):
@@ -138,7 +139,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def update(self,request,pk):
-        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = VendorLanguagePair.objects.filter(user_id=user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},context={'request':request},partial=True)
         print(ser.is_valid())
@@ -149,7 +152,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = VendorLanguagePair.objects.filter(user_id=user.id).all()
         lang_pair = get_object_or_404(queryset, pk=pk)
         lang_pair.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -423,7 +428,9 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
 
 @api_view(['POST'])
 def vendor_language_pair(request):
-    user=request.user
+    pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else [] 
+    user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+    #user=request.user
     language_pair_xl_file=request.FILES.get('language_pair_xl_file')
     if not language_pair_xl_file:
         return JsonResponse({'status':'file not uploaded'})
