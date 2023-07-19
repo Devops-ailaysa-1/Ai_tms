@@ -69,8 +69,8 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
                 textbox_['left']=x
                 textbox_['top']=y
-                textbox_['width']=w#-x
-                textbox_['height']=h#-y
+                textbox_['width']=w-x
+                textbox_['height']=h-y
                 final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
                 for a in k.words:
                     text_list.append(" ") 
@@ -174,7 +174,7 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 # from celery import shared_task
 # @shared_task(serializer='json')
 
-def inpaint_image_creation(image_details,inpaintparallel=False):
+def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
     # if hasattr(image_details,'image'):
     #     img_path=image_details.image.path
     # else:
@@ -184,7 +184,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
         img_path=image_details.inpaint_image.path
     else:
         img_path=image_details.image.path
-
     mask_path=image_details.mask.path
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
@@ -214,7 +213,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
                 black_and_white=np.asarray(black_and_white)
                 black_and_white=black_and_white[:, :, :3]
                 image_color_change=image_color_change[:, :, :3]
- 
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 
