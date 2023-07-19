@@ -3361,7 +3361,7 @@ for lang_code,lang_path in dictionary_paths.items():
 
 @api_view(['GET'])
 def symspellcheck(request):
-
+    from ai_openai.serializers import lang_detector
     tar = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
@@ -3373,22 +3373,22 @@ def symspellcheck(request):
         task = Task.objects.get(id=task_id)
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
-   
+    else:
+        print("RR------->",tar.split('.')[0])
+        lang_code = lang_detector(tar.split('.')[0])
+        
     
     def get_words(text):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         tknzr = TweetTokenizer()
         nltk_tokens = tknzr.tokenize(tar)
         words = [word for word in nltk_tokens if word not in punctuation]
-        #print('wrd-------------->',words)
         return words
 
 
     def spell_check_large_text(text):
         max_edit_distance = 2
         words = get_words(text)
-        #words = re.findall(r'\b\w+\b', text)
-        #print('wrd-------------->',words)
         misspelled_words = []
         processed_words = set()
         for word in words:
