@@ -286,11 +286,16 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     can_tar_ins.json=tar_json_pro
                     can_tar_ins.save()
 
-
-    def resize_scale(self,canvas_width,canvas_height,width,height):
+    def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
         scale_multiplier_x=width//canvas_width
         scale_multiplier_y=height//canvas_height
-        return scale_multiplier_x,scale_multiplier_y
+        for i in source_json_file['objects']:
+            i['scaleX']=i['scaleX']*scale_multiplier_x
+            i['scaleY']=i['scaleY']*scale_multiplier_x
+            i['left']=i['left']*scale_multiplier_x
+            i['top']=i['top']*scale_multiplier_y
+        return source_json_file
+
 
     def update(self, instance, validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
@@ -317,20 +322,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design = validated_data.get('temp_global_design',None)
 
 
- 
 
         if social_media_create and width and height: ##########################this one same fun below  ####custome resize
             # can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             can_srcs=CanvasSourceJsonFiles.objects.filter(canvas_design=instance)
             for can_src in can_srcs:
                 source_json_file=copy.deepcopy(can_src.json)
-                canvas_width=source_json_file['backgroundImage']['width']
-                canvas_height=source_json_file['backgroundImage']['height']
-                scale_multiplier_x,scale_multiplier_y=self.resize_scale(canvas_width,canvas_height,width,height)
-                source_json_file['backgroundImage']['scaleX']=source_json_file['backgroundImage']['scaleX']*scale_multiplier_x
-                source_json_file['backgroundImage']['scaleY']=source_json_file['backgroundImage']['scaleY']*scale_multiplier_y
-                source_json_file['backgroundImage']['left']=source_json_file['backgroundImage']['left']*scale_multiplier_x
-                source_json_file['backgroundImage']['top']=source_json_file['backgroundImage']['top']*scale_multiplier_y
+                print("ins size-->",instance.width,instance.height)
+                source_json_file=self.resize_scale(source_json_file,width,height,instance.width,instance.height)
+                print(source_json_file)
                 source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
                 source_json_file['projectid']['project_category_id']=social_media_create.id
                 source_json_file['backgroundImage']['width']=int(width)
