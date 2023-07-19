@@ -287,8 +287,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     can_tar_ins.save()
 
     def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
-        scale_multiplier_x=width//canvas_width
-        scale_multiplier_y=height//canvas_height
+        scale_multiplier_x=width/canvas_width
+        scale_multiplier_y=height/canvas_height
         for i in source_json_file['objects']:
             i['scaleX']=i['scaleX']*scale_multiplier_x
             i['scaleY']=i['scaleY']*scale_multiplier_x
