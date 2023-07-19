@@ -394,13 +394,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
             return instance
 
-        if canvas_translation_tar_lang:
-            src_lang=instance.canvas_translate.last().source_language.locale_code
-            source_json_files_all=instance.canvas_json_src.all()
-            self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
-            return instance
-
-
         if canvas_translation_target and tar_page:         ######################Target__update
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
             canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
@@ -414,6 +407,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     # print("outside----->json, canvas_translation_target")
                 canvas_trans.json = target_json_file
             canvas_trans.save()
+            return instance
+
+
+        if canvas_translation_tar_lang:
+            src_lang=instance.canvas_translate.last().source_language.locale_code
+            source_json_files_all=instance.canvas_json_src.all()
+            self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
+            return instance
  
         if source_json_file and src_page: ########################## source__update
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
