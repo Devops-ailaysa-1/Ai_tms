@@ -443,18 +443,11 @@ class MyTemplateDesignRetrieveViewset(generics.RetrieveAPIView):
     serializer_class = MyTemplateDesignRetrieveSerializer
     lookup_field = 'id'
 
-
-
 class CanvasDownloadFormatViewset(viewsets.ViewSet):
     def list(self,request):
         queryset = CanvasDownloadFormat.objects.all()
         serializer = CanvasDownloadFormatSerializer(queryset,many=True)
         return Response(serializer.data)
-
-
-
-
-
 
 mime_type={'svg':'image/svg+xml',
         'png':'image/png',
@@ -951,7 +944,6 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
             queryset = SocialMediaSize.objects.filter(id=social_media_name_id)
         else:
             queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
-        print("qu",queryset)
         queryset_2 = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)

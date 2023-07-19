@@ -325,17 +325,17 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if social_media_create and width and height: ##########################this one same fun below  ####custome resize
             # can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            can_srcs=CanvasSourceJsonFiles.objects.filter(canvas_design=instance)
+            can_srcs=instance.canvas_json_src.all()
             for can_src in can_srcs:
                 source_json_file=copy.deepcopy(can_src.json)
                 print("ins size-->",instance.width,instance.height)
                 source_json_file=self.resize_scale(source_json_file,width,height,instance.width,instance.height)
-                print(source_json_file)
                 source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
                 source_json_file['projectid']['project_category_id']=social_media_create.id
                 source_json_file['backgroundImage']['width']=int(width)
                 source_json_file['backgroundImage']['height']=int(height)
                 can_src.json=source_json_file
+                print(source_json_file)
                 can_src.save()
             instance.width=int(width)
             instance.height=int(height)
@@ -540,8 +540,8 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         data=super().to_representation(instance)
         data['template_lang'] = instance.template_lang.locale.first().locale_code
         data['category'] = instance.category.social_media_name
-        data['width'] =  instance.category.width
-        data['height'] =  instance.category.height 
+        data['width']=instance.category.width
+        data['height']=instance.category.height 
         return data
 
     def create(self, validated_data):
