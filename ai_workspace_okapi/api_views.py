@@ -3374,9 +3374,8 @@ def symspellcheck(request):
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
     else:
-        print("RR------->",tar.split('.')[0])
         lang_code = lang_detector(tar.split('.')[0])
-        
+        print("RR------->",lang_code)
     
     def get_words(text):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
@@ -3402,7 +3401,7 @@ def symspellcheck(request):
         return misspelled_words
 
     if lang_code not in dictionary_paths:
-        return JsonResponse({"msg":"spell check not available"},status=400)
+        return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
     suggestions = spell_check_large_text(tar)
     return JsonResponse({"result":suggestions},safe=False)
 
