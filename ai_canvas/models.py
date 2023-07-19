@@ -163,13 +163,14 @@ class MyTemplateDesign(models.Model):
     height=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
-    project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True)
+    project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True,related_name='project_cat_mytemplate')
      
 class MyTemplateDesignPage(models.Model):
     my_template_design=models.ForeignKey(MyTemplateDesign,related_name='my_template_page', on_delete=models.CASCADE)
     my_template_thumbnail=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
     my_template_export=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_exports,blank=True,null=True)
     my_template_json=models.JSONField(null=True,default=dict)
+
     # page_no=models.IntegerField()
     # class Meta:
     #     constraints = [

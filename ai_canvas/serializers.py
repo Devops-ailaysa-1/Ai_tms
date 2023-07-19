@@ -388,30 +388,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
 
-            # for count,tar_lang in enumerate(canvas_translation_tar_lang):
-
-            #     trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
-            #     trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
-            #     trans_json_project['projectid']['langNo']=trans_json.source_language.id
-            #      ####list of all canvas src json 
-            #     # trans_json.canvas_src_json
-            #     for count,src_json_file in enumerate(source_json_files_all):
-            #         src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
-            #         src_json_file.save()
- 
-            #         res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
-                     
-            #         if res[tar_lang.locale.first().locale_code]:
-            #             tar_json_form=res[tar_lang.locale.first().locale_code]             
-            #             tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
-            #             can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
-            #                                                  json=tar_json_form,page_no=src_json_file.page_no)
-            #             tar_json_pro=can_tar_ins.json
-            #             tar_json_pro['projectid']={"pages":len(source_json_files_all),'page':count+1,"langId": trans_json.id,
-            #                                        "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
-            #             can_tar_ins.json=tar_json_pro
-            #             can_tar_ins.save()
-
         if canvas_translation_target and tar_page:         ######################Target__update
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
             canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,formats='png',multiplierValue=1) ##thumb
@@ -435,33 +411,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) ##thumb
             canva_source.thumbnail = thumbnail_src ##thumb
             canva_source.save()
- 
-###
-        # elif thumbnail_src and src_page:
-        #     canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
- 
-        #     thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
-        #     canva_source.thumbnail = thumbnail_src
-        #     canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
-        #     canva_source.save()   
-
-###
-
-            # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
-            #     os.remove(thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
-
-        # if temp_global_design and new_project:
-        #     width=temp_global_design.width
-        #     height=temp_global_design.height
-        #     json=temp_global_design.json
-        #     category=temp_global_design.category
-        #     user = self.context['request'].user
-        #     new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
-        #     json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
-        #                             "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
-        #     CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
-        #     return new_proj
 
         if temp_global_design:
             json_page = temp_global_design.json #
@@ -629,10 +578,11 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
     tar_lang =  serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     trans_page_no = serializers.IntegerField(required=False) 
     src_page_no= serializers.IntegerField(required=False)
-    
+    social_media_name = serializers.CharField(source='project_category.social_media_name')
+    social_media_id=serializers.IntegerField(source='project_category.id')
     class Meta:
         model = MyTemplateDesign
-        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no') #'my_template_page'
+        fields =  ('id','width','height','template_global_id','canvas_design_id','trans_page_no','tar_lang','src_page_no','social_media_name','social_media_id') #'my_template_page'
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -642,11 +592,27 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 data['my_template_thumbnail'] = template_page_first.my_template_thumbnail.url
             else:
                 data['my_template_thumbnail'] = None
-        # if not instance.project_category:
-        #     instance.project_category_id = 32
-        #     instance.save()
-        #     data['project_category']=instance.project_category_id
+        if not instance.project_category:
+            social_media_size=SocialMediaSize.objects.get(social_media_name='Instagram Ad')
+            # instance.project_category=social_media_size
+            # instance.save()
+            data['social_media_name']='Instagram Ad'
+            data['social_media_id']=social_media_size.id
         return data
+    
+    def mytemp_create(self,canvas_design_id,user):
+        file_name=canvas_design_id.file_name
+        width=canvas_design_id.width
+        height=canvas_design_id.height
+        if not canvas_design_id.project_category:
+            social_media_size=SocialMediaSize.objects.get(social_media_name='Instagram Ad')
+            canvas_design_id.project_category=social_media_size
+            canvas_design_id.save()
+            project_category=canvas_design_id.project_category
+        else:
+            project_category=canvas_design_id.project_category
+        my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+        return my_temp_design
 
     def create(self, validated_data):
         template_global_id = validated_data.pop('template_global_id',None)
@@ -656,14 +622,10 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
         src_page_no=validated_data.pop('src_page_no',None)
         tar_lang=validated_data.pop('tar_lang',None)
         user = self.context['request'].user
-        if canvas_design_id:
-            file_name=canvas_design_id.file_name
-            width=canvas_design_id.width
-            height=canvas_design_id.height
-            project_category=canvas_design_id.project_category
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
 
+        if canvas_design_id:
             if trans_page_no and tar_lang:
+                my_temp_design=self.mytemp_create(canvas_design_id,user)
                 canvas_target=CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=canvas_design_id,
                                                                 canvas_trans_json__target_language=tar_lang,page_no=trans_page_no)
                 canvas_target.json=copy.copy(canvas_trans_id.json)
@@ -673,12 +635,16 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                                                      my_template_json=my_template_json )
  
             elif src_page_no:
+                my_temp_design=self.mytemp_create(canvas_design_id,user)
                 canvas_source  = canvas_design_id.canvas_json_src.get(page_no=src_page_no)
                 my_template_thumbnail = canvas_source.thumbnail
                 my_template_json=copy.copy(canvas_source.json)
                 my_template_json.pop('projectid',None)
                 MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                     my_template_json=my_template_json )
+            else:
+                raise serializers.ValidationError({'msg':'need page number'})
+            
         if template_global_id:
             file_name=template_global_id.file_name
             width=template_global_id.width
@@ -694,12 +660,21 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
 
 class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
     my_template_page = MyTemplateDesignPageSerializer(many=True)
+    # social_media_name = serializers.ReadOnlyField(source='project_category_name')
+    social_media_name = serializers.CharField(source='project_category.social_media_name')
+    social_media_id=serializers.IntegerField(source='project_category.id')
     class Meta:
         model = MyTemplateDesign
-        fields = ('id','width','height','my_template_page',)
+        fields = ('id','width','height','social_media_name','social_media_id','my_template_page')
 
-
-    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not instance.project_category:
+            social_media_size=SocialMediaSize.objects.get(social_media_name='Instagram Ad')
+            instance.project_category=social_media_size
+            instance.save()
+            # data['project_category']=instance.project_category_id
+        return data
 
 
 class TemplateKeywordSerializer(serializers.ModelSerializer):
@@ -904,3 +879,63 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = TemplateGlobalDesign
 #         fields = ('id','file_name','width','height','template_globl_pag',) #,'user_name'
+
+
+
+
+####update
+
+###
+        # elif thumbnail_src and src_page:
+        #     canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+ 
+        #     thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
+        #     canva_source.thumbnail = thumbnail_src
+        #     canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
+        #     canva_source.save()   
+
+###
+
+            # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
+            #     os.remove(thumbnail_page_path)
+            # print('path exist',os.path.exists(thumbnail_page_path))
+
+        # if temp_global_design and new_project:
+        #     width=temp_global_design.width
+        #     height=temp_global_design.height
+        #     json=temp_global_design.json
+        #     category=temp_global_design.category
+        #     user = self.context['request'].user
+        #     new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+        #     json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+        #                             "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+        #     CanvasSourceJsonFiles.objects.create(new_proj=new_proj,json=json,page_no=1)
+        #     return new_proj
+
+
+
+
+##tar update
+            # for count,tar_lang in enumerate(canvas_translation_tar_lang):
+
+            #     trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
+            #     trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
+            #     trans_json_project['projectid']['langNo']=trans_json.source_language.id
+            #      ####list of all canvas src json 
+            #     # trans_json.canvas_src_json
+            #     for count,src_json_file in enumerate(source_json_files_all):
+            #         src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
+            #         src_json_file.save()
+ 
+            #         res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+                     
+            #         if res[tar_lang.locale.first().locale_code]:
+            #             tar_json_form=res[tar_lang.locale.first().locale_code]             
+            #             tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
+            #             can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
+            #                                                  json=tar_json_form,page_no=src_json_file.page_no)
+            #             tar_json_pro=can_tar_ins.json
+            #             tar_json_pro['projectid']={"pages":len(source_json_files_all),'page':count+1,"langId": trans_json.id,
+            #                                        "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
+            #             can_tar_ins.json=tar_json_pro
+            #             can_tar_ins.save()
