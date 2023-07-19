@@ -262,20 +262,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
             ####to create instance for target language
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
-            # for tar_lang in inpaint_creation_target_lang:
-            #     tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())
-            #                                                 #  mask=instance.mask,inpaint_image=instance.inpaint_image,
-            #                                                 #  mask_json=instance.mask_json)   
-            #     tar_json_copy=copy.deepcopy(instance.source_canvas_json)
-            #     tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
-            #                                  "page":1,'projId':instance.id,'projectType':'image-translate'}
-            #     for i in tar_json_copy['objects']:
-            #         if 'text' in i.keys():
-            #             translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-            #                                            target_lang_code=tar_lang.locale.first().locale_code)
-            #             i['text']=translate_bbox
-            #     tar_bbox.target_canvas_json=tar_json_copy
-            #     tar_bbox.save()
+            instance.save()
+            return instance
+
+        if inpaint_creation_target_lang:
+            src_lang=instance.source_language
+            self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
 
