@@ -3344,9 +3344,14 @@ class Choicelistselectedview(viewsets.ModelViewSet):
 
 dictionary_paths = {
     "en": "/ai_home/dictionaries/en.txt",
-    # "sq": "/ai_home/dictionaries/sq.txt",
-    # "es": "/ai_home/dictionaries/es.txt", 
-    # Add more language dictionary paths here
+    #"sq": "/ai_home/dictionaries/sq.txt",
+    "es": "/ai_home/dictionaries/es.txt", 
+    "ar": "/ai_home/dictionaries/ar.txt",
+    "fr": "/ai_home/dictionaries/fr.txt",
+    "lv": "/ai_home/dictionaries/lv.txt",
+    "nl": "/ai_home/dictionaries/nl.txt",
+    "pt": "/ai_home/dictionaries/pt.txt",
+    "ru": "/ai_home/dictionaries/ru.txt",
 }
 
 sym_spell = SymSpell()
@@ -3369,7 +3374,7 @@ def symspellcheck(request):
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
    
-
+    
     def get_words(text):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         tknzr = TweetTokenizer()
@@ -3392,9 +3397,12 @@ def symspellcheck(request):
                 word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
                 if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
                     suggestion_words = [s.term for s in word_suggestions]
-                    misspelled_words.append((word, suggestion_words))
+                    misspelled_words.append({'word':word, 'suggestion':suggestion_words})
                 processed_words.add(lowercase_word)
         return misspelled_words
+
+    if lang_code not in dictionary_paths:
+        return JsonResponse({"msg":"spell check not available"},status=400)
     suggestions = spell_check_large_text(tar)
     return JsonResponse({"result":suggestions},safe=False)
 
