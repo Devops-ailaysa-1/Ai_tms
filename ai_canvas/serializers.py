@@ -328,14 +328,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_srcs=instance.canvas_json_src.all()
             for can_src in can_srcs:
                 source_json_file=copy.deepcopy(can_src.json)
-                print("ins size-->",instance.width,instance.height)
                 source_json_file=self.resize_scale(source_json_file,width,height,instance.width,instance.height)
                 source_json_file['projectid']['project_category_label']=social_media_create.social_media_name
                 source_json_file['projectid']['project_category_id']=social_media_create.id
                 source_json_file['backgroundImage']['width']=int(width)
                 source_json_file['backgroundImage']['height']=int(height)
                 can_src.json=source_json_file
-                print(source_json_file)
                 can_src.save()
             instance.width=int(width)
             instance.height=int(height)
@@ -393,8 +391,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 for text in src_json_file.json['objects']:
                     if text['type']== 'textbox':
                         TextboxUpdate.objects.get_or_create(canvas=instance,text=text['text'],text_id=text['name'])
-
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
+            return instance
+
+        if canvas_translation_tar_lang:
+            src_lang=instance.canvas_translate.last().source_language.locale_code
+            source_json_files_all=instance.canvas_json_src.all()
+            self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
+            return instance
+
 
         if canvas_translation_target and tar_page:         ######################Target__update
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
