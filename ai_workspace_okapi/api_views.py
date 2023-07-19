@@ -102,7 +102,7 @@ from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_tm import match
-
+from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -110,6 +110,9 @@ logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 
 END_POINT= settings.END_POINT
+
+
+
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -164,7 +167,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def trim_segments(doc_data):
-
         #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
@@ -3331,12 +3333,30 @@ class Choicelistselectedview(viewsets.ModelViewSet):
 
 
 
+ 
+
+    # dictionary_path = dictionary_paths.get(lang)
+    # if dictionary_path:
+    #     sym_spell.load_dictionary(dictionary_path, term_index=0,count_index=1)
+    # return sym_spell
+# sym_spell=load_dictionary(lang_code)
+
+
+dictionary_paths = {
+    "en": "/ai_home/dictionaries/en.txt",
+    # "sq": "/ai_home/dictionaries/sq.txt",
+    # "es": "/ai_home/dictionaries/es.txt", 
+    # Add more language dictionary paths here
+}
+
+sym_spell = SymSpell()
+for lang_code,lang_path in dictionary_paths.items():
+    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+
 
 @api_view(['GET'])
 def symspellcheck(request):
-    from symspellpy import SymSpell, Verbosity
 
-    
     tar = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
@@ -3348,34 +3368,24 @@ def symspellcheck(request):
         task = Task.objects.get(id=task_id)
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
-
-
    
-    sym_spell = SymSpell()
 
-    
-    dictionary_paths = {
-        "en": "/ai_home/dictionaries/en.txt",
-        # "de": "path/to/german_dictionary.txt",
-        # "es": "path/to/spanish_dictionary.txt",
-        # Add more language dictionary paths here
-    }
-
-   
-    def load_dictionary(lang):
-        dictionary_path = dictionary_paths.get(lang)
-        if dictionary_path:
-            sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1)
+    def get_words(text):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+        tknzr = TweetTokenizer()
+        nltk_tokens = tknzr.tokenize(tar)
+        words = [word for word in nltk_tokens if word not in punctuation]
+        #print('wrd-------------->',words)
+        return words
 
 
     def spell_check_large_text(text):
-
-        load_dictionary(lang_code)
         max_edit_distance = 2
-        words = re.findall(r'\b\w+\b', text)
+        words = get_words(text)
+        #words = re.findall(r'\b\w+\b', text)
+        #print('wrd-------------->',words)
         misspelled_words = []
         processed_words = set()
-
         for word in words:
             if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
                 lowercase_word = word.lower()
@@ -3384,10 +3394,7 @@ def symspellcheck(request):
                     suggestion_words = [s.term for s in word_suggestions]
                     misspelled_words.append((word, suggestion_words))
                 processed_words.add(lowercase_word)
-        
         return misspelled_words
-
-    
     suggestions = spell_check_large_text(tar)
     return JsonResponse({"result":suggestions},safe=False)
 
