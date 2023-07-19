@@ -14,7 +14,7 @@ from ai_staff.models import Countries
 from django.db.models import Count,Q
 from django.utils import timezone
 from datetime import timedelta
-from ai_bi.serializers import AiUserSerializer
+from ai_bi.serializers import AiUserSerializer,DjStripeUserSerializer,StipeCustomerSerialiizer,ChargeSerialiizer
 from ai_bi.permissions import IsBiUser,IsBiAdmin
 from rest_framework import response
 from rest_framework.decorators import permission_classes
@@ -114,12 +114,12 @@ class language_listview(viewsets.ModelViewSet):
 import django_filters  
 
 class AiDateFilter(django_filters.FilterSet):
+ 
     date_joined = django_filters.DateTimeFilter()
     # month_name = django_filters.CharFilter(method='filter_by_month_name')
-
     class Meta:
         model = AiUser
-        fields = {'date_joined': ['exact', 'lt', 'lte', 'gt', 'gte']}
+        fields = {"date_joined": ['exact', 'lt', 'lte', 'gt', 'gte']}
 
     # def filter_by_month_name(self, queryset, name, value):
     #     # Filter the queryset based on the month name
@@ -199,7 +199,7 @@ from ai_bi.forms import bi_user_invite_mail
 
 def create_user(name,email,country,password):
     hashed = make_password(password)
-    print("randowm pass",password)
+    print("random pass",password)
     try:
         user = AiUser.objects.create(fullname =name,email=email,country_id=country,password=hashed)
         UserAttribute.objects.create(user=user)
@@ -235,7 +235,7 @@ class BiuserManagement(viewsets.ModelViewSet):
             raise Http404
   
     def list(self,request):
-        users= self.filter_queryset(self.get_queryset())
+        users= self.filter_queryset(self.get_queryset().filter(~Q(bi_user=request.user)))
         pagin=self.paginator.paginate_queryset(users,request,view=self)
         ser=BiUserSerializer(pagin,many=True)
         response=self.get_paginated_response(ser.data)
@@ -283,4 +283,96 @@ class BiuserManagement(viewsets.ModelViewSet):
         obj=obj.bi_user
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+import logging
+
+logger = logging.getLogger(__name__)
+from ai_bi.reports import AilaysaReport
+from djstripe.models import Subscription,Charge,Customer
+
+class SubscriptionDateFilter(django_filters.FilterSet):
+    created = django_filters.DateTimeFilter()
+    # month_name = django_filters.CharFilter(method='filter_by_month_name')
+    class Meta:
+        model = Subscription
+        fields = {"created": ['exact', 'lt', 'lte', 'gt', 'gte']}
+
+
+class SubscriptionListView(viewsets.ModelViewSet):
+    permission_classes=[IsBiAdmin]
+    serializer_class = DjStripeUserSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering_fields = ['id',"customer__email","livemode","created","plan__product__name","customer__id","customer__subscriber","customer__currency","status"]
+    search_fields = ["customer__email","plan__product__name","id","customer__id","customer__currency","status"]
+    filterset_fields = ["plan__product__name","status","customer__currency",'id',"customer__subscriber","customer__id","livemode"]
+    ordering = ("-created")
+    # filterset_class = SubscriptionDateFilter
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    
+    def get_queryset(self,days):
+        queryset=get_users()
+        queryset=Subscription.objects.filter(Q(customer__subscriber__in=queryset)&Q(status__in=['trialing','active','past_due']))
+        if days:
+            date= timezone.now() - timezone.timedelta(days=int(days))
+            queryset = queryset.filter(created_gte=date)
+            return queryset
+        else:
+            return queryset
+        
+    def list(self,request):
+        days=request.GET.get("days",None)
+        queryset=self.filter_queryset(self.get_queryset(days))
+        pagin=self.paginator.paginate_queryset(queryset,request,view=self)
+        serializer=DjStripeUserSerializer(pagin,many=True)
+        response=self.get_paginated_response(serializer.data)
+        return response   
+
+
+
+def get_paid_user(user,paid=False,):
+    if paid:
+        queryset=Charge.objects.filter(Q(customer__subscriber__in=user)&Q(status="succeeded"))
+    else:
+        queryset=Charge.objects.filter(Q(customer__subscriber__in=user))
+
+    return queryset
+
+class PaidUserView(viewsets.ModelViewSet):
+    permission_classes=[IsBiAdmin]
+    paginator=PageNumberPagination()
+    serializer_class=ChargeSerialiizer
+    paginator.page_size=20
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    # ordering_fields = []]
+    search_fields = ["customer__email"]
+    # filterset_fields = []
+    # ordering = ()
+
+    def get_queryset(self,days,paid):
+        user=get_users()
+        # customer=Customer.objects.filter(Q(subscriber__in=queryset))
+        queryset=get_paid_user(user,paid)
+        if days:
+            date= timezone.now() - timezone.timedelta(days=int(days))
+            queryset = queryset.filter(date_joined__gte=date)
+            return queryset
+        else:
+            return queryset
+        
+    def list(self,request):
+        days=request.GET.get("days",None)
+        paid=request.GET.get("paid",False)
+        paid_user=self.filter_queryset(self.get_queryset(days,paid))
+        pagin=self.paginator.paginate_queryset(paid_user,request,view=self)
+        serializer=ChargeSerialiizer(pagin,many=True)
+        response=self.get_paginated_response(serializer.data)
+        return response  
+
+
+
+
+
+
+
 

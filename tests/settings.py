@@ -164,6 +164,7 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
+    "ai_bi"
     # 'debug_toolbar',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation

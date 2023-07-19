@@ -10,6 +10,11 @@ router.register(r"language_info", api_views.language_listview, basename="languag
 router.register(r"aiuser_info", api_views.AiUserListview, basename="user_info")
 router.register(r"vendor-info", api_views.VendorListview, basename="vendor_info")
 router.register(r"user_management", api_views.BiuserManagement, basename="user-management")
+router.register(r"subscription-info",api_views.SubscriptionListView,basename="subcriptions-info")
+router.register(r"paid-user-info",api_views.PaidUserView,basename="paid-users-info")
+
+
+
 
 
 
