@@ -165,7 +165,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             print(instance.height,instance.width)
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
-            print(instance.types)
+            if not instance.project_name:
+                img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
+                if img_obj:
+                    instance.project_name='Untitled project ({})'.format(str(len(img_obj)+1))
+                else:
+                    instance.project_name='Untitled project'
             instance.save()
             print("saved instance")
             return instance
