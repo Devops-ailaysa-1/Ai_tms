@@ -199,7 +199,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
 
-
         if social_media_create and width and height:
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(width)
@@ -208,12 +207,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
-            # json=can_json.json
-            # for i in json['objects']:
-            #     if 'textbox' == i['type']:
-            #         i['user_text']=i['text']
-            # can_json.json=json
-            # can_json.save()
+
             instance.height=int(width)
             instance.width=int(height)
             # instance.file_name=social_media_create.social_media_name
@@ -268,9 +262,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             for count,src_json_file in enumerate(source_json_files_all):
                 src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                 src_json_file.save()
-
                 res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
-                    
                 if res[tar_lang.locale.first().locale_code]:
                     tar_json_form=res[tar_lang.locale.first().locale_code]             
                     tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
@@ -291,7 +283,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             i['left']=i['left']*scale_multiplier_x
             i['top']=i['top']*scale_multiplier_y
         return source_json_file
-
 
     def update(self, instance, validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
