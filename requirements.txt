@@ -230,4 +230,5 @@ tiktoken==0.4.0
 tkinter
 ptvsd
 pygame
+symspellpy
 

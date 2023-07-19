@@ -103,7 +103,7 @@ from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
-from symspellpy import SymSpell, Verbosity
+# from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -3361,9 +3361,9 @@ dictionary_paths = {
     # Add more language dictionary paths here
 }
 
-sym_spell = SymSpell()
-for lang_code,lang_path in dictionary_paths.items():
-    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+# sym_spell = SymSpell()
+# for lang_code,lang_path in dictionary_paths.items():
+#     sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
 
 
 @api_view(['GET'])

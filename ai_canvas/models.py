@@ -204,12 +204,8 @@ class FontFile(models.Model):
     def __str__(self) -> str:
         return self.name
     
-
- 
 class ThirdpartyImageMedium(models.Model):
     image = models.FileField(upload_to="aidesign/thirdpartyimage",blank=True,null=True)
- 
-
 
 def user_directory_path_canvas_image_medium(filename):
     return "aidesign/assets/image_medium/"+filename
