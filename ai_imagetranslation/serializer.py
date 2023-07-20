@@ -347,8 +347,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
 
 
-# class ImageloadRetrieveLSerializer(serializers.ModelSerializer):
-#     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
+class ImageTranslateListSerializer(serializers.ModelSerializer):
+    # image_url=serializers.CharField(source='image.url')
+    class Meta:
+        model=ImageTranslate
+        fields=('id','project_name','types','height','width','image')
 
 
 def back_groung_rm_json_update():

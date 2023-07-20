@@ -10,6 +10,7 @@ router.register(r'backgroundremove' , api_views.BackgroundRemovelViewset ,basena
 urlpatterns =  router.urls
 
 urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),
-              path('image-download',api_views.image_translation_project_view,name="image_download")]
+              path('image-download',api_views.image_translation_project_view,name="image_download"),
+              path('image-list',api_views.ImageTranslateListViewset.as_view({'get': 'list'}),name='image-trans-list'  )]
 urlpatterns+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

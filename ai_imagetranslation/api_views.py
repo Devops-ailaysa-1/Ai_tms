@@ -1,5 +1,6 @@
 from rest_framework import viewsets 
-from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,BackgroundRemovelSerializer)
+from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
+                                            BackgroundRemovelSerializer,ImageTranslateListSerializer)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel)
 from rest_framework import status
@@ -19,7 +20,7 @@ from ai_canvas.api_views import download_file_canvas,mime_type
 import io
 from django import core
 from zipfile import ZipFile
-
+from ai_canvas.api_views import CustomPagination
 
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
@@ -206,7 +207,30 @@ def image_translation_project_view(request):
 
 
 
-from ai_canvas.api_views import CustomPagination
+class ImageTranslateListViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =[]
+    search_fields =['project_name','types','height','width']
+    page_size=20
+ 
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self, request):
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageTranslateListSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+
+
+
+
 class ImageInpaintCreationListView(ListAPIView,CustomPagination):
     queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
@@ -271,3 +295,14 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
 #                 archive.writestr(path,values)
 #         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
 #     return response
+
+
+# feature = {
+#     0:'text-to-image'
+# }
+
+
+# model_list = {
+#     'stability':[],
+#     'stable_diffusion_api':
+# }
