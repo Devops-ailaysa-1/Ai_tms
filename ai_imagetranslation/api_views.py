@@ -185,7 +185,7 @@ def image_translation_project_view(request):
         res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')
         return res
     
-    elif language == image_instance.source_language.id:
+    elif language == image_instance.source_language.language.id:
         print("langu")
         img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,
                                        image_instance.source_language.language.language)
