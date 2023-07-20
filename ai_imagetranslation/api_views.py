@@ -109,7 +109,6 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         image = request.FILES.get('image')
         image_id =  request.POST.getlist('image_id')
         canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
-        print("canvas_asset_image_id",canvas_asset_image_id)
         # if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
         #     return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         
@@ -165,7 +164,6 @@ def image_translation_project_view(request):
     language=request.query_params.get('language',0)
     export_size=request.query_params.get('export_size',1)
     file_format=request.query_params.get('file_format')
- 
     language = int(language) if language else None
     file_format = file_format.replace(" ","-") if file_format else ""
     image_download={}
@@ -186,18 +184,12 @@ def image_translation_project_view(request):
         return res
     
     elif language == image_instance.source_language.language.id:
-        print("langu")
-        print("language",language)
-        print(image_instance.source_language.language.id)
-        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,
-                                       image_instance.source_language.language.language)
+        img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     
     elif language and language != image_instance.source_language.language.id:
-        print("language",language)
-        print(image_instance.source_language.language.id)
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
         img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,image_instance.s_im.get(target_language__language__id=language).target_language.language.language)
         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
@@ -207,7 +199,6 @@ def image_translation_project_view(request):
         image_download[image_instance.source_language.language.language] =image_instance.source_language.language.id
         for i in image_instance.s_im.all():
             image_download[i.target_language.language.language]=i.target_language.language.id
-
         lang={**{"All":0},**image_download}
         resp = {"language":  lang , "page":[]}
         return Response(resp)

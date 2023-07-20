@@ -874,8 +874,6 @@ def image_list(request):
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     
-
-
     # itm_pr_pge=6
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     # image_cats=paginate_items(image_cats,page,itm_pr_pge)[0]

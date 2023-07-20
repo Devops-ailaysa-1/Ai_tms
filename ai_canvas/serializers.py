@@ -247,32 +247,32 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     j.save()
                 else:
                     for tar_jsn in json['objects']:
-                        print("type--",tar_jsn['type'])
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
                             tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
-            trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
-            trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
-            trans_json_project['projectid']['langNo']=trans_json.source_language.id
-                ####list of all canvas src json 
-            # trans_json.canvas_src_json
-            for count,src_json_file in enumerate(source_json_files_all):
-                src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
-                src_json_file.save()
-                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
-                if res[tar_lang.locale.first().locale_code]:
-                    tar_json_form=res[tar_lang.locale.first().locale_code]             
-                    tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
-                    can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
-                                                            json=tar_json_form,page_no=src_json_file.page_no)
-                    tar_json_pro=can_tar_ins.json
-                    tar_json_pro['projectid']={"pages":len(source_json_files_all),'page':count+1,"langId": trans_json.id,
-                                                "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
-                    can_tar_ins.json=tar_json_pro
-                    can_tar_ins.save()
+            if not CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()):
+                trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
+                trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
+                trans_json_project['projectid']['langNo']=trans_json.source_language.id
+    
+                for count,src_json_file in enumerate(source_json_files_all):
+                    src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
+                    src_json_file.save()
+                    res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+                    if res[tar_lang.locale.first().locale_code]:
+                        tar_json_form=res[tar_lang.locale.first().locale_code]             
+                        tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1)
+
+                        can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
+                                                                json=tar_json_form,page_no=src_json_file.page_no)
+                        tar_json_pro=can_tar_ins.json
+                        tar_json_pro['projectid']={"pages":len(source_json_files_all),'page':count+1,"langId": trans_json.id,
+                                                    "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
+                        can_tar_ins.json=tar_json_pro
+                        can_tar_ins.save()
 
     def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
         scale_multiplier_x=width/canvas_width
