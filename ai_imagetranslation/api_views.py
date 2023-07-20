@@ -208,7 +208,7 @@ def image_translation_project_view(request):
     else:
         image_download[image_instance.source_language.language.language] =image_instance.source_language.language.id
         for i in image_instance.s_im.all():
-            image_download[i.target_language.language.language]=i.target_language.language.language.id
+            image_download[i.target_language.language.language]=i.target_language.language.id
 
         lang={**{"All":0},**image_download}
         resp = {"language":  lang , "page":[]}
