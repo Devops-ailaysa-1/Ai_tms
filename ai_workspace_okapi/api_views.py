@@ -3072,6 +3072,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     search_fields = ['source_word','edited_word']
+    ordering = ('-id')
     ordering_fields = ['id','source_word','edited_word']
 
     @staticmethod
@@ -3088,6 +3089,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
+        choice_list_id = request.GET.get('choice_list_id',None)
         if segment_id: 
             if split_check(segment_id):
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
@@ -3107,7 +3109,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                    raw_mt=seg_his[len(seg_his)-2].target 
                 else:
                     raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                    print(2)
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
 
@@ -3123,7 +3124,10 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 return Response(asset,status=status.HTTP_200_OK)
             return Response({},status=status.HTTP_200_OK)
         else:
-            assets = SelflearningAsset.objects.filter(choice_list__user=request.user).order_by('-id')
+            if choice_list_id:
+                assets = SelflearningAsset.objects.filter(choice_list__id=choice_list_id)
+            else:
+                assets = SelflearningAsset.objects.filter(choice_list__user=request.user)
             queryset = self.filter_queryset(assets)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = SelflearningAssetSerializer(pagin_tc, many=True)
@@ -3210,7 +3214,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     ordering = ('-id')
-    search_fields = ['name']
+    search_fields = ['name','choice_list__edited_word','choice_list__source_word']
     ordering_fields = ['id','name','language']
 
     @staticmethod
