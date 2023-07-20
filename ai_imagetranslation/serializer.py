@@ -35,8 +35,6 @@ class ImageloadSerializer(serializers.ModelSerializer):
     #         instance.save()
     #     return super().to_representation(instance)
 
-
-
     def create(self, validated_data):
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
@@ -52,8 +50,6 @@ class ImageloadSerializer(serializers.ModelSerializer):
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
         return instance
-
-
 
 # class TargetInpaintimageSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -280,8 +276,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
-
-
         
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
