@@ -265,7 +265,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     if res[tar_lang.locale.first().locale_code]:
                         tar_json_form=res[tar_lang.locale.first().locale_code]             
                         tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1)
-
                         can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
                                                                 json=tar_json_form,page_no=src_json_file.page_no)
                         tar_json_pro=can_tar_ins.json

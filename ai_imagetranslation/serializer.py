@@ -1,8 +1,8 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,StableDiffusionAPI)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
-from ai_imagetranslation.utils import inpaint_image_creation ,image_content
+from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_api
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
@@ -407,6 +407,57 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
         return instance
+
+styles = {0:'3d-model',1:'analog-film',2:'anime',3:'cinematic' ,4:'comic-book' ,5:'digital-art',
+  6:'enhance',7:'fantasy-art',8:'isometric',9:'line-art',10:'low-poly',11:'modeling-compound',12:'neon-punk',
+  13:'origami',14:'photographic',15:'pixel-art',16:'tile-texture'}
+
+samplers = {0:'DDIM',1:'DDPM',2:'K_DPMPP_2M',3:'K_DPMPP_2S_ANCESTRAL',4:'K_DPM_2',
+           5:'K_DPM_2_ANCESTRAL',6:'K_EULER',7:'K_EULER_ANCESTRAL',8:'K_HEUN',9:'K_LMS'}
+
+class StableDiffusionAPISerializer(serializers.ModelSerializer):
+    used_api=serializers.CharField(allow_null=True,required=True) 
+    prompt=serializers.CharField(allow_null=True,required=True)
+    style =serializers.IntegerField(allow_null=True,required=True)
+    height=serializers.IntegerField(allow_null=True,required=True)
+    width=serializers.IntegerField(allow_null=True,required=True)
+    sampler=serializers.IntegerField(allow_null=True,required=True)
+
+    class Meta:
+        fields = ("id",'prompt','style','height','width','sampler','image','used_api')
+        model=StableDiffusionAPI
+        # extra_kwargs= 
+        #              'style':{'read_only':True},
+        #               'height':{'read_only':True},
+        #                 'width':{'read_only':True},'sampler':{'read_only':True}}
+
+
+    def create(self, validated_data):
+        user=self.context['request'].user
+        used_api=validated_data.get('used_api',None)
+        prompt=validated_data.get('prompt',None)
+        style =validated_data.pop('style',None)
+        height=validated_data.pop('height',None)
+        width=validated_data.pop('width',None)
+        sampler=validated_data.pop('sampler',None)
+        if used_api == 'stability':
+            image=stable_diffusion_api(prompt=prompt,weight=1,steps=11,height=height,width=width,style_preset=styles[int(style)],sampler=samplers[int(sampler)])
+            instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name='stable-diffusion-xl-beta-v2-2-2',
+                                                       style=style,height=height,width=width,sampler=sampler)
+            instance.image=image
+            instance.save()
+            return instance
+        
+
+
+
+        
+
+
+
+
+
+
 
 
 

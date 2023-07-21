@@ -1,6 +1,6 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
-                                            BackgroundRemovelSerializer,ImageTranslateListSerializer)
+                                            BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel)
 from rest_framework import status
@@ -21,6 +21,8 @@ import io
 from django import core
 from zipfile import ZipFile
 from ai_canvas.api_views import CustomPagination
+from ai_imagetranslation.models import StableDiffusionAPI
+from ai_imagetranslation.utils import stable_diffusion_api
 
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
@@ -40,7 +42,6 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     
     def create(self,request):
         image = request.FILES.get('image')
-        
         if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         serializer = ImageloadSerializer(data=request.data ,context={'request':request})
@@ -228,13 +229,11 @@ class ImageTranslateListViewset(viewsets.ViewSet,PageNumberPagination):
         response = self.get_paginated_response(serializer.data)
         return response
 
-
-
-
 class ImageInpaintCreationListView(ListAPIView,CustomPagination):
     queryset = ImageInpaintCreation.objects.all()#.values
     serializer_class = ImageInpaintCreationListSerializer
     pagination_class = CustomPagination
+
     # def get_queryset(self):
     #     # Specify the fields to include in the serialized representation
     #     fields = ['id','image', 'width', 'field3']
@@ -243,7 +242,6 @@ class ImageInpaintCreationListView(ListAPIView,CustomPagination):
 #     queryset = Imageload.objects.all()
 #     serializer_class = ImageloadRetrieveRetrieveSerializer
 #     lookup_field = 'id'
-
 
 class BackgroundRemovelViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -275,7 +273,6 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:
 #         print("single___page",pages_list[0].json)
@@ -297,12 +294,27 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
 #     return response
 
 
-# feature = {
-#     0:'text-to-image'
-# }
+model_list = {'stability':[],
+    'stable_diffusion_api':[]
+    }
 
 
-# model_list = {
-#     'stability':[],
-#     'stable_diffusion_api':
-# }
+class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+
+ 
+    def get(self, request):
+        queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = StableDiffusionAPISerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def create(self,request):    
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)

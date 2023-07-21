@@ -78,8 +78,6 @@ class ImageInpaintCreation(models.Model):
     # inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
     # mask_json=models.JSONField(blank=True,null=True)
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
-
-
     class Meta:
         ordering = ['id']
 
@@ -96,7 +94,6 @@ class ImageInpaintCreation(models.Model):
 def user_directory_path_image_background_removel(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid,"background_removel",filename)
 
-
 class BackgroundRemovel(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
     image_json_id=models.CharField(max_length=100,blank=True,null=True)
@@ -109,7 +106,6 @@ class BackgroundRemovel(models.Model):
     def __str__(self) -> str:
         return self.image_json_id+'----'+self.image_url
     
-
 class BackgroundRemovePreviewimg(models.Model):
     back_ground_remove=models.ForeignKey(BackgroundRemovel,on_delete=models.CASCADE,related_name="back_ground_rm_preview_im")
     image_url=models.URLField(blank=True,null=True)
@@ -135,3 +131,19 @@ class BackgroundRemovePreviewimg(models.Model):
 
 #     def __str__(self) -> str:
 #         return self.image_json_id+'----'+self.image_url
+
+
+
+class StableDiffusionAPI(models.Model):
+    user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    image=models.FileField(upload_to='stable-diffusion-image',blank=True,null=True)
+    used_api=models.CharField(max_length=200,blank=True,null=True)
+    model_name=models.CharField(max_length=200,blank=True,null=True)
+    prompt=models.CharField(max_length=3000,blank=True,null=True)
+    style=models.CharField(max_length=100,blank=True,null=True)
+
+    height=models.IntegerField(blank=True,null=True)
+    width=models.IntegerField(blank=True,null=True)
+    sampler=models.CharField(max_length=100,blank=True,null=True)
+    def __str__(self) -> str:
+        return self.used_api

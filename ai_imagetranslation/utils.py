@@ -215,10 +215,8 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 image_color_change=image_color_change[:, :, :3]
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
-                
                 return dst_final,image_text_details,text_box_list
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
-                
         else:
             return ValidationError(output)
 
@@ -242,8 +240,6 @@ def background_merge(u2net_result,original_img):
     img_byte_arr = img_io.getvalue()
     # print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
- 
-
 
 def background_remove(image_path):
     headers={}
@@ -319,3 +315,35 @@ def background_remove(image_path):
 #     if isinstance(obj, dict):
 #         return {name: move_to_device(val, device) for name, val in obj.items()}
 #     raise ValueError(f'Unexpected type {type(obj)}')
+
+#########stabilityai
+ 
+STABLE_DIFFUSION_API= os.getenv('STABLE_DIFFUSION_API') 
+STABILITY=os.getenv('STABILITY')   
+STABLE_DIFFUSION_API_URL =os.getenv('STABLE_DIFFUSION_API_URL')
+MODEL_VERSION =os.getenv('MODEL_VERSION')
+
+def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler):
+    token = "Bearer {}".format(STABILITY)
+    header={
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization":token ,
+    }
+    json = {"samples":1,"height": height,"width": width,
+    "steps": steps,"cfg_scale": 3,"sampler":sampler,
+    "style_preset": style_preset,
+    "text_prompts": [{"text": prompt,"weight": weight}]}
+    url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
+    response = requests.post(url=url,headers=header,json=json)
+    if response.status_code != 200:
+        raise Exception("Non-200 response: " + str(response.text))
+    data =base64.b64decode(response.json()['artifacts'][0]['base64'])
+    image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
+    return image
+
+
+
+
+
+#stable-diffusion-xl-beta-v2-2-2
