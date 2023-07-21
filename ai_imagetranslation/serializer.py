@@ -443,8 +443,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if used_api == 'stable_diffusion_api':
             image = stable_diffusion_public(prompt,weight=1,steps=20,height=height,width=width,style_preset="",sampler="",negative_prompt=negative_prompt)['output']
             model_name='mid-j'
-        instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name=model_name',
-                                                       style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
+        instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name=model_name,
+                                                   style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
         instance.image=image
         instance.save()
 
