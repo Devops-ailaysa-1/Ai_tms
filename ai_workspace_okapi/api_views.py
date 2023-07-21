@@ -102,7 +102,7 @@ from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_tm import match
-
+from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -110,6 +110,9 @@ logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 
 END_POINT= settings.END_POINT
+
+
+
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -164,7 +167,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def trim_segments(doc_data):
-
         #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
@@ -1219,7 +1221,7 @@ class MT_RawAndTM_View(views.APIView):
                     print(choice, "*****************")
                     replace_word=choice.last().edited_word
                     print("replace_word---------->",replace_word)
-                    pattern = r'\b{}\b'.format(word)
+                    #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
                     print("Trans--------------->",translation)
                     suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
@@ -3070,6 +3072,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     search_fields = ['source_word','edited_word']
+    ordering = ('-id')
     ordering_fields = ['id','source_word','edited_word']
 
     @staticmethod
@@ -3086,6 +3089,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
+        choice_list_id = request.GET.get('choice_list_id',None)
         if segment_id: 
             if split_check(segment_id):
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
@@ -3105,7 +3109,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                    raw_mt=seg_his[len(seg_his)-2].target 
                 else:
                     raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                    print(2)
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
 
@@ -3121,7 +3124,10 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 return Response(asset,status=status.HTTP_200_OK)
             return Response({},status=status.HTTP_200_OK)
         else:
-            assets = SelflearningAsset.objects.filter(choice_list__user=request.user).order_by('-id')
+            if choice_list_id:
+                assets = SelflearningAsset.objects.filter(choice_list__id=choice_list_id)
+            else:
+                assets = SelflearningAsset.objects.filter(choice_list__user=request.user)
             queryset = self.filter_queryset(assets)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = SelflearningAssetSerializer(pagin_tc, many=True)
@@ -3208,7 +3214,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     ordering = ('-id')
-    search_fields = ['name']
+    search_fields = ['name','choice_list__edited_word','choice_list__source_word']
     ordering_fields = ['id','name','language']
 
     @staticmethod
@@ -3328,4 +3334,80 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+
+
+ 
+
+    # dictionary_path = dictionary_paths.get(lang)
+    # if dictionary_path:
+    #     sym_spell.load_dictionary(dictionary_path, term_index=0,count_index=1)
+    # return sym_spell
+# sym_spell=load_dictionary(lang_code)
+
+
+dictionary_paths = {
+    "en": "/ai_home/dictionaries/en.txt",
+    #"sq": "/ai_home/dictionaries/sq.txt",
+    "es": "/ai_home/dictionaries/es.txt", 
+    "ar": "/ai_home/dictionaries/ar.txt",
+    "fr": "/ai_home/dictionaries/fr.txt",
+    "lv": "/ai_home/dictionaries/lv.txt",
+    "nl": "/ai_home/dictionaries/nl.txt",
+    "pt": "/ai_home/dictionaries/pt.txt",
+    "ru": "/ai_home/dictionaries/ru.txt",
+}
+
+sym_spell = SymSpell()
+for lang_code,lang_path in dictionary_paths.items():
+    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+
+
+@api_view(['GET'])
+def symspellcheck(request):
+    from ai_openai.serializers import lang_detector
+    tar = request.POST.get('target')
+    doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
+    else:
+        lang_code = lang_detector(tar.split('.')[0])
+        print("RR------->",lang_code)
     
+    def get_words(text):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+        tknzr = TweetTokenizer()
+        nltk_tokens = tknzr.tokenize(tar)
+        words = [word for word in nltk_tokens if word not in punctuation]
+        return words
+
+
+    def spell_check_large_text(text):
+        max_edit_distance = 2
+        words = get_words(text)
+        misspelled_words = []
+        processed_words = set()
+        for word in words:
+            if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
+                lowercase_word = word.lower()
+                word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
+                if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
+                    suggestion_words = [s.term for s in word_suggestions]
+                    misspelled_words.append({'word':word, 'suggestion':suggestion_words})
+                processed_words.add(lowercase_word)
+        return misspelled_words
+
+    if lang_code not in dictionary_paths:
+        return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
+    suggestions = spell_check_large_text(tar)
+    return JsonResponse({"result":suggestions},safe=False)
+
+
+
