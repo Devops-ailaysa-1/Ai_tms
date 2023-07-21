@@ -1216,7 +1216,7 @@ class MT_RawAndTM_View(views.APIView):
         if choicelist:
             for word in words: 
                 print("Word---------->", word)
-                choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
+                choice=choicelist.filter(source_word__icontains = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
                     print(choice, "*****************")
                     replace_word=choice.last().edited_word
