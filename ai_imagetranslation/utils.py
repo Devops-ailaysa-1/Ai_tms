@@ -18,9 +18,9 @@ from io import BytesIO
 from rest_framework import serializers
 from ai_canvas.template_json import textbox_json
 import copy
-import uuid,math
+import uuid,math,json
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
-
+from ai_canvas.utils import convert_image_url_to_file 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
 BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
@@ -322,6 +322,7 @@ STABLE_DIFFUSION_API= os.getenv('STABLE_DIFFUSION_API')
 STABILITY=os.getenv('STABILITY')   
 STABLE_DIFFUSION_API_URL =os.getenv('STABLE_DIFFUSION_API_URL')
 MODEL_VERSION =os.getenv('MODEL_VERSION')
+STABLE_DIFFUSION_PUBLIC_API=os.getenv('STABLE_DIFFUSION_PUBLIC_API')
 
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     token = "Bearer {}".format(STABILITY)
@@ -347,6 +348,36 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     return image
 
 
+
+
+def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
+    url = "https://stablediffusionapi.com/api/v4/dreambooth"
+
+    payload = json.dumps({
+    "key": STABLE_DIFFUSION_PUBLIC_API,
+    "prompt": prompt,
+    "negative_prompt": negative_prompt,
+    "width": width,
+    "height": height,
+    "model_id": "midjourney",
+    "samples": "1",
+    "num_inference_steps": steps,
+    "seed": None,
+    "guidance_scale": 7.5,
+    "safety_checker": "yes",
+    "multi_lingual": "yes",
+    "panorama": "no",
+    "self_attention": "no",
+    "upscale": "no",
+    "embeddings_model": None,
+    "webhook": None,
+    "track_id": None
+    })
+
+    headers = {'Content-Type': 'application/json'}
+
+    response = requests.request("POST", url, headers=headers, data=payload).json()['output']
+    return  convert_image_url_to_file(image_url=response,no_pil_object=True)
 
 
 

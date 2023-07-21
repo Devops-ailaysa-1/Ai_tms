@@ -333,7 +333,6 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         else:
             return Response(serializer.errors)
         
-
     def filter_queryset(self, queryset):
         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
         for backend in list(filter_backends):

@@ -2,7 +2,7 @@ from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTran
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
-from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_api
+from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_api,stable_diffusion_public
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
@@ -422,7 +422,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     height=serializers.IntegerField(allow_null=True,required=True)
     width=serializers.IntegerField(allow_null=True,required=True)
     sampler=serializers.IntegerField(allow_null=True,required=True)
-    negative_prompt=serializers.CharField(allow_null=True,required=True)
+    negative_prompt=serializers.CharField(allow_null=True,required=False)
     class Meta:
         fields = ("id",'prompt','style','height','width','sampler','image','used_api','negative_prompt')
         model=StableDiffusionAPI
@@ -439,12 +439,14 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if used_api == 'stability':
             image=stable_diffusion_api(prompt=prompt,weight=1,steps=20,height=height,negative_prompt=negative_prompt,width=width,
                                        style_preset=styles[int(style)],sampler=samplers[int(sampler)])
+
+        if used_api == 'stable_diffusion_api':
+            image = stable_diffusion_public(prompt,weight=1,steps=20,height=height,width=width,style_preset="",sampler="",negative_prompt=negative_prompt)['output']
             instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name='stable-diffusion-xl-beta-v2-2-2',
                                                        style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
-            instance.image=image
-            instance.save()
-        if used_api == 'stable_diffusion_api':
-            pass
+        instance.image=image
+        instance.save()
+
         return instance
         
         
