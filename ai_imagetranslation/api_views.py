@@ -23,7 +23,7 @@ from zipfile import ZipFile
 from ai_canvas.api_views import CustomPagination
 from ai_imagetranslation.models import StableDiffusionAPI
 from ai_imagetranslation.utils import stable_diffusion_api
-
+from ai_exportpdf.utils import download_file
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -294,22 +294,36 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
 #     return response
 
 
-model_list = {'stability':[],
-    'stable_diffusion_api':[]
-    }
+model_list = ['stability','stable_diffusion_api']
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_ai_image_generated_file_stable(request,id):
+    try:
+        file = StableDiffusionAPI.objects.get(id=id).image 
+        return download_file(file.path)
+    except:
+        return Response({'msg':'Requested file not exists'},status=401)
 
 
 class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
-
- 
+    search_fields =['prompt','sampler','style']
     def get(self, request):
         queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = StableDiffusionAPISerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
         return response
+    
+    def retrieve(self,request,pk):
+        query_set = StableDiffusionAPI.objects.get(id = pk)
+        serializer = StableDiffusionAPISerializer(query_set )
+        return Response(serializer.data)
     
     def create(self,request):    
         serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
@@ -318,3 +332,10 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset

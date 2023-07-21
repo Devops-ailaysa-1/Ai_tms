@@ -140,8 +140,8 @@ class StableDiffusionAPI(models.Model):
     used_api=models.CharField(max_length=200,blank=True,null=True)
     model_name=models.CharField(max_length=200,blank=True,null=True)
     prompt=models.CharField(max_length=3000,blank=True,null=True)
+    negative_prompt=models.CharField(max_length=3000,blank=True,null=True)
     style=models.CharField(max_length=100,blank=True,null=True)
-
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
     sampler=models.CharField(max_length=100,blank=True,null=True)

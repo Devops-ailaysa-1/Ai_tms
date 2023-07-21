@@ -323,7 +323,7 @@ STABILITY=os.getenv('STABILITY')
 STABLE_DIFFUSION_API_URL =os.getenv('STABLE_DIFFUSION_API_URL')
 MODEL_VERSION =os.getenv('MODEL_VERSION')
 
-def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler):
+def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     token = "Bearer {}".format(STABILITY)
     header={
         "Content-Type": "application/json",
@@ -331,9 +331,13 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler):
         "Authorization":token ,
     }
     json = {"samples":1,"height": height,"width": width,
-    "steps": steps,"cfg_scale": 3,"sampler":sampler,
+    "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
     "style_preset": style_preset,
-    "text_prompts": [{"text": prompt,"weight": weight}]}
+    "text_prompts": [
+        {"text": prompt,"weight": weight},
+        {"text":negative_prompt,"weight":-1}
+        ]
+    }
     url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
     response = requests.post(url=url,headers=header,json=json)
     if response.status_code != 200:

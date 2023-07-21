@@ -422,15 +422,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     height=serializers.IntegerField(allow_null=True,required=True)
     width=serializers.IntegerField(allow_null=True,required=True)
     sampler=serializers.IntegerField(allow_null=True,required=True)
-
+    negative_prompt=serializers.CharField(allow_null=True,required=True)
     class Meta:
-        fields = ("id",'prompt','style','height','width','sampler','image','used_api')
+        fields = ("id",'prompt','style','height','width','sampler','image','used_api','negative_prompt')
         model=StableDiffusionAPI
-        # extra_kwargs= 
-        #              'style':{'read_only':True},
-        #               'height':{'read_only':True},
-        #                 'width':{'read_only':True},'sampler':{'read_only':True}}
-
 
     def create(self, validated_data):
         user=self.context['request'].user
@@ -440,13 +435,18 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         height=validated_data.pop('height',None)
         width=validated_data.pop('width',None)
         sampler=validated_data.pop('sampler',None)
+        negative_prompt = validated_data.pop('negative_prompt',None)
         if used_api == 'stability':
-            image=stable_diffusion_api(prompt=prompt,weight=1,steps=11,height=height,width=width,style_preset=styles[int(style)],sampler=samplers[int(sampler)])
+            image=stable_diffusion_api(prompt=prompt,weight=1,steps=20,height=height,negative_prompt=negative_prompt,width=width,
+                                       style_preset=styles[int(style)],sampler=samplers[int(sampler)])
             instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name='stable-diffusion-xl-beta-v2-2-2',
-                                                       style=style,height=height,width=width,sampler=sampler)
+                                                       style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
             instance.image=image
             instance.save()
-            return instance
+        if used_api == 'stable_diffusion_api':
+            pass
+        return instance
+        
         
 
 
