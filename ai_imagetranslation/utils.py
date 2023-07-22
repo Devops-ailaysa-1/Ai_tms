@@ -171,15 +171,18 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     return result,black_and_white
 
 
+def resize_data_remove(resize_instance):
+    img_path=resize_instance.resize_image.path
+    mask_path=resize_instance.resize_mask.path
+    resize_instance.delete()
+    os.remove(img_path)
+    os.remove(mask_path)
+
 # from celery import shared_task
 # @shared_task(serializer='json')
 
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
-    # if hasattr(image_details,'image'):
-    #     img_path=image_details.image.path
-    # else:
-    #     img_path=image_details.inpaint_image.path
-    
+    IMG_RESIZE_SHAPE=(256,256)
     if inpaintparallel:
         img_path=image_details.inpaint_image.path
     else:
@@ -188,16 +191,22 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
     if image_details.mask:
-        image_to_extract_text=np.bitwise_and(mask ,img)
+        image_to_extract_text=np.bitwise_and(mask,img)
         content=image_content(image_to_extract_text)
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
-        # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-        output=inpaint_image(img_path, mask_path)
+        resize_img=cv2.resize(img,IMG_RESIZE_SHAPE)
+        resize_mask=cv2.resize(mask,IMG_RESIZE_SHAPE)
+        resize_image=core.files.File(core.files.base.ContentFile(image_content(resize_img)),"resize_image.png")
+        resize_mask=core.files.File(core.files.base.ContentFile(image_content(resize_mask)),"resize_mask.png")
+        img_trans_resize=ImageTranslateResizeImage.objects.create(image_translate=image_details,resize_image=resize_image,resize_mask=resize_mask)
+        output=inpaint_image(img_trans_resize.resize_image.path,img_trans_resize.resize_mask.path)
+        resize_data_remove(img_trans_resize)
         if output['code']==200:
-            if output['result'].shape[0]==np.prod(img.shape):
-                res=np.reshape(output['result'],img.shape)  
+            if output['result'].shape[0]==np.prod(resize_img.shape):
+                res=np.reshape(output['result'],resize_img.shape)
+                res=cv2.resize(res,img.shape[:2])
                 diff=cv2.absdiff(img,res)
                 diff=lama_diff(mask,diff)
                 diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
@@ -216,7 +225,8 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 return dst_final,image_text_details,text_box_list
-            else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
+            else:
+                raise serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
         else:
             return ValidationError(output)
 

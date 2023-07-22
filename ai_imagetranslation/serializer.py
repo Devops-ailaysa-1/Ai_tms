@@ -1,4 +1,5 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,StableDiffusionAPI)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
+                                        StableDiffusionAPI,ImageTranslateResizeImage)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -84,10 +85,8 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
         model = ImageInpaintCreation
-        fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box',
-                  'export','thumbnail','created_at','updated_at')
-                #   ,'mask','inpaint_image','mask_json')
-        
+        fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box','export','thumbnail','created_at','updated_at')
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if representation.get('target_language' ,None):
@@ -118,9 +117,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
-            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase')
-        #,'image_id')
+            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id','created_at','updated_at','magic_erase')
+       
         
     def to_representation(self, instance):
         representation=super().to_representation(instance)

@@ -22,6 +22,9 @@ def user_directory_path_image_load_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_load/thumbnail",filename)
 
 
+def user_directory_path_image_translate_image_temp_resize(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.image_translate.user.uid, "image_translate/image_upload/image_translate/temp_resize",filename)
+
 class Imageload(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
     image=models.FileField(upload_to=user_directory_path_image_load,blank=True ,null=True,validators=[FileExtensionValidator(allowed_extensions=["svg","jpeg","jpg","png"])])
@@ -51,6 +54,13 @@ class ImageTranslate(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     # thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
 
+
+class ImageTranslateResizeImage(models.Model):
+    image_translate=models.ForeignKey(ImageTranslate,on_delete=models.CASCADE,related_name='image_translate_resize')
+    resize_image=models.FileField(upload_to=user_directory_path_image_translate_image_temp_resize,blank=True,null=True)
+    resize_mask=models.FileField(upload_to=user_directory_path_image_translate_image_temp_resize,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 def user_directory_path_image_translate_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/thumbnail",filename) 
