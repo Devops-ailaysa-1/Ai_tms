@@ -362,28 +362,17 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 
     payload = json.dumps({
     "key": STABLE_DIFFUSION_PUBLIC_API,
-    "prompt": prompt,
-    "negative_prompt": negative_prompt,
-    "width": width,
-    "height": height,
-    "model_id": "midjourney",
-    "samples": "1",
-    "num_inference_steps": steps,
-    "seed": None,
-    "guidance_scale": 7.5,
-    "safety_checker": "yes",
-    "multi_lingual": "yes",
-    "panorama": "no",
-    "self_attention": "no",
-    "upscale": "no",
-    "embeddings_model": None,
-    "webhook": None,
-    "track_id": None
+    "prompt": prompt,"negative_prompt": negative_prompt,
+    "width": width,"height": height,
+    "model_id": "midjourney","samples": "1",
+    "num_inference_steps": steps,"seed": None,
+    "guidance_scale": 7.5,"safety_checker": "yes",
+    "multi_lingual": "yes","panorama": "no",
+    "self_attention": "no","upscale": "no",
+    "embeddings_model": None,"webhook": None,"track_id": None
     })
-
     headers = {'Content-Type': 'application/json'}
-
-    response = requests.request("POST", url, headers=headers, data=payload).json()['output']
+    response = requests.request("POST", url, headers=headers, data=payload).json()['output'][0]
     return  convert_image_url_to_file(image_url=response,no_pil_object=True)
 
 

@@ -256,6 +256,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             if CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()).exists():
                 pairs='language pair already exists {}_{}'.format(src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                 raise serializers.ValidationError({'msg':pairs})
+            if src_lang.locale.first() == tar_lang.locale.first():
+                raise serializers.ValidationError({'msg':'looks like same language pair {} '.format(tar_lang.locale.first().locale_code)})
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
             trans_json_project['projectid']['langNo']=trans_json.source_language.id
@@ -370,7 +372,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
-
             source_json_files_all=instance.canvas_json_src.all()
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
@@ -389,11 +390,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             if target_json_file:
                 if hasattr(target_json_file ,'json'):
                     target_json_file = json_src_change(target_json_file.json,req_host,instance,text_box_save=False)
-                    # print("outside----->json, canvas_translation_target")
                 canvas_trans.json = target_json_file
             canvas_trans.save()
             return instance
-
 
         if canvas_translation_tar_lang:
             src_lang=instance.canvas_translate.last().source_language.language
