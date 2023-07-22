@@ -256,8 +256,6 @@ class TextboxUpdate(models.Model):
         else:
             return ""
 
-
-
 class EmojiCategory(models.Model):
     name=models.CharField(max_length=200,null=True,blank=True)
     def __str__(self) -> str:
@@ -273,3 +271,13 @@ class EmojiData(models.Model):
     def __str__(self) -> str:
         return self.emoji_name
     
+
+class ImageListCategory(models.Model):
+    imageurl=models.CharField(max_length=3000,null=True,blank=True)
+    preview_img=models.CharField(max_length=3000,null=True,blank=True)
+    tags=models.CharField(max_length=300,null=True,blank=True)
+    type=models.CharField(max_length=200,null=True,blank=True)
+    user=models.CharField(max_length=200,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.type

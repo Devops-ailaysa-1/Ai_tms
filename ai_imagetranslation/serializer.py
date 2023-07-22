@@ -134,13 +134,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             representation['inpaint_image']=instance.inpaint_image.url  #
         if representation.get('create_inpaint_pixel_location',None):
             representation['create_inpaint_pixel_location']=instance.create_inpaint_pixel_location.url
-        # if representation.get('thumbnail' , None):
-        #     image_path=instance.image.path
-        #     im = Image.open(image_path)
-        #     thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
-        #     instance.thumbnail=thumb_nail
-        #     instance.save()
-        #     representation['thumbnail']=instance.thumbnail
         return representation
     
     @staticmethod
@@ -173,11 +166,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             return instance
     
     def img_trans(self,instance,inpaint_creation_target_lang,src_lang):
+        if not instance.source_canvas_json:
+            raise serializers.ValidationError({'msg':'source json is not sent'})
+        tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         for tar_lang in inpaint_creation_target_lang:
-            tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())
-                                                        #  mask=instance.mask,inpaint_image=instance.inpaint_image,
-                                                        #  mask_json=instance.mask_json)   
-            tar_json_copy=copy.deepcopy(instance.source_canvas_json)
+            tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first()) 
             tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
@@ -195,6 +188,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         canvas_asset_image_id=validated_data.get('canvas_asset_image_id' ,None)
         mask_json=validated_data.get('mask_json')
         magic_erase=validated_data.get('magic_erase')
+        bounding_box_source_update=validated_data.get('bounding_box_source_update',None)
+        bounding_box_target_update=validated_data.get('bounding_box_target_update',None)
+        target_update_id=validated_data.get('target_update_id',None)
+        source_canvas_json=validated_data.get('source_canvas_json',None)
+        target_canvas_json=validated_data.get('target_canvas_json',None)
+        thumbnail=validated_data.get('thumbnail',None)
+        export=validated_data.get('export',None)
 
         if magic_erase and mask_json:
             instance.mask_json=mask_json
@@ -222,8 +222,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.project_name = validated_data.get('project_name')
             instance.save()
             
-        if validated_data.get('mask'):
-            instance.mask = validated_data.get('mask')
+        if validated_data.get('mask_json',None):
+            instance.mask_json = validated_data.get('mask_json')
             instance.save()
             
         if src_lang :
@@ -231,6 +231,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
+            for tar_lang in inpaint_creation_target_lang:
+                if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),source_image__source_language=src_lang.locale.first()).exists():
+                    raise serializers.ValidationError({"msg":"language pair already exists"})
+            
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask_image=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json=mask_json
@@ -263,24 +267,19 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             return instance
 
         if inpaint_creation_target_lang:
+            if not instance.source_language:
+                raise serializers.ValidationError({'msg':'source language not selected'})
             src_lang=instance.source_language
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
 
         ####update for target and source json 
-        bounding_box_source_update=validated_data.get('bounding_box_source_update',None)
-        bounding_box_target_update=validated_data.get('bounding_box_target_update',None)
-        target_update_id=validated_data.get('target_update_id',None)
-        source_canvas_json=validated_data.get('source_canvas_json',None)
-        target_canvas_json=validated_data.get('target_canvas_json',None)
-        thumbnail=validated_data.get('thumbnail',None)
-        export=validated_data.get('export',None)
         
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
+                print(instance.s_im.all())
                 instance.mask_json=mask_json
-                # print(instance.inpaint_image)
                 instance.save()
             else:
                 instance.mask_json=mask_json
@@ -288,6 +287,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
                 instance.mask=mask
                 instance.save()
+                if not instance.inpaint_image:
+                    raise serializers.ValidationError({'msg':"no object removal image is generated"})
                 inpaint_out_image,_,text_box_list=inpaint_image_creation(instance,inpaintparallel=True,magic_erase=False)
                 content=image_content(inpaint_out_image)
                 inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
@@ -300,13 +301,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.source_canvas_json=source_canvas_json
                 instance.save()
                 for tar_ins in instance.s_im.all():
+                    if not tar_ins.target_canvas_json:
+                        raise serializers.ValidationError({'msg':'target json not present'})
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
                         txt_box=copy.deepcopy(text_box)
                         if 'text' in txt_box:
-                            translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
-                                                        target_lang_code=tar_ins.target_language.locale_code)
+                            translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',target_lang_code=tar_ins.target_language.locale_code)
                             txt_box['text']=translate_bbox
                         text_box_list_new.append(txt_box)
                     tar_json['objects'][0]['src']=HOST_NAME+instance.inpaint_image.url

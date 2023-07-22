@@ -49,7 +49,7 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
 
 
 def creating_image_bounding_box(image_path,color_find_image_diff):
-    poly_line = []
+    poly_line=[]
     pillow_image_to_extract_color=Image.fromarray(color_find_image_diff)
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
     text_and_bounding_results={}

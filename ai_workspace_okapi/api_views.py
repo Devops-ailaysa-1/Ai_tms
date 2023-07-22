@@ -3370,9 +3370,9 @@ dictionary_paths = {
     "ru": "/ai_home/dictionaries/ru.txt",
 }
 
-sym_spell = SymSpell()
-for lang_code,lang_path in dictionary_paths.items():
-    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+# sym_spell = SymSpell()
+# for lang_code,lang_path in dictionary_paths.items():
+#     sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
 
 
 @api_view(['GET'])

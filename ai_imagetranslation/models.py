@@ -2,6 +2,7 @@ from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale
 from ai_auth.models import AiUser
 from django.core.validators import FileExtensionValidator
+from django.core.exceptions import ValidationError
 def user_directory_path_image_load(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_load/",filename)
 
@@ -54,7 +55,6 @@ class ImageTranslate(models.Model):
 def user_directory_path_image_translate_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/thumbnail",filename) 
 
-
 def user_directory_path_image_translate_export(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/export",filename) 
 
@@ -78,19 +78,15 @@ class ImageInpaintCreation(models.Model):
     # inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
     # mask_json=models.JSONField(blank=True,null=True)
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
-    class Meta:
+    class Meta:            
         ordering = ['id']
-
-# class TargetInpaintimage(models.Model):
-#     inpaint_create=models.ForeignKey(to=ImageInpaintCreation,blank=True,null=True,on_delete=models.CASCADE,related_name='tar_im_create')
-#     mask_json=models.JSONField(blank=True,null=True)
-#     inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
-#     target_canvas_json=models.JSONField(blank=True,null=True)
-#     thumbnail=models.FileField(upload_to=user_directory_path_image_translate_thumbnail,blank=True,null=True)
-#     export=models.FileField(upload_to=user_directory_path_image_translate_export,blank=True,null=True) 
-
     
-
+    # def validate_unique(self, exclude=None):
+    #     im_tr=ImageTranslate.objects.filter(user=self.source_image.user,source_language=self.source_image.source_language,
+    #                                         s_im__target_language=self.target_language)
+    #     if im_tr.exists():
+    #         raise ValidationError({'msg':"source and target pair already exist"})
+    
 def user_directory_path_image_background_removel(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid,"background_removel",filename)
 
