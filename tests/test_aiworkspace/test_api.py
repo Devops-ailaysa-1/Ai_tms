@@ -2,7 +2,16 @@ from tests import load_files,get_test_file,get_test_file_path
 import pytest,os
 from django.core.files.uploadedfile import SimpleUploadedFile
 from pathlib import Path
+from rest_framework.test import APIClient
+from rest_framework import status
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import AccessToken
+from ai_auth.models import AiUser
+from allauth.account.models import EmailAddress
+
+
 BASE_URL="http://localhost:8083/"
+
 
 # @pytest.mark.run1
 # @pytest.mark.django_db
@@ -54,221 +63,261 @@ BASE_URL="http://localhost:8083/"
 #     # assert response.json()['Res'][0]['task_id'] != None
 #     # pytest.task_id = response.json()['Res'][0]['task_id']
 
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.tokens import AccessToken
-from django.urls import reverse
-import pytest
-from ai_auth.models import AiUser
-from allauth.account.models import EmailAddress
-
 
 # create a API client
 
-@pytest.fixture
-def api_client():
-    return APIClient()
+# @pytest.fixture
+# def api_client():
+#     return APIClient()
 
 # Create AiUser and email verification
-@pytest.mark.django_db
-@pytest.fixture
-def user():
-    user=AiUser.objects.create_user(email='testuser@gmail.com', password='testpassword')
-    EmailAddress.objects.create(email ='testuser@gmail.com', verified = True, primary = True, user = user)
-    return user
+# @pytest.mark.django_db
+# @pytest.fixture
+# def user():
+#     user=AiUser.objects.create_user(email='testuser@gmail.com', password='testpassword')
+#     EmailAddress.objects.create(email ='testuser@gmail.com', verified = True, primary = True, user = user)
+#     return user
 
 # get access token for the user
-@pytest.fixture
-@pytest.mark.django_db
-def access_token(user):
-    return AccessToken.for_user(user)
+# @pytest.fixture
+# @pytest.mark.django_db
+# def access_token(user):
+#     return AccessToken.for_user(user)
 
-# create using Api endpoints
-@pytest.mark.django_db
-def test_create_user(api_client):
-    url=f"{BASE_URL}auth/dj-rest-auth/registration/"
-    data={"email":'testuser@gmail.com',"password":'testpassword',"password2":'testpassword','fullname':"TEST","country":101,"source_language":17,"target_language":77}
-    response = api_client.post(url, data, format='json')
-    print(response.json())
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.data["user"]["email"]=='testuser@gmail.com'
-    assert 'access_token' in response.data
-    assert response.data["access_token"]!=None
+# # create using Api endpoints
+# @pytest.mark.django_db
+# def test_create_user(api_client):
+#     url=f"{BASE_URL}auth/dj-rest-auth/registration/"
+#     data={"email":'testuser@gmail.com',"password":'testpassword',"password2":'testpassword','fullname':"TEST","country":101,"source_language":17,"target_language":77}
+#     response = api_client.post(url, data, format='json')
+#     # print(response.json())
+#     assert response.status_code == status.HTTP_201_CREATED
+#     assert response.data["user"]["email"]=='testuser@gmail.com'
+#     assert 'access_token' in response.data
+#     assert response.data["access_token"]!=None
 
 # user login
-@pytest.mark.django_db
-def test_login(api_client, user, access_token):
-    # Login and get an access token
-    print(user,access_token)
-    login_url = f"{BASE_URL}auth/dj-rest-auth/login/"
-    data = {'email': 'testuser@gmail.com', 'password': 'testpassword'}
-    response = api_client.post(login_url, data, format='json')
-    print(response.json())
-    # check the access token 
-    assert 'access_token' in response.data
-    assert response.status_code == status.HTTP_200_OK
+# @pytest.mark.django_db
+# def test_login(api_client, user, access_token):
+#     # Login and get an access token
+#     print(user,access_token)
+#     login_url = f"{BASE_URL}auth/dj-rest-auth/login/"
+#     data = {'email': 'testuser@gmail.com', 'password': 'testpassword'}
+#     response = api_client.post(login_url, data, format='json')
+#     print(response.json())
+#     # check the access token 
+#     assert 'access_token' in response.data
+#     assert response.status_code == status.HTTP_200_OK
 
-@pytest.mark.django_db
-def test_get_user(api_client,access_token,user):
-    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    url=f"{BASE_URL}auth/dj-rest-auth/user/"
-    response=api_client.get(url,format='json')
-    print(response.json())
-    assert response.status_code == 200
-    assert response.data["email"]==user.email
+# @pytest.mark.django_db
+# def test_get_user(api_client,access_token,user):
+#     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+#     url=f"{BASE_URL}auth/dj-rest-auth/user/"
+#     response=api_client.get(url,format='json')
+#     # print(response.json())
+#     assert response.status_code == 200
+#     assert response.data["email"]==user.email
 
-@pytest.mark.django_db
-def test_logout(api_client, user, access_token):
-    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    print(user,access_token)
-    url = f"{BASE_URL}auth/dj-rest-auth/logout/"
-    data = {'email': 'testuser@gmail.com', 'password': 'testpassword'}
-    response = api_client.post(url, format='json')
-    print(response.json())
-    assert response.data["detail"]=="Successfully logged out."
-    assert response.status_code == status.HTTP_200_OK
+# @pytest.mark.django_db
+# def test_logout(api_client, user, access_token):
+#     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+#     print(user,access_token)
+#     url = f"{BASE_URL}auth/dj-rest-auth/logout/"
+#     data = {'email': 'testuser@gmail.com', 'password': 'testpassword'}
+#     response = api_client.post(url, format='json')
+#     # print(response.json())
+#     assert response.data["detail"]=="Successfully logged out."
+#     assert response.status_code == status.HTTP_200_OK
 
-@pytest.mark.django_db
-def test_choicelist_create(api_client, user, access_token):
+# @pytest.fixture(scope='function')
+# @pytest.mark.django_db
+# def setup_database():
+#     # Replace with logic to set up initial database data for each test
+#     api_client= APIClient()
+#     url=f"{BASE_URL}auth/dj-rest-auth/registration/"
+#     data={"email":'testuser@gmail.com',"password":'testpassword',"password2":'testpassword','fullname':"TEST","country":101,"source_language":17,"target_language":77}
+#     response = api_client.post(url, data, format='json')
+#     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {response.data["access_token"]}')
+#     yield
+
+
+@pytest.fixture
+def api_client():
+    user=AiUser.objects.get(id=1)
+    access_token=AccessToken.for_user(user)
+    api_client= APIClient()
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    yield api_client
+
+
+# @pytest.fixture(autouse=True)
+# # @pytest.mark.django_db
+# def api_client():
+#     api_client= APIClient()
+#     url=f"{BASE_URL}auth/dj-rest-auth/registration/"
+#     data={"email":'testuser@gmail.com',"password":'testpassword',"password2":'testpassword','fullname':"TEST","country":101,"source_language":17,"target_language":77}
+#     response = api_client.post(url, data, format='json')
+#     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {response.data["access_token"]}')
+#     yield api_client
+#     # print ("log_out")
+#     # return api_client
+
+# choice_list_module TestCase
+@pytest.mark.django_db(transaction=True)
+def test_choicelist(api_client):
     # # Perform a POST request with the authenticated user
-    post_url = f"{BASE_URL}workspace_okapi/choicelist/"
+    # api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    end_point=  f"{BASE_URL}workspace_okapi/choicelist/"
+
+    # post
     data = {'language': '77', 'name': 'azar',}
-    response = api_client.post(post_url, data, format='multipart')
+    response = api_client.post(end_point, data, format='multipart')
     print(response.json())
     assert response.status_code == 200
     assert response.data['language'] == 77
     assert response.data['name'] == 'azar'
 
     data = {'language': '77', 'name': 'azar_05',}
-    response = api_client.post(post_url, data, format='multipart')
+    response = api_client.post(end_point, data, format='multipart')
     print(response.json())
     assert response.status_code == 200
 
-
-    get_response=api_client.get(f"{BASE_URL}workspace_okapi/choicelist/",format="json")
+    #get_list
+    get_response=api_client.get(end_point,format="json")
     print(get_response.json())
     assert get_response.status_code==200
-    # assert len(get_response.data["results"])==2
-
-    
+    assert len(get_response.data["results"])==2
     pk=get_response.data["results"][0]["id"]
     print(pk)
-
+    
+    # put method
     data={"name":"azar_01"}
-    put_response=api_client.put(f"{BASE_URL}workspace_okapi/choicelist/{pk}/",data)
+    put_response=api_client.put(f"{end_point}{pk}/",data)
     print(put_response.json(),"********************")
-    print(pk)
-    get_response=api_client.get(f"{BASE_URL}workspace_okapi/choicelist/{pk}/",format="json")
-    print(get_response.json())
     assert put_response.status_code == 200
+
+    # retrive method
+    get_response=api_client.get(f"{end_point}{pk}/")
+    print(get_response.json())
+    assert get_response.status_code==200
     assert get_response.data['name'] == 'azar_01'
 
-# @pytest.fixture(scope="session")
+    #delete method
+    del_response=api_client.delete(f"{end_point}{pk}/")
+    del_response.status_code==204
+    get_response=api_client.get(end_point,format="json")
+    print(get_response)
+    assert pk not in [i['id'] for i in get_response.data["results"]]
+
+
+# self_learning_module TestCase
+
+@pytest.fixture
 # @pytest.mark.django_db
-# def access_token():
-#     api_client=APIClient()
-#     url=f"{BASE_URL}auth/dj-rest-auth/registration/"
-#     data={"email":'testuser@gmail.com',"password":'testpassword',"password2":'testpassword','fullname':"TEST","country":101,"source_language":17,"target_language":77}
-#     sign_up = api_client.post(url, data, format='json')
-#     login_url = f"{BASE_URL}auth/dj-rest-auth/login/"
-#     data = {'email': 'testuser@gmail.com', 'password': 'testpassword'}
-#     response = api_client.post(login_url, data, format='json')
-#     access_token=response.data['access_token']
-#     # print(access_token)
-#     return access_token
+def choice_list_id(api_client):
+    url=f"{BASE_URL}workspace_okapi/choicelist/"
+    data = {'language': '77', 'name': 'azar',}
+    response = api_client.post(url, data, format='multipart')
+    print(response.json())
+    get_response=api_client.get(url,format="json")
+    print(get_response.json())
+    pk=get_response.data["results"][0]["id"]
+    print(pk)
+    yield response.data["id"]
+    print('destroy')
+    # return response.data["id"]
 
-# # @pytest.fixture(scope='session')
-# # def setup_choicelist(api_client,access_token):
-# #         token = access_token
-# #         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-# #         url = f"{BASE_URL}"  # Replace 'endpoint' with the actual endpoint URL you want to test
-# #         data = {'language': '77', 'name': 'azar',} # Replace with the data you want to send in the request
-# #         response = api_client.post(url, data)
-# #         print(response.json())
-# #         pk=response.data['id']
-# #         return pk
-        
+data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
+@pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
+@pytest.mark.django_db
+def test_selflearn(api_client,choice_list_id,data,status):
+    end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
+    # data={"source_word":"apple","edited_word":"app","choice_list_id":choice_list_id}
+    #  create selflearn asset
+    data["choice_list_id"]=choice_list_id
+    res=api_client.post(end_point,data,format='multipart')
+    print(res.data["choice_list"])
+    assert res.data["choice_list"] == choice_list_id
+    assert res.data["source_word"]==data["source_word"]
+    assert res.status_code==status
 
-# import pytest
-# from rest_framework.test import APIClient
+    # get list
+    get_response=api_client.get(end_point)
+    print(get_response.json())
+    assert len(get_response.data["results"])>0
+    assert get_response.status_code==200
+    pk=get_response.data["results"][0]["id"]
 
-# # @pytest.mark.django_db
-# class TestChoiceList:
-#     API_BASE_URL = f"{BASE_URL}workspace_okapi/choicelist/" 
-   
-#     # def __init__(self):
-#     #     self.pk= None
+    # update
+    data={"edited_word":"application"}
+    upd_response=api_client.put(f"{end_point}{pk}/",data)
+    assert upd_response.status_code==200
+    assert upd_response.data['id']==pk and upd_response.data['edited_word']==data["edited_word"]
 
-#     @pytest.fixture
-#     def api_client(self,access_token):
-#         token = access_token
-#         api_client=APIClient()
-#         api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-#         return api_client
-#         # return APIClient()
-#     # @pytest.fixture    
-#     # def setup_choicelist(api_client,access_token):
-#     #     token = access_token
-#     #     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-#     #     url = f"{BASE_URL}"  # Replace 'endpoint' with the actual endpoint URL you want to test
-#     #     data = {'language': '77', 'name': 'azar',} # Replace with the data you want to send in the request
-#     #     response = api_client.post(url, data)
-#     #     print(response.json())
-#     #     pk=response.data['id']
-#     #     return pk
-     
-#     @pytest.mark.first
-#     @pytest.mark.django_db
-#     def test_post_endpoint(self, api_client):
-#         url = f"{self.API_BASE_URL}"  # Replace 'endpoint' with the actual endpoint URL you want to test
-#         data = {'language': '77', 'name': 'azar',} # Replace with the data you want to send in the request
-#         response = api_client.post(url, data)
-#         print(response.json())
-#         self.pk=response.data['id']
-#         assert response.status_code == 200
-#         # Add more assertions to verify the response content if needed
-
-#     # @pytest.mark.django_db
-#     def test_get_endpoint(self, api_client):
-#         # api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-#         get_response=api_client.get(f"{BASE_URL}workspace_okapi/choicelist/",format="json")
-#         print(get_response.json(),"*******************")
-#         assert get_response.status_code==200
-#         assert len(get_response.data["results"])==1
-    
-#     # @pytest.mark.django_db
-#     def test_put_endpoint(self, api_client,setup_choicelist):
-#         pk=setup_choicelist
-#         print(self.pk,"---------------------")
-#         url = f"{self.API_BASE_URL}/{pk}"  # Replace 'endpoint' with the actual endpoint URL you want to test
-#         data = {'name': 'azar_01',} # Replace with the data you want to send in the request
-#         response = api_client.put(url, data)
-#         assert response.status_code == 200
-#         # Add more assertions to verify the response content if needed
-#     # @pytest.mark.django_db
-#     def test_delete_endpoint(self, api_client,setup_choicelist):
-#         pk=setup_choicelist
-#         url = f"{self.API_BASE_URL}/{pk}"  # Replace 'endpoint' with the actual endpoint URL you want to test
-#         response = api_client.delete(url)
-#         assert response.status_code == 204
-#         # Add more assertions to verify the response content if needed
-
-    # ... Add more test cases as needed
+    # delete
+    del_response=api_client.delete(f"{end_point}{pk}/")
+    del_response.status_code==204
+    get_response=api_client.get(end_point,format="json")
+    print(get_response)
+    assert pk not in [i['id'] for i in get_response.data["results"]]
 
 
+import json
+@pytest.fixture
+def test_data():
+    with open('fixtures/SelflearningAsset.json') as f:
+        data = json.load(f)
+    return data
 
+@pytest.fixture
+def get_choicelist():
+    with open('fixtures/ChoiceLists.json') as f:
+        data = json.load(f)
+    return data
 
+@pytest.mark.django_db
+def test_choice(api_client,get_choicelist):
+    print(get_choicelist)
+    end_point=  f"{BASE_URL}workspace_okapi/choicelist/1/"
+    get_response=api_client.get(end_point,format="json")
+    print("-----------",get_response.json())
+    # assert get_choicelist[0]["fields"]==get_response.json()
+    assert get_response.status_code==200
 
+@pytest.mark.django_db
+def test_putchoice(api_client,get_choicelist):
+    print(get_choicelist)
+    data={"name":"azar"}
+    end_point=  f"{BASE_URL}workspace_okapi/choicelist/1/"   
+    get_response=api_client.put(end_point,data)
+    print("-----------",get_response.json())
+    assert get_choicelist[0]["fields"]["name"]!=get_response.data["name"]
+    assert get_response.status_code==200
 
+@pytest.mark.django_db
+def test_get_items(api_client, test_data):
+    items = test_data
+    end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
+    response = api_client.get(end_point)
+    assert response.status_code == 200
 
-
+data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
+@pytest.mark.django_db
+@pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
+def test_post_item(api_client, test_data,data,status,choice_list_id):
+    end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
+    data["choice_list_id"]=choice_list_id
+    response = api_client.post(end_point, json=data)
+    assert response.status_code == status
 
 
 
+# choicelistselected
 
-
-
-
-
+@pytest.mark.django_db
+def test_choicelistselected(api_client):
+    endpoint=f"{BASE_URL}workspace_okapi/choicelistselected/"
+    query_params={"project":5478}
+    response=api_client.get(endpoint+"?project=5478")
+    assert response.status_code==200
+    print(response.data)
