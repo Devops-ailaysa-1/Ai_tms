@@ -478,7 +478,8 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     new_height = round(scale_val*height)
                     im=cv2.resize(im ,(new_height,new_width))
                     content=image_content(im)
-                    instance.thumbnail=Image.fromarray(im)
+                    thumbnail_content=image_content(Image.fromarray(im))
+                    instance.thumbnail=core.files.base.ContentFile(thumbnail_content,name=instance.image.name.split('/')[-1])  
                     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
                     instance.image=im
                     instance.save()
