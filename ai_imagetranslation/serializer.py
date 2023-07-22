@@ -167,7 +167,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     
     def target_check(self,instance,target_list,src_lang):
         for tar_lang in target_list:
-            if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),source_image__source_language=src_lang.locale.first()).exists():
+            if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),
+                                                   source_image__source_language=src_lang).exists():
                 raise serializers.ValidationError({"msg":"language pair already exists"})
     
     def img_trans(self,instance,inpaint_creation_target_lang,src_lang):
@@ -236,7 +237,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
-            self.target_check(instance,inpaint_creation_target_lang,src_lang)
+            self.target_check(instance,inpaint_creation_target_lang,src_lang.locale.first())
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask_image=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json=mask_json
