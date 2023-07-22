@@ -932,21 +932,15 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     def list(self,request):
         social_media_name_id=request.query_params.get('social_media_name_id',None)
         search=request.query_params.get('search',None)
-        # if search:
-        #     queryset = SocialMediaSize.objects.filter(template_global_categoty__template_global_page__tag_name__icontains=search).distinct()
-        # elif social_media_name_id and search:
-        #     queryset = SocialMediaSize.objects.filter(id=social_media_name_id,template_global_categoty__template_global_page__tag_name__icontains=search).distinct() 
-        # else:
-        #     queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
         if social_media_name_id:
-            queryset = SocialMediaSize.objects.filter(id=social_media_name_id)
+            queryset=SocialMediaSize.objects.filter(id=social_media_name_id)
         else:
-            queryset = SocialMediaSize.objects.all().order_by("social_media_name") 
+            queryset=SocialMediaSize.objects.all().order_by("social_media_name") 
         queryset_2 = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
         serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
-        # print("data----->>>",serializer.data)
-        response = self.get_paginated_response(serializer.data)
+        data=[i for i in serializer.data if i['template_global_categoty']]
+        response = self.get_paginated_response(data)
         if response.data["next"]:
             response.data["next"] = response.data["next"].replace("http://", "https://")
         if response.data["previous"]:

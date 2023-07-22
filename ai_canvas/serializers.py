@@ -551,7 +551,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         return instance
 
 class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
-    template_global_categoty=TemplateGlobalDesignSerializerV2(many=True,read_only=True)
+    template_global_categoty=TemplateGlobalDesignSerializerV2(many=True,required=False,allow_null=False)
     
     class Meta:
         fields=('id','template_global_categoty','social_media_name')
