@@ -271,8 +271,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if inpaint_creation_target_lang:
             if not instance.source_language:
                 raise serializers.ValidationError({'msg':'source language not selected'})
-            self.target_check(instance,inpaint_creation_target_lang,src_lang)
             src_lang=instance.source_language
+            self.target_check(instance,inpaint_creation_target_lang,src_lang)
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
