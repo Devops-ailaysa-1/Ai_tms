@@ -165,6 +165,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             print("saved instance")
             return instance
     
+    def target_check(self,instance,target_list,src_lang):
+        for tar_lang in target_list:
+            if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),source_image__source_language=src_lang.locale.first()).exists():
+                raise serializers.ValidationError({"msg":"language pair already exists"})
+    
     def img_trans(self,instance,inpaint_creation_target_lang,src_lang):
         if not instance.source_canvas_json:
             raise serializers.ValidationError({'msg':'source json is not sent'})
@@ -231,10 +236,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
-            for tar_lang in inpaint_creation_target_lang:
-                if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),source_image__source_language=src_lang.locale.first()).exists():
-                    raise serializers.ValidationError({"msg":"language pair already exists"})
-            
+            self.target_check(instance,inpaint_creation_target_lang,src_lang)
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask_image=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json=mask_json
@@ -269,6 +271,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if inpaint_creation_target_lang:
             if not instance.source_language:
                 raise serializers.ValidationError({'msg':'source language not selected'})
+            self.target_check(instance,inpaint_creation_target_lang,src_lang)
             src_lang=instance.source_language
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
