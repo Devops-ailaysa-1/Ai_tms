@@ -466,6 +466,8 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             if extension=='jpg':
                 extension='jpeg'
             im = cv2.imread(instance.image.path)
+            if not instance.image_name:
+                instance.image_name=instance.image.path.split('/')[-1]
             if extension !='svg':
                 height,width,_ = im.shape
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
@@ -478,8 +480,9 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     new_height = round(scale_val*height)
                     im=cv2.resize(im ,(new_height,new_width))
                     content=image_content(im)
-                    thumbnail_content=image_content(Image.fromarray(im))
-                    instance.thumbnail=core.files.base.ContentFile(thumbnail_content,name=instance.image.name.split('/')[-1])  
+                    instance.height=new_width
+                    instance.width=new_height
+                    # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
                     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
                     instance.image=im
                     instance.save()

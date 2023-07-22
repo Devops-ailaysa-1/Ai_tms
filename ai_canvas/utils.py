@@ -185,7 +185,6 @@ def export_download(json_str,format,multipliervalue):
         json_ = json.dumps(json_str)
         data = {'json':json_ ,'format':'svg'}
     elif format=='png-transparent':
-        print("format------------>",format)
         json_trans = copy.deepcopy(json_str)
         json_trans['background']='transparent'
         json_trans['backgroundImage']['fill']='transparent'

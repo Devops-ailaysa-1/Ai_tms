@@ -259,9 +259,6 @@ def background_remove(image_path):
     arr = np.frombuffer(response.content, dtype=np.uint8)
     res=np.reshape(arr,(320,320,3))
     user_image=cv2.imread(image_path)
-    # im = Image.fromarray(res * 255).convert('RGB')
-    # im.save("afternath.png")
-    # im=np.asarray(im)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
     bck_gur_res=background_merge(y0,user_image)
