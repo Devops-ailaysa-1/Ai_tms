@@ -24,6 +24,7 @@ from ai_canvas.api_views import CustomPagination
 from ai_imagetranslation.models import StableDiffusionAPI
 from ai_imagetranslation.utils import stable_diffusion_api
 from ai_exportpdf.utils import download_file
+
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -111,8 +112,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         image = request.FILES.get('image')
         image_id =  request.POST.getlist('image_id')
         canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
-        # if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
-        #     return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         
         if image:
             serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 

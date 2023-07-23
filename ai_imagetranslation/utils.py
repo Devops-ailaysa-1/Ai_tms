@@ -332,49 +332,90 @@ MODEL_VERSION =os.getenv('MODEL_VERSION')
 STABLE_DIFFUSION_PUBLIC_API=os.getenv('STABLE_DIFFUSION_PUBLIC_API')
 
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    token = "Bearer {}".format(STABILITY)
-    header={
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization":token ,
-    }
-    json = {"samples":1,"height": height,"width": width,
-    "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
-    "style_preset": style_preset,
-    "text_prompts": [
-        {"text": prompt,"weight": weight},
-        {"text":negative_prompt,"weight":-1}
-        ]
-    }
-    url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
-    response = requests.post(url=url,headers=header,json=json)
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
-    data =base64.b64decode(response.json()['artifacts'][0]['base64'])
-    image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
-    return image
+    # token = "Bearer {}".format(STABILITY)
+    # header={
+    #     "Content-Type": "application/json",
+    #     "Accept": "application/json",
+    #     "Authorization":token ,
+    # }
+    # json = {"samples":1,"height": height,"width": width,
+    # "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
+    # "style_preset": style_preset,
+    # "text_prompts": [
+    #     {"text": prompt,"weight": weight},
+    #     {"text":negative_prompt,"weight":-1}
+    #     ]
+    # }
+    # url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
+    # response = requests.post(url=url,headers=header,json=json)
+    # if response.status_code != 200:
+    #     raise Exception("Non-200 response: " + str(response.text))
+    # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
+    # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
+    pass
 
-
-
+def sd_status_check(id):
+    url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
+    payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
+    headers = {'Content-Type': 'application/json'}
+    response = requests.request("POST", url, headers=headers, data=payload)
+    print(response.json())
+    return response.json()
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
-
-    payload = json.dumps({
-    "key": STABLE_DIFFUSION_PUBLIC_API,
-    "prompt": prompt,"negative_prompt": negative_prompt,
-    "width": width,"height": height,
-    "model_id": "midjourney","samples": "1",
-    "num_inference_steps": steps,"seed": None,
-    "guidance_scale": 7.5,"safety_checker": "yes",
-    "multi_lingual": "yes","panorama": "no",
-    "self_attention": "no","upscale": "no",
-    "embeddings_model": None,"webhook": None,"track_id": None
-    })
+    
+    if not negative_prompt:
+        print("no negative prompt")
+        negative_prompt=None
+    payload =  json.dumps({
+                "key":key ,
+                "model_id": "realistic-vision-v13",
+                "prompt": prompt,"negative_prompt":negative_prompt,"width": width,"height": height,
+                "samples": "1","num_inference_steps": "41","safety_checker": "yes",
+                "enhance_prompt": "yes","seed": None,
+                "guidance_scale":7.5,"multi_lingual": "no",
+                "panorama": "no","self_attention": "yes",
+                "upscale": "no","embeddings_model": None,
+                "lora_model": None,"tomesd": "yes",
+                "use_karras_sigmas": "yes","vae": None,"lora_strength": None,
+                "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None
+                })
     headers = {'Content-Type': 'application/json'}
-    response = requests.request("POST", url, headers=headers, data=payload).json()['output'][0]
-    return  convert_image_url_to_file(image_url=response,no_pil_object=True)
+
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    print(response.json())
+    if response.status_code==200:
+        res=response.json()
+        if len(res['output'])==0 and res['status']=='processing':
+            while True:
+                response=sd_status_check(res['id'])
+                if response['status']=='processing':
+                    print("processing sd")
+                elif response['status']=='success':
+                    break
+        return  convert_image_url_to_file(image_url=response['output'][0],no_pil_object=True)
+    else:
+        raise serializers.ValidationError({'msg':response.text})
 
 
 
 #stable-diffusion-xl-beta-v2-2-2
+
+
+
+# import requests
+# import json
+
+# url = "https://stablediffusionapi.com/api/v4/dreambooth"
+
+ 
+
+# headers = {
+#   'Content-Type': 'application/json'
+# }
+
+# response = requests.request("POST", url, headers=headers, data=payload)
+
+# print(response.text)

@@ -372,7 +372,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     # canvas_json=serializers.JSONField(required=False)
     preview_json=serializers.JSONField(required=False)
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
-
+    canvas_json=serializers.JSONField(required=True)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im')
@@ -405,6 +405,8 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.canvas_json =tar_json
             instance.save()
             return instance
+        else:
+            raise serializers.ValidationError("no canvas_json is loaded")
     
     def update(self, instance, validated_data):
         image_url=validated_data.get('image_url',None)
@@ -445,7 +447,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
                                        style_preset=styles[int(style)],sampler=samplers[int(sampler)])
             model_name='stable-diffusion-xl-beta-v2-2-2'
         if used_api == 'stable_diffusion_api':
-            image = stable_diffusion_public(prompt,weight=1,steps=20,height=height,width=width,style_preset="",sampler="",negative_prompt=negative_prompt)
+            image = stable_diffusion_public(prompt,weight=1,steps=31,height=height,width=width,style_preset="",sampler="",negative_prompt=negative_prompt)
             model_name='mid-j'
         instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name=model_name,
                                                    style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
