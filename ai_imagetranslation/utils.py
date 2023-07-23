@@ -387,10 +387,10 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.json())
     if response.status_code==200:
-        res=response.json()
-        if len(res['output'])==0 and res['status']=='processing':
+        response=response.json()
+        if len(response['output'])==0 and response['status']=='processing':
             while True:
-                response=sd_status_check(res['id'])
+                response=sd_status_check(response['id'])
                 if response['status']=='processing':
                     print("processing sd")
                 elif response['status']=='success':
