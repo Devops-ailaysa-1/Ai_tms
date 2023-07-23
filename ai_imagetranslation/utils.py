@@ -359,7 +359,6 @@ def sd_status_check(id):
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
-    print(response.json())
     return response.json()
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
@@ -393,7 +392,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
                 if "id" in response.keys():
                     response=sd_status_check(response['id'])
                 else:
-                    raise serializers.ValidationError({'msg':response.text})
+                    raise serializers.ValidationError({'msg':response})
                 if response['status']=='processing':
                     print("processing sd")
                 elif response['status']=='success':
