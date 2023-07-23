@@ -369,7 +369,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         print("no negative prompt")
         negative_prompt=None
     payload =  json.dumps({
-                "key":key ,
+                "key":STABLE_DIFFUSION_PUBLIC_API ,
                 "model_id": "realistic-vision-v13",
                 "prompt": prompt,"negative_prompt":negative_prompt,"width": width,"height": height,
                 "samples": "1","num_inference_steps": "41","safety_checker": "yes",
