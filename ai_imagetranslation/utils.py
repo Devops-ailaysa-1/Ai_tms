@@ -363,7 +363,6 @@ def sd_status_check(id):
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
-    
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
@@ -381,18 +380,14 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
                 "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None
                 })
     headers = {'Content-Type': 'application/json'}
-
-
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.json())
     if response.status_code==200:
         response=response.json()
+        reference_id=response['id']
         if len(response['output'])==0 and response['status']=='processing':
             while True:
-                if "id" in response.keys():
-                    response=sd_status_check(response['id'])
-                else:
-                    raise serializers.ValidationError({'msg':response})
+                response=sd_status_check(reference_id)
                 if response['status']=='processing':
                     print("processing sd")
                 elif response['status']=='success':
