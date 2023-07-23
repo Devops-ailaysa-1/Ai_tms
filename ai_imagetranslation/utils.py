@@ -390,7 +390,10 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         response=response.json()
         if len(response['output'])==0 and response['status']=='processing':
             while True:
-                response=sd_status_check(response['id'])
+                if "id" in response.keys():
+                    response=sd_status_check(response['id'])
+                else:
+                    raise serializers.ValidationError({'msg':response.text})
                 if response['status']=='processing':
                     print("processing sd")
                 elif response['status']=='success':
