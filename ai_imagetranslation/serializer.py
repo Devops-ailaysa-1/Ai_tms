@@ -24,9 +24,10 @@ def create_thumbnail_img_load(base_dimension,image):
 
 
 class ImageloadSerializer(serializers.ModelSerializer):
+    image_asset_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required= False)
     class Meta:
         model = Imageload
-        fields = ('id','image','file_name','types','height','width','thumbnail')
+        fields = ('id','image','file_name','types','height','width','thumbnail','image_asset_id')
     
     # def to_representation(self, instance):
     #     data=super().to_representation(instance)
@@ -37,9 +38,13 @@ class ImageloadSerializer(serializers.ModelSerializer):
     #     return super().to_representation(instance)
 
     def create(self, validated_data):
+        image_asset_id=validated_data.pop('image_asset_id',None)
         user =  self.context['request'].user
-        data = {**validated_data ,'user':user}
-        instance =  Imageload.objects.create(**data)
+        if image_asset_id:
+            instance=Imageload.objects.create(image=image_asset_id.image,user=user)
+        else:
+            data = {**validated_data ,'user':user}
+            instance =  Imageload.objects.create(**data)
         file_name = instance.image.name.split('/')[-1]
         types = file_name.split(".")[-1]
         instance.file_name = file_name
@@ -110,7 +115,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     magic_erase=serializers.BooleanField(required=False,default=False)
     image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),
                                         required=False,write_only=True)
-    # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
+    image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
+    
+
     
     class Meta:
         model=ImageTranslate
@@ -118,7 +125,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load')
+            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id')
        
         
     def to_representation(self, instance):
@@ -139,8 +146,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        # thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
-        return width,height#,thumb_nail
+        #thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
+        return width,height #thumb_nail
     
     def create(self, validated_data):
         user=self.context['request'].user
@@ -151,7 +158,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
-             
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             if not instance.project_name:
@@ -203,6 +209,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
+        image_id=validated_data.get('image_id',None)
         image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
 
         if magic_erase and mask_json:
@@ -223,6 +230,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height=canvas_asset_image_id.height
             instance.width=canvas_asset_image_id.width
             instance.save()
+        
+        if image_id:
+            instance.image
+
 
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
