@@ -271,12 +271,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
             ####to create instance for target language
 
-            image_inpaint_create=ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),
-                                                target_canvas_json=basic_json_copy) 
-            thumb_image=thumbnail_create(image_inpaint_create.target_canvas_json,formats='png')
-            thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
-            image_inpaint_create.thumbnail=thumb_image
-            image_inpaint_create.save()
+                image_inpaint_create=ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),
+                                                    target_canvas_json=basic_json_copy) 
+                thumb_image=thumbnail_create(image_inpaint_create.target_canvas_json,formats='png')
+                thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
+                image_inpaint_create.thumbnail=thumb_image
+                image_inpaint_create.save()
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
