@@ -109,7 +109,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     canvas_asset_image_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required=False,write_only=True)
     magic_erase=serializers.BooleanField(required=False,default=False)
-    image_translate_delete=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),
+    image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),
                                         required=False,write_only=True)
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
     
@@ -119,7 +119,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete')
+            'created_at','updated_at','magic_erase','image_translate_delete_target')
        
         
     def to_representation(self, instance):
@@ -205,7 +205,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
-        image_translate_delete=validated_data.get('image_translate_delete',None)
+        image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
 
         if magic_erase and mask_json:
             instance.mask_json=mask_json
@@ -216,8 +216,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.inpaint_image=inpaint_image_file 
             instance.save()
 
-        if image_translate_delete:
-            for i in image_translate_delete:
+        if image_translate_delete_target:
+            for i in image_translate_delete_target:
                 i.delete()
 
         if canvas_asset_image_id:
