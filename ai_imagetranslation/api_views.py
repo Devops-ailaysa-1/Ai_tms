@@ -120,12 +120,12 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
-            data = [{'image':im.image} for im in im_details]
+            data = [{'image':im.image,'image_load':im.id} for im in im_details]
             serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
 
         elif canvas_asset_image_id:
              im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
-             data={'image':im_details.image}
+             data={'image':im_details.image,'image_load':im_details.id}
              serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
         else:
             return Response({'msg':"upload any image"})

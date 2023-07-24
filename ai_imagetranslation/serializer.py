@@ -100,7 +100,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     bounding_box_target_update=serializers.JSONField(required=False)
     bounding_box_source_update=serializers.JSONField(required=False)
     target_update_id=serializers.IntegerField(required=False)
-    # target_update_id=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all(),required=False,write_only=True)
     source_canvas_json=serializers.JSONField(required=False)
     target_canvas_json=serializers.JSONField(required=False)
     thumbnail=serializers.FileField(required=False)
@@ -119,7 +118,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete_target')
+            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load')
        
         
     def to_representation(self, instance):
@@ -152,7 +151,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
-            print(instance.height,instance.width)
+             
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             if not instance.project_name:
@@ -162,7 +161,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 else:
                     instance.project_name='Untitled project'
             instance.save()
-            print("saved instance")
             return instance
     
     def target_check(self,instance,target_list,src_lang):
