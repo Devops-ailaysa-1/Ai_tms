@@ -119,7 +119,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase')
+            'created_at','updated_at','magic_erase','image_translate_delete')
        
         
     def to_representation(self, instance):
@@ -270,10 +270,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
             ####to create instance for target language
-            thumb_image=thumbnail_create(mask_json,formats='png')
+
+            image_inpaint_create=ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),
+                                                target_canvas_json=basic_json_copy) 
+            thumb_image=thumbnail_create(image_inpaint_create.basic_json_copy,formats='png')
             thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
-            ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),
-                                                target_canvas_json=basic_json_copy,thumbnail=thumb_image) 
+            image_inpaint_create.thumbnail=thumb_image
+            image_inpaint_create.save()
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
