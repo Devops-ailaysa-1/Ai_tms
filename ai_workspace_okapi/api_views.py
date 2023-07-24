@@ -3108,13 +3108,13 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
            
-            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).first()
+            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).last()
             print("Choice in self-learn------->",choice)
             if choice:
                 self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
             else:
                 self_learning=None
-
+            print("self Learn------->",self_learning)
             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
