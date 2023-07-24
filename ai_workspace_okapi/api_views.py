@@ -1219,7 +1219,7 @@ class MT_RawAndTM_View(views.APIView):
                 choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
                     print(choice, "*****************")
-                    replace_word=choice.last().edited_word
+                    replace_word=choice.first().edited_word
                     print("replace_word---------->",replace_word)
                     #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
@@ -2402,16 +2402,9 @@ def spellcheck(request):
             nltk_tokens = tknzr.tokenize(tar)
             words = [word for word in nltk_tokens if word not in punctuation]
             print('wrd-------------->',words)
-            # batch_size = 300  
-            # num_batches = len(words) // batch_size + 1
-            # for i in range(num_batches):
-            #     start = i * batch_size
-            #     end = (i + 1) * batch_size
-            #     batch = words[start:end]
-            #     print("batch---------------->",batch)
-            for word in words:
+            for word in list(set(words)):
                 suggestions=[]
-                if hobj.spell(word)==False:
+                if hobj.spell(word)==False and not word.isdigit():# and len(word)>2
                     suggestions.extend(hobj.suggest(word))
                     out=[{"word":word,"Suggested Words":suggestions}]
                     res.extend(out)
@@ -2425,12 +2418,13 @@ def spellcheck(request):
                 misspelled=spell.unknown(words)#set
                 for word in misspelled:
                     suggestion=list(spell.candidates(word))
-                    for k in words:
-                        if k==word.capitalize():
-                            out=[{"word":k,"Suggested Words":suggestion}]
-                            break
-                        else:
-                            out=[{"word":word,"Suggested Words":suggestion}]
+                    for k in list(set(words)):
+                        if len(word)>2 and not word.isdigit():
+                            if k==word.capitalize():
+                                out=[{"word":k,"Suggested Words":suggestion}]
+                                break
+                            else:
+                                out=[{"word":word,"Suggested Words":suggestion}]
                     res.extend(out)
                 return JsonResponse({"result":res},safe=False)
     except:
@@ -3094,6 +3088,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if split_check(segment_id):
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
                 seg = get_object_or_404(Segment,id=segment_id) 
+                lang = get_object_or_404(Languages,id=seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(segment=seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target
@@ -3104,6 +3099,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 split_seg=get_object_or_404(SplitSegment,id=segment_id)
+                lang = get_object_or_404(Languages,id=split_seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target 
@@ -3111,13 +3107,14 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                     raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
-
-            choice=ChoiceListSelected.objects.filter(project__id=project.id).first()
+           
+            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).last()
+            print("Choice in self-learn------->",choice)
             if choice:
                 self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
             else:
                 self_learning=None
-
+            print("self Learn------->",self_learning)
             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
@@ -3149,10 +3146,10 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             doc=get_object_or_404(Document,id=doc_id)
             lang=get_object_or_404(Languages,id=doc.target_language_id)
             user=self.request.user
-            choice_list=ChoiceListSelected.objects.filter(project_id=doc.project).first()
-            print(choice_list,'------------')
-            if choice_list:
-                choice_list=get_object_or_404(ChoiceLists,id=choice_list.choice_list.id)
+            choice_list_sld=ChoiceListSelected.objects.filter(project_id=doc.project).filter(choice_list__language=lang)
+            print(choice_list_sld,'------------')
+            if choice_list_sld:
+                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.last().choice_list.id)
             else:
                 choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
                 if created == False:
@@ -3348,14 +3345,14 @@ class Choicelistselectedview(viewsets.ModelViewSet):
 
 dictionary_paths = {
     "en": "/ai_home/dictionaries/en.txt",
-    #"sq": "/ai_home/dictionaries/sq.txt",
-    "es": "/ai_home/dictionaries/es.txt", 
-    "ar": "/ai_home/dictionaries/ar.txt",
-    "fr": "/ai_home/dictionaries/fr.txt",
-    "lv": "/ai_home/dictionaries/lv.txt",
-    "nl": "/ai_home/dictionaries/nl.txt",
-    "pt": "/ai_home/dictionaries/pt.txt",
-    "ru": "/ai_home/dictionaries/ru.txt",
+    # #"sq": "/ai_home/dictionaries/sq.txt",
+    # "es": "/ai_home/dictionaries/es.txt", 
+    # "ar": "/ai_home/dictionaries/ar.txt",
+    # "fr": "/ai_home/dictionaries/fr.txt",
+    # "lv": "/ai_home/dictionaries/lv.txt",
+    # "nl": "/ai_home/dictionaries/nl.txt",
+    # "pt": "/ai_home/dictionaries/pt.txt",
+    # "ru": "/ai_home/dictionaries/ru.txt",
 }
 
 sym_spell = SymSpell()

@@ -1563,7 +1563,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         data = request.POST.dict()
         ################################Need to change########################################
         user = request.user.team.owner  if request.user.team  else request.user
-        if Receiver.email == 'ailaysateam@gmail.com':
+        if Receiver.email == 'ams@ailaysa.com':
             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         ##########################################################################################
         # task = request.POST.getlist('task')

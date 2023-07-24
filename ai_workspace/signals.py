@@ -53,3 +53,43 @@ def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
             raise IntegrityError("Project of a file and job should same!!!")
 
     # if instance.job.project
+
+# def extract_project_instance(instance):
+#     if type(instance) is Project:
+#         return instance
+#     elif type(instance) is Task:
+#         return instance.job.project
+#     elif type(instance) is Document:
+#         return instance.job.project
+#     elif type(instance) is Glossary:
+#         return instance.project
+#     elif type(instance) is TermsModel:
+#         return instance.glossary.project
+#     elif type(instance) is Segment:
+#         return instance.text_unit.document.job.project   
+#     elif type(instance) is ExpressProjectDetail:
+#         return instance.task.job.project   
+#     elif type(instance) is TaskTranscriptDetails:
+#         return instance.task.job.project   
+#     return None
+
+# # Signal receiver for cache invalidation
+
+# @receiver(post_save, sender=Glossary)
+# @receiver(post_save, sender=TermsModel)
+# @receiver(post_save, sender=Project)
+# @receiver(post_save, sender=Document)
+# @receiver(post_save, sender=Task)
+# @receiver(post_save, sender= Segment)
+# @receiver(post_save, sender= ExpressProjectDetail)
+# @receiver(post_save, sender= TaskTranscriptDetails)
+# # @receiver(post_delete, sender=Glossary)
+# # @receiver(post_delete, sender=TermsModel)
+
+# def invalidate_project_cache(sender, instance, **kwargs):
+#     project = extract_project_instance(instance)
+#     if project:
+#         print("Inside if")
+#         cache_key = f'pr_progress_property_{project.pk}'
+#         cache.delete(cache_key)
+#         print("Deleted")

@@ -824,6 +824,8 @@ class GetVendorListSerializer(serializers.ModelSerializer):
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
         query = queryset.filter(currency=obj.currency_based_on_country)
+        print("Obj_Currency--------->",obj.currency_based_on_country)
+        print("Query--------->",query)
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data
