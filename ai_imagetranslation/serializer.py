@@ -109,7 +109,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     canvas_asset_image_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required=False,write_only=True)
     magic_erase=serializers.BooleanField(required=False,default=False)
-
+    image_translate_delete=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),
+                                        required=False,write_only=True)
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
     
     class Meta:
@@ -117,7 +118,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
-            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id','created_at','updated_at','magic_erase')
+            'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
+            'created_at','updated_at','magic_erase')
        
         
     def to_representation(self, instance):
@@ -188,7 +190,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         src_lang = validated_data.get('source_language' ,None)
         inpaint_creation_target_lang = validated_data.get('inpaint_creation_target_lang' ,None)
-        image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
+        image_to_translate_id = validated_data.get('image_to_translate_id',None)
         canvas_asset_image_id=validated_data.get('canvas_asset_image_id' ,None)
         mask_json=validated_data.get('mask_json')
         magic_erase=validated_data.get('magic_erase')
@@ -199,6 +201,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
+        image_translate_delete=validated_data.get('image_translate_delete',None)
 
         if magic_erase and mask_json:
             instance.mask_json=mask_json
@@ -208,6 +211,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
             instance.inpaint_image=inpaint_image_file 
             instance.save()
+
+        if image_translate_delete:
+            for i in image_translate_delete:
+                i.delete()
 
         if canvas_asset_image_id:
             instance.image=canvas_asset_image_id.image
@@ -263,6 +270,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
             ####to create instance for target language
+            thumb_image=thumbnail_create(mask_json,formats='png')
+            thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
+            ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),
+                                                target_canvas_json=basic_json_copy,thumbnail=thumb_image) 
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
             return instance
