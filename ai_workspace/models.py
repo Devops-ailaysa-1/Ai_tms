@@ -53,7 +53,7 @@ from ai_workspace_okapi.models import SplitSegment
 from django.db.models.functions import Cast
 from django.db.models import CharField
 from django.core.cache import cache
-
+import functools
 
 
 def set_pentm_dir(instance):
@@ -334,10 +334,19 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-
+    # def convert_to_tuple(self, value):
+    #     if isinstance(value, list):
+    #         return tuple(self.convert_to_tuple(item) for item in value)
+    #     return value
 
     # @property
     def pr_progress(self,tasks):
+        # cache_key = f'pr_progress_property_{self.id}'
+        # cached_value = cache.get(cache_key)
+        # if cached_value:
+        #     return cached_value
+        # else:
+        #     cache.set(cache_key, result, timeout=60)
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
@@ -414,6 +423,7 @@ class Project(models.Model):
                 return "Completed"
             else:
                 return "In Progress"
+               
 
     #@cached_property
     # @property
