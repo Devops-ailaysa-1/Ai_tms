@@ -3146,7 +3146,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             choice_list_sld=ChoiceListSelected.objects.filter(project_id=doc.project).filter(choice_list__language=lang)
             print(choice_list_sld,'------------')
             if choice_list_sld:
-                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.choice_list.id)
+                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.last().choice_list.id)
             else:
                 choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
                 if created == False:
