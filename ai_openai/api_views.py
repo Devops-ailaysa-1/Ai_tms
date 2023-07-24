@@ -983,7 +983,7 @@ def generate_article(request):
                                     print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable:
                                         print("Str----------->",str_cont)
-                                        blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id.cc=consumable)
+                                        blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id,cc=consumable)
                                         #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
