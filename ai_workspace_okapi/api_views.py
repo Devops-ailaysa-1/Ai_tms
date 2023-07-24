@@ -3088,6 +3088,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if split_check(segment_id):
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
                 seg = get_object_or_404(Segment,id=segment_id) 
+                lang = get_object_or_404(Languages,id=seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(segment=seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target
@@ -3098,6 +3099,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 split_seg=get_object_or_404(SplitSegment,id=segment_id)
+                lang = get_object_or_404(Languages,id=split_seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target 
@@ -3105,8 +3107,9 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                     raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
-
-            choice=ChoiceListSelected.objects.filter(project__id=project.id).first()
+           
+            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).first()
+            print("Choice in self-learn------->",choice)
             if choice:
                 self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
             else:
