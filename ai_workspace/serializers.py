@@ -634,7 +634,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
-
+	
 			res = instance.pr_progress(tasks)
 			return res
 		else:
