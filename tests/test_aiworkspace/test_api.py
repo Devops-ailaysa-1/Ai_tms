@@ -162,162 +162,223 @@ def api_client():
 #     # print ("log_out")
 #     # return api_client
 
-# choice_list_module TestCase
-@pytest.mark.django_db(transaction=True)
-def test_choicelist(api_client):
-    # # Perform a POST request with the authenticated user
-    # api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    end_point=  f"{BASE_URL}workspace_okapi/choicelist/"
 
-    # post
-    data = {'language': '77', 'name': 'azar',}
-    response = api_client.post(end_point, data, format='multipart')
-    print(response.json())
-    assert response.status_code == 200
-    assert response.data['language'] == 77
-    assert response.data['name'] == 'azar'
+# # choice_list_module TestCase
+# @pytest.mark.django_db(transaction=True)
+# def test_choicelist(api_client):
+#     # # Perform a POST request with the authenticated user
+#     # api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+#     end_point=  f"{BASE_URL}workspace_okapi/choicelist/"
 
-    data = {'language': '77', 'name': 'azar_05',}
-    response = api_client.post(end_point, data, format='multipart')
-    print(response.json())
-    assert response.status_code == 200
+#     # post
+#     data = {'language': '77', 'name': 'azar',}
+#     response = api_client.post(end_point, data, format='multipart')
+#     print(response.json())
+#     assert response.status_code == 200
+#     assert response.data['language'] == 77
+#     assert response.data['name'] == 'azar'
 
-    #get_list
-    get_response=api_client.get(end_point,format="json")
-    print(get_response.json())
-    assert get_response.status_code==200
-    assert len(get_response.data["results"])==2
-    pk=get_response.data["results"][0]["id"]
-    print(pk)
+#     data = {'language': '77', 'name': 'azar_05',}
+#     response = api_client.post(end_point, data, format='multipart')
+#     print(response.json())
+#     assert response.status_code == 200
+
+#     #get_list
+#     get_response=api_client.get(end_point,format="json")
+#     print(get_response.json())
+#     assert get_response.status_code==200
+#     assert len(get_response.data["results"])==2
+#     pk=get_response.data["results"][0]["id"]
+#     print(pk)
     
-    # put method
-    data={"name":"azar_01"}
-    put_response=api_client.put(f"{end_point}{pk}/",data)
-    print(put_response.json(),"********************")
-    assert put_response.status_code == 200
+#     # put method
+#     data={"name":"azar_01"}
+#     put_response=api_client.put(f"{end_point}{pk}/",data)
+#     print(put_response.json(),"********************")
+#     assert put_response.status_code == 200
 
-    # retrive method
-    get_response=api_client.get(f"{end_point}{pk}/")
-    print(get_response.json())
-    assert get_response.status_code==200
-    assert get_response.data['name'] == 'azar_01'
+#     # retrive method
+#     get_response=api_client.get(f"{end_point}{pk}/")
+#     print(get_response.json())
+#     assert get_response.status_code==200
+#     assert get_response.data['name'] == 'azar_01'
 
-    #delete method
-    del_response=api_client.delete(f"{end_point}{pk}/")
-    del_response.status_code==204
-    get_response=api_client.get(end_point,format="json")
-    print(get_response)
-    assert pk not in [i['id'] for i in get_response.data["results"]]
+#     #delete method
+#     del_response=api_client.delete(f"{end_point}{pk}/")
+#     del_response.status_code==204
+#     get_response=api_client.get(end_point,format="json")
+#     print(get_response)
+#     assert pk not in [i['id'] for i in get_response.data["results"]]
 
 
 # self_learning_module TestCase
 
-@pytest.fixture
+# @pytest.fixture
+# # @pytest.mark.django_db
+# def choice_list_id(api_client):
+#     url=f"{BASE_URL}workspace_okapi/choicelist/"
+#     data = {'language': '77', 'name': 'azar',}
+#     response = api_client.post(url, data, format='multipart')
+#     print(response.json())
+#     get_response=api_client.get(url,format="json")
+#     print(get_response.json())
+#     pk=get_response.data["results"][0]["id"]
+#     print(pk)
+#     yield response.data["id"]
+#     print('destroy')
+#     # return response.data["id"]
+
+# data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
+# @pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
 # @pytest.mark.django_db
-def choice_list_id(api_client):
-    url=f"{BASE_URL}workspace_okapi/choicelist/"
-    data = {'language': '77', 'name': 'azar',}
-    response = api_client.post(url, data, format='multipart')
-    print(response.json())
-    get_response=api_client.get(url,format="json")
-    print(get_response.json())
-    pk=get_response.data["results"][0]["id"]
-    print(pk)
-    yield response.data["id"]
-    print('destroy')
-    # return response.data["id"]
+# def test_selflearn(api_client,choice_list_id,data,status):
+#     end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
+#     # data={"source_word":"apple","edited_word":"app","choice_list_id":choice_list_id}
+#     #  create selflearn asset
+#     data["choice_list_id"]=choice_list_id
+#     res=api_client.post(end_point,data,format='multipart')
+#     print(res.data["choice_list"])
+#     assert res.data["choice_list"] == choice_list_id
+#     assert res.data["source_word"]==data["source_word"]
+#     assert res.status_code==status
 
-data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
-@pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
+#     # get list
+#     get_response=api_client.get(end_point)
+#     print(get_response.json())
+#     assert len(get_response.data["results"])>0
+#     assert get_response.status_code==200
+#     pk=get_response.data["results"][0]["id"]
+
+#     # update
+#     data={"edited_word":"application"}
+#     upd_response=api_client.put(f"{end_point}{pk}/",data)
+#     assert upd_response.status_code==200
+#     assert upd_response.data['id']==pk and upd_response.data['edited_word']==data["edited_word"]
+
+#     # delete
+#     del_response=api_client.delete(f"{end_point}{pk}/")
+#     del_response.status_code==204
+#     get_response=api_client.get(end_point,format="json")
+#     print(get_response)
+#     assert pk not in [i['id'] for i in get_response.data["results"]]
+
+
+
+from .conftest import selflearningasset,choicelist
+
 @pytest.mark.django_db
-def test_selflearn(api_client,choice_list_id,data,status):
+class TestChoicelist:
+    end_point =  f"{BASE_URL}workspace_okapi/choicelist/"
+
+    def test_get(self,api_client,choicelist):
+        print(choicelist)
+        end_point=  f"{BASE_URL}workspace_okapi/choicelist/"
+        get_response=api_client.get(end_point,format="json")
+        print("-----------",get_response.json())
+        # assert get_choicelist[0]["fields"]==get_response.json()
+        assert get_response.status_code==200
+       
+    data=[{'language': '77', 'name': 'azar',},{'language': '77', 'name': 'azar_01',}]
+    @pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)]) 
+    def test_post(self,api_client,choicelist,data,status):
+        # data = {'language': '77', 'name': 'azar',}
+        print(type(data["language"]))
+        response = api_client.post(TestChoicelist.end_point, data, format='multipart')
+        print(response.json())
+        assert response.status_code == 200
+        # assert response.data['language'] == data["language"]
+        assert response.data['name'] == data["name"]
+
+        data = {'language': '77', 'name': 'azar_05',}
+        response = api_client.post(TestChoicelist.end_point, data, format='multipart')
+        print(response.json())
+        assert response.status_code == 200
+
+    def test_put(self,api_client,choicelist):
+        pk=choicelist[0]["pk"]
+        print(pk)
+        data={"name":"azar_01"}
+        put_response=api_client.put(f"{TestChoicelist.end_point}{pk}/",data)
+        print(put_response.json(),"********************")
+        assert put_response.status_code == 200
+
+    def test_retrive(self,api_client,choicelist):
+        pk=choicelist[0]["pk"]
+        get_response=api_client.get(f"{TestChoicelist.end_point}{pk}/")
+        print(get_response.json())
+        assert get_response.status_code==200
+        assert get_response.json()==choicelist[0]["fields"]
+
+    def test_delete(self,api_client,choicelist):
+        pk=choicelist[0]["pk"]
+        del_response=api_client.delete(f"{TestChoicelist.end_point}{pk}/")
+        del_response.status_code==204
+        get_response=api_client.get(TestChoicelist.end_point,format="json")
+        print(get_response)
+        assert pk not in [i['id'] for i in get_response.data["results"]]
+
+@pytest.mark.django_db
+class Testselflearn:
     end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
-    # data={"source_word":"apple","edited_word":"app","choice_list_id":choice_list_id}
-    #  create selflearn asset
-    data["choice_list_id"]=choice_list_id
-    res=api_client.post(end_point,data,format='multipart')
-    print(res.data["choice_list"])
-    assert res.data["choice_list"] == choice_list_id
-    assert res.data["source_word"]==data["source_word"]
-    assert res.status_code==status
 
-    # get list
-    get_response=api_client.get(end_point)
-    print(get_response.json())
-    assert len(get_response.data["results"])>0
-    assert get_response.status_code==200
-    pk=get_response.data["results"][0]["id"]
+    def test_get(self,api_client,selflearningasset):
+        print(selflearningasset)
+        get_response=api_client.get(Testselflearn.end_point,format="json")
+        print(get_response.json())
+        assert len(get_response.data["results"])==len(selflearningasset)
+        assert get_response.status_code==200
 
-    # update
-    data={"edited_word":"application"}
-    upd_response=api_client.put(f"{end_point}{pk}/",data)
-    assert upd_response.status_code==200
-    assert upd_response.data['id']==pk and upd_response.data['edited_word']==data["edited_word"]
+    data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
+    @pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
+    def test_post(self,api_client,selflearningasset,data,status):
+        # data={"source_word":"apple","edited_word":"app","choice_list_id":1}
+        data["choice_list_id"]=1
+        res = api_client.post(Testselflearn.end_point, data, format='multipart')
+        print(res.data["choice_list"])
+        assert res.data["choice_list"] == 1
+        assert res.data["source_word"]==data["source_word"]
+        assert res.status_code==status
 
-    # delete
-    del_response=api_client.delete(f"{end_point}{pk}/")
-    del_response.status_code==204
-    get_response=api_client.get(end_point,format="json")
-    print(get_response)
-    assert pk not in [i['id'] for i in get_response.data["results"]]
+    def test_put(self,api_client,selflearningasset):
+        pk=selflearningasset[0]["pk"]
+        print(pk)
+        data={"edited_word":"small"}
+        res=api_client.put(f"{Testselflearn.end_point}{pk}/",data)
+        print(res.json(),"********************")
+        assert res.status_code == 200
+        assert res.data["edited_word"]=="small" and res.data["id"]==pk
 
+    def test_retrive(self,api_client,selflearningasset):
+        pk=selflearningasset[0]["pk"]
+        get_response=api_client.get(f"{Testselflearn.end_point}{pk}/")
+        print(get_response.json())
+        assert get_response.status_code==200
+        assert get_response.json()==selflearningasset[0]["fields"]
 
-import json
-@pytest.fixture
-def test_data():
-    with open('fixtures/SelflearningAsset.json') as f:
-        data = json.load(f)
-    return data
+    def test_delete(self,api_client,selflearningasset):
+        pk=selflearningasset[0]["pk"]
+        del_response=api_client.delete(f"{Testselflearn.end_point}{pk}/")
+        del_response.status_code==204
+        get_response=api_client.get(Testselflearn.end_point,format="json")
+        print(get_response)
+        assert pk not in [i['id'] for i in get_response.data["results"]]
 
-@pytest.fixture
-def get_choicelist():
-    with open('fixtures/ChoiceLists.json') as f:
-        data = json.load(f)
-    return data
-
-@pytest.mark.django_db
-def test_choice(api_client,get_choicelist):
-    print(get_choicelist)
-    end_point=  f"{BASE_URL}workspace_okapi/choicelist/1/"
-    get_response=api_client.get(end_point,format="json")
-    print("-----------",get_response.json())
-    # assert get_choicelist[0]["fields"]==get_response.json()
-    assert get_response.status_code==200
-
-@pytest.mark.django_db
-def test_putchoice(api_client,get_choicelist):
-    print(get_choicelist)
-    data={"name":"azar"}
-    end_point=  f"{BASE_URL}workspace_okapi/choicelist/1/"   
-    get_response=api_client.put(end_point,data)
-    print("-----------",get_response.json())
-    assert get_choicelist[0]["fields"]["name"]!=get_response.data["name"]
-    assert get_response.status_code==200
-
-@pytest.mark.django_db
-def test_get_items(api_client, test_data):
-    items = test_data
-    end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
-    response = api_client.get(end_point)
-    assert response.status_code == 200
-
-data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
-@pytest.mark.django_db
-@pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
-def test_post_item(api_client, test_data,data,status,choice_list_id):
-    end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
-    data["choice_list_id"]=choice_list_id
-    response = api_client.post(end_point, json=data)
-    assert response.status_code == status
+# data=[{"source_word":"apple","edited_word":"app"},{"source_word":"apple","edited_word":"apply"}]
+# @pytest.mark.django_db
+# @pytest.mark.parametrize("data,status",[(data[0], 200), (data[1], 200)])
+# def test_post_item(api_client, test_data,data,status,choice_list_id):
+#     end_point=  f"{BASE_URL}workspace_okapi/selflearn/"
+#     data["choice_list_id"]=choice_list_id
+#     response = api_client.post(end_point, json=data)
+#     assert response.status_code == status
 
 
+# # choicelistselected
 
-# choicelistselected
-
-@pytest.mark.django_db
-def test_choicelistselected(api_client):
-    endpoint=f"{BASE_URL}workspace_okapi/choicelistselected/"
-    query_params={"project":5478}
-    response=api_client.get(endpoint+"?project=5478")
-    assert response.status_code==200
-    print(response.data)
+# @pytest.mark.django_db
+# def test_choicelistselected(api_client):
+#     endpoint=f"{BASE_URL}workspace_okapi/choicelistselected/"
+#     query_params={"project":5478}
+#     response=api_client.get(endpoint+"?project=5478")
+#     assert response.status_code==200
+#     print(response.data)
