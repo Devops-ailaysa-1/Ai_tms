@@ -127,13 +127,16 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
              im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
              data={'image':im_details.image}
              serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+        else:
+            return Response({'msg':"upload any image"})
              
         if serializer.is_valid():
             serializer.save()
-            response=JsonResponse(serializer.data)
-            response.status_code = 200
-            response["Custom-Header"] = "Value"
-            return response
+            # response=
+            # response.status_code = 200
+            # response["Custom-Header"] = "Value"
+            # print(response)
+            return Response(serializer.data)
         else:
             return Response(serializer.errors)
         
