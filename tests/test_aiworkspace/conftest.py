@@ -18,3 +18,15 @@ def choicelist():
     with open('fixtures/ChoiceLists.json') as f:
         data = json.load(f)
     return data
+
+@pytest.fixture
+def choicelistselected():
+    with open ("fixtures/ChoiceListSelected.json") as f:
+        data=json.load(f)
+    return data
+
+@pytest.fixture
+def document():
+    with open ("fixtures/Document.json") as f:
+        data=json.load(f)
+    return data
