@@ -186,6 +186,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     i['text']=translate_bbox
             tar_bbox.target_canvas_json=tar_json_copy
             tar_bbox.save()
+            thumb_image=thumbnail_create(tar_bbox.target_canvas_json,formats='png')
+            thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
+            tar_bbox.thumbnail=thumb_image
+            tar_bbox.save()
 
     def update(self, instance, validated_data):
         src_lang = validated_data.get('source_language' ,None)
