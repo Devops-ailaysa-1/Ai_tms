@@ -377,19 +377,20 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
                 "upscale": "no","embeddings_model": None,
                 "lora_model": None,"tomesd": "yes",
                 "use_karras_sigmas": "yes","vae": None,"lora_strength": None,
-                "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None
-                })
+                "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.json())
     if response.status_code==200:
         response=response.json()
         reference_id=response['id']
+        print("reference_id",reference_id)
         if len(response['output'])==0 and response['status']=='processing':
             while True:
                 response=sd_status_check(reference_id)
                 if response['status']=='processing':
                     print("processing sd")
+                    print(response)
                 elif response['status']=='success':
                     break
         return  convert_image_url_to_file(image_url=response['output'][0],no_pil_object=True)
