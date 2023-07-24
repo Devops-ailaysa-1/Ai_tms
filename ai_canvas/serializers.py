@@ -116,6 +116,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     new_project=serializers.BooleanField(required=False,write_only=True)
     delete_target_design_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all()),
                                         required=False,write_only=True)
+    change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.CharField(required=False)
@@ -127,7 +128,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox','new_project','delete_target_design_lang')
+                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
+                    'new_project','delete_target_design_lang','change_source_lang')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -313,6 +315,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         new_project=validated_data.get('new_project',None)
         temp_global_design = validated_data.get('temp_global_design',None)
         delete_target_design_lang=validated_data.get('delete_target_design_lang',None)
+        change_source_lang=validated_data.get('change_source_lang',None)
+
+        if change_source_lang:
+            CanvasTranslatedJson.objects.filter(canvas_design=instance).update(source_language=change_source_lang.locale.first())
 
         if delete_target_design_lang:
             for i in delete_target_design_lang:
@@ -662,7 +668,6 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
             MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                      my_template_json=my_template_json )
-                
         return my_temp_design
 
 class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
