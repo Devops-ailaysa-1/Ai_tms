@@ -1219,7 +1219,7 @@ class MT_RawAndTM_View(views.APIView):
                 choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
                 if choice:
                     print(choice, "*****************")
-                    replace_word=choice.last().edited_word
+                    replace_word=choice.first().edited_word
                     print("replace_word---------->",replace_word)
                     #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
