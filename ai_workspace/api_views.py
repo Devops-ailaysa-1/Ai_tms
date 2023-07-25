@@ -891,14 +891,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             # elif self.request.user in project.team.get_project_manager:
             #     return project.get_tasks
             else:
-                return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-                        in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+                return [task for job in project.project_jobs_set.all() for task \
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
         else:
             print("Indivual")
-            return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-                        in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-            # return [task for job in project.project_jobs_set.all() for task \
-            #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+            # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
+            #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
+            return [task for job in project.project_jobs_set.all() for task \
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
 
 
     def get_object(self):
