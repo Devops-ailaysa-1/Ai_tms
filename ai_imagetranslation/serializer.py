@@ -453,35 +453,36 @@ samplers = {0:'DDIM',1:'DDPM',2:'K_DPMPP_2M',3:'K_DPMPP_2S_ANCESTRAL',4:'K_DPM_2
            5:'K_DPM_2_ANCESTRAL',6:'K_EULER',7:'K_EULER_ANCESTRAL',8:'K_HEUN',9:'K_LMS'}
 
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
-    used_api=serializers.CharField(allow_null=True,required=True) 
+    # used_api=serializers.CharField(allow_null=True,required=True) 
     prompt=serializers.CharField(allow_null=True,required=True)
-    style =serializers.IntegerField(allow_null=True,required=True)
-    height=serializers.IntegerField(allow_null=True,required=True)
-    width=serializers.IntegerField(allow_null=True,required=True)
-    sampler=serializers.IntegerField(allow_null=True,required=True)
+    # style =serializers.IntegerField(allow_null=True,required=True)
+    # height=serializers.IntegerField(allow_null=True,required=True)
+    # width=serializers.IntegerField(allow_null=True,required=True)
+    # sampler=serializers.IntegerField(allow_null=True,required=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False)
     class Meta:
-        fields = ("id",'prompt','style','height','width','sampler','image','used_api','negative_prompt')
+        fields = ("id",'prompt','image','negative_prompt') #style height width sampler used_api
         model=StableDiffusionAPI
 
     def create(self, validated_data):
         user=self.context['request'].user
-        used_api=validated_data.get('used_api',None)
+        # used_api=validated_data.get('used_api',None)
         prompt=validated_data.get('prompt',None)
-        style =validated_data.pop('style',None)
-        height=validated_data.pop('height',None)
-        width=validated_data.pop('width',None)
-        sampler=validated_data.pop('sampler',None)
+        # style =validated_data.pop('style',None)
+        # height=validated_data.pop('height',None)
+        # width=validated_data.pop('width',None)
+        # sampler=validated_data.pop('sampler',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
-        if used_api == 'stability':
-            image=stable_diffusion_api(prompt=prompt,weight=1,steps=20,height=height,negative_prompt=negative_prompt,width=width,
-                                       style_preset=styles[int(style)],sampler=samplers[int(sampler)])
-            model_name='stable-diffusion-xl-beta-v2-2-2'
-        if used_api == 'stable_diffusion_api':
-            image = stable_diffusion_public(prompt,weight=1,steps=31,height=height,width=width,style_preset="",sampler="",negative_prompt=negative_prompt)
-            model_name='mid-j'
-        instance=StableDiffusionAPI.objects.create(user=user,used_api=used_api,prompt=prompt,model_name=model_name,
-                                                   style=style,height=height,width=width,sampler=sampler,negative_prompt=negative_prompt)
+        # if used_api == 'stability':
+        #     image=stable_diffusion_api(prompt=prompt,weight=1,steps=20,height=height,negative_prompt=negative_prompt,width=width,
+        #                                style_preset=styles[int(style)],sampler=samplers[int(sampler)])
+        #     model_name='stable-diffusion-xl-beta-v2-2-2'
+        # if used_api == 'stable_diffusion_api':
+        image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
+                                      style_preset="",sampler="",negative_prompt=negative_prompt)
+        model_name='mid-j'
+        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name=model_name,
+                                                   style="",height=512,width=512,sampler="",negative_prompt=negative_prompt)
         instance.image=image
         instance.save()
 

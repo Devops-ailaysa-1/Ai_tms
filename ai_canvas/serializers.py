@@ -761,9 +761,6 @@ class TextTemplateSerializer(serializers.ModelSerializer):
             [TemplateKeyword.objects.create(text_template=instance,text_keywords = key) for key in  txt_temp]
         return instance
 
-
-
-
 class FontFileSerializer(serializers.ModelSerializer):
     class Meta:
         model=FontFile

@@ -844,24 +844,17 @@ def image_list(request):
     page=request.query_params.get('page')
     image_url=request.query_params.get('image_url')
     search_image=request.query_params.get('search_image')
-
     if image_category_name and search_image and page:
- 
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,search=search_image,page=page)
-
         if not image_cat_see_all:
             return Response({'image_list':[],'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
-
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
-        
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
                          'image_list':res,'total_page':total_page},status=200)
-
     if search_image and page:
- 
         page=int(page)
         res=req_thread(search=search_image,page=page)
         if not res:
@@ -871,9 +864,7 @@ def image_list(request):
         has_prev=False if page==1 else True
         return Response({'has_next':has_next,'page':page,'has_prev':has_prev , 
                          'result_for':search_image , 'image_list':res,'total_page':total_page},status=200)
-
     if image_category_name and page:
- 
         page=int(page)
         image_cat_see_all=req_thread(category=image_category_name,page=page)
         if not image_cat_see_all:
@@ -903,7 +894,6 @@ def image_list(request):
     return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': fin_dat.has_next(),
                     'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
 
-            
 
 class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
