@@ -371,7 +371,7 @@ def vendor_lang_sheet():
     worksheet = workbook.add_worksheet('Vendor Language Pairs')
 
     worksheet2 = workbook.add_worksheet('Languages')
-    languages=list(Languages.objects.all().values_list('language',flat=True))
+    languages=list(Languages.objects.all().order_by('language').values_list('language',flat=True))
     worksheet2.write('A1','Languages')
     for i in range(len(languages)):
         a='A{}'.format(i+2)
@@ -393,8 +393,8 @@ def vendor_lang_sheet():
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
     boolean=['True','False']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
-    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})    
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
@@ -453,6 +453,7 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
+                    print("Lang-------->",row['Target Language'].capitalize())
                     src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
                     tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
@@ -494,8 +495,8 @@ def vendor_language_pair(request):
 
 #from rest_framework.permissions import AllowAny
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
-#@permission_classes([AllowAny])
+#@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=service_provider_translation_rates.xlsx'
