@@ -3367,7 +3367,7 @@ def symspellcheck(request):
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
     if not text:
-        return JsonResponse({'msg':"no text"})
+        return JsonResponse({'msg':"no text"},status=400)
     if doc_id:
         doc = Document.objects.get(id=doc_id)
         lang_code = doc.target_language_code
@@ -3379,11 +3379,14 @@ def symspellcheck(request):
     else:
         lang_code = lang_detector(text.split('.')[0])
         print("RR------->",lang_code)
-    end_pts = settings.END_POINT +"spell-check/"
+    lang_code= 'zh' if lang_code == 'zh-Hant' or lang_code == 'zh-Hans' else lang_code
+    end_pts = settings.END_POINT +"spell-check/" #'http://165.22.218.167:8015/spell-check/'
     data ={'text': text,'lang_code': lang_code}
     result=requests.request("GET", url=end_pts, data=data)
     print(result.json())
-    return JsonResponse(result.json())
+    try:return JsonResponse(result.json())
+    except:return JsonResponse({'msg':'something went wrong'},status=400)
+    
 
 
 
