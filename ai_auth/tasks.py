@@ -964,3 +964,68 @@ def update_words_from_template_task(file_ids):
                 value.save()
                 #print("ID----------->",value.id)
         print("Terms Uploaded")
+
+
+
+
+@task
+def sync_user_details_bi(test=False,is_vendor=False):
+    from ai_auth.reports import AilaysaReport
+    from ai_bi.models import AiUserDetails
+    users = AiUser.objects.all()
+    rep = AilaysaReport()
+    users = rep.get_users(is_vendor=is_vendor,test=test)
+    
+
+    for user in users:
+        data = dict()
+        data = {
+            "email":user.email,
+            "fullname":user.fullname,
+            "country":user.country.name,
+            "is_staff":user.is_staff,
+            "is_active": user.is_active,
+            "deactivation_date":user.deactivation_date,
+            "date_joined":user.date_joined,
+            "last_login":user.last_login,
+            "deactivate":user.deactivate,
+            "is_vendor":user.is_vendor,
+            "is_agency":user.is_agency,
+            "is_internal_member":user.is_internal_member,
+            "first_login":user.first_login,
+            "currency_based_on_country":user.currency_based_on_country,
+            "signup_age":0
+            }
+        sub = rep.get_user_subscription(user)
+        if sub!=None:
+            data.update({
+            "subscription_name":sub.plan.product.name,
+            "subscription_status":sub.status,
+            "subscription_start":sub.current_period_start,
+            "subscription_end":sub.current_period_end
+            })
+        credits = rep.get_user_credits(user)
+        if credits != None:
+            data.update({
+            "intial_credits":credits[0],
+            "credits_left":credits[1],
+            "credits_consumed":credits[2]
+            })
+
+        proj_counts = rep.get_project_counts(user)
+        if proj_counts!=None:
+            data.update({
+            "projects_created":proj_counts[0],
+            "documents_created":proj_counts[1],
+            "pdf_conversion":proj_counts[2],
+            "blogs_created":proj_counts[3],
+            "project_types":2
+            })
+        
+        obj, created =AiUserDetails.objects.using("bi").update_or_create(**data)
+
+        # try:
+        #     user_det = AiUserDetails.objects.get(email=user.email)
+        # except AiUserDetails.DoesNotExist:
+        #     user_det = AiUserDetails(**data)
+        #     user_det.save(using="bi")
