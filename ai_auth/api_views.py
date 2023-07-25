@@ -1738,13 +1738,14 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
+        own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
         existing = HiredEditors.objects.filter(user=user,hired_editor=vendor)
         if existing:
             return JsonResponse({"msg":"editor already existed in your hired_editors list.check his availability in chat and assign"},safe = False)
         else:
             role_name = Role.objects.get(id=role).name
             email = vendor.email
-            if vendor.email == 'ams@ailaysa.com':
+            if vendor.email == own_agency_email:
                 serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':2,'added_by':request.user.id})
                 if serializer.is_valid():
                     serializer.save()
