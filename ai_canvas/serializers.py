@@ -579,6 +579,25 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
         if template is not None:
             return data
 
+
+
+class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
+    template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
+    template_list=serializers.CharField(required=False)
+    category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
+    # json=serializers.JSONField(required=True)
+    template_lang=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=True)
+    is_pro=serializers.BooleanField(default=False)
+    is_published=serializers.BooleanField(default=False)
+
+    class Meta:
+        model=TemplateGlobalDesign
+        fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
+                'template_lang','description','thumbnail_page','json') 
+        extra_kwargs = { 
+            'template_list':{'write_only':True},}
+
+
 ############# for no json ###############
 # class TemplateGlobalDesignViewSerializer(serializers.ModelSerializer):
 #     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
