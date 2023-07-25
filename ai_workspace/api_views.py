@@ -2107,25 +2107,25 @@ def file_write(pr):
                 target = express_obj.target_text if express_obj.target_text else ''
                 f.write(target)
                 f.write('\n')
-                f.write("---------" + "\n")
+                f.write("---------" + "\n\n")
                 rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
                 if rewrite_obj.exists():
                     f.write("Rewrite:" + "\n")
                     f.write(rewrite_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
                 simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
                 if simplified_obj.exists():
                     f.write("Simplify:" + "\n")
                     f.write(simplified_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
                 shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
                 if shorten_obj.exists():
                     f.write("Shorten:" + "\n")
                     f.write(shorten_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
                 
 
 
@@ -3395,25 +3395,25 @@ def express_task_download(request,task_id):###############permission need to be 
         target = express_obj.target_text if express_obj.target_text else ''
         f.write(target)
         f.write('\n')
-        f.write("---------" + "\n")
+        f.write("---------" + "\n\n")
         rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
         if rewrite_obj.exists():
             f.write("Rewrite:" + "\n")
             f.write(rewrite_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
             f.write("Simplify:" + "\n")
             f.write(simplified_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
         shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
         if shorten_obj.exists():
             f.write("Shorten:" + "\n")
             f.write(shorten_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
     print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
