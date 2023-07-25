@@ -178,6 +178,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if not instance.source_canvas_json:
             raise serializers.ValidationError({'msg':'source json is not sent'})
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
+        tar_json_copy['background']="rgba(231,232,234,0.4)"
         for tar_lang in inpaint_creation_target_lang:
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first()) 
             tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
@@ -266,6 +267,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 inpaint_out_image,source_bounding_box,text_box_list=inpaint_image_creation(instance,magic_erase=False)  
                 src_json=copy.deepcopy(source_bounding_box)
                 basic_json_copy=copy.deepcopy(basic_json)
+                basic_json_copy['background']= "rgba(231,232,234,0.4)"
                 instance.source_bounding_box=src_json 
                 content=image_content(inpaint_out_image)
                 inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
