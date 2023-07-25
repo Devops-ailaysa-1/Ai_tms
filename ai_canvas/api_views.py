@@ -315,6 +315,10 @@ class CustomPagination(PageNumberPagination):
     page_size = 20 
     page_size_query_param = 'page_size'
 
+class CustomSocialMediaSizePagination(PageNumberPagination):
+    page_size = 30
+    page_size_query_param = 'page_size'
+
 class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     pagination_class = CanvasDesignListViewsetPagination
     permission_classes = [IsAuthenticated,]
@@ -719,17 +723,27 @@ class SocialMediaSizeCustom(viewsets.ViewSet):
 
 
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
-    # pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend]
+    # pagination_class = CustomSocialMediaSizePagination
+    page_size = 30
+    search_fields = ['social_media_name']
     def list(self,request):
         queryset = SocialMediaSize.objects.all().exclude(social_media_name__icontains='Custom').order_by('social_media_name')
-        # pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = SocialMediaSizeSerializer(queryset,many=True)
-        # response = self.get_paginated_response(serializer.data)
-        # if response.data["next"]:
-        #     response.data["next"] = response.data["next"].replace("http://", "https://")
-        # if response.data["previous"]:
-        #         response.data["previous"] = response.data["previous"].replace("http://", "https://")
-        return Response(serializer.data)
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = SocialMediaSizeSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
     
     def create(self,request):
         src=request.FILES.get('src',None)
@@ -749,6 +763,8 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+
+
         
     def delete(self,request,pk):
         query_set=SocialMediaSize.objects.get(id=pk)
