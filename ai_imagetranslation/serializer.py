@@ -371,6 +371,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
              
         if target_canvas_json and target_update_id:
             im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
+            if im_cre.source_image.source_language == im_cre.target_language:
+                print("src and tar id are same")
+                im_cre.source_image.source_canvas_json=target_canvas_json
             im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
