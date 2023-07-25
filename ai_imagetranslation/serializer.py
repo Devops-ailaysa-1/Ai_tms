@@ -188,6 +188,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code)
                     i['text']=translate_bbox
+                if i['id'] == 'background':
+                    i['name']='Background-current'
             tar_bbox.target_canvas_json=tar_json_copy
             tar_bbox.save()
             thumb_image=thumbnail_create(tar_bbox.target_canvas_json,formats='png')
@@ -282,7 +284,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 basic_json_copy['perPixelTargetFind']=False
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
-            ####to create instance for target language
             inpaint_creation_target_lang.append(src_lang)
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             # image_inpaint_create=ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),target_canvas_json=basic_json_copy) 
