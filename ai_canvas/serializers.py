@@ -523,15 +523,15 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
     template_list=serializers.CharField(required=False)
     category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
-    json=serializers.JSONField(required=True)
+    # json=serializers.JSONField(required=True)
     template_lang=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=True)
     is_pro=serializers.BooleanField(default=False)
     is_published=serializers.BooleanField(default=False)
 
     class Meta:
         model=TemplateGlobalDesign
-        fields=('id','template_tag','template_list','json','template_name','category','is_pro','is_published',
-                'template_lang','description','thumbnail_page')
+        fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
+                'template_lang','description','thumbnail_page') #json
         extra_kwargs = { 
             'template_list':{'write_only':True},}
 
@@ -580,20 +580,20 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
             return data
 
 ############# for no json ###############
-class TemplateGlobalDesignViewSerializer(serializers.ModelSerializer):
-    template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
-    class Meta:
-        model=TemplateGlobalDesign
-        fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
-                'template_lang','description','thumbnail_page')
+# class TemplateGlobalDesignViewSerializer(serializers.ModelSerializer):
+#     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
+#     class Meta:
+#         model=TemplateGlobalDesign
+#         fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
+#                 'template_lang','description','thumbnail_page')
 
 
-class CategoryWiseGlobaltemplateViewSerializer(serializers.ModelSerializer):
-    template_global_categoty=TemplateGlobalDesignViewSerializer(many=True,required=False,allow_null=False)
+# class CategoryWiseGlobaltemplateViewSerializer(serializers.ModelSerializer):
+#     template_global_categoty=TemplateGlobalDesignViewSerializer(many=True,required=False,allow_null=False)
     
-    class Meta:
-        fields=('id','template_global_categoty','social_media_name')
-        model=SocialMediaSize
+#     class Meta:
+#         fields=('id','template_global_categoty','social_media_name')
+#         model=SocialMediaSize
 
 ############# #######
 
