@@ -1076,7 +1076,7 @@ def DesignerDownload(request):
 
 class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
     # pagination_class = CustomPagination
-    page_size = 10
+    page_size = 30
     page_size_query_param = 'page_size'
     search_fields=['emoji_name']
     def list(self,request):

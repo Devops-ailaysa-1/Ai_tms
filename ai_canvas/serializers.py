@@ -807,7 +807,7 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
         fields='__all__'
 
     def get_cat_data(self,obj):
-        return EmojiData.objects.filter(emoji_cat=obj)[:30].values_list('data',flat=True)
+        return EmojiData.objects.filter(emoji_cat=obj)[:10].values_list('data',flat=True)
 
 
 # class EmojiDataSerializer(serializers.ModelSerializer):
