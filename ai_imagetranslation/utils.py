@@ -205,7 +205,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
         if output['code']==200:
             if output['result'].shape[0]==np.prod(resize_img.shape):
                 res=np.reshape(output['result'],resize_img.shape)
-                print("shape--->",img.shape[1::-1])
                 res=cv2.resize(res,img.shape[1::-1])
                 diff=cv2.absdiff(img,res)
                 diff=lama_diff(mask,diff)
@@ -295,8 +294,6 @@ def background_remove(image_path):
 #     instance.inpaint_image=masked_tr
 #     instance.save()
     
-
-
 
 
 
