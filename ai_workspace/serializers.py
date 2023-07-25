@@ -1059,9 +1059,23 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
+	#task_assign_info = TaskAssignInfoSerializer(required=False)
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
-
+	#task_self_assign_info = serializers.SerializerMethodField()
+	bid_job_detail_info = serializers.SerializerMethodField()
+	open_in =  serializers.SerializerMethodField()
+	transcribed = serializers.SerializerMethodField()
+	text_to_speech_convert_enable = serializers.SerializerMethodField()
+	converted = serializers.SerializerMethodField()
+	is_task_translated = serializers.SerializerMethodField()
+	mt_only_credit_check = serializers.SerializerMethodField()
+	converted_audio_file_exists = serializers.SerializerMethodField()
+	download_audio_output_file = serializers.SerializerMethodField()
+	# can_open = serializers.SerializerMethodField()
+	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
+	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
@@ -1070,6 +1084,109 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
 			"converted_audio_file_exists","download_audio_output_file",)
 
+	def get_converted_audio_file_exists(self,obj):
+		if obj.document:
+			return obj.document.converted_audio_file_exists
+		else:
+			return None
+	
+
+	def get_download_audio_output_file(self,obj):
+		if obj.document:
+			return obj.document.download_audio_output_file
+		else:
+			return None
+
+
+	def get_converted(self,obj):
+		if obj.job.project.project_type_id == 4 :
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+						return True
+					else:return False
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						if obj.task_transcript_details.exists():
+							return True
+						else:return False
+					else:return None
+				else:return None
+		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
+
+	def get_is_task_translated(self,obj):
+		if obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True and obj.pdf_task.first().translation_task_created == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
+
+	def get_mt_only_credit_check(self,obj):
+		try:return obj.document.doc_credit_check_open_alert
+		except:return None
+
+
+	def get_transcribed(self,obj):
+		if obj.job.project.project_type_id == 4 :
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+				if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+					return True
+				else:return False
+			else:return None
+		else:return None
+
+	def get_text_to_speech_convert_enable(self,obj):
+		if obj.job.project.project_type_id == 4 :
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+				if obj.job.target_language==None:
+					if obj.task_transcript_details.exists():
+						return False
+					else:return True
+				else:return None
+			else:return None
+		else:return None
+
+
+	def get_open_in(self,obj):
+		try:
+			if obj.job.project.project_type_id == 5:
+				return "ExpressEditor"
+			elif obj.job.project.project_type_id == 4:
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.job.target_language==None:
+						return "Ailaysa Writer or Text Editor"
+					else:
+						return "Transeditor"
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						return "Download"
+					else:return "Transeditor"
+			elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+				if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+					try:return obj.pdf_task.last().pdf_api_use
+					except:return None
+				else:return "Transeditor"	
+			else:return "Transeditor"
+		except:
+			try:
+				if obj.job.project.glossary_project:
+					return "GlossaryEditor"
+			except:
+				return "Transeditor"
+
+	def get_bid_job_detail_info(self,obj):
+		if obj.job.project.proj_detail.all():
+			qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
+			return ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
+		else:
+			return None
 
 
 	def get_task_assign_info(self, obj):
@@ -1115,6 +1232,38 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				# else:return None
 			else: return None
 
+	# def get_task_self_assign_info(self,obj):
+	# 	user = self.context.get("request").user
+	# 	task_assign = obj.task_info.filter(task_assign_info__isnull=False)
+	# 	if task_assign:
+	# 		for i in task_assign:
+	# 			if i.step_id == 1:return None
+	# 			else:
+	# 				self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
+	# 				print("SA------------>",self_assign)
+	# 				if self_assign:
+	# 					step = self_assign.step.id
+	# 					mt_enable = self_assign.mt_enable
+	# 					pre_translate = self_assign.pre_translate
+	# 					copy_paste_enable = self_assign.copy_paste_enable
+	# 					task_status = self_assign.get_status_display()
+	# 					try:
+	# 						if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
+	# 							can_open = False
+	# 						else:can_open = True
+	# 					except:can_open = True
+	# 					return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+	# 				else:return None
+	# 	else:
+	# 		return None
+
+	# def get_task_word_count(self,instance):
+	# 	if instance.document_id:
+	# 		document = Document.objects.get(id = instance.document_id)
+	# 		return document.total_word_count
+	# 	else:
+	# 		t = TaskDetails.objects.get(task_id = instance.id)
+	# 		return t.task_word_count
 
 
 class ProjectSerializerV2(serializers.ModelSerializer):
