@@ -368,7 +368,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     payload = json.dumps({
         "key":  STABLE_DIFFUSION_PUBLIC_API,
   
-        "prompt": negative_prompt,
+        "prompt": prompt,
         "negative_prompt": negative_prompt,
         "width": "512",
         "height": "512",
