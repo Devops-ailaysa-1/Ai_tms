@@ -85,7 +85,6 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                                                     "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
                                                     # "poly_line":poly_line}
             textbox_['text']="".join(text_list).strip()
-            print("text-------------->>","".join(text_list))
             textbox_['fill']="rgb{}".format(tuple(final_color[0]))
             font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
             textbox_['fontSize']=font-5
@@ -206,7 +205,8 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
         if output['code']==200:
             if output['result'].shape[0]==np.prod(resize_img.shape):
                 res=np.reshape(output['result'],resize_img.shape)
-                res=cv2.resize(res,img.shape[:2])
+                print("shape--->",img.shape[1::-1])
+                res=cv2.resize(res,img.shape[1::-1])
                 diff=cv2.absdiff(img,res)
                 diff=lama_diff(mask,diff)
                 diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
@@ -248,7 +248,6 @@ def background_merge(u2net_result,original_img):
     img_io = io.BytesIO()
     u2net_result.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
-    # print(type(img_byte_arr))
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
 def background_remove(image_path):
