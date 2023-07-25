@@ -3383,7 +3383,7 @@ def symspellcheck(request):
     data['lang_code'] = lang_code
     end_pts = settings.END_POINT +"spell-check/"
     result = requests.get(end_pts , data)
-    print("RES-------------->",result.json())
+    print("RES-------------->",result)
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'})
     # def get_words(text):
