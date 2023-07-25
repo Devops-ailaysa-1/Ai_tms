@@ -485,7 +485,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
                                                    style="",height=512,width=512,sampler="",negative_prompt=negative_prompt)
         instance.image=image
         instance.save()
-
         return instance
         
         

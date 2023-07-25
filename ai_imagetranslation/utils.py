@@ -358,7 +358,8 @@ def sd_status_check(id):
     return response.json()
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    url = "https://stablediffusionapi.com/api/v4/dreambooth"
+    # url = "https://stablediffusionapi.com/api/v4/dreambooth"
+    url="https://stablediffusionapi.com/api/v3/text2img"
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
@@ -366,6 +367,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 
     payload = json.dumps({
         "key":  STABLE_DIFFUSION_PUBLIC_API,
+  
         "prompt": negative_prompt,
         "negative_prompt": negative_prompt,
         "width": "512",
@@ -388,6 +390,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     print(response.json())
     if response.status_code==200:
         response=response.json()
+        print("response",response.json())
         reference_id=response['id']
         print("reference_id",reference_id)
         if len(response['output'])==0 and response['status']=='processing':
