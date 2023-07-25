@@ -2101,25 +2101,31 @@ def file_write(pr):
                 f.write("Source:" + "\n")
                 f.write(express_obj.source_text) 
                 f.write('\n')
-                f.write("---------" + "\n")
-                f.write("Target:" + "\n\n")
+                f.write("---------" + "\n\n")
                 f.write("Standard:" + "\n")
                 target = express_obj.target_text if express_obj.target_text else ''
                 f.write(target)
                 f.write('\n')
                 f.write("---------" + "\n")
-                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-                if shorten_obj.exists():
-                    f.write("Shortened:" + "\n")
-                    f.write(shorten_obj.last().final_result)
+                rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+                if rewrite_obj.exists():
+                    f.write("Rewrite:" + "\n")
+                    f.write(rewrite_obj.last().final_result)
                     f.write("\n")
                     f.write("---------" + "\n")
                 simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
                 if simplified_obj.exists():
-                    f.write("Simplified:" + "\n")
+                    f.write("Simplify:" + "\n")
                     f.write(simplified_obj.last().final_result)
                     f.write("\n")
                     f.write("---------" + "\n")
+                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+                if shorten_obj.exists():
+                    f.write("Shorten:" + "\n")
+                    f.write(shorten_obj.last().final_result)
+                    f.write("\n")
+                    f.write("---------" + "\n")
+                
 
 
 @api_view(["GET"])
@@ -3383,23 +3389,28 @@ def express_task_download(request,task_id):###############permission need to be 
         f.write("Source:" + "\n")
         f.write(express_obj.source_text) 
         f.write('\n')
-        f.write("---------" + "\n")
-        f.write("Target:" + "\n\n")
+        f.write("---------" + "\n\n")
         f.write("Standard:" + "\n")
         target = express_obj.target_text if express_obj.target_text else ''
         f.write(target)
         f.write('\n')
         f.write("---------" + "\n")
-        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-        if shorten_obj.exists():
-            f.write("Shortened:" + "\n")
-            f.write(shorten_obj.last().final_result)
+        rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+        if rewrite_obj.exists():
+            f.write("Rewrite:" + "\n")
+            f.write(rewrite_obj.last().final_result)
             f.write("\n")
             f.write("---------" + "\n")
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
-            f.write("Simplified:" + "\n")
+            f.write("Simplify:" + "\n")
             f.write(simplified_obj.last().final_result)
+            f.write("\n")
+            f.write("---------" + "\n")
+        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+        if shorten_obj.exists():
+            f.write("Shorten:" + "\n")
+            f.write(shorten_obj.last().final_result)
             f.write("\n")
             f.write("---------" + "\n")
     print("File Written--------------->",target_filename)
