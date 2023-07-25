@@ -1198,6 +1198,117 @@ class Task(models.Model):
         super().save()
 
     @property
+    def converted_audio_file_exists(self):
+        if self.document:
+            return self.document.converted_audio_file_exists
+        else:
+            return None
+
+    @property
+    def download_audio_output_file(self):
+        if self.document:
+            return self.document.download_audio_output_file
+        else:
+            return None
+
+    @property
+    def converted(self):
+        if self.job.project.project_type_id == 4 :
+                if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                    if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+                        return True
+                    else:return False
+                elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                    if self.job.target_language==None:
+                        if self.task_transcript_details.exists():
+                            return True
+                        else:return False
+                    else:return None
+                else:return None
+        elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+            if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                if self.pdf_task.all().exists() == True:
+                    return True
+                else:return False
+            else:return None
+        else:return None
+	
+    @property
+    def is_task_translated(self):
+        if self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+            if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                if self.pdf_task.all().exists() == True and self.pdf_task.first().translation_task_created == True:
+                    return True
+                else:return False
+            else:return None
+        else:return None
+
+    @property
+    def mt_only_credit_check(self):
+        try:return self.document.doc_credit_check_open_alert
+        except:return None
+
+    @property
+    def transcribed(self):
+        if self.job.project.project_type_id == 4 :
+            if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+                    return True
+                else:return False
+            else:return None
+        else:return None
+
+    @property
+    def text_to_speech_convert_enable(self):
+        if self.job.project.project_type_id == 4 :
+            if  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                if self.job.target_language==None:
+                    if self.task_transcript_details.exists():
+                        return False
+                    else:return True
+                else:return None
+            else:return None
+        else:return None
+
+    @cached_property
+    def open_in(self):
+        try:
+            if self.job.project.project_type_id == 5:
+                return "ExpressEditor"
+            elif self.job.project.project_type_id == 4:
+                if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                    if self.job.target_language==None:
+                        return "Ailaysa Writer or Text Editor"
+                    else:
+                        return "Transeditor"
+                elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                    if self.job.target_language==None:
+                        return "Download"
+                    else:return "Transeditor"
+            elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+                if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                    try:return self.pdf_task.last().pdf_api_use
+                    except:return None
+                else:return "Transeditor"	
+            else:return "Transeditor"
+        except:
+            try:
+                if self.job.project.glossary_project:
+                    return "GlossaryEditor"
+            except:
+                return "Transeditor"
+
+    @property
+    def bid_job_detail_info(self):
+        from ai_marketplace.serializers import ProjectPostJobDetailSerializer
+        if self.job.project.proj_detail.all():
+            qs = self.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = self.job.source_language.id) & Q(tar_lang_id = self.job.target_language.id if self.job.target_language else self.job.source_language_id))
+            return ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
+        else:
+            return None
+
+
+    @property
     def get_document_url(self):
         try:
             if self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
