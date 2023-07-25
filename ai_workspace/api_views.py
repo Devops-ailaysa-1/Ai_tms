@@ -1558,12 +1558,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         reassign = request.POST.get('reassigned') 
+        own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
         print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
         data = request.POST.dict()
         ################################Need to change########################################
         user = request.user.team.owner  if request.user.team  else request.user
-        if Receiver.email == 'ams@ailaysa.com':
+        if Receiver.email == own_agency_email:
             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         ##########################################################################################
         # task = request.POST.getlist('task')
