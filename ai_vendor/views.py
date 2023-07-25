@@ -453,11 +453,16 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
-                    print("Lang-------->",row['Target Language'].capitalize())
-                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
-                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
+                    given_src = row['Source Language'].capitalize() if row['Source Language'].split() == 1 else row['Source Language'][0].capitalize() + row['Source Language'][1:]
+                    given_tar = row['Target Language'].capitalize() if row['Target Language'].split() == 1 else row['Target Language'][0].capitalize() + row['Target Language'][1:]
+                    print("SRc------------>",given_src)
+                    print("TAr------------>",given_tar)
+                    src_lang=Languages.objects.filter(language=given_src).first()
+                    tar_lang=Languages.objects.filter(language=given_tar).first()
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
                     print("Cur------>",currency_code)
+                    print("Src_lang------>",src_lang)
+                    print("Tar_lang------>",tar_lang)
                     currency=Currencies.objects.get(currency_code=currency_code)
                     service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
                     unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
