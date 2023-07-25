@@ -3360,12 +3360,14 @@ class Choicelistselectedview(viewsets.ModelViewSet):
 #     sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def symspellcheck(request):
     from ai_openai.serializers import lang_detector
-    tar = request.POST.get('target')
+    text = request.POST.get('target',None)
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
+    if not text:
+        return JsonResponse({'msg':"no text"})
     if doc_id:
         doc = Document.objects.get(id=doc_id)
         lang_code = doc.target_language_code
@@ -3375,17 +3377,17 @@ def symspellcheck(request):
         lang_code = task.job.target_language_code
         lang_id = task.job.target_language_id
     else:
-        lang_code = lang_detector(tar.split('.')[0])
+        lang_code = lang_detector(text.split('.')[0])
         print("RR------->",lang_code)
-
-    data = {}
-    data['text'] = tar
-    data['lang_code'] = lang_code
     end_pts = settings.END_POINT +"spell-check/"
-    result = requests.get(end_pts , data)
-    print("RES-------------->",result)
-    try:return JsonResponse(result.json())
-    except:return JsonResponse({'msg':'something went wrong'})
+    data ={'text': text,'lang_code': lang_code}
+    result=requests.request("GET", url=end_pts, data=data)
+    print(result.json())
+    return JsonResponse(result.json())
+
+
+
+    # except:return JsonResponse({'msg':'something went wrong'})
     # def get_words(text):
     #     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
     #     tknzr = TweetTokenizer()
