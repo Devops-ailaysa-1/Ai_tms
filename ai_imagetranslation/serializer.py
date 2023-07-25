@@ -113,8 +113,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     canvas_asset_image_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required=False,write_only=True)
     magic_erase=serializers.BooleanField(required=False,default=False)
-    image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),
-                                        required=False,write_only=True)
+    image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),required=False,write_only=True)
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
     
 
@@ -188,7 +187,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code)
                     i['text']=translate_bbox
-                if i['id'] == 'background':
+                if i['name'] == "Background-static":
                     i['name']='Background-current'
             tar_bbox.target_canvas_json=tar_json_copy
             tar_bbox.save()
@@ -235,7 +234,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if image_id:
             instance.image
-
 
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
