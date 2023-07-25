@@ -564,6 +564,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
             TemplateTag.objects.create(tag_name=template_list,global_template=instance)
         return instance
 
+
 class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     template_global_categoty=TemplateGlobalDesignSerializerV2(many=True,required=False,allow_null=False)
     
@@ -571,13 +572,30 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
         fields=('id','template_global_categoty','social_media_name')
         model=SocialMediaSize
  
-
     def to_representation(self, instance):
         data=super().to_representation(instance)
         template=instance.template_global_categoty.all()
         # print("template",template)
         if template is not None:
             return data
+
+############# for no json ###############
+class TemplateGlobalDesignViewSerializer(serializers.ModelSerializer):
+    template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
+    class Meta:
+        model=TemplateGlobalDesign
+        fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
+                'template_lang','description','thumbnail_page')
+
+
+class CategoryWiseGlobaltemplateViewSerializer(serializers.ModelSerializer):
+    template_global_categoty=TemplateGlobalDesignViewSerializer(many=True,required=False,allow_null=False)
+    
+    class Meta:
+        fields=('id','template_global_categoty','social_media_name')
+        model=SocialMediaSize
+
+############# #######
 
 class MyTemplateDesignPageSerializer(serializers.ModelSerializer):
     class Meta:

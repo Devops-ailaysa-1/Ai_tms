@@ -362,18 +362,27 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
-    payload =  json.dumps({
-                "key":STABLE_DIFFUSION_PUBLIC_API ,
-                "model_id": "realistic-vision-v13",
-                "prompt": prompt,"negative_prompt":negative_prompt,"width": width,"height": height,
-                "samples": "1","num_inference_steps": "41","safety_checker": "yes",
-                "enhance_prompt": "yes","seed": None,
-                "guidance_scale":7.5,"multi_lingual": "no",
-                "panorama": "no","self_attention": "yes",
-                "upscale": "no","embeddings_model": None,
-                "lora_model": None,"tomesd": "yes",
-                "use_karras_sigmas": "yes","vae": None,"lora_strength": None,
-                "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None})
+ 
+
+    payload = json.dumps({
+        "key":  STABLE_DIFFUSION_PUBLIC_API,
+        "prompt": negative_prompt,
+        "negative_prompt": negative_prompt,
+        "width": "512",
+        "height": "512",
+        "samples": "1",
+        "num_inference_steps": "20",
+        "seed": None,
+        "guidance_scale": 7.5,
+        "safety_checker": "yes",
+        "multi_lingual": "no",
+        "panorama": "no",
+        "self_attention": "no",
+        "upscale": "no",
+        "embeddings_model": None,
+        "webhook": None,
+        "track_id": None
+        })
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.json())
@@ -395,21 +404,15 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 
 
 
-#stable-diffusion-xl-beta-v2-2-2
-
-
-
-# import requests
-# import json
-
-# url = "https://stablediffusionapi.com/api/v4/dreambooth"
-
- 
-
-# headers = {
-#   'Content-Type': 'application/json'
-# }
-
-# response = requests.request("POST", url, headers=headers, data=payload)
-
-# print(response.text)
+# json.dumps({
+# "key":STABLE_DIFFUSION_PUBLIC_API ,
+# "model_id": "realistic-vision-v13",
+# "prompt": prompt,"negative_prompt":negative_prompt,"width": width,"height": height,
+# "samples": "1","num_inference_steps": "41","safety_checker": "yes",
+# "enhance_prompt": "yes","seed": None,
+# "guidance_scale":7.5,"multi_lingual": "no",
+# "panorama": "no","self_attention": "yes",
+# "upscale": "no","embeddings_model": None,
+# "lora_model": None,"tomesd": "yes",
+# "use_karras_sigmas": "yes","vae": None,"lora_strength": None,
+# "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None})

@@ -11,7 +11,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,CategoryWiseGlobaltemplateViewSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -954,7 +954,7 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
             queryset=SocialMediaSize.objects.all().order_by("social_media_name") 
         queryset_2 = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset_2, request , view=self)
-        serializer=CategoryWiseGlobaltemplateSerializer(pagin_tc,many=True)
+        serializer=CategoryWiseGlobaltemplateViewSerializer(pagin_tc,many=True) #CategoryWiseGlobaltemplateViewSerializer
         data=[i for i in serializer.data if i['template_global_categoty']]
         response = self.get_paginated_response(data)
         if response.data["next"]:
@@ -1076,7 +1076,7 @@ def DesignerDownload(request):
 
 class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
     # pagination_class = CustomPagination
-    page_size = 60
+    page_size = 10
     page_size_query_param = 'page_size'
     search_fields=['emoji_name']
     def list(self,request):
