@@ -3343,21 +3343,21 @@ class Choicelistselectedview(viewsets.ModelViewSet):
 # sym_spell=load_dictionary(lang_code)
 
 
-dictionary_paths = {
-    "en": "/ai_home/dictionaries/en.txt",
-    # #"sq": "/ai_home/dictionaries/sq.txt",
-    # "es": "/ai_home/dictionaries/es.txt", 
-    # "ar": "/ai_home/dictionaries/ar.txt",
-    # "fr": "/ai_home/dictionaries/fr.txt",
-    # "lv": "/ai_home/dictionaries/lv.txt",
-    # "nl": "/ai_home/dictionaries/nl.txt",
-    # "pt": "/ai_home/dictionaries/pt.txt",
-    # "ru": "/ai_home/dictionaries/ru.txt",
-}
+# dictionary_paths = {
+#     #"en": "/ai_home/dictionaries/en.txt",
+#     # #"sq": "/ai_home/dictionaries/sq.txt",
+#     # "es": "/ai_home/dictionaries/es.txt", 
+#     # "ar": "/ai_home/dictionaries/ar.txt",
+#     # "fr": "/ai_home/dictionaries/fr.txt",
+#     # "lv": "/ai_home/dictionaries/lv.txt",
+#     # "nl": "/ai_home/dictionaries/nl.txt",
+#     # "pt": "/ai_home/dictionaries/pt.txt",
+#     # "ru": "/ai_home/dictionaries/ru.txt",
+# }
 
-sym_spell = SymSpell()
-for lang_code,lang_path in dictionary_paths.items():
-    sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+# sym_spell = SymSpell()
+# for lang_code,lang_path in dictionary_paths.items():
+#     sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
 
 
 @api_view(['GET'])
@@ -3377,34 +3377,42 @@ def symspellcheck(request):
     else:
         lang_code = lang_detector(tar.split('.')[0])
         print("RR------->",lang_code)
-    
-    def get_words(text):
-        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-        tknzr = TweetTokenizer()
-        nltk_tokens = tknzr.tokenize(tar)
-        words = [word for word in nltk_tokens if word not in punctuation]
-        return words
+
+    data = {}
+    data['text'] = tar
+    data['lang_code'] = lang_code
+    end_pts = settings.END_POINT +"spell-check/"
+    result = requests.post(end_pts , data)
+    print("RES-------------->",result.json())
+    try:return JsonResponse(result.json())
+    except:return JsonResponse({'msg':'something went wrong'})
+    # def get_words(text):
+    #     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+    #     tknzr = TweetTokenizer()
+    #     nltk_tokens = tknzr.tokenize(tar)
+    #     words = [word for word in nltk_tokens if word not in punctuation]
+    #     return words
 
 
-    def spell_check_large_text(text):
-        max_edit_distance = 2
-        words = get_words(text)
-        misspelled_words = []
-        processed_words = set()
-        for word in words:
-            if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
-                lowercase_word = word.lower()
-                word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
-                if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
-                    suggestion_words = [s.term for s in word_suggestions]
-                    misspelled_words.append({'word':word, 'suggestion':suggestion_words})
-                processed_words.add(lowercase_word)
-        return misspelled_words
+    # def spell_check_large_text(text):
+    #     max_edit_distance = 2
+    #     words = get_words(text)
+    #     misspelled_words = []
+    #     processed_words = set()
+    #     for word in words:
+    #         if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
+    #             lowercase_word = word.lower()
+    #             word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
+    #             if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
+    #                 suggestion_words = [s.term for s in word_suggestions]
+    #                 misspelled_words.append({'word':word, 'suggestion':suggestion_words})
+    #             processed_words.add(lowercase_word)
+    #     return misspelled_words
 
-    if lang_code not in dictionary_paths:
-        return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
-    suggestions = spell_check_large_text(tar)
-    return JsonResponse({"result":suggestions},safe=False)
+    # if lang_code not in dictionary_paths:
+    #     return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
+    # suggestions = spell_check_large_text(tar)
+    # return JsonResponse({"result":suggestions},safe=False)
 
 
 
