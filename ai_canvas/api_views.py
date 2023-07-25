@@ -11,7 +11,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,CategoryWiseGlobaltemplateViewSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
