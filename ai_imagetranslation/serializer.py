@@ -373,6 +373,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             if im_cre.source_image.source_language == im_cre.target_language:
                 print("src and tar id are same")
                 im_cre.source_image.source_canvas_json=target_canvas_json
+                im_cre.save()
             im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
