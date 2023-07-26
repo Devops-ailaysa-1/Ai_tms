@@ -15,7 +15,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from rest_framework.decorators import api_view,permission_classes
 from ai_canvas.utils import export_download
-from ai_canvas.api_views import download_file_canvas,mime_type
+from ai_canvas.api_views import download_file_canvas,mime_type,text_download
 import io
 from django import core
 from zipfile import ZipFile
@@ -179,13 +179,21 @@ def image_translation_project_view(request):
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
         with ZipFile(buffer, mode="a") as archive:  
-            file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
-            src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size )
+            if file_format == 'text':
+                file_name = '{}.{}'.format(image_instance.source_language.language.language,".txt")
+                src_image_json=text_download(image_instance.source_canvas_json)
+            else:
+                file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
+                src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size )
             archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
-                file_name = '{}.{}'.format(tar_lang,format_exe)
-                tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
+                if file_format == 'text':
+                    file_name = '{}.{}'.format(image_instance.source_language.language.language,".txt")
+                    tar_image_json=text_download(tar_json.target_canvas_json)
+                else:
+                    file_name = '{}.{}'.format(tar_lang,format_exe)
+                    tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
                 archive.writestr(file_name,tar_image_json)
         res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')
         return res
