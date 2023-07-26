@@ -459,7 +459,8 @@ mime_type={'svg':'image/svg+xml',
         'jpg':'image/jpeg',
         'zip':'application/zip',
         'png-transparent':'image/png',
-        'pdf':'application/pdf'}
+        'pdf':'application/pdf',
+        'text':'text/plain'}
 
 def download_file_canvas(file_path,mime_type,name):
     response = HttpResponse(file_path, content_type=mime_type)
@@ -976,18 +977,27 @@ def text_download(json):
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = 'png' if file_format == 'png-transparent' else file_format
     if len(pages_list)==1:
-        img_res=export_download(pages_list[0].json,file_format,export_size)
-        file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
-        export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        if file_format=="text":
+            export_src=text_download(pages_list[0].json)
+            file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,"txt")
+        else:
+            img_res=export_download(pages_list[0].json,file_format,export_size)
+            file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
+            export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:
         buffer=io.BytesIO()
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
-                file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
-                path='{}/{}'.format(lang,file_name)
-                # file_format = 'png' if file_format == 'png-transparent' else file_format
-                values=export_download(src_json.json,file_format,export_size)
+                if file_format=="text":
+                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,"txt")
+                    path='{}/{}'.format(lang,file_name)
+                    values=text_download(src_json.json)
+                else:
+                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
+                    path='{}/{}'.format(lang,file_name)
+                    # file_format = 'png' if file_format == 'png-transparent' else file_format
+                    values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
