@@ -7,9 +7,9 @@ from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stab
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
-import copy,os
+import copy,os,cv2,numpy
 from ai_canvas.utils import convert_image_url_to_file 
-from ai_imagetranslation.utils import background_remove
+from ai_imagetranslation.utils import background_remove,background_merge
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 
@@ -404,19 +404,18 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     preview_json=serializers.JSONField(required=False)
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
     canvas_json=serializers.JSONField(required=True)
+    erase_mask_json=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
-        fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im')
+        fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im','erase_mask_json')
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
-                      'image':{'write_only':True},
-                     }
+                      'image':{'write_only':True},}
 
     def create(self, validated_data):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
         preview_json=validated_data.get('preview_json',None)
-
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
@@ -441,8 +440,27 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         image_url=validated_data.get('image_url',None)
+        erase_mask_json=validated_data.get('erase_mask_json',None)
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
+
+        if erase_mask_json:  ##
+            mask_image=thumbnail_create(erase_mask_json,formats='mask') 
+            image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
+            mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
+            original_img=cv2.imread(instance.image.path)
+            back_ground_create=background_merge(mask_img,original_img)
+            instance.image=back_ground_create
+            instance.save()
+            tar_json=copy.deepcopy(instance.canvas_json)
+            preview_json=copy.deepcopy(instance.preview_json)
+            tar_json['src']=HOST_NAME+instance.image.url
+            tar_json['brs']=3
+            preview_json['brs']=3
+            preview_json['src']=HOST_NAME+instance.image.url
+            instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
+            instance.canvas_json =tar_json
+            instance.save()
         return instance
 
 styles = {0:'3d-model',1:'analog-film',2:'anime',3:'cinematic' ,4:'comic-book' ,5:'digital-art',

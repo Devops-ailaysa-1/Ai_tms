@@ -233,6 +233,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
 def background_merge(u2net_result,original_img):
     newdata=[]
     original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
+    print(u2net_result.shape ,original_img.shape)
     u2net_result=cv2.subtract(u2net_result,original_img)
     # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
