@@ -1479,19 +1479,20 @@ class GetAssignToSerializer(serializers.Serializer):
 
 	def get_agencies(self,obj):
 		from ai_auth.utils import get_plan_name
+		own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
 		try:
-			default = AiUser.objects.get(email="ams@ailaysa.com")########need to change later##############
+			default = AiUser.objects.get(email=own_agency_email)########need to change later##############
 			if self.context.get('request').user == default:
 				tt =[]
 			else:
 				try:profile = default.professional_identity_info.avatar_url
 				except:profile = None
-				tt = [{'name':default.fullname,'email':"ams@ailaysa.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
+				tt = [{'name':default.fullname,'email':own_agency_email,'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
 		except:
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ams@ailaysa.com")).filter(~Q(hired_editor__deactivate = True))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = own_agency_email)).filter(~Q(hired_editor__deactivate = True))
 		qs_ = [i for i in qs_ if get_plan_name(i.hired_editor) != None ]
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
@@ -1503,9 +1504,10 @@ class GetAssignToSerializer(serializers.Serializer):
 		request = self.context.get('request')
 		pro_user = self.context.get('pro_user',None)
 		job_id= request.query_params.get('job',None)
+		own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ams@ailaysa.com"))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = own_agency_email))
 		print("qs_--------------->",qs_)
 		print("pro_user-------------->",pro_user)
 		if pro_user:

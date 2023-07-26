@@ -892,9 +892,11 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
         else:
             print("Indivual")
+            # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
+            #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
             return [task for job in project.project_jobs_set.all() for task \
                     in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
 
@@ -1564,12 +1566,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         reassign = request.POST.get('reassigned') 
+        own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
         print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
         data = request.POST.dict()
         ################################Need to change########################################
         user = request.user.team.owner  if request.user.team  else request.user
-        if Receiver.email == 'ams@ailaysa.com':
+        if Receiver.email == own_agency_email:
             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         ##########################################################################################
         # task = request.POST.getlist('task')
@@ -2116,25 +2119,31 @@ def file_write(pr):
                 f.write("Source:" + "\n")
                 f.write(express_obj.source_text) 
                 f.write('\n')
-                f.write("---------" + "\n")
-                f.write("Target:" + "\n\n")
+                f.write("---------" + "\n\n")
                 f.write("Standard:" + "\n")
                 target = express_obj.target_text if express_obj.target_text else ''
                 f.write(target)
                 f.write('\n')
-                f.write("---------" + "\n")
-                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-                if shorten_obj.exists():
-                    f.write("Shortened:" + "\n")
-                    f.write(shorten_obj.last().final_result)
+                f.write("---------" + "\n\n")
+                rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+                if rewrite_obj.exists():
+                    f.write("Rewrite:" + "\n")
+                    f.write(rewrite_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
                 simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
                 if simplified_obj.exists():
-                    f.write("Simplified:" + "\n")
+                    f.write("Simplify:" + "\n")
                     f.write(simplified_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
+                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+                if shorten_obj.exists():
+                    f.write("Shorten:" + "\n")
+                    f.write(shorten_obj.last().final_result)
+                    f.write("\n")
+                    f.write("---------" + "\n\n")
+                
 
 
 @api_view(["GET"])
@@ -3411,25 +3420,30 @@ def express_task_download(request,task_id):###############permission need to be 
         f.write("Source:" + "\n")
         f.write(express_obj.source_text) 
         f.write('\n')
-        f.write("---------" + "\n")
-        f.write("Target:" + "\n\n")
+        f.write("---------" + "\n\n")
         f.write("Standard:" + "\n")
         target = express_obj.target_text if express_obj.target_text else ''
         f.write(target)
         f.write('\n')
-        f.write("---------" + "\n")
-        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-        if shorten_obj.exists():
-            f.write("Shortened:" + "\n")
-            f.write(shorten_obj.last().final_result)
+        f.write("---------" + "\n\n")
+        rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+        if rewrite_obj.exists():
+            f.write("Rewrite:" + "\n")
+            f.write(rewrite_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
-            f.write("Simplified:" + "\n")
+            f.write("Simplify:" + "\n")
             f.write(simplified_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
+        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+        if shorten_obj.exists():
+            f.write("Shorten:" + "\n")
+            f.write(shorten_obj.last().final_result)
+            f.write("\n")
+            f.write("---------" + "\n\n")
     print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
