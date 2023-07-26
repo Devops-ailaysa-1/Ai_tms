@@ -198,7 +198,6 @@ def export_download(json_str,format,multipliervalue):
          
         
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
- 
     if thumb_image.status_code ==200:
         if format=='svg':
             compressed_data=svg_convert_base64(thumb_image.text)

@@ -58,6 +58,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     text_box_list=[]
     for i in  texts.pages:
         for j in i.blocks:
+            # x,y,w,h=k.bounding_box.vertices[0].x ,k.bounding_box.vertices[1].y,k.bounding_box.vertices[2].x,k.bounding_box.vertices[3].y 
             for k in j.paragraphs:
                 count=0
                 text_uuid=uuid.uuid4()
@@ -66,7 +67,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 textbox_['id']="text_"+(str(text_uuid))
                 count+=1
                 textbox_['name']=name
-                x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+                x,y,w,h=k.bounding_box.vertices[0].x ,k.bounding_box.vertices[1].y,k.bounding_box.vertices[2].x,k.bounding_box.vertices[3].y 
                 textbox_['left']=x
                 textbox_['top']=y
                 textbox_['width']=w-x
@@ -81,16 +82,16 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
-                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
-                                                    # "poly_line":poly_line}
-            textbox_['text']="".join(text_list).strip()
-            textbox_['fill']="rgb{}".format(tuple(final_color[0]))
-            font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
-            textbox_['fontSize']=font-5
-            no_of_segments+=1
-            text_list=[]
-            text_box_list.append(textbox_)
+                text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
+                                                        "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color}
+                                                        # "poly_line":poly_line}
+                textbox_['text']="".join(text_list).strip()
+                textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+                font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
+                textbox_['fontSize']=font-5
+                no_of_segments+=1
+                text_list=[]
+                text_box_list.append(textbox_)
     return text_and_bounding_results,text_box_list
  
 
@@ -262,62 +263,7 @@ def background_remove(image_path):
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
 
- 
 
-
-    # else:
-    #     image_text_details=creating_image_bounding_box(image_details.image.path)
-    #     mask_out_to_inpaint=np.zeros((img.shape[0],img.shape[1] ,3) , np.uint8)
-    #     for i in image_text_details.values():
-    #         bbox =  i['bbox']
-    #         cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
-    #     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-    #     mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
-    #     output = inpaint_image(img_path, mask_path)
-    #     output = np.reshape(output, img.shape) 
-    #     return output,image_text_details
-
-
-
-# def image_inpaint_revert(instance,mask_json):
-#     main_image=cv2.imread(instance.image.path)
-#     mask_image=TemplateGlobalDesignSerializer().thumb_create(json_str=mask_json,formats='mask',multiplierValue=None)
-#     bit_wise_ = cv2.bitwise_and(mask_image,main_image)
-#     tmp = cv2.cvtColor(bit_wise_, cv2.COLOR_BGR2GRAY)
-#     _,alpha = cv2.threshold(tmp,0,255,cv2.THRESH_BINARY)
-#     b, g, r = cv2.split(bit_wise_)
-#     rgba = [b,g,r, alpha]
-#     masked_tr = cv2.merge(rgba,4)
-#     masked_tr=Image.fromarray(masked_tr)
-#     main_image=Image.fromarray(main_image)
-#     masked_tr.paste(main_image, (0, 0), main_image)
-#     instance.inpaint_image=masked_tr
-#     instance.save()
-    
-
-
-
-# def load_image(fname , mode):
-#     if mode == "L":
-#         # img = cv2.resize(fname, (200,200)) 
-#         img = fname
-#     else:
-#         # fname = cv2.resize(fname, (200,200))
-#         img = np.transpose(fname, (2, 0, 1))
-#     out_img = img.astype('float32') / 255
-#     return out_img   
-
-
-# def move_to_device(obj, device):
-#     if isinstance(obj, torch.nn.Module):
-#         return obj.to(device)
-#     if torch.is_tensor(obj):
-#         return obj.to(device)
-#     if isinstance(obj, (tuple, list)):
-#         return [move_to_device(el, device) for el in obj]
-#     if isinstance(obj, dict):
-#         return {name: move_to_device(val, device) for name, val in obj.items()}
-#     raise ValueError(f'Unexpected type {type(obj)}')
 
 #########stabilityai
  
@@ -418,3 +364,62 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 # "lora_model": None,"tomesd": "yes",
 # "use_karras_sigmas": "yes","vae": None,"lora_strength": None,
 # "scheduler": "UniPCMultistepScheduler","webhook": None, "track_id": None})
+
+
+
+ 
+
+
+    # else:
+    #     image_text_details=creating_image_bounding_box(image_details.image.path)
+    #     mask_out_to_inpaint=np.zeros((img.shape[0],img.shape[1] ,3) , np.uint8)
+    #     for i in image_text_details.values():
+    #         bbox =  i['bbox']
+    #         cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
+    #     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+    #     mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
+    #     output = inpaint_image(img_path, mask_path)
+    #     output = np.reshape(output, img.shape) 
+    #     return output,image_text_details
+
+
+
+# def image_inpaint_revert(instance,mask_json):
+#     main_image=cv2.imread(instance.image.path)
+#     mask_image=TemplateGlobalDesignSerializer().thumb_create(json_str=mask_json,formats='mask',multiplierValue=None)
+#     bit_wise_ = cv2.bitwise_and(mask_image,main_image)
+#     tmp = cv2.cvtColor(bit_wise_, cv2.COLOR_BGR2GRAY)
+#     _,alpha = cv2.threshold(tmp,0,255,cv2.THRESH_BINARY)
+#     b, g, r = cv2.split(bit_wise_)
+#     rgba = [b,g,r, alpha]
+#     masked_tr = cv2.merge(rgba,4)
+#     masked_tr=Image.fromarray(masked_tr)
+#     main_image=Image.fromarray(main_image)
+#     masked_tr.paste(main_image, (0, 0), main_image)
+#     instance.inpaint_image=masked_tr
+#     instance.save()
+    
+
+
+
+# def load_image(fname , mode):
+#     if mode == "L":
+#         # img = cv2.resize(fname, (200,200)) 
+#         img = fname
+#     else:
+#         # fname = cv2.resize(fname, (200,200))
+#         img = np.transpose(fname, (2, 0, 1))
+#     out_img = img.astype('float32') / 255
+#     return out_img   
+
+
+# def move_to_device(obj, device):
+#     if isinstance(obj, torch.nn.Module):
+#         return obj.to(device)
+#     if torch.is_tensor(obj):
+#         return obj.to(device)
+#     if isinstance(obj, (tuple, list)):
+#         return [move_to_device(el, device) for el in obj]
+#     if isinstance(obj, dict):
+#         return {name: move_to_device(val, device) for name, val in obj.items()}
+#     raise ValueError(f'Unexpected type {type(obj)}')
