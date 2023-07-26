@@ -966,23 +966,25 @@ def update_words_from_template_task(file_ids):
         print("Terms Uploaded")
 
 
-
+def diff_month(d1, d2):
+    return (d1.year - d2.year) * 12 + d1.month - d2.month
 
 @task
 def sync_user_details_bi(test=False,is_vendor=False):
     from ai_auth.reports import AilaysaReport
-    from ai_bi.models import AiUserDetails
+    from ai_bi.models import AiUserDetails,UsedLangPairs
     users = AiUser.objects.all()
     rep = AilaysaReport()
     users = rep.get_users(is_vendor=is_vendor,test=test)
     
 
     for user in users:
-        data = dict()
+        data  = dict()
+        data2 = dict()
         data = {
             "email":user.email,
             "fullname":user.fullname,
-            "country":user.country.name,
+            "country":user.country.name if user.country!=None else None,
             "is_staff":user.is_staff,
             "is_active": user.is_active,
             "deactivation_date":user.deactivation_date,
@@ -993,8 +995,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
             "is_agency":user.is_agency,
             "is_internal_member":user.is_internal_member,
             "first_login":user.first_login,
-            "currency_based_on_country":user.currency_based_on_country,
-            "signup_age":0
+            "currency_based_on_country":user.currency_based_on_country.currency if user.currency_based_on_country!=None else None,
+            "signup_age":abs(diff_month(user.date_joined,timezone.now()))
             }
         sub = rep.get_user_subscription(user)
         if sub!=None:
@@ -1008,8 +1010,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
         if credits != None:
             data.update({
             "intial_credits":credits[0],
-            "credits_left":credits[1],
-            "credits_consumed":credits[2]
+            "credits_left":credits[2],
+            "credits_consumed":credits[1]
             })
 
         proj_counts = rep.get_project_counts(user)
@@ -1019,13 +1021,35 @@ def sync_user_details_bi(test=False,is_vendor=False):
             "documents_created":proj_counts[1],
             "pdf_conversion":proj_counts[2],
             "blogs_created":proj_counts[3],
-            "project_types":2
             })
         
-        obj, created =AiUserDetails.objects.using("bi").update_or_create(**data)
+        # obj, created =AiUserDetails.objects.using("bi").update_or_create(**data)
 
         # try:
         #     user_det = AiUserDetails.objects.get(email=user.email)
         # except AiUserDetails.DoesNotExist:
         #     user_det = AiUserDetails(**data)
         #     user_det.save(using="bi")
+
+
+
+        objs = AiUserDetails.objects.using("bi").filter(email=data["email"])
+        if objs.count() != 0:
+            objs.using("bi").update(**data)
+        else:
+            user_det = AiUserDetails(**data)
+            user_det.save(using="bi")
+
+        user_det = AiUserDetails.objects.using("bi").get(email=data["email"])
+        lang_pairs = rep.get_language_pair_used(user)
+        if len(lang_pairs) != 0:
+            # data['language_pairs_used']=','.join(lang_pairs)
+            for lang in lang_pairs:
+                data2['user_detail'] = user_det
+                pairs = lang.split('->')
+                data2['source_lang'] = pairs[0]
+                if len(pairs)!=1:
+                    data2['target_lang'] = pairs[1]
+                user_lang = UsedLangPairs(**data2)
+                user_lang.save(using="bi")
+
