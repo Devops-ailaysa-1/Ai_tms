@@ -47,10 +47,14 @@ class AiUserDetails(models.Model):
     blogs_created = models.IntegerField(default=0)
     signup_age = models.IntegerField(default=0)
     project_types = models.CharField(max_length=100,null=True,blank=True)
-    language_pairs_used = models.TextField(null=True,blank=True)
 
-    class Meta:
-        managed=False
+    # class Meta:
+    #     managed=False
 
 
 # post_save.connect(_bi_user_details, sender=AiUserDetails)
+
+class UsedLangPairs(models.Model):
+    user_detail = models.ForeignKey(AiUserDetails,related_name="lang_pair_used",on_delete=models.CASCADE)
+    source_lang =  models.CharField(max_length=200)
+    target_lang =  models.CharField(max_length=200,null=True,blank=True)

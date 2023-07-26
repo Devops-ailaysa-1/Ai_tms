@@ -972,14 +972,15 @@ def diff_month(d1, d2):
 @task
 def sync_user_details_bi(test=False,is_vendor=False):
     from ai_auth.reports import AilaysaReport
-    from ai_bi.models import AiUserDetails
+    from ai_bi.models import AiUserDetails,UsedLangPairs
     users = AiUser.objects.all()
     rep = AilaysaReport()
     users = rep.get_users(is_vendor=is_vendor,test=test)
     
 
     for user in users:
-        data = dict()
+        data  = dict()
+        data2 = dict()
         data = {
             "email":user.email,
             "fullname":user.fullname,
@@ -1030,9 +1031,7 @@ def sync_user_details_bi(test=False,is_vendor=False):
         #     user_det = AiUserDetails(**data)
         #     user_det.save(using="bi")
 
-        lang_pairs = rep.get_language_pair_used(user)
-        if len(lang_pairs) != 0:
-            data['language_pairs_used']=','.join(lang_pairs)
+
 
         objs = AiUserDetails.objects.using("bi").filter(email=data["email"])
         if objs.count() != 0:
@@ -1040,3 +1039,17 @@ def sync_user_details_bi(test=False,is_vendor=False):
         else:
             user_det = AiUserDetails(**data)
             user_det.save(using="bi")
+
+        user_det = AiUserDetails.objects.using("bi").get(email=data["email"])
+        lang_pairs = rep.get_language_pair_used(user)
+        if len(lang_pairs) != 0:
+            # data['language_pairs_used']=','.join(lang_pairs)
+            for lang in lang_pairs:
+                data2['user_detail'] = user_det
+                pairs = lang.split('->')
+                data2['source_lang'] = pairs[0]
+                if len(pairs)!=1:
+                    data2['target_lang'] = pairs[1]
+                user_lang = UsedLangPairs(**data2)
+                user_lang.save(using="bi")
+
