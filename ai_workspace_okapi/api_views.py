@@ -3233,23 +3233,23 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         project = request.GET.get('project',None)
-        choice=request.GET.get('choice_list_id',None)
+        #choice=request.GET.get('choice_list_id',None)
         user = request.user.team.owner  if request.user.team  else request.user
-        if choice:
-            ch_list=self.get_object(request,choice)
-            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
-            queryset = self.filter_queryset(self_learning)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
-            return self.get_paginated_response(serializer.data)
-        elif project:
+        # if choice:
+        #     ch_list=self.get_object(request,choice)
+        #     self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+        #     queryset = self.filter_queryset(self_learning)
+        #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        #     serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+        #     return self.get_paginated_response(serializer.data)
+        if project:
             project=get_object_or_404(Project,id=project)
             lang=project.get_target_languages
             ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=user)
             queryset = self.filter_queryset(ch_list)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self) 
-            choice_serializer=ChoiceListsSerializer(pagin_tc,many=True)
-            return self.get_paginated_response(choice_serializer.data)
+            #pagin_tc = self.paginate_queryset(queryset, request , view=self) 
+            choice_serializer=ChoiceListsSerializer(queryset,many=True)
+            return Response(choice_serializer.data)
         else:       
             ch_list=ChoiceLists.objects.filter(user=user)
             queryset = self.filter_queryset(ch_list)
