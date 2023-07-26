@@ -1220,6 +1220,7 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
+        authorize(request,resource=task,action="delete",actor=self.request.user)
         if task.task_info.filter(task_assign_info__isnull=False):
             print("assigned")
             return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
@@ -1413,6 +1414,8 @@ class ProjectAnalysis(APIView):
 
     permission_classes = [IsAuthenticated]
     def get(self, request, project_id):
+        pro=get_object_or_404(Project,id=project_id)
+        authorize(request,actor=request.user,resource=pro,action="read")
         return Response(ProjectAnalysisProperty.get(project_id))
 
 #########################################
@@ -1457,6 +1460,9 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         file = request.FILES.getlist('instruction_file')
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
+
+        tsk = Task.objects.get(id=task)
+        authorize(request, resource=tsk, actor=self.request.user, action="read")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -1762,6 +1768,7 @@ def get_assign_to_list(request):
     return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 
 def find_vendor(team,jobs):
+    externalmembers=[]
     for j in team:
         for job in jobs:
             try:profile = j.hired_editor.professional_identity_info.avatar_url
@@ -1891,6 +1898,9 @@ def tasks_list(request):
 @api_view(['GET',])
 def instruction_file_download(request,instruction_file_id):
     instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
+
+    task=TaskAssignInfo.objects.get(task_assign_instruction_file__id=instruction_file_id)
+    authorize(request,resource=task,actor=request.user,action="read")
     if instruction_file:
         return download_file(instruction_file.path)
         # fl_path = instruction_file.path
@@ -1934,6 +1944,11 @@ class AssignToListView(viewsets.ModelViewSet):
         job = self.request.GET.getlist('job')
         reassign = self.request.GET.get('reassign',None)
         pro = Project.objects.get(id = project)
+        
+        task=Task.objects.filter(job__project__id=5390)
+        tsk=filter_authorize(request,task,"read",self.request.user)
+        if not tsk:
+            return JsonResponse({"msg":"you are not authorixed to perform this action"})
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
             #authorize(request, resource=job_obj, actor=request.user, action="read")
@@ -2126,6 +2141,7 @@ def file_write(pr):
 #@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
+    authorize(request,resource=pr,action="read",actor=request.user)
     if pr.project_type_id == 5:
         file_write(pr)
 
@@ -2372,6 +2388,8 @@ def transcribe_file(request):
 @permission_classes([IsAuthenticated])
 def transcribe_file_get(request):
     task_id = request.GET.get('task')
+    task=Task.objects.get(id=task_id)
+    authorize(request,resource=task,action="read",actor=request.user)
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     ser = TaskTranscriptDetailSerializer(queryset,many=True)
     return Response(ser.data)
@@ -2487,6 +2505,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender',None)
     pr = Project.objects.get(id=project)
+    authorize(request,resource=pr,action="read",actor=request.user)
     for _task in pr.get_source_only_tasks:
         if _task.task_transcript_details.first() == None:
             tasks.append(_task)
@@ -2620,6 +2639,7 @@ def download_text_to_speech_source(request):
     gender = request.GET.get('gender')
     user = request.user
     obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="read",actor=request.user)
     # if obj.task_transcript_details.exists()==False:
     #     tt = text_to_speech_task(obj,language,gender,user)
     file = obj.task_transcript_details.first().source_audio_file
@@ -2633,6 +2653,7 @@ def download_text_to_speech_source(request):
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="read",actor=request.user)
     try:
         output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
         return download_file(output_from_writer.path)
@@ -2675,16 +2696,23 @@ def zipit(folders, zip_filename):
 @permission_classes([IsAuthenticated])
 def project_list_download(request):
     projects = request.GET.getlist('project')
-    dest = []
-    for obj in projects:
-        pr = Project.objects.get(id=obj)
-        path = pr.project_dir_path + '/source'
-        dest.append(path)
-    zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
-    zipit(dest,zip_file_name)
-    tt = download_file(zip_file_name)
-    os.remove(zip_file_name)
-    return tt
+
+    pro = get_list_or_404(Project,id__in=projects)
+    proj=authorize_list(pro,"read",request.user)
+    projects=[str(i.id) for i in proj]
+    print(projects,"************************")
+    if projects:
+        dest = []
+        for obj in projects:
+            pr = Project.objects.get(id=obj)
+            path = pr.project_dir_path + '/source'
+            dest.append(path)
+        zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
+        zipit(dest,zip_file_name)
+        tt = download_file(zip_file_name)
+        os.remove(zip_file_name)
+        return tt
+    return JsonResponse({"msg":"you are not authorized to perform this action"})
 
 
 ############################Deprecated###########################################
