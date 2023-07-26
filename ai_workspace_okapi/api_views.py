@@ -3295,13 +3295,14 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     queryset = ChoiceListSelected.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = ChoiceListSelectedSerializer
-    paginator = PageNumberPagination()
-    paginator.page_size = 10
+    # paginator = PageNumberPagination()
+    # paginator.page_size = 10
 
     def get_object(self,request,ids):
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=self.request.user)
+            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=user)
         except:
             raise Http404
         return obj
@@ -3312,7 +3313,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         if not project_id:
             return Response({"msg":"project_id required"})
         project=get_object_or_404(Project,id=project_id)
-        authorize(request, resource=project, actor=request.user, action="read")
+       # authorize(request, resource=project, actor=request.user, action="read")
         choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=user)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
@@ -3321,7 +3322,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         project_id = request.POST.get('project')
         choice_list=request.POST.getlist('choice_list')
         project=get_object_or_404(Project,id=project_id)
-        authorize(request, resource=project, actor=request.user, action="read")
+       # authorize(request, resource=project, actor=request.user, action="read")
         if choice_list:
             data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
             serializer = ChoiceListSelectedSerializer(data=data,many=True)
