@@ -163,6 +163,9 @@ company_members_list = [
 def get_assignment_role(step,reassigned=False):
     from ai_workspace.models import AiRoleandStep
     
+    # ins=instance.task_ven_status
+    # if ins=="null":
+    #     res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Invitee')).last()
     if reassigned:
         res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Agency')).last()
     else:

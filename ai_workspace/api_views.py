@@ -1464,7 +1464,8 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         req_copy.method = "DELETE"
 
         tsk = Task.objects.get(id=task)
-        authorize(request, resource=tsk, actor=self.request.user, action="read")
+        print(self.request.user)
+        authorize(request, resource=tsk, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -1951,7 +1952,7 @@ class AssignToListView(viewsets.ModelViewSet):
         task=Task.objects.filter(job__project__id=5390)
         tsk=filter_authorize(request,task,"read",self.request.user)
         if not tsk:
-            return JsonResponse({"msg":"you are not authorixed to perform this action"})
+            return JsonResponse({"msg":"You do not have permission to perform this action."})
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
             #authorize(request, resource=job_obj, actor=request.user, action="read")
