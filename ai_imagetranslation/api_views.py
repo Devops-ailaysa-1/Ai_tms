@@ -178,13 +178,13 @@ def image_translation_project_view(request):
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
         with ZipFile(buffer, mode="a") as archive:  
-            if file_format == 'text':
-                file_name = '{}.{}'.format(image_instance.source_language.language.language,".txt")
-                src_image_json=text_download(image_instance.source_canvas_json)
-            else:
-                file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
-                src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size)
-            archive.writestr(file_name,src_image_json)
+            # if file_format == 'text':
+            #     file_name = '{}.{}'.format(image_instance.source_language.language.language,".txt")
+            #     src_image_json=text_download(image_instance.source_canvas_json)
+            # else:
+            #     file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
+            #     src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size)
+            # archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
                 if file_format == 'text':
