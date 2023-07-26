@@ -227,8 +227,6 @@ def image_translation_project_view(request):
         return Response(resp)
 
 
-
-
 class ImageTranslateListViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]

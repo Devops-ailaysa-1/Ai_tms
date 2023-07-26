@@ -17,6 +17,7 @@ from django.db.models import Q,F
 from itertools import chain
 from zipfile import ZipFile
 import io
+import django_filters
 from ai_staff.serializer import FontFamilySerializer ,SocialMediaSizeSerializer
 import os, urllib
 from django.http import JsonResponse, Http404, HttpResponse
@@ -654,7 +655,7 @@ class FontFileViewset(viewsets.ViewSet):
         query_set.delete()
         return Response(status=204)
 
-import django_filters
+
 class FontFamilyFilter(django_filters.FilterSet):
     font_search = django_filters.CharFilter(field_name='font_family_name', label='renamed_field')
 
@@ -765,8 +766,6 @@ class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
         else:
             return Response(serializer.errors)
 
-
-        
     def delete(self,request,pk):
         query_set=SocialMediaSize.objects.get(id=pk)
         query_set.delete()
@@ -819,8 +818,6 @@ def all_cat_req(category):
     params['q']=category
     params['catagory']=str(category).lower()
     pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers) 
-    print("pixa_bay",pixa_bay)
-    print("pixa_bay",pixa_bay.status_code)
     return pixa_bay.json()
 
 def process_pixabay(**kwargs):
@@ -881,14 +878,12 @@ def image_list(request):
         image_file=pixa_image_url(image_url)
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
-    
     # itm_pr_pge=6
     image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     # image_cats=paginate_items(image_cats,page,itm_pr_pge)[0]
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(all_cat_req,image_cats))
 
- 
     data=process_pixabay(results=results,image_cats=image_cats)
     paginate=Paginator(data,6)  ###no of item in single page
     fin_dat=paginate.get_page(page)
