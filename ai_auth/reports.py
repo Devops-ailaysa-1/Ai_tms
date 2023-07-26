@@ -399,7 +399,7 @@ class AilaysaReport:
     def get_user_credits(self,user):
         total_credits,credits_consumed,credits_un_consumed = 0,0,0
         credits = UserCredits.objects.filter(user=user)
-        sub_credits = credits.filter(credit_pack_type = "Subscription")
+        sub_credits = credits.filter(credit_pack_type__icontains = "Subscription")
         addon_credits = credits.filter(credit_pack_type = "Addon")
         for addon in addon_credits:
             if addon.buyed_credits != None:
@@ -421,3 +421,11 @@ class AilaysaReport:
         pdf = Ai_PdfUpload.objects.filter(user=user)
 
         return projects.count(),my_docs.count(),pdf.count(),blog_creation.count()
+
+    def get_language_pair_used(self,user):
+        ls = set()
+        projects = Project.objects.filter(ai_user=user)
+        for proj in projects:
+            for i in proj.project_jobs_set.all():
+                ls.add(i.__str__())
+        return list(ls)

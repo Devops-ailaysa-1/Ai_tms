@@ -47,6 +47,7 @@ class AiUserDetails(models.Model):
     blogs_created = models.IntegerField(default=0)
     signup_age = models.IntegerField(default=0)
     project_types = models.CharField(max_length=100,null=True,blank=True)
+    language_pairs_used = models.TextField(null=True,blank=True)
 
     class Meta:
         managed=False
