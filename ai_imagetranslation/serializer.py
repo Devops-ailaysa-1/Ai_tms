@@ -505,20 +505,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance.save()
         return instance
         
-        
-
-
-
-        
-
-
-
-
-
-
-
-
-
 
 
         # if target_update_id and mask_json:

@@ -963,7 +963,14 @@ class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
         TemplateGlobalDesign.objects.get(id=pk).delete()
         return Response({'msg':'deleted successfully'})
     
- 
+def text_download(json):
+    text=[]
+    for i in json['objects']:
+        if i['type']== 'textbox':
+            text.append(i['text'])
+            text.append("\n")
+    return "".join(text)
+
 
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
@@ -1012,16 +1019,26 @@ def DesignerDownload(request):
             buffer=io.BytesIO()
             with zipfile.ZipFile(buffer, mode="a") as archive:
                 for src_json in src_jsons:
-                    file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
-                    path='{}/{}'.format(src_lang,file_name)
-                    values=export_download(src_json.json,file_format,export_size)
+                    if file_format=="text":
+                        values=text_download(src_json.json)
+                        file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,"txt")
+                        path='{}/{}'.format(src_lang,file_name)
+                    else:
+                        file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
+                        path='{}/{}'.format(src_lang,file_name)
+                        values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
                     for tar_json in tar_jsons:
-                        values=export_download(tar_json.json,file_format,export_size)
-                        file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
-                        path='{}/{}'.format(tar_lang.target_language.language,file_name)
+                        if file_format=="text":
+                            values=text_download(tar_json.json)
+                            file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,"txt")
+                            path='{}/{}'.format(tar_lang.target_language.language,file_name)
+                        else:
+                            values=export_download(tar_json.json,file_format,export_size)
+                            file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
+                            path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             if buffer.getvalue():
                 if not canvas.file_name:
