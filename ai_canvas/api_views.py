@@ -973,7 +973,6 @@ def text_download(json):
     return "".join(text)
 
 
-
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = 'png' if file_format == 'png-transparent' else file_format
     if len(pages_list)==1:
