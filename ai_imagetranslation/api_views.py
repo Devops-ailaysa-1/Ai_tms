@@ -200,7 +200,7 @@ def image_translation_project_view(request):
     elif language == image_instance.source_language.language.id:
         if file_format == 'text':
             export_src=text_download(image_instance.source_canvas_json)
-            file_name="page_{}_{}.{}".format(str(1),language,"txt")
+            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language.language.language,"txt")
         else:
             img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
@@ -209,11 +209,12 @@ def image_translation_project_view(request):
     
     elif language and language != image_instance.source_language.language.id:
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
+        lang=image_instance.s_im.get(target_language__language__id=language).target_language.language.language
         if file_format == 'text':
             export_src=text_download(tar_inst.target_canvas_json)
-            file_name="page_{}_{}.{}".format(str(1),language,"txt")
+            file_name="page_{}_{}.{}".format(str(1),lang,"txt")
         else:
-            img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,image_instance.s_im.get(target_language__language__id=language).target_language.language.language)
+            img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,lang)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
