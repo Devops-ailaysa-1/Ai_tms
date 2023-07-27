@@ -79,14 +79,13 @@ class ProjectManager(models.Manager):
             jobs = project.project_jobs_set.all()
             target_languages = [i.target_language_id for i in jobs if i.target_language]
             print("TL----------->", target_languages)
-            query = [ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True) for i in target_languages]
-            #query = ChoiceLists.objects.filter(user = project.ai_user).filter(language_id__in = target_languages).filter(is_default=True)
-            print("Qr------------>",query)
-            objects = [item[0] for item in query]
-            if objects:
-                ch = [ChoiceListSelected.objects.get_or_create(project=project,choice_list=i) for i in objects]
-                print("Ch--------->",ch)
+            for i in target_languages:
+                ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
+                exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
+                if not exists:
+                    ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
             return None
+
 
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -290,3 +289,12 @@ class TaskAssignManager(models.Manager):
     #     return self.create_tasks_of_audio_files(
     #         files=files, jobs=jobs, klass=None, project=project
     #     )
+            # query = [ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True) for i in target_languages]
+            # #query = ChoiceLists.objects.filter(user = project.ai_user).filter(language_id__in = target_languages).filter(is_default=True)
+            # print("Qr------------>",query)
+            # objects = [item[0] for item in query]
+            # if objects:
+            #     ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i) f
+            #     ch = [ChoiceListSelected.objects.get_or_create(project=project,choice_list=i) for i in objects]
+            #     print("Ch--------->",ch)
+            # return None
