@@ -41,6 +41,8 @@ class ImageloadSerializer(serializers.ModelSerializer):
         image_asset_id=validated_data.pop('image_asset_id',None)
         user =  self.context['request'].user
         if image_asset_id:
+            if image_asset_id.file_name.endswith(".svg"):
+                raise serializers.ValidationError("image should be in png or jpg format")
             instance=Imageload.objects.create(image=image_asset_id.image,user=user)
         else:
             data = {**validated_data ,'user':user}
