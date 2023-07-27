@@ -402,7 +402,9 @@ def get_res_path(source_lang):
     elif source_lang in ['ml']:
         res_paths["srx_file_path"] = "okapi_resources/malayalam.srx"
         return res_paths
-
+    elif source_lang in ['km']:
+        res_paths["srx_file_path"] = "okapi_resources/khmer.srx"
+        return res_paths
     else:
         return res_paths
 

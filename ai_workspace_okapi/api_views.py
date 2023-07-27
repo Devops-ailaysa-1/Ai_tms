@@ -102,7 +102,7 @@ from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_tm import match
-
+from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -110,6 +110,9 @@ logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 
 END_POINT= settings.END_POINT
+
+
+
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -164,7 +167,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def trim_segments(doc_data):
-
         #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
@@ -1188,43 +1190,45 @@ class MT_RawAndTM_View(views.APIView):
         print(project)
         return project
 
-    # @staticmethod
-    # def get_words_list(sent):
-    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-    #     tokens=word_tokenize(sent)
-    #     target = [word for word in tokens if word not in punctuation]
-    #     words=[]
-    #     tg_word = [word for word in target] 
-    #     unigram = ngrams(tg_word , 1)
-    #     words.extend(list(" ".join(i) for i in unigram))
-    #     bigrams = ngrams(tg_word , 2)
-    #     words.extend(list(" ".join(i) for i in bigrams))
-    #     trigrams = ngrams(tg_word , 3)
-    #     words.extend(list(" ".join(i) for i in trigrams))
-    #     return words
+    @staticmethod
+    def get_words_list(sent):
+        punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+        tokens=word_tokenize(sent)
+        target = [word for word in tokens if word not in punctuation]
+        words=[]
+        tg_word = [word for word in target] 
+        unigram = ngrams(tg_word , 1)
+        words.extend(list(" ".join(i) for i in unigram))
+        bigrams = ngrams(tg_word , 2)
+        words.extend(list(" ".join(i) for i in bigrams))
+        trigrams = ngrams(tg_word , 3)
+        words.extend(list(" ".join(i) for i in trigrams))
+        return words
 
-    # @staticmethod   
-    # def asset_replace(request,translation,project,lang): 
-    #     choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
-    #     print("choice--------->",choice, choice.last())
-    #     choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
-    #     print("Choicelist----------->",choicelist)
-    #     words = MT_RawAndTM_View.get_words_list(translation)
-    #     suggestion={}
-    #     if choicelist:
-    #         for word in words: 
-    #             print("Word---------->", word)
-    #             choice=choicelist.filter(source_word__iexact = word).order_by("edited_word",'-created_at').distinct("edited_word")
-    #             if choice:
-    #                 print(choice, "*****************")
-    #                 replace_word=choice.first().edited_word
-    #                 pattern = r'\b{}\b'.format(word)
-    #                 translation= re.sub(pattern, replace_word, translation)
-    #                 suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
-    #                 suggestion[replace_word].insert(0,word) 
+    @staticmethod   
+    def asset_replace(request,translation,project,lang): 
+        choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
+        print("choice--------->",choice, choice.last())
+        self_learn=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
+        print("SelfLearn----------->",self_learn)
+        words = MT_RawAndTM_View.get_words_list(translation)
+        suggestion={}
+        if self_learn:
+            for word in words: 
+                print("Word---------->", word)
+                choice=self_learn.filter(source_word__iexact = word).order_by('-updated_at').distinct()
+                if choice:
+                    print(choice, "*****************")
+                    replace_word=choice.first().edited_word
+                    print("replace_word---------->",replace_word)
+                    #pattern = r'\b{}\b'.format(word)
+                    translation= re.sub(word, replace_word, translation)
+                    print("Trans--------------->",translation)
+                    suggestion[replace_word]=[i.edited_word for i in choice if  i.edited_word != replace_word]
+                    suggestion[replace_word].insert(0,word) 
         
-    #     print(translation)
-    #     return translation,suggestion
+        print(translation)
+        return translation,suggestion
 
 
     def get(self, request, segment_id):
@@ -1262,20 +1266,17 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                # print('data normal=-----------',data['mt_raw'])
-                #rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 
                 # #list option assets
                 # replace asset auto
                 seg_obj = Segment.objects.get(id=segment_id)
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                # asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-
-        
-                # print('rep----------',asset_rep)
+                rep = data.get('mt_raw',None)
+                if rep:
+                    asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                    data['mt_raw']=asset_rep
+                    data['options']=asset_list
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
@@ -1292,18 +1293,15 @@ class MT_RawAndTM_View(views.APIView):
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                #rep=data['mt_raw']
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
-                # #list option assets
-                # # replace asset auto
                 seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                #asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
-                # data['mt_raw']=asset_rep
-                # data['options']=asset_list
-                # print('rep----------',asset_rep)
-
-
+                rep = data.get('mt_raw',None)
+                if rep:
+                    asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                    data['mt_raw']=asset_rep
+                    data['options']=asset_list
+                    print('rep----------',asset_rep)
 
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
@@ -2404,16 +2402,9 @@ def spellcheck(request):
             nltk_tokens = tknzr.tokenize(tar)
             words = [word for word in nltk_tokens if word not in punctuation]
             print('wrd-------------->',words)
-            # batch_size = 300  
-            # num_batches = len(words) // batch_size + 1
-            # for i in range(num_batches):
-            #     start = i * batch_size
-            #     end = (i + 1) * batch_size
-            #     batch = words[start:end]
-            #     print("batch---------------->",batch)
-            for word in words:
+            for word in list(set(words)):
                 suggestions=[]
-                if hobj.spell(word)==False:
+                if hobj.spell(word)==False and not word.isdigit():# and len(word)>2
                     suggestions.extend(hobj.suggest(word))
                     out=[{"word":word,"Suggested Words":suggestions}]
                     res.extend(out)
@@ -2427,12 +2418,13 @@ def spellcheck(request):
                 misspelled=spell.unknown(words)#set
                 for word in misspelled:
                     suggestion=list(spell.candidates(word))
-                    for k in words:
-                        if k==word.capitalize():
-                            out=[{"word":k,"Suggested Words":suggestion}]
-                            break
-                        else:
-                            out=[{"word":word,"Suggested Words":suggestion}]
+                    for k in list(set(words)):
+                        if len(word)>2 and not word.isdigit():
+                            if k==word.capitalize():
+                                out=[{"word":k,"Suggested Words":suggestion}]
+                                break
+                            else:
+                                out=[{"word":word,"Suggested Words":suggestion}]
                     res.extend(out)
                 return JsonResponse({"result":res},safe=False)
     except:
@@ -3061,11 +3053,13 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     search_fields = ['source_word','edited_word']
+    ordering = ('-id')
     ordering_fields = ['id','source_word','edited_word']
 
     @staticmethod
     def get_object(request,id):
-        asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=request.user)
+        user =request.user.team.owner  if request.user.team  else request.user
+        asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3077,10 +3071,13 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         segment_id=request.GET.get('segment_id',None)
+        choice_list_id = request.GET.get('choice_list_id',None)
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
         if segment_id: 
             if split_check(segment_id):
                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
                 seg = get_object_or_404(Segment,id=segment_id) 
+                lang = get_object_or_404(Languages,id=seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(segment=seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target
@@ -3091,28 +3088,32 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 split_seg=get_object_or_404(SplitSegment,id=segment_id)
+                lang = get_object_or_404(Languages,id=split_seg.text_unit.document.target_language_id)
                 seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target 
                 else:
                     raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                    print(2)
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
-
-            choice=ChoiceListSelected.objects.filter(project__id=project.id).first()
+           
+            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).last()
+            print("Choice in self-learn------->",choice)
             if choice:
                 self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
             else:
                 self_learning=None
-
+            print("self Learn------->",self_learning)
             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
             return Response({},status=status.HTTP_200_OK)
         else:
-            assets = SelflearningAsset.objects.filter(choice_list__user=request.user).order_by('-id')
+            if choice_list_id:
+                assets = SelflearningAsset.objects.filter(choice_list__id=choice_list_id)
+            else:
+                assets = SelflearningAsset.objects.filter(choice_list__user=user)
             queryset = self.filter_queryset(assets)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = SelflearningAssetSerializer(pagin_tc, many=True)
@@ -3133,11 +3134,11 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         if doc_id:                                               
             doc=get_object_or_404(Document,id=doc_id)
             lang=get_object_or_404(Languages,id=doc.target_language_id)
-            user=self.request.user
-            choice_list=ChoiceListSelected.objects.filter(project_id=doc.project).first()
-            print(choice_list,'------------')
-            if choice_list:
-                choice_list=get_object_or_404(ChoiceLists,id=choice_list.choice_list.id)
+            user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+            choice_list_sld=ChoiceListSelected.objects.filter(project_id=doc.project).filter(choice_list__language=lang)
+            print(choice_list_sld,'------------')
+            if choice_list_sld:
+                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.last().choice_list.id)
             else:
                 choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
                 if created == False:
@@ -3155,7 +3156,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return Response(ser.errors)
 
     def update(self,request,pk):
-        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+        ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
         edited=request.POST.get('edited_word',None)
         slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
         if slf:
@@ -3168,7 +3170,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             return Response(ser.errors)
 
     def delete(self,request,pk):
-        ins = SelflearningAsset.objects.get(choice_list__user=self.request.user,id=pk)
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+        ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
         ins.delete()
         return  Response(status=204)
     
@@ -3204,7 +3207,8 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
 
     @staticmethod
     def get_object(request,id):
-        asset = get_object_or_404(ChoiceLists, id=id,user=request.user)
+        user = request.user.team.owner  if request.user.team  else request.user
+        asset = get_object_or_404(ChoiceLists, id=id, user=user)
         return  asset
 
     def filter_queryset(self, queryset):
@@ -3216,24 +3220,25 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     
     def list(self,request):
         project = request.GET.get('project',None)
-        choice=request.GET.get('choice_list_id',None)
-        if choice:
-            ch_list=self.get_object(request,choice)
-            self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
-            queryset = self.filter_queryset(self_learning)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
-            return self.get_paginated_response(serializer.data)
-        elif project:
+        #choice=request.GET.get('choice_list_id',None)
+        user = request.user.team.owner  if request.user.team  else request.user
+        # if choice:
+        #     ch_list=self.get_object(request,choice)
+        #     self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+        #     queryset = self.filter_queryset(self_learning)
+        #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        #     serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+        #     return self.get_paginated_response(serializer.data)
+        if project:
             project=get_object_or_404(Project,id=project)
             lang=project.get_target_languages
-            ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=self.request.user)
+            ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=user)
             queryset = self.filter_queryset(ch_list)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self) 
-            choice_serializer=ChoiceListsSerializer(pagin_tc,many=True)
-            return self.get_paginated_response(choice_serializer.data)
+            #pagin_tc = self.paginate_queryset(queryset, request , view=self) 
+            choice_serializer=ChoiceListsSerializer(queryset,many=True)
+            return Response(choice_serializer.data)
         else:       
-            ch_list=ChoiceLists.objects.filter(user=self.request.user)
+            ch_list=ChoiceLists.objects.filter(user=user)
             queryset = self.filter_queryset(ch_list)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = ChoiceListsSerializer(pagin_tc, many=True)
@@ -3250,8 +3255,8 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
         lang=request.POST.get('language',None)
         name=request.POST.get('name',None)
         lang=get_object_or_404(Languages,id=lang)
-
-        user=self.request.user
+        #user=self.request.user
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
         choice_serializer= ChoiceListsSerializer(data={'name':name,'language':lang.id,'user':user.id})
         if choice_serializer.is_valid():
             choice_serializer.save()
@@ -3277,24 +3282,26 @@ class Choicelistselectedview(viewsets.ModelViewSet):
     queryset = ChoiceListSelected.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = ChoiceListSelectedSerializer
-    paginator = PageNumberPagination()
-    paginator.page_size = 10
+    # paginator = PageNumberPagination()
+    # paginator.page_size = 10
 
     def get_object(self,request,ids):
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
         pk = self.kwargs.get("pk", 0)
         try:
-            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=self.request.user)
+            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=user)
         except:
             raise Http404
         return obj
     
     def list(self,request):
         project_id = request.GET.get('project')
+        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
         if not project_id:
             return Response({"msg":"project_id required"})
         project=get_object_or_404(Project,id=project_id)
-        authorize(request, resource=project, actor=request.user, action="read")
-        choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=self.request.user)
+       # authorize(request, resource=project, actor=request.user, action="read")
+        choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=user)
         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
         return Response(Choice_selected_ser.data)
 
@@ -3302,7 +3309,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         project_id = request.POST.get('project')
         choice_list=request.POST.getlist('choice_list')
         project=get_object_or_404(Project,id=project_id)
-        authorize(request, resource=project, actor=request.user, action="read")
+       # authorize(request, resource=project, actor=request.user, action="read")
         if choice_list:
             data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
             serializer = ChoiceListSelectedSerializer(data=data,many=True)
@@ -3319,4 +3326,93 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+
+
+ 
+
+    # dictionary_path = dictionary_paths.get(lang)
+    # if dictionary_path:
+    #     sym_spell.load_dictionary(dictionary_path, term_index=0,count_index=1)
+    # return sym_spell
+# sym_spell=load_dictionary(lang_code)
+
+
+# dictionary_paths = {
+#     #"en": "/ai_home/dictionaries/en.txt",
+#     # #"sq": "/ai_home/dictionaries/sq.txt",
+#     # "es": "/ai_home/dictionaries/es.txt", 
+#     # "ar": "/ai_home/dictionaries/ar.txt",
+#     # "fr": "/ai_home/dictionaries/fr.txt",
+#     # "lv": "/ai_home/dictionaries/lv.txt",
+#     # "nl": "/ai_home/dictionaries/nl.txt",
+#     # "pt": "/ai_home/dictionaries/pt.txt",
+#     # "ru": "/ai_home/dictionaries/ru.txt",
+# }
+
+# sym_spell = SymSpell()
+# for lang_code,lang_path in dictionary_paths.items():
+#     sym_spell.load_dictionary(lang_path, term_index=0,count_index=1)
+
+
+@api_view(['POST'])
+def symspellcheck(request):
+    from ai_openai.serializers import lang_detector
+    text = request.POST.get('target',None)
+    doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
+    if not text:
+        return JsonResponse({'msg':"no text"},status=400)
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
+    else:
+        lang_code = lang_detector(text.split('.')[0])
+        print("RR------->",lang_code)
+    lang_code= 'zh' if lang_code == 'zh-Hant' or lang_code == 'zh-Hans' else lang_code
+    end_pts = settings.END_POINT +"spell-check/" #'http://165.22.218.167:8015/spell-check/'
+    data ={'text': text,'lang_code': lang_code}
+    result=requests.request("GET", url=end_pts, data=data)
+    print(result.json())
+    try:return JsonResponse(result.json())
+    except:return JsonResponse({'msg':'something went wrong'},status=400)
     
+
+
+
+    # except:return JsonResponse({'msg':'something went wrong'})
+    # def get_words(text):
+    #     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+    #     tknzr = TweetTokenizer()
+    #     nltk_tokens = tknzr.tokenize(tar)
+    #     words = [word for word in nltk_tokens if word not in punctuation]
+    #     return words
+
+
+    # def spell_check_large_text(text):
+    #     max_edit_distance = 2
+    #     words = get_words(text)
+    #     misspelled_words = []
+    #     processed_words = set()
+    #     for word in words:
+    #         if not word.isdigit() and len(word)>1 and word.lower() not in processed_words:
+    #             lowercase_word = word.lower()
+    #             word_suggestions = sym_spell.lookup(lowercase_word, Verbosity.TOP, max_edit_distance)
+    #             if word_suggestions != [] and (len(word_suggestions) > 0 and word_suggestions[0].term != lowercase_word):
+    #                 suggestion_words = [s.term for s in word_suggestions]
+    #                 misspelled_words.append({'word':word, 'suggestion':suggestion_words})
+    #             processed_words.add(lowercase_word)
+    #     return misspelled_words
+
+    # if lang_code not in dictionary_paths:
+    #     return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
+    # suggestions = spell_check_large_text(tar)
+    # return JsonResponse({"result":suggestions},safe=False)
+
+
+

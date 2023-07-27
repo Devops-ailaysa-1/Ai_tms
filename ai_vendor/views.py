@@ -102,8 +102,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
 
     def get_queryset(self):
-        print(self.request.user)
-        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset=VendorLanguagePair.objects.filter(user_id=user.id).all()
         return queryset
 
     def list(self,request):
@@ -138,7 +139,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def update(self,request,pk):
-        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = VendorLanguagePair.objects.filter(user_id=user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},context={'request':request},partial=True)
         print(ser.is_valid())
@@ -149,7 +152,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = VendorLanguagePair.objects.filter(user_id=user.id).all()
         lang_pair = get_object_or_404(queryset, pk=pk)
         lang_pair.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -366,7 +371,7 @@ def vendor_lang_sheet():
     worksheet = workbook.add_worksheet('Vendor Language Pairs')
 
     worksheet2 = workbook.add_worksheet('Languages')
-    languages=list(Languages.objects.all().values_list('language',flat=True))
+    languages=list(Languages.objects.all().order_by('language').values_list('language',flat=True))
     worksheet2.write('A1','Languages')
     for i in range(len(languages)):
         a='A{}'.format(i+2)
@@ -388,8 +393,8 @@ def vendor_lang_sheet():
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
     boolean=['True','False']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
-    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})    
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
@@ -426,7 +431,9 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
 
 @api_view(['POST'])
 def vendor_language_pair(request):
-    user=request.user
+    pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else [] 
+    user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+    #user=request.user
     language_pair_xl_file=request.FILES.get('language_pair_xl_file')
     if not language_pair_xl_file:
         return JsonResponse({'status':'file not uploaded'})
@@ -446,10 +453,16 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
-                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
-                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
+                    given_src = row['Source Language'].capitalize() if row['Source Language'].split() == 1 else row['Source Language'][0].capitalize() + row['Source Language'][1:]
+                    given_tar = row['Target Language'].capitalize() if row['Target Language'].split() == 1 else row['Target Language'][0].capitalize() + row['Target Language'][1:]
+                    print("SRc------------>",given_src)
+                    print("TAr------------>",given_tar)
+                    src_lang=Languages.objects.filter(language=given_src).first()
+                    tar_lang=Languages.objects.filter(language=given_tar).first()
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
                     print("Cur------>",currency_code)
+                    print("Src_lang------>",src_lang)
+                    print("Tar_lang------>",tar_lang)
                     currency=Currencies.objects.get(currency_code=currency_code)
                     service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
                     unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
