@@ -334,7 +334,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     #     "track_id": None,
     #     # 'scheduler':'DDIMScheduler',
     #     })
-
+    print(negative_prompt)
     payload = json.dumps({
     "key": STABLE_DIFFUSION_PUBLIC_API,
     "model_id": "sdxl",
@@ -354,7 +354,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "embeddings_model": None,
     "webhook": None,
     "track_id": None,
-    # "enhance_prompt":'no',
+    "enhance_prompt":'yes',
     'scheduler':'DDIMScheduler',
     }) #num_inference_steps
     headers = {'Content-Type': 'application/json'}
