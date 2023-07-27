@@ -99,6 +99,9 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         return representation
 
 
+
+
+
 class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
     inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
@@ -115,8 +118,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     magic_erase=serializers.BooleanField(required=False,default=False)
     image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),required=False,write_only=True)
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
-    
-
     
     class Meta:
         model=ImageTranslate
@@ -383,10 +384,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
 
 class ImageTranslateListSerializer(serializers.ModelSerializer):
-    # image_url=serializers.CharField(source='image.url')
     class Meta:
         model=ImageTranslate
-        fields=('id','project_name','types','height','width','image')
+        fields=('id','width','height','project_name','updated_at','created_at','types',
+                'thumbnail','source_language','image_load')
 
 
 def back_groung_rm_json_update():

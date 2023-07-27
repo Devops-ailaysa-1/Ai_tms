@@ -682,8 +682,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 canvas_target.json=copy.copy(canvas_trans_id.json)
                 my_template_json.pop('projectid',None)
                 my_template_thumbnail=canvas_target.thumbnail
-                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
-                                                     my_template_json=my_template_json )
+                MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,my_template_json=my_template_json )
  
             elif src_page_no:
                 my_temp_design=self.mytemp_create(canvas_design_id,user)
