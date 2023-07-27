@@ -1904,13 +1904,13 @@ class CombinedSerializer(ProjectQuickSetupSerializer):
         return data
 
 
-class ToolkitSerializer(ProjectQuickSetupSerializer):
+class AssertSerializer(ProjectQuickSetupSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        from ai_exportpdf.serializer import PdfFileSerializer
-        from ai_exportpdf.models import Ai_PdfUpload
-        if type(instance) is Ai_PdfUpload:
-            pdf_data = PdfFileSerializer(instance).data
-            data.update(pdf_data)
+        from ai_workspace_okapi.serializers import ChoiceListsSerializer
+        from ai_workspace_okapi.models import ChoiceLists
+        if type(instance) is ChoiceLists:
+            ch_data = ChoiceListsSerializer(instance).data
+            data.update(ch_data)
         return data
