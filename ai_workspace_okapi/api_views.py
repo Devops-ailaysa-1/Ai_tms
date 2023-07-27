@@ -3215,7 +3215,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     ordering = ('-id')
-    search_fields = ['name','choice_list__edited_word','choice_list__source_word']
+    search_fields = ['name']
     ordering_fields = ['id','name','language']
 
     @staticmethod
