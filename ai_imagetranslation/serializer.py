@@ -387,7 +387,7 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageTranslate
         fields=('id','width','height','project_name','updated_at','created_at','types',
-                'thumbnail','source_language','image_load')
+                'thumbnail','source_language','image_load','image')
 
 
 def back_groung_rm_json_update():
