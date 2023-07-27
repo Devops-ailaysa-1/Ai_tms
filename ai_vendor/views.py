@@ -370,7 +370,7 @@ def vendor_lang_sheet():
     worksheet = workbook.add_worksheet('Vendor Language Pairs')
 
     worksheet2 = workbook.add_worksheet('Languages')
-    languages=list(Languages.objects.all().values_list('language',flat=True))
+    languages=list(Languages.objects.all().order_by('language').values_list('language',flat=True))
     worksheet2.write('A1','Languages')
     for i in range(len(languages)):
         a='A{}'.format(i+2)
@@ -390,8 +390,8 @@ def vendor_lang_sheet():
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
     boolean=['True','False']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
-    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})    
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$125'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
@@ -450,10 +450,16 @@ def vendor_language_pair(request):
             for _, row in df.iterrows():
                 try:
                     print("Inside Try")
-                    src_lang=Languages.objects.get(language=row['Source Language'].capitalize())
-                    tar_lang=Languages.objects.get(language=row['Target Language'].capitalize())
+                    given_src = row['Source Language'].capitalize() if row['Source Language'].split() == 1 else row['Source Language'][0].capitalize() + row['Source Language'][1:]
+                    given_tar = row['Target Language'].capitalize() if row['Target Language'].split() == 1 else row['Target Language'][0].capitalize() + row['Target Language'][1:]
+                    print("SRc------------>",given_src)
+                    print("TAr------------>",given_tar)
+                    src_lang=Languages.objects.filter(language=given_src).first()
+                    tar_lang=Languages.objects.filter(language=given_tar).first()
                     currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
                     print("Cur------>",currency_code)
+                    print("Src_lang------>",src_lang)
+                    print("Tar_lang------>",tar_lang)
                     currency=Currencies.objects.get(currency_code=currency_code)
                     service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
                     unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])

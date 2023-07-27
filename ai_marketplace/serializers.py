@@ -610,7 +610,10 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_service_info(self,obj):
         key_ = os.getenv("FIXER-API-KEY")
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        #vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
@@ -682,7 +685,10 @@ class AvailablePostJobSerializer(serializers.Serializer):
         return obj.bidproject_details.count()
 
     def get_apply(self, obj):
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        #vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         steps = obj.get_steps
         matched_jobs,applied_jobs=[],[]
@@ -1003,7 +1009,10 @@ class GetTalentSerializer(serializers.Serializer):
     def get_saved(self,obj):
         tt=[]
         request = self.context['request']
-        saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        request_user = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        saved_ids = SavedVendor.objects.filter(customer=request_user).values_list('vendor_id')
         saved = AiUser.objects.filter(id__in=saved_ids)
         ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
         return ser
@@ -1016,7 +1025,10 @@ class GetTalentSerializer(serializers.Serializer):
     def get_hired(self,obj):
         tt=[]
         request = self.context['request']
-        hired_ids = HiredEditors.objects.filter(user=request.user).values_list('hired_editor_id')
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        request_user = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        hired_ids = HiredEditors.objects.filter(user=request_user).values_list('hired_editor_id')
         hired = AiUser.objects.filter(id__in=hired_ids)
         ser = GetVendorListSerializer(hired,many=True,context={'request': request}).data
         print("ser------->",ser)

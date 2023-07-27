@@ -507,11 +507,13 @@ class ChoiceListsSerializer (serializers.ModelSerializer):
         fields = "__all__"
 
 class ChoiceListSelectedSerializer (serializers.ModelSerializer):
+    language=serializers.SerializerMethodField()
     class Meta:
         model = ChoiceListSelected
-        fields = "__all__"
-
-
+        fields = ("id","project","choice_list","language")
+    
+    def get_language(self,obj):
+        return obj.choice_list.language.id
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
@@ -547,17 +549,17 @@ class MT_RawSerializer(serializers.ModelSerializer):
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
         return super().to_internal_value(data=data)
 
-    def slf_learning_word_update(self,instance,doc):
-        from ai_workspace_okapi.models import SelflearningAsset
-        slf_lrn_inst=SelflearningAsset.objects.filter(user=doc.owner_pk,target_language=doc.target_language_id)
-        if slf_lrn_inst:
-            word_list=list(slf_lrn_inst.values_list('source_word',flat=True))
-            mt_raw_lists=instance.mt_raw.split(' ')
-            for mt_raw_list in mt_raw_lists:
-                if mt_raw_list in word_list:
-                    edited_word=slf_lrn_inst.filter(source_word=mt_raw_list).last().edited_word
-                    instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
-                    instance.save()
+    # def slf_learning_word_update(self,instance,doc):
+    #     from ai_workspace_okapi.models import SelflearningAsset
+    #     slf_lrn_inst=SelflearningAsset.objects.filter(user=doc.owner_pk,target_language=doc.target_language_id)
+    #     if slf_lrn_inst:
+    #         word_list=list(slf_lrn_inst.values_list('source_word',flat=True))
+    #         mt_raw_lists=instance.mt_raw.split(' ')
+    #         for mt_raw_list in mt_raw_lists:
+    #             if mt_raw_list in word_list:
+    #                 edited_word=slf_lrn_inst.filter(source_word=mt_raw_list).last().edited_word
+    #                 instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
+    #                 instance.save()
 
     def create(self, validated_data):
 

@@ -177,6 +177,14 @@ DATABASES={
         'PASSWORD':os.getenv( "psql_password" ),
         'HOST':os.getenv( "psql_host" ),
         'PORT':os.getenv( "psql_port" ),
+    },
+    'bi':{
+    'ENGINE':'django.db.backends.postgresql_psycopg2',
+    'NAME':os.getenv( "psql_database_bi" ),
+    'USER':os.getenv( "psql_user_bi" ),
+    'PASSWORD':os.getenv( "psql_password_bi" ),
+    'HOST':os.getenv( "psql_host_bi" ),
+    'PORT':os.getenv( "psql_port_bi" ),
     }
 }
 # Password validation
