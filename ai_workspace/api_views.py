@@ -4383,7 +4383,7 @@ class AssertList(viewsets.ModelViewSet):
     def list(self,request):
         project_managers = request.user.team.get_project_manager if request.user.team else []
         user = request.user.team.owner if request.user.team and request.user in project_managers else request.user
-        query = request.GET.get('project_type')
+        query = request.GET.get('type')
         ordering = request.GET.get('ordering')
 
         view_instance_1 = QuickProjectSetupView()
@@ -4393,14 +4393,21 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+        queryset1 = queryset.filter(glossary_project__isnull=False)
         queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
         search_query = request.GET.get('search')
 
+        if query:
+            if query == 'glossary':
+                queryset2 = ChoiceLists.objects.none()
+            elif query == 'assert':
+                queryset1 = Project.objects.none()
+
         if search_query:
-            queryset1 = queryset1.filter(project_name__icontains=search_query)
-            queryset2 = queryset2.filter(name__icontains=search_query)
+            queryset1 = queryset1.filter(Q(project_name__icontains=search_query)|Q(project_jobs_set__source_language__language__icontains=search_query)|Q(project_jobs_set__target_language__language__icontains=search_query))
+            queryset2 = queryset2.filter(Q(name__icontains=search_query)|Q(language__language__icontains=search_query))
+
         merged_queryset = list(chain(queryset1,queryset2))
         print("MQ-------------->",merged_queryset)
         ordering_param = request.GET.get('ordering', '-created_at')  
