@@ -314,13 +314,13 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
  
     payload = json.dumps({
         "key":  STABLE_DIFFUSION_PUBLIC_API,
-        "model_id": "sdxl",
+        "model_id": "midjourney",
         "prompt": prompt,
         "negative_prompt": negative_prompt,
-        "width": "512",
-        "height": "512",
+        "width": "1024",
+        "height": "1024",
         "samples": "1",
-        "num_inference_steps": "30",
+        "num_inference_steps": "50",
         "seed": None,
         "guidance_scale": 7.5,
         "safety_checker": "yes",
@@ -330,7 +330,8 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         # "upscale": "no",
         # "embeddings_model": None,
         "webhook": None,
-        "track_id": None
+        "track_id": None,
+        'scheduler':'DDIMScheduler',
         })
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
