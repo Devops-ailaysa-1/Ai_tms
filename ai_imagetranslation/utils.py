@@ -296,7 +296,7 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
     # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     pass
-
+ngv_pmt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs, cartoon, cg, 3d, unreal, animate"
 def sd_status_check(id):
     url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
@@ -311,28 +311,52 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
- 
+    else:
+        negative_prompt+=ngv_pmt
+    # payload = json.dumps({
+    #     "key":  STABLE_DIFFUSION_PUBLIC_API,
+    #     # "model_id": "midjourney",
+    #     "prompt": prompt,
+    #     "negative_prompt": negative_prompt,
+    #     "width": "512",
+    #     "height": "512",
+    #     "samples": "1",
+    #     "num_inference_steps": "30",
+    #     "seed": None,
+    #     "guidance_scale": 7.5,
+    #     "safety_checker": "yes",
+    #     "multi_lingual": "no",
+    #     "panorama": "no",
+    #     "self_attention": "no",
+    #     "upscale": "no",
+    #     "embeddings_model": None,
+    #     "webhook": None,
+    #     "track_id": None,
+    #     # 'scheduler':'DDIMScheduler',
+    #     })
+
     payload = json.dumps({
-        "key":  STABLE_DIFFUSION_PUBLIC_API,
-        # "model_id": "midjourney",
-        "prompt": prompt,
-        "negative_prompt": negative_prompt,
-        "width": "512",
-        "height": "512",
-        "samples": "1",
-        "num_inference_steps": "30",
-        "seed": None,
-        "guidance_scale": 7.5,
-        "safety_checker": "yes",
-        "multi_lingual": "no",
-        "panorama": "no",
-        "self_attention": "no",
-        "upscale": "no",
-        "embeddings_model": None,
-        "webhook": None,
-        "track_id": None,
-        # 'scheduler':'DDIMScheduler',
-        })
+    "key": STABLE_DIFFUSION_PUBLIC_API,
+    "model_id": "sdxl",
+    "prompt": prompt,
+    "negative_prompt": negative_prompt,
+    "width": "1024",
+    "height": "1024",
+    "samples": "1",
+    "num_inference_steps": 41,    
+    "seed": None,
+    "guidance_scale": 7.5,
+    "safety_checker": "yes",
+    "multi_lingual": "no",
+    "panorama": "no",
+    "self_attention": "yes",
+    "upscale": "no",
+    "embeddings_model": None,
+    "webhook": None,
+    "track_id": None,
+    # "enhance_prompt":'no',
+    'scheduler':'DDIMScheduler',
+    }) #num_inference_steps
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.json())
