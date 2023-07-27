@@ -51,7 +51,7 @@ class CanvasUserImageAssets(models.Model):
 
 class CanvasDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_designer_details")
+    # task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_designer_details")
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
