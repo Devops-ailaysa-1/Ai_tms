@@ -657,6 +657,7 @@ class SocialMediaSize(models.Model):
     src=models.FileField(upload_to='socialmediasize',blank=True ,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
 
     def __str__(self) -> str:
         return self.social_media_name

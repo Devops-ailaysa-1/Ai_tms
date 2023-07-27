@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
-                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory ,EmojiData)#TemplatePage
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
