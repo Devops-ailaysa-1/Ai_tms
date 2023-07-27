@@ -133,12 +133,13 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         return queryset
 
     def get(self, request):
-        #try:
+        pr_managers = request.user.team.get_project_manager if request.user.team else [] 
+        user = request.user.team.owner if request.user.team and request.user in pr_managers else request.user 
         projectpost_id = request.GET.get('project_post_id')
         if projectpost_id:
             queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
         else:
-            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
+            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = user.id)).order_by('-id').distinct()# | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
             # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
@@ -284,11 +285,13 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
 
     def get(self, request):
-        if self.request.user.is_vendor == True:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        if user.is_vendor == True:
             try:
-                print(request.user.id)
+                print(user.id)
                 id = request.GET.get('id')
-                queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
+                queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=user.id)).distinct().order_by('-id').all()
                 pagin_tc = self.paginate_queryset(queryset, request , view=self)
                 serializer = BidPropasalDetailSerializer(pagin_tc,many=True,context={'request':request})
                 response = self.get_paginated_response(serializer.data)
@@ -302,11 +305,13 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def create(self, request):###########Need to check#############
-        if self.request.user.is_vendor == True:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        if user.is_vendor == True:
             post_id = request.POST.get('post_id')
             post = ProjectboardDetails.objects.get(id=post_id)
             sample_file=request.FILES.get('sample_file')
-            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id},context={'request':request})
+            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':user.id},context={'request':request})
             print(serializer.is_valid())
             if serializer.is_valid():
                 with transaction.atomic():
@@ -342,7 +347,9 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):############need to include currency conversion###############
-    if request.user.is_vendor == True:
+    pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else [] 
+    user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+    if user.is_vendor == True:
         projectpost = request.POST.get('projectpost')
         post = ProjectboardDetails.objects.get(id = projectpost)
         ser = PrimaryBidDetailSerializer(post,context={'request':request})
@@ -477,10 +484,13 @@ class IncompleteProjectListView(viewsets.ModelViewSet):
     filterset_class = IncompleteProjectListFilter
 
     def get_queryset(self):
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in pr_managers else self.request.user
         queryset_2 = Project.objects.select_related('voice_proj_detail').filter(voice_proj_detail__project_type_sub_category_id=2).filter(project_jobs_set__target_language=None).values('id')
-        queryset=Project.objects.filter(Q(ai_user=self.request.user)\
-                    |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).\
-                    exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=self.request.user)).exclude(id__in=queryset_2).order_by('-id').distinct()
+        queryset = Project.objects.filter(Q(ai_user=user)\
+                    |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1)))\
+                    .filter(Q(proj_detail__isnull=True)|(Q(proj_detail__isnull=False) & Q(proj_detail__deleted_at__isnull=False)))\
+                    .exclude(id__in=queryset_2).order_by('-id').distinct()
         return queryset
 
 
@@ -545,13 +555,17 @@ class AvailableJobsListView(generics.ListAPIView):
     # page_size = None
 
     def validate(self):
-        if self.request.user.is_vendor == False:
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        if user.is_vendor == False:
             raise ValidationError({"error":"user is not a vendor"})
 
     def get_queryset(self):
         self.validate()
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         present = timezone.now()
-        queryset= ProjectboardDetails.objects.filter(~Q(customer=self.request.user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
+        queryset= ProjectboardDetails.objects.filter(~Q(customer=user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
         print("@@@@@@@@@@@2",queryset)
         return queryset
 
@@ -675,6 +689,7 @@ class GetVendorListViewNew(generics.ListAPIView):
     serializer_class = GetVendorListSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
     filterset_class = VendorFilterNew
+    search_fields = ['fullname','email']
     pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]#None
 
     def validate(self):
@@ -686,7 +701,7 @@ class GetVendorListViewNew(generics.ListAPIView):
 
     def get_queryset(self):
         self.validate()
-        user = self.request.user
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
@@ -701,7 +716,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com').exclude(is_active=False).exclude(deactivate=True)
+                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(is_active=False).exclude(deactivate=True)#.exclude(email='ams@ailaysa.com')
         if max_price and min_price and count_unit and currency:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):

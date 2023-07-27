@@ -892,9 +892,11 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
         else:
             print("Indivual")
+            # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
+            #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
             return [task for job in project.project_jobs_set.all() for task \
                     in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
 
@@ -1558,12 +1560,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         reassign = request.POST.get('reassigned') 
+        own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
         print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
         data = request.POST.dict()
         ################################Need to change########################################
         user = request.user.team.owner  if request.user.team  else request.user
-        if Receiver.email == 'ailaysateam@gmail.com':
+        if Receiver.email == own_agency_email:
             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         ##########################################################################################
         # task = request.POST.getlist('task')
@@ -2101,25 +2104,31 @@ def file_write(pr):
                 f.write("Source:" + "\n")
                 f.write(express_obj.source_text) 
                 f.write('\n')
-                f.write("---------" + "\n")
-                f.write("Target:" + "\n\n")
+                f.write("---------" + "\n\n")
                 f.write("Standard:" + "\n")
                 target = express_obj.target_text if express_obj.target_text else ''
                 f.write(target)
                 f.write('\n')
-                f.write("---------" + "\n")
-                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-                if shorten_obj.exists():
-                    f.write("Shortened:" + "\n")
-                    f.write(shorten_obj.last().final_result)
+                f.write("---------" + "\n\n")
+                rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+                if rewrite_obj.exists():
+                    f.write("Rewrite:" + "\n")
+                    f.write(rewrite_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
                 simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
                 if simplified_obj.exists():
-                    f.write("Simplified:" + "\n")
+                    f.write("Simplify:" + "\n")
                     f.write(simplified_obj.last().final_result)
                     f.write("\n")
-                    f.write("---------" + "\n")
+                    f.write("---------" + "\n\n")
+                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+                if shorten_obj.exists():
+                    f.write("Shorten:" + "\n")
+                    f.write(shorten_obj.last().final_result)
+                    f.write("\n")
+                    f.write("---------" + "\n\n")
+                
 
 
 @api_view(["GET"])
@@ -3383,25 +3392,30 @@ def express_task_download(request,task_id):###############permission need to be 
         f.write("Source:" + "\n")
         f.write(express_obj.source_text) 
         f.write('\n')
-        f.write("---------" + "\n")
-        f.write("Target:" + "\n\n")
+        f.write("---------" + "\n\n")
         f.write("Standard:" + "\n")
         target = express_obj.target_text if express_obj.target_text else ''
         f.write(target)
         f.write('\n')
-        f.write("---------" + "\n")
-        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
-        if shorten_obj.exists():
-            f.write("Shortened:" + "\n")
-            f.write(shorten_obj.last().final_result)
+        f.write("---------" + "\n\n")
+        rewrite_obj = express_obj.express_src_text.filter(customize__customize='Rewrite')
+        if rewrite_obj.exists():
+            f.write("Rewrite:" + "\n")
+            f.write(rewrite_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
-            f.write("Simplified:" + "\n")
+            f.write("Simplify:" + "\n")
             f.write(simplified_obj.last().final_result)
             f.write("\n")
-            f.write("---------" + "\n")
+            f.write("---------" + "\n\n")
+        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+        if shorten_obj.exists():
+            f.write("Shorten:" + "\n")
+            f.write(shorten_obj.last().final_result)
+            f.write("\n")
+            f.write("---------" + "\n\n")
     print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
@@ -4354,59 +4368,65 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
 
 
-# from .serializers import ToolkitSerializer
-# class ToolkitList(viewsets.ModelViewSet):
+from .serializers import AssertSerializer
+from ai_workspace_okapi.models import ChoiceLists
+class AssertList(viewsets.ModelViewSet):
 
-#     serializer_class = ToolkitSerializer
-#     permission_classes = [IsAuthenticated]
-#     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
-#     paginator = PageNumberPagination()
-#     paginator.page_size = 20
-#     # https://www.django-rest-framework.org/api-guide/filtering/
+    serializer_class = AssertSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    # https://www.django-rest-framework.org/api-guide/filtering/
 
 
-#     def list(self,request):
-#         user = request.user
-#         project_managers = user.team.get_project_manager if user.team else []
-#         owner = user.team.owner if user.team  else user
-#         query = request.GET.get('name')
-#         ordering = request.GET.get('ordering')
+    def list(self,request):
+        project_managers = request.user.team.get_project_manager if request.user.team else []
+        user = request.user.team.owner if request.user.team and request.user in project_managers else request.user
+        query = request.GET.get('type')
+        ordering = request.GET.get('ordering')
 
-#         view_instance_1 = QuickProjectSetupView()
+        view_instance_1 = QuickProjectSetupView()
 
-#         view_instance_1.request = request
-#         view_instance_1.request.GET = request.GET
+        view_instance_1.request = request
+        view_instance_1.request.GET = request.GET
 
-#         queryset = view_instance_1.get_queryset()
+        queryset = view_instance_1.get_queryset()
 
-#         queryset1 = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-#         queryset2 = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
-#                         .filter(task_id=None).order_by('-id')
+        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
-#         search_query = request.GET.get('search')
+        search_query = request.GET.get('search')
 
-#         if search_query:
-#             queryset1 = queryset1.filter(project_name__icontains=search_query)
-#             queryset2 = queryset2.filter(pdf_file_name__icontains=search_query)
-#         merged_queryset = list(chain(queryset1,queryset2))
-#         print("MQ-------------->",merged_queryset)
-#         ordering_param = request.GET.get('ordering', '-created_at')  
+        if query:
+            if query == 'glossary':
+                queryset2 = ChoiceLists.objects.none()
+            elif query == 'assert':
+                queryset1 = Project.objects.none()
 
-#         if ordering_param.startswith('-'):
-#             field_name = ordering_param[1:]  
-#             reverse_order = True
-#         else:
-#             field_name = ordering_param
-#             reverse_order = False
-#         if field_name == 'created_at':
-#             ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
-#         else:
-#             ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
-#         print("Or---------->",ordered_queryset)
-#         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-#         ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
-#         response = self.get_paginated_response(ser.data)
-#         return response
+        if search_query:
+            queryset1 = queryset1.filter(Q(project_name__icontains=search_query)|Q(project_jobs_set__source_language__language__icontains=search_query)|Q(project_jobs_set__target_language__language__icontains=search_query))
+            queryset2 = queryset2.filter(Q(name__icontains=search_query)|Q(language__language__icontains=search_query))
+
+        merged_queryset = list(chain(queryset1,queryset2))
+        print("MQ-------------->",merged_queryset)
+        ordering_param = request.GET.get('ordering', '-created_at')  
+
+        if ordering_param.startswith('-'):
+            field_name = ordering_param[1:]  
+            reverse_order = True
+        else:
+            field_name = ordering_param
+            reverse_order = False
+        if field_name == 'created_at':
+            ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
+        else:
+            ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'name',None)),reverse=reverse_order)
+        print("Or---------->",ordered_queryset)
+        pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
+        ser = AssertSerializer(pagin_tc,many=True,context={'request': request})
+        response = self.get_paginated_response(ser.data)
+        return response
 
 
         # if ordering_param.startswith('-'):

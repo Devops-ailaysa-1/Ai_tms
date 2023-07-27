@@ -134,6 +134,8 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
     def get_current_status(self,obj):
         user_ = self.context.get("request").user
+        pr_managers = user_.team.get_project_manager if user_.team and user_.team.owner.is_agency else [] 
+        user_admin = user_.team.owner if user_.team and user_.team.owner.is_agency and user_ in pr_managers else user_
         if obj.projectpost.closed_at != None:
             return "Projectpost Closed"
         elif obj.projectpost.deleted_at !=None:
@@ -141,7 +143,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         else:  ##############################Need to revise this##############################
             if obj.status_id == 3:
                 try:
-                    ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
+                    ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_admin).first()
                     return str(ht.get_status_display())
                 except:
                     return None
@@ -305,6 +307,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         job_id= request.query_params.get('job')
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
@@ -316,7 +319,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
         else:
             queryset = obj.vendor_lang_pair.filter(deleted_at=None)
 
-        query = queryset.filter(currency = obj.currency_based_on_country)
+        query = queryset.filter(currency = user.currency_based_on_country)
 
         if query.exists():
             #if query[0].service.exists() or query[0].servicetype.exists():
@@ -578,7 +581,9 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_bid_applied(self,obj):
         applied =[]
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
         jobs = obj.get_postedjobs
         for i in jobs:
             if i.bid_details.filter(vendor_id = vendor.id):
@@ -586,7 +591,9 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         return ProjectPostJobDetailSerializer(applied,many=True,context={'request':self.context.get("request")}).data
 
     def get_post_jobs(self,obj):
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
         jobs = obj.get_postedjobs
         matched_jobs=[]
         for i in jobs:
@@ -604,7 +611,10 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_service_info(self,obj):
         key_ = os.getenv("FIXER-API-KEY")
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        #vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
@@ -676,7 +686,10 @@ class AvailablePostJobSerializer(serializers.Serializer):
         return obj.bidproject_details.count()
 
     def get_apply(self, obj):
-        vendor = self.context.get("request").user
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        vendor = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        #vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         steps = obj.get_steps
         matched_jobs,applied_jobs=[],[]
@@ -810,6 +823,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         job_id= request.query_params.get('job')
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
@@ -817,7 +831,9 @@ class GetVendorListSerializer(serializers.ModelSerializer):
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
-        query = queryset.filter(currency=obj.currency_based_on_country)
+        query = queryset.filter(currency=user.currency_based_on_country)
+        print("Obj_Currency--------->",user.currency_based_on_country)
+        print("Query--------->",query)
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data
@@ -967,10 +983,11 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         source_lang = self.context['sl']
         target_lang = self.context['tl']
         queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
-        query = queryset.filter(currency=obj.currency_based_on_country)
+        query = queryset.filter(currency=user.currency_based_on_country)
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data
@@ -995,7 +1012,10 @@ class GetTalentSerializer(serializers.Serializer):
     def get_saved(self,obj):
         tt=[]
         request = self.context['request']
-        saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        request_user = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        saved_ids = SavedVendor.objects.filter(customer=request_user).values_list('vendor_id')
         saved = AiUser.objects.filter(id__in=saved_ids)
         ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
         return ser
@@ -1008,7 +1028,10 @@ class GetTalentSerializer(serializers.Serializer):
     def get_hired(self,obj):
         tt=[]
         request = self.context['request']
-        hired_ids = HiredEditors.objects.filter(user=request.user).values_list('hired_editor_id')
+        user = self.context.get("request").user
+        pr_managers = user.team.get_project_manager if user.team and user.team.owner.is_agency else [] 
+        request_user = user.team.owner if user.team and user.team.owner.is_agency and user in pr_managers else user
+        hired_ids = HiredEditors.objects.filter(user=request_user).values_list('hired_editor_id')
         hired = AiUser.objects.filter(id__in=hired_ids)
         ser = GetVendorListSerializer(hired,many=True,context={'request': request}).data
         print("ser------->",ser)

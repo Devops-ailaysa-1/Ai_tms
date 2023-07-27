@@ -634,7 +634,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
-
+	
 			res = instance.pr_progress(tasks)
 			return res
 		else:
@@ -727,7 +727,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# tasks = Task.objects.create_tasks_of_files_and_jobs(
 				# 	files=files, jobs=jobs, project=project, klass=Task)
 				task_assign = TaskAssign.objects.assign_task(project=project)
-				#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+				ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
 				objls_is_allowed(task_assign,"create",user)
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
@@ -814,7 +814,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
-		#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+		ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
 		return  project
 
 	# def to_representation(self, value):
@@ -1479,19 +1479,20 @@ class GetAssignToSerializer(serializers.Serializer):
 
 	def get_agencies(self,obj):
 		from ai_auth.utils import get_plan_name
+		own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
 		try:
-			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
+			default = AiUser.objects.get(email=own_agency_email)########need to change later##############
 			if self.context.get('request').user == default:
 				tt =[]
 			else:
 				try:profile = default.professional_identity_info.avatar_url
 				except:profile = None
-				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
+				tt = [{'name':default.fullname,'email':own_agency_email,'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
 		except:
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com")).filter(~Q(hired_editor__deactivate = True))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = own_agency_email)).filter(~Q(hired_editor__deactivate = True))
 		qs_ = [i for i in qs_ if get_plan_name(i.hired_editor) != None ]
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
@@ -1503,9 +1504,10 @@ class GetAssignToSerializer(serializers.Serializer):
 		request = self.context.get('request')
 		pro_user = self.context.get('pro_user',None)
 		job_id= request.query_params.get('job',None)
+		own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = own_agency_email))
 		print("qs_--------------->",qs_)
 		print("pro_user-------------->",pro_user)
 		if pro_user:
@@ -1902,13 +1904,13 @@ class CombinedSerializer(ProjectQuickSetupSerializer):
         return data
 
 
-class ToolkitSerializer(ProjectQuickSetupSerializer):
+class AssertSerializer(ProjectQuickSetupSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        from ai_exportpdf.serializer import PdfFileSerializer
-        from ai_exportpdf.models import Ai_PdfUpload
-        if type(instance) is Ai_PdfUpload:
-            pdf_data = PdfFileSerializer(instance).data
-            data.update(pdf_data)
+        from ai_workspace_okapi.serializers import ChoiceListsSerializer
+        from ai_workspace_okapi.models import ChoiceLists
+        if type(instance) is ChoiceLists:
+            ch_data = ChoiceListsSerializer(instance).data
+            data.update(ch_data)
         return data

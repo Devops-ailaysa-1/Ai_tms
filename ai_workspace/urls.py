@@ -62,7 +62,7 @@ urlpatterns += [
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
 	# path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
 	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
-	path('get_assign_to_list/',api_views.get_assign_to_list),
+	#path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
 	path('file_project_list/',api_views.WriterProjectListView.as_view({'get':'list'})),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
@@ -102,7 +102,7 @@ urlpatterns += [
 	path('bulk_task_accept/',api_views.bulk_task_accept),
 	path('all_proj_lists/',api_views.CombinedProjectListView.as_view({'get':'list'})),
 	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
-	#path('toolkit_lists/',api_views.ToolkitList.as_view({'get':'list'})),
+	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
 ]
 # views urls adding for local testing
 urlpatterns += [

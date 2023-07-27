@@ -65,22 +65,25 @@ class Countries_listview(viewsets.ModelViewSet):
     paginator.page_size = 20
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     ordering_fields = ['id']
-    search_fields = ['country__name',]
+    search_fields = ['name',]
 
     def get_queryset(self):
-        queryset=get_users()
+        queryset=Countries.objects.all()
         return queryset
 
     def list(self,request):
-        users=self.filter_queryset(self.get_queryset())
-        # coun=Countries.objects.all()
-        coun=users.values("country__name",).annotate(count=Count("country")).order_by("-count")
-        pagin=self.paginator.paginate_queryset(coun,request,view=self)
+        users=get_users()
+        coun=self.filter_queryset(self.get_queryset())
+        # coun=users.values("country__name",).annotate(count=Count("country")).order_by("-count")
+        country = coun.values("name",).annotate(count=Count('aiuser_country',filter=Q(aiuser_country__in=users)))
+        queryset=country.filter(Q(count__gte=0)).order_by("-count")
+        pagin=self.paginator.paginate_queryset(queryset,request,view=self)
         response=self.get_paginated_response(pagin)
         return response
     
 from ai_staff.models import Languages
 from ai_workspace.models import Job,Task
+from ai_workspace.models import Project
 
 class language_listview(viewsets.ModelViewSet):
     permission_classes = [IsBiUser]
@@ -95,35 +98,95 @@ class language_listview(viewsets.ModelViewSet):
         return queryset
 
     def list(self,request):
-        # users=get_users()
+        users=get_users()
         lang=self.filter_queryset(self.get_queryset())
-        task=Task.objects.filter(job__target_language__in=lang)
-        lang_count=task.values("job__target_language","job__target_language__language").annotate(count=Count("id")).order_by("-count")
+        pro=Project.objects.filter(ai_user__in=users)
+        lang_list = lang.values("language",).annotate(count=Count('target_language__job_tasks_set',filter=Q(target_language__project__in=pro)))
+        lang_count=lang_list.filter(Q(count__gte=0)).order_by("-count")
+        # task=Task.objects.filter(job__target_language__in=lang)
+        # lang_count=task.values("job__target_language","job__target_language__language").annotate(count=Count("id")).order_by("-count")
         pagin=self.paginator.paginate_queryset(lang_count,request,view=self)
         response=self.get_paginated_response(pagin)
         return response
     
+import django_filters  
+from dateutil.relativedelta import relativedelta
+
+class AiDateFilter(django_filters.FilterSet):
+    date_joined = django_filters.DateTimeFilter()
+    # month_name = django_filters.CharFilter(method='filter_by_month_name')
+
+    class Meta:
+        model = AiUser
+        fields = {'date_joined': ['exact', 'lt', 'lte', 'gt', 'gte']}
+
+
+    # def filter_by_month_name(self, queryset, name, value):
+    #     # Filter the queryset based on the month name
+    #     month_number = timezone.datetime.strptime(value, '%B').month
+    #     queryset = queryset.filter(date_joined__month=month_number)
+    #     return queryset
+
 class AiUserListview(viewsets.ModelViewSet):
-    # queryset=AiUser.objects.all()
+    queryset=AiUser.objects.all()
+    permission_classes = [IsBiUser]
+    serializer_class = AiUserSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering_fields = ['id',"date_joined","is_vendor"]
+    search_fields = ['country__name','fullname',"id"]
+    ordering = ('-date_joined')
+    filterset_class = AiDateFilter
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def get_queryset(self,days):
+        queryset=get_users()
+        if days:
+            date = timezone.now() - timezone.timedelta(days=int(days))
+            queryset = queryset.filter(date_joined__gte=date)
+            return queryset
+        else:
+            return queryset
+        
+
+    def list(self,request):
+        days=request.GET.get("days",None)
+        users= self.filter_queryset(self.get_queryset(days))
+        pagin=self.paginator.paginate_queryset(users,request,view=self)
+        ser=AiUserSerializer(pagin,many=True)
+        response=self.get_paginated_response(ser.data)
+        return response
+    
+class VendorListview(viewsets.ModelViewSet):
+    queryset=AiUser.objects.all()
     permission_classes = [IsBiUser]
     serializer_class = AiUserSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     ordering_fields = ['id',"date_joined"]
     search_fields = ['country__name','fullname',"id"]
     ordering = ('-date_joined')
+    filterset_class = AiDateFilter
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
-    def get_queryset(self):
-        queryset=get_users()
-        return queryset
-  
+    def get_queryset(self,days):
+        queryset=get_users(is_vendor=True)
+        print(queryset)
+        if days:
+            date= timezone.now() - timezone.timedelta(days=int(days))
+            queryset = queryset.filter(date_joined__gte=date)
+            return queryset
+        else:
+            return queryset
+    
     def list(self,request):
-        users= self.filter_queryset(self.get_queryset())
+        days=request.GET.get("days",None)
+        users= self.filter_queryset(self.get_queryset(days))
         pagin=self.paginator.paginate_queryset(users,request,view=self)
         ser=AiUserSerializer(pagin,many=True)
         response=self.get_paginated_response(ser.data)
         return response
+
 
 from ai_bi.serializers import BiUserSerializer
 from django.http import Http404
@@ -138,14 +201,15 @@ def create_user(name,email,country,password):
     hashed = make_password(password)
     print("randowm pass",password)
     try:
-        user = AiUser.objects.create(fullname =name,email = email,country_id=country,password = hashed)
+        user = AiUser.objects.create(fullname =name,email=email,country_id=country,password=hashed)
         UserAttribute.objects.create(user=user)
         # BiUser.objects.create(bi_user=user,bi_role=1)
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
+        return {"email":email,"user":user,"password":password}
     except IntegrityError as e:
         print("Intergrity error",str(e))
         return None
-    return email, user,password
+    
 
 
 class BiuserManagement(viewsets.ModelViewSet):
@@ -185,17 +249,20 @@ class BiuserManagement(viewsets.ModelViewSet):
         role=request.POST.get("role","TECHNICAL")
         with transaction.atomic():
             try:
-                email, user,password=create_user(name,email,country,password)
-                user_data={"bi_user":user.id,"bi_role":role}
-                serializer=BiUserSerializer(data=user_data,many=False)
-                if serializer.is_valid():
-                    serializer.save()
-                    bi_user_invite_mail(email, user,password)
-                    return Response(serializer.data,status=200)
+                user=create_user(name,email,country,password)
+                if user !=None:
+                    user_data={"bi_user":user["user"].id,"bi_role":role}
+                    serializer=BiUserSerializer(data=user_data,many=False)
+                    if serializer.is_valid():
+                        serializer.save()
+                        bi_user_invite_mail(user["email"], user["user"],user["password"])
+                        return Response(serializer.data,status=200)
+                    return Response( serializer.errors)
+                else:
+                    return Response( {"msg":"Email already exists"},status=400)
             except IntegrityError as e:
                 print("Intergrity error",str(e))
                 return Response(status=400)
-        return Response( serializer.errors)
 
     def retrieve(self, request, pk):
         user=self.get_object()
@@ -213,6 +280,7 @@ class BiuserManagement(viewsets.ModelViewSet):
     
     def destroy(self, request,pk):
         obj=self.get_object()
+        obj=obj.bi_user
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

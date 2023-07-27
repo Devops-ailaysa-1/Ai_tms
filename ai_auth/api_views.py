@@ -32,7 +32,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -1738,25 +1738,33 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
+        own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
         existing = HiredEditors.objects.filter(user=user,hired_editor=vendor)
         if existing:
             return JsonResponse({"msg":"editor already existed in your hired_editors list.check his availability in chat and assign"},safe = False)
         else:
             role_name = Role.objects.get(id=role).name
             email = vendor.email
-            serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':1,'added_by':request.user.id})
-            if serializer.is_valid():
-                serializer.save()
-                hired_editor_id = serializer.data.get('id')
-                ext = HiredEditors.objects.get(id = serializer.data.get('id'))
-                uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
-                token = invite_accept_token.make_token(ext)
-                link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
-                context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
-                auth_forms.external_member_invite_mail(context,email)
-                msg_send(user,vendor)
-                return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if vendor.email == own_agency_email:
+                serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':2,'added_by':request.user.id})
+                if serializer.is_valid():
+                    serializer.save()
+                    return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':1,'added_by':request.user.id})
+                if serializer.is_valid():
+                    serializer.save()
+                    hired_editor_id = serializer.data.get('id')
+                    ext = HiredEditors.objects.get(id = serializer.data.get('id'))
+                    uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
+                    token = invite_accept_token.make_token(ext)
+                    link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                    context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
+                    auth_forms.external_member_invite_mail(context,email)
+                    msg_send(user,vendor)
+                    return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk):
         try:

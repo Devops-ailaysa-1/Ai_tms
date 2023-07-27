@@ -20,6 +20,9 @@ from io import BytesIO
 from django.core.mail import EmailMessage
 import time
 logger = logging.getLogger('django')
+from ai_openai.models import BlogCreation
+from ai_workspace.models import MyDocuments
+from ai_exportpdf.models import Ai_PdfUpload
 # FIXTURE_DIR_PATH = Path(__file__).parent.joinpath("fixtures")
 
 
@@ -382,3 +385,49 @@ class AilaysaReport:
             logger.info("Report sent")
         else:
             logger.error("Issue in report sending")
+    
+    def get_user_subscription(self,user):
+        """get active or last subscription"""
+        customer = user.djstripe_customers.last()
+        if customer == None:
+            return None
+        try:
+            return customer.subscription
+        except:
+            return None
+    
+    def get_user_credits(self,user):
+        total_credits,credits_consumed,credits_un_consumed = 0,0,0
+        credits = UserCredits.objects.filter(user=user)
+        sub_credits = credits.filter(credit_pack_type__icontains = "Subscription")
+        addon_credits = credits.filter(credit_pack_type = "Addon")
+        for addon in addon_credits:
+            if addon.buyed_credits != None:
+                total_credits += addon.buyed_credits
+                credits_un_consumed +=addon.credits_left
+
+        for sub in sub_credits:
+            total_credits += sub.buyed_credits
+            credits_un_consumed += abs(sub.credits_left - (sub.carried_credits if sub.carried_credits!=None else 0))
+
+        credits_consumed = total_credits - credits_un_consumed
+
+        return (total_credits,credits_consumed,credits_un_consumed)
+    
+
+    def get_project_counts(self,user):
+
+        projects = Project.objects.filter(ai_user=user)
+        my_docs = MyDocuments.objects.filter(ai_user=user)
+        blog_creation = BlogCreation.objects.filter(user=user)
+        pdf = Ai_PdfUpload.objects.filter(user=user)
+
+        return projects.count(),my_docs.count(),pdf.count(),blog_creation.count()
+
+    def get_language_pair_used(self,user):
+        ls = set()
+        projects = Project.objects.filter(ai_user=user)
+        for proj in projects:
+            for i in proj.project_jobs_set.all():
+                ls.add(i.__str__())
+        return list(ls)

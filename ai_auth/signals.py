@@ -229,18 +229,22 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
 
 
 def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
-	if created:
-		if instance.is_internal_member == True:
-			instance.currency_based_on_country_id = 144
-			instance.save()
-		else:
-			queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
-			if queryset:
-				instance.currency_based_on_country_id = queryset.first().currency_id
-				instance.save()
-			else:
-				instance.currency_based_on_country_id = 144
-				instance.save()
+    if created:
+        if instance.is_internal_member == True:
+            instance.currency_based_on_country_id = 144
+            instance.save()
+        else:
+            print("Inside Signal")
+            queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
+            print("Qr--------->",queryset)
+            if queryset:
+                print("Ins-------->",instance.id)
+                print("inside if------>",queryset.first().currency_id)
+                instance.currency_based_on_country_id = queryset.first().currency_id
+                instance.save()
+            else:
+                instance.currency_based_on_country_id = 144
+                instance.save()
 
 
 
