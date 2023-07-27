@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
-
+from ai_workspace.models import Task
 class CanvasCatagories(models.Model):
     catagory_name = models.CharField(max_length=50,null=True,blank=True)
     def __str__(self) -> str:
@@ -51,6 +51,7 @@ class CanvasUserImageAssets(models.Model):
 
 class CanvasDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_designer_details")
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
@@ -127,28 +128,6 @@ class TemplateTag(models.Model):
             return ""
 
 
-
-# class GlobalTemplateTags(models.Model):
-#     tag_name=models.ForeignKey(TemplateTag,related_name='template_global_tag_name', on_delete=models.CASCADE)
-#     template_design=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_tag', on_delete=models.CASCADE)
-
-#     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
-#     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
- 
-
-
-# class TemplatePage(models.Model):
-#     template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
-#     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
-#     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-#     json_page=models.JSONField(null=True,default=dict)
-#     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
-    # page_no=models.IntegerField()
-    # class Meta:
-    #     constraints = [
-    #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
-
-
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
     return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "aidesign/mytemplatedesign/aidesign_thumbnails_target/thumbnails/",filename)
 
@@ -209,15 +188,6 @@ class ThirdpartyImageMedium(models.Model):
 def user_directory_path_canvas_image_medium(filename):
     return "aidesign/assets/image_medium/"+filename
 
-# class ImageListMedium(models.Model):
-    
-#     image_name=models.CharField(max_length=200,blank=True,null=True)
-#     api_name=models.CharField(max_length=200,blank=True,null=True)
-#     preview_image=models.FileField(upload_to="canvas/assets/image_medium/",blank=True,null=True)
-#     image_url=models.URLField()
-#     tags=models.CharField(max_length=100,blank=True,null=True)
-#     def __str__(self) -> str:
-#         return self.image_name+" "+self.api_name
 
 
 class CanvasDownloadFormat(models.Model):
@@ -280,3 +250,35 @@ class ImageListCategory(models.Model):
 
     def __str__(self) -> str:
         return self.type
+
+
+# class ImageListMedium(models.Model):
+    
+#     image_name=models.CharField(max_length=200,blank=True,null=True)
+#     api_name=models.CharField(max_length=200,blank=True,null=True)
+#     preview_image=models.FileField(upload_to="canvas/assets/image_medium/",blank=True,null=True)
+#     image_url=models.URLField()
+#     tags=models.CharField(max_length=100,blank=True,null=True)
+#     def __str__(self) -> str:
+#         return self.image_name+" "+self.api_name
+
+
+# class GlobalTemplateTags(models.Model):
+#     tag_name=models.ForeignKey(TemplateTag,related_name='template_global_tag_name', on_delete=models.CASCADE)
+#     template_design=models.ForeignKey(TemplateGlobalDesign,related_name='template_global_tag', on_delete=models.CASCADE)
+
+#     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+ 
+
+
+# class TemplatePage(models.Model):
+#     template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+#     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
+#     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
+#     json_page=models.JSONField(null=True,default=dict)
+#     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
+    # page_no=models.IntegerField()
+    # class Meta:
+    #     constraints = [
+    #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
