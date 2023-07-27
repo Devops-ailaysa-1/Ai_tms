@@ -305,9 +305,9 @@ def sd_status_check(id):
     return response.json()
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    # url = "https://stablediffusionapi.com/api/v4/dreambooth"
+    url = "https://stablediffusionapi.com/api/v4/dreambooth"
  
-    url="https://stablediffusionapi.com/api/v3/text2img"
+    # url="https://stablediffusionapi.com/api/v3/text2img"
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
