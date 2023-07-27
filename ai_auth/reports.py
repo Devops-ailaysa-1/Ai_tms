@@ -410,6 +410,8 @@ class AilaysaReport:
             total_credits += sub.buyed_credits
             credits_un_consumed += abs(sub.credits_left - (sub.carried_credits if sub.carried_credits!=None else 0))
 
+        credits_consumed = total_credits - credits_un_consumed
+
         return (total_credits,credits_consumed,credits_un_consumed)
     
 
