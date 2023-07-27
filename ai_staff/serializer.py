@@ -455,7 +455,7 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
         if 'src' in data.keys() and instance.src:
             print()
             if instance.src:
-                data['src']=STATIC_URL+"canvas-assets/social_media/"+data['social_media_name']+".png"
+                data['src']=STATIC_URL+"social_media/"+data['social_media_name']+".png"
                 # data['src'] = instance.src.url
         return data
 
