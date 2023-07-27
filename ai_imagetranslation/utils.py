@@ -305,16 +305,16 @@ def sd_status_check(id):
     return response.json()
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    url = "https://stablediffusionapi.com/api/v4/dreambooth"
+    # url = "https://stablediffusionapi.com/api/v4/dreambooth"
  
-    # url="https://stablediffusionapi.com/api/v3/text2img"
+    url="https://stablediffusionapi.com/api/v3/text2img"
     if not negative_prompt:
         print("no negative prompt")
         negative_prompt=None
  
     payload = json.dumps({
         "key":  STABLE_DIFFUSION_PUBLIC_API,
-        "model_id": "midjourney",
+        # "model_id": "midjourney",
         "prompt": prompt,
         "negative_prompt": negative_prompt,
         "width": "512",
@@ -324,14 +324,14 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         "seed": None,
         "guidance_scale": 7.5,
         "safety_checker": "yes",
-        # "multi_lingual": "no",
-        # "panorama": "no",
-        # "self_attention": "no",
-        # "upscale": "no",
-        # "embeddings_model": None,
+        "multi_lingual": "no",
+        "panorama": "no",
+        "self_attention": "no",
+        "upscale": "no",
+        "embeddings_model": None,
         "webhook": None,
         "track_id": None,
-        'scheduler':'DDIMScheduler',
+        # 'scheduler':'DDIMScheduler',
         })
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
