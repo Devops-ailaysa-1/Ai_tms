@@ -701,7 +701,7 @@ class GetVendorListViewNew(generics.ListAPIView):
 
     def get_queryset(self):
         self.validate()
-        user = self.request.user
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
