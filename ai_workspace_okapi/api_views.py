@@ -1213,7 +1213,7 @@ class MT_RawAndTM_View(views.APIView):
         print("SelfLearn----------->",self_learn)
         words = MT_RawAndTM_View.get_words_list(translation)
         suggestion={}
-        if choicelist:
+        if self_learn:
             for word in words: 
                 print("Word---------->", word)
                 choice=self_learn.filter(source_word__iexact = word).order_by('-updated_at').distinct()
