@@ -1209,17 +1209,21 @@ class MT_RawAndTM_View(views.APIView):
     def asset_replace(request,translation,project,lang): 
         choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
         print("choice--------->",choice, choice.last())
-        choicelist=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
-        print("Choicelist----------->",choicelist)
+        self_learn=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
+        print("SelfLearn----------->",self_learn)
         words = MT_RawAndTM_View.get_words_list(translation)
         suggestion={}
-        if choicelist:
+        if self_learn:
             for word in words: 
                 print("Word---------->", word)
+<<<<<<< HEAD
                 choice=choicelist.filter(source_word__iexact = word).order_by("-updated_at").distinct()
+=======
+                choice=self_learn.filter(source_word__iexact = word).order_by('-updated_at').distinct()
+>>>>>>> origin/v4-merged-production
                 if choice:
                     print(choice, "*****************")
-                    replace_word=choice.last().edited_word
+                    replace_word=choice.first().edited_word
                     print("replace_word---------->",replace_word)
                     #pattern = r'\b{}\b'.format(word)
                     translation= re.sub(word, replace_word, translation)
@@ -3215,7 +3219,7 @@ class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
     ordering = ('-id')
-    search_fields = ['name','choice_list__edited_word','choice_list__source_word']
+    search_fields = ['name']
     ordering_fields = ['id','name','language']
 
     @staticmethod
