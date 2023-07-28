@@ -333,7 +333,9 @@ model_list = ['stability','stable_diffusion_api']
 def download_ai_image_generated_file_stable(request,id):
     try:
         file = StableDiffusionAPI.objects.get(id=id).image 
-        return download_file(file.path)
+        file_format=file.path.split(".")[-1]
+        file_name=file.path.split("/")[-1]
+        return download_file_canvas(file,mime_type[file_format.lower()],file_name)
     except:
         return Response({'msg':'Requested file not exists'},status=401)
 

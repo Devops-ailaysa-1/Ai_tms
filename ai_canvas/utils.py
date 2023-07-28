@@ -226,9 +226,8 @@ def install_font(font_path):
     os.system("fc-cache -f -v")
     # print(f"Font '{family_name}' installed successfully!")
     return family_name
-import time
+
 def convert_image_url_to_file(image_url,no_pil_object=True):
-    print("image_url",image_url)
     img_io = io.BytesIO()
     if no_pil_object:
         im=Image.open(requests.get(image_url, stream=True).raw)
