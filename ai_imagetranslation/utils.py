@@ -305,7 +305,7 @@ def sd_status_check(id):
     return response.json()
 
 
-
+import random
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
@@ -339,15 +339,16 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     #     })
     print(negative_prompt)
     payload = json.dumps({
-    "key": STABLE_DIFFUSION_PUBLIC_API,
+    "key":STABLE_DIFFUSION_PUBLIC_API ,
     "model_id": "sdxl",
     "prompt": prompt,
     "negative_prompt": negative_prompt,
     "width": "1024",
     "height": "1024",
     "samples": "1",
-    "num_inference_steps": 41,    
-    "seed": None,
+    "num_inference_steps": 41,   
+    # "num_inference_steps": "51",
+    "seed": random.randint(0,99999999999),
     "guidance_scale": 7.5,
     "safety_checker": "yes",
     "multi_lingual": "no",
@@ -357,28 +358,55 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "embeddings_model": None,
     "webhook": None,
     "track_id": None,
-    "enhance_prompt":'yes',
+    "enhance_prompt":'no',
     'scheduler':'DDIMScheduler',
-    }) #num_inference_steps
+    "self_attention":'yes',
+    #     "base64":True,
+    #     "vae":"stabilityai/sdxl-vae",
+    #     "clip_skip":4
+    }) 
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
-    print(response.json())
-    if response.status_code==200:
-        response=response.json()
-        reference_id=response['id']
-        print("reference_id",reference_id)
-        print(response['output'])
-        if len(response['output'])==0 and response['status']=='processing':
-            while True:
-                response=sd_status_check(reference_id)
-                if response['status']=='processing':
-                    print("processing sd")
-                    print(response)
-                elif response['status']=='success':
-                    break
-        return  convert_image_url_to_file(image_url=response['output'][0],no_pil_object=True)
+    x=response.json()
+    print(x)
+    process=False
+ 
+    while True:
+        x=sd_status_check(response.json()['id'])
+        print(x)
+        if not x['status']=='processing' or x['status']=='success':
+            process=True
+            break
+    if process:
+        return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
     else:
-        raise serializers.ValidationError({'msg':response.text})
+        raise serializers.ValidationError({'msg':"error on processing SD"})
+ 
+
+
+
+
+
+
+    # headers = {'Content-Type': 'application/json'}
+    # response = requests.request("POST", url, headers=headers, data=payload)
+    # print(response.json())
+    # if response.status_code==200:
+    #     response=response.json()
+    #     reference_id=response['id']
+    #     print("reference_id",reference_id)
+    #     print(response['output'])
+    #     if len(response['output'])==0 and response['status']=='processing':
+    #         while True:
+    #             response=sd_status_check(reference_id)
+    #             if response['status']=='processing':
+    #                 print("processing sd")
+    #                 print(response)
+    #             elif response['status']=='success':
+    #                 break
+    #     return  convert_image_url_to_file(image_url=response['output'][0],no_pil_object=True)
+    # else:
+    #     raise serializers.ValidationError({'msg':response.text})
 
 
 
