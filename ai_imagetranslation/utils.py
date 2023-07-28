@@ -304,13 +304,16 @@ def sd_status_check(id):
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json()
 
+
+
+
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
  
     # url="https://stablediffusionapi.com/api/v3/text2img"
     if not negative_prompt:
         print("no negative prompt")
-        negative_prompt=None
+        negative_prompt=ngv_pmt
     else:
         negative_prompt+=ngv_pmt
     # payload = json.dumps({
@@ -364,6 +367,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         response=response.json()
         reference_id=response['id']
         print("reference_id",reference_id)
+        print(response['output'])
         if len(response['output'])==0 and response['status']=='processing':
             while True:
                 response=sd_status_check(reference_id)
