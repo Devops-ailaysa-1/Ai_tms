@@ -73,7 +73,19 @@ resource ai_tm::TmxFileNew{
     "Agency Project owner" if "Agency Admin";
 }
 
+resource ai_workspace::Job{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
 
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+}
 # has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
 # ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id,role__role__name:role_name).count() != 0;
 

@@ -158,6 +158,7 @@ class JobView(viewsets.ModelViewSet):
         print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
+            # objs=filter_authorize(request,objs,"delete",self.request.user)
             for obj in objs:
                 obj.delete()
             return Response(status=204)
@@ -585,6 +586,10 @@ class TbxUploadView(APIView):
         if doc_id != 0:
             job_id = Document.objects.get(id=doc_id).job_id
             project_id = Job.objects.get(id=job_id).project_id
+        # task=Task.objects.filter(job__project__id=project_id)
+        # print(task)
+        # pro=filter_authorize(request,task,"create",self.request.user)
+        # if pro:
         serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
         # print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
@@ -592,6 +597,8 @@ class TbxUploadView(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        # else:
+        #     return JsonResponse({"msg":"You do not have permission to perform this action."})
 
 
 def docx_save_pdf(pdf_obj):
@@ -947,10 +954,14 @@ class TM_FetchConfigsView(viewsets.ViewSet):
 
     def update(self, request, pk, format=None):
         project = self.get_object(pk)
+        # task=Task.objects.filter(job__project=project)
+        # tsk=filter_authorize(request,task,"update",self.request.user)
+        # if tsk:
         ser = ProjectSerializerV2(project, data=request.data, partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
+        # return JsonResponse({"msg":"You do not have permission to perform this action."},status=401)
 
 
 class ReferenceFilesView(viewsets.ModelViewSet):
@@ -1523,12 +1534,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         step = request.GET.get('step')
         reassigned = request.GET.get('reassigned',False)
 
-        tsks = Task.objects.filter(id__in=tasks)
-        # for tsk in tsks:
-        #     authorize(request, resource=tsk, actor=request.user, action="read") #
+        tsks = get_list_or_404(Task,id__in=tasks)
+        task=authorize_list(tsks,"read",self.request.user)
+        task=[i.id for i in task]
 
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__reassigned = reassigned))
+            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = task) & Q(task_assign__reassigned = reassigned))
             # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
