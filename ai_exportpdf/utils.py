@@ -98,6 +98,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         file_format,page_length =  file_pdf_check(fp,id)
         # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
+
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
         print({"result":"Error during input file fetching: couldn't connect to host"})

@@ -151,7 +151,7 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     resized_width,resized_heigth= resized_image.size
     output=img_str.decode()
     ima_str='data:image/png;base64,'+str(output)
-    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_heigth}
+    data = {'maskimage':ima_str,'width':resized_width,'height':resized_heigth}
     thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
     ###convert thumb to black and white
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
