@@ -1216,11 +1216,7 @@ class MT_RawAndTM_View(views.APIView):
         if self_learn:
             for word in words: 
                 print("Word---------->", word)
-<<<<<<< HEAD
-                choice=choicelist.filter(source_word__iexact = word).order_by("-updated_at").distinct()
-=======
                 choice=self_learn.filter(source_word__iexact = word).order_by('-updated_at').distinct()
->>>>>>> origin/v4-merged-production
                 if choice:
                     print(choice, "*****************")
                     replace_word=choice.first().edited_word
@@ -1609,9 +1605,21 @@ class DocumentToFile(views.APIView):
         try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
         except:managers = []
 
-        if (request.user ==  document_user) or (request.user in managers):
+        # Doc=Document.objects.get(id=document_id)
+        # user=self.request.user.team.owner if self.request.user.team  else self.request.user
+        # assign_objs=TaskAssign.objects.filter(task_id=Doc.task_obj.id,assign_to=user)
 
+        # agency = []
+        # if assign_objs.filter(assign_to__isnull=False):
+        #     assign_to = assign_objs.last().assign_to
 
+        #     if assign_to.is_agency :
+        #         agency.append(assign_to)
+        #         if assign_to.team:
+        #             agency.append(assign_to.team.get_project_manager)
+        # if (request.user ==  document_user) or (request.user in managers) or (request.user in agency) :
+
+        if request.user:
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":
                 return self.download_source_file(document_id)

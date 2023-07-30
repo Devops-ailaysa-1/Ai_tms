@@ -305,7 +305,7 @@ class FileView(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
     def destroy(self, request, *args, **kwargs):
-        from ai_workspace_okapi.api_views import DocumentViewByTask
+        from ai_workspace_okapi.api_views import DocumentViewByTask  
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
@@ -1476,7 +1476,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         tsk = Task.objects.get(id=task)
         print(self.request.user)
-        authorize(request, resource=tsk, actor=self.request.user, action="update")
+        # authorize(request, resource=tsk, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
