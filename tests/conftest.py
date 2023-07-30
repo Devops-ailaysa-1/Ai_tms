@@ -76,21 +76,12 @@ def django_db_setup(django_db_setup, django_db_blocker):
         call_command('loaddata', 'fixtures/userattribute.json')
         call_command('loaddata', 'fixtures/emailaddress.json')
         call_command('loaddata', 'fixtures/steps.json')
-        call_command('loaddata', 'fixtures/Project.json')
         call_command('loaddata', 'fixtures/user_credits.json')
-        call_command('loaddata', 'fixtures/ChoiceLists.json')
-        call_command('loaddata', 'fixtures/ChoiceListSelected.json')
-        call_command('loaddata', 'fixtures/SelflearningAsset.json')
-        # call_command('loaddata', 'fixtures/AiPrompt.json')
-        call_command('loaddata', 'fixtures/file.json')
-        call_command('loaddata', 'fixtures/job.json')
-        call_command('loaddata', 'fixtures/Document.json')
-        
-        # call_command('loaddata', 'fixtures/Account.json')
-        # call_command('loaddata', 'fixtures/Product.json')
-        # call_command('loaddata', 'fixtures/Plan.json')
-        # call_command('loaddata', 'fixtures/Price.json')
-        # call_command('loaddata', 'fixtures/AilaysaCampaigns.json')
+        call_command('loaddata', 'fixtures/Account.json')
+        call_command('loaddata', 'fixtures/Product.json')
+        call_command('loaddata', 'fixtures/Plan.json')
+        call_command('loaddata', 'fixtures/Price.json')
+        call_command('loaddata', 'fixtures/AilaysaCampaigns.json')
         # call_command('loaddata', 'fixtures/prompt_categories.json')
         # call_command('loaddata', 'fixtures/prompt_sub_categories.json')
         # call_command('loaddata', 'fixtures/prompt_start_phrases.json')
@@ -100,7 +91,9 @@ def django_db_setup(django_db_setup, django_db_blocker):
         from djstripe.models import Account
         default_djstripe_owner=Account.objects.first()
         
-                
+
+
+        
 # @pytest.fixture
 # def test_create():     
 #     create_user("stephenlangtest@gmail.com","stephenlangtest@gmail.com",101,'test@123#')
