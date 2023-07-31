@@ -199,7 +199,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json=can_json.json
             src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                    "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
-            
             can_json.json=src_json    
             can_json.save()
             instance.save()
@@ -492,10 +491,10 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     scale_val = min([2048/width, 2048/ height])
                     new_width = round(scale_val*width)
                     new_height = round(scale_val*height)
-                    im=cv2.resize(im ,(new_height,new_width))
+                    im=cv2.resize(im ,(new_width,new_height)) #
                     content=image_content(im)
-                    instance.height=new_width
-                    instance.width=new_height
+                    instance.height=new_height #
+                    instance.width=new_width
                     # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
                     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
                     instance.image=im
