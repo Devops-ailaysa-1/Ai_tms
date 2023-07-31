@@ -2682,7 +2682,7 @@ def download_text_to_speech_source(request):
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
-    authorize(request,resource=obj,action="read",actor=request.user)
+    authorize(request,resource=obj,action="download",actor=request.user)
     try:
         output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
         return download_file(output_from_writer.path)
