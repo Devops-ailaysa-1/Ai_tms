@@ -957,9 +957,7 @@ class TM_FetchConfigsView(viewsets.ViewSet):
 
     def update(self, request, pk, format=None):
         project = self.get_object(pk)
-        # task=Task.objects.filter(job__project=project)
-        # tsk=filter_authorize(request,task,"update",self.request.user)
-        # if tsk:
+        authorize(request,resource=project,action="update",actor=self.request.user)
         ser = ProjectSerializerV2(project, data=request.data, partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
