@@ -7,6 +7,7 @@ from django_oso.auth import authorize
 import django_oso
 import logging
 logger = logging.getLogger('django')
+import copy
 
 # from ai_auth.api_views import resync_instances
 
@@ -76,11 +77,12 @@ def filter_authorize(request,query,action,user):
 	return query.filter(id__in = auth_ids)
 
 def authorize_list(obj_list,action,user):
+	obj=copy.deepcopy(obj_list)
 	for instance in obj_list:
 		if not django_oso.oso.Oso.is_allowed(
 			actor=user, resource=instance, action=action):
-			obj_list.remove(instance)
-	return obj_list
+			obj.remove(instance)
+	return obj
 			
 
 	# 	try:
