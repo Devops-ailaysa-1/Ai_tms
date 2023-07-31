@@ -1049,6 +1049,7 @@ class TbxFileDetail(APIView):
 
     def put(self, request, id):
         tbx_asset = self.get_object(id)
+        authorize(request,resource=tbx_asset,action="update",actor=self.request.user)
         #tbx_file = request.FILES.get('tbx_file')
         job_id = request.POST.get("job_id", None)
         serializer = TbxFileSerializer(tbx_asset, data={"job" : job_id}, partial=True)
@@ -1059,6 +1060,7 @@ class TbxFileDetail(APIView):
 
     def delete(self, request, id):
         tbx_asset = self.get_object(id)
+        authorize(request,resource=tbx_asset,action="delete",actor=self.request.user)
         tbx_asset.delete()
         return Response(data={"Message": "Removed Terminology asset"}, status=204)
 
