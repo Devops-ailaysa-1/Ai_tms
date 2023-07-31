@@ -577,7 +577,7 @@ class TmxFileView(viewsets.ViewSet):
 
     def create(self, request):
         data = {**request.POST.dict(), "tmx_files": request.FILES.getlist("tmx_files")}
-        ser_data = TmxFileSerializer.prepare_data(data)
+        ser_data = TmxFileSerializer.prepare_data(request,data)
         ser = TmxFileSerializer(data=ser_data, many=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
@@ -591,10 +591,8 @@ class TbxUploadView(APIView):
         if doc_id != 0:
             job_id = Document.objects.get(id=doc_id).job_id
             project_id = Job.objects.get(id=job_id).project_id
-        # task=Task.objects.filter(job__project__id=project_id)
-        # print(task)
-        # pro=filter_authorize(request,task,"create",self.request.user)
-        # if pro:
+        pro=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=pro,action="create",actor=self.request.user)
         serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
         # print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
