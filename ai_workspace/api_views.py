@@ -1030,6 +1030,8 @@ class TbxFileListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request, project_id):
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=project,action="create",actor=self.request.user)
         data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
         ser_data = TbxFileSerializer.prepare_data(data)
         serializer = TbxFileSerializer(data=ser_data,many=True)
