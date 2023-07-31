@@ -1006,9 +1006,12 @@ class ReferenceFilesView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
+            objs=authorize_list(objs,"delete",request.user)
             for obj in objs:
                 obj.delete()
             return Response(status=204)
+        obj=self.get_object()
+        authorize(request,resource=obj,action="delete",actor=self.request.user)
         return super().destroy(request, *args, **kwargs)
 
 @api_view(["DELETE"])
