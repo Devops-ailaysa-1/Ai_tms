@@ -1083,7 +1083,8 @@ def glossary_template_lite(request):
 class TbxTemplateUploadView(APIView):
 
     def post(self, request, project_id):
-
+        pro=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=pro,action="create",actor=self.request.user)
         data = {**request.POST.dict(), "tbx_template_file" : request.FILES.get('tbx_template_file')}
         data.update({'project_id': project_id})
         prep_data = TbxTemplateSerializer.prepare_data(data)
@@ -1117,7 +1118,9 @@ class TbxTemplateUploadView(APIView):
 
 @api_view(['GET',])
 def tbx_download(request,tbx_file_id):
-    tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
+    obj = TbxFile.objects.get(id=tbx_file_id)
+    tbx_asset=obj.tbx_file
+    authorize(request,resource=obj,action="download",actor=request.user)
     return download_file(tbx_asset.path)
     # fl_path = tbx_asset.path
     # filename = os.path.basename(fl_path)
