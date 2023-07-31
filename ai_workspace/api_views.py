@@ -1921,10 +1921,9 @@ def tasks_list(request):
     # return Response(task_list)
 @api_view(['GET',])
 def instruction_file_download(request,instruction_file_id):
-    instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
-
-    task=TaskAssignInfo.objects.get(task_assign_instruction_file__id=instruction_file_id)
-    authorize(request,resource=task,actor=request.user,action="read")
+    inst = Instructionfiles.objects.get(id=instruction_file_id)
+    authorize(request,resource=inst,actor=request.user,action="download")
+    instruction_file =inst.instruction_file
     if instruction_file:
         return download_file(instruction_file.path)
         # fl_path = instruction_file.path
