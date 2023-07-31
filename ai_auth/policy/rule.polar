@@ -93,7 +93,7 @@ resource ai_workspace::Job{
 # For models with task obj
 has_role(actor: ai_auth::AiUser, role_name: String,resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
-    ai_workspace_okapi::Segment,,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment]
+    ai_workspace_okapi::Segment,,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,ai_workspace::Instructionfiles]
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name:role_name).count() != 0;
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource : ai_workspace::Project,ai_workspace::ProjectContentType,ai_workspace::ProjectFilesCreateType,
@@ -102,7 +102,7 @@ and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,r
 
 # For models without task obj
 has_role(actor: ai_auth::AiUser, role_name: String, resource:Resource) if
-resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_tm::TmxFileNew] 
+resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_tm::TmxFileNew,ai_workspace::File,ai_workspace::ReferenceFiles,ai_workspace::TbxFile] 
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
 
 
@@ -118,14 +118,15 @@ has_role(actor: ai_auth::AiUser, _role_name: "Project owner", resource:Resource)
 ## For agency
 # For models without task obj 
 has_role(actor: ai_auth::AiUser, _role_name: "Agency Project owner", resource:Resource) if
-resource.__class__ in [ai_workspace::Project,ai_workspace::Job] 
+resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_workspace::File,ai_workspace::ReferenceFiles,ai_workspace::TbxFile] 
 and actor.internal_member.count() != 0
-and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]));
+and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk__in:resource.proj_obj.get_tasks_pk,role__role__name__in:["Editor","Reviewer"]));
 
 # For models with task obj
 has_role(actor: ai_auth::AiUser, _role_name: "Agency Project owner",resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
-    ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment]
+    ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
+    ,ai_workspace::Instructionfiles]
 and actor.internal_member.count() != 0
 and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]));
 
@@ -135,14 +136,15 @@ and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_
 ## For Agency Admin
 # For models without task obj 
 has_role(actor: ai_auth::AiUser,_role_name: "Agency Admin", resource:Resource) if
-resource.__class__ in [ai_workspace::Project,ai_workspace::Job] 
+resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_workspace::File,ai_workspace::ReferenceFiles,ai_workspace::TbxFile] 
 and actor.is_agency
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name__in:["Editor","Reviewer"]).count() != 0;
 
 # For models with task obj
 has_role(actor: ai_auth::AiUser,_role_name: "Agency Admin",resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
-    ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment]
+    ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
+    ai_workspace::Instructionfiles]
 and actor.is_agency
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]).count() != 0;
 
@@ -532,5 +534,70 @@ resource ai_workspace_okapi::Comment{
     "Editor" if "Agency Reviewer";
     "Agency Project owner" if "Agency Admin";
 
+
+}
+
+resource ai_workspace::ReferenceFiles{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "Editor" if "Agency Project owner";
+    "Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
+
+}
+
+resource ai_workspace::TbxFile{
+    permissions = ["read", "create","update","delete","download"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "download" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "create" if "Agency Project owner";
+    "update" if "Agency Project owner";
+    "download" if "Agency Project owner";
+    "Editor" if "Agency Project owner";
+    "Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
+
+}
+
+resource ai_workspace::Instructionfiles{
+    permissions = ["read", "create","update","delete","download"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "download" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "create" if "Agency Project owner";
+    "update" if "Agency Project owner";
+    "download" if "Agency Project owner";
+    "Editor" if "Agency Project owner";
+    "Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
 
 }
