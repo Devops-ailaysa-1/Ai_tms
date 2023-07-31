@@ -3073,7 +3073,9 @@ import difflib
 from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError
 
-
+from nltk.corpus import stopwords
+# nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
@@ -3129,7 +3131,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 self_learning=None
             print("self Learn------->",self_learning)
-            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
+            print(lang,"llllllllllllllllllll")
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning,lang)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
@@ -3201,11 +3204,12 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
     @staticmethod
-    def seq_match_seg_diff(words1,words2,self_learning):
+    def seq_match_seg_diff(words1,words2,self_learning,lang):
         source = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words1)
         s1=source.split()
         target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
         s2=target.split()
+        stopwords=stop_words if lang.lang=='English' else {}
         assets={}
         print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
@@ -3214,11 +3218,12 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
                 source=" ".join(s1[i1:i2])
                 edited=" ".join(s2[j1:j2])
-                if self_learning:
-                    if not self_learning.filter(source_word=source ,edited_word=edited): 
+                if source not in stopwords and edited not in stopwords:
+                    if self_learning:
+                        if not self_learning.filter(source_word=source ,edited_word=edited): 
+                            assets[source]=edited
+                    else:
                         assets[source]=edited
-                else:
-                    assets[source]=edited
         print("------------------",assets)  
         return assets
 
