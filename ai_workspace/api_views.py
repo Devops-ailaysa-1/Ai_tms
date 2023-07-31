@@ -158,10 +158,12 @@ class JobView(viewsets.ModelViewSet):
         print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
-            # objs=filter_authorize(request,objs,"delete",self.request.user)
-            for obj in objs:
+            objs=authorize_list(objs,"delete",request.user) 
+            for obj in objs: 
                 obj.delete()
             return Response(status=204)
+        obj=self.get_object(many=False) 
+        authorize(request,resource=obj,action="delete",actor=self.request.user)
         return super().destroy(request, *args, **kwargs)
 
 class ProjectSubjectView(viewsets.ModelViewSet):
