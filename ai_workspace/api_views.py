@@ -310,6 +310,7 @@ class FileView(viewsets.ModelViewSet):
         from ai_workspace_okapi.api_views import DocumentViewByTask  
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
+            objs=authorize_list(objs,"delete",request.user)
             for obj in objs:
                 tasks = obj.file_tasks_set.all()
                 for i in tasks:
@@ -320,6 +321,8 @@ class FileView(viewsets.ModelViewSet):
                 os.remove(obj.file.path)
                 obj.delete()
             return Response(status=204)
+        file=self.get_object(many=False)
+        authorize(request,resource=file,action="delete",actor=request.user)
         return super().destroy(request, *args, **kwargs)
 
 
