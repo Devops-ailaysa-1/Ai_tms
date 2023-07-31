@@ -2668,7 +2668,7 @@ def download_text_to_speech_source(request):
     gender = request.GET.get('gender')
     user = request.user
     obj = Task.objects.get(id = task)
-    authorize(request,resource=obj,action="read",actor=request.user)
+    authorize(request,resource=obj,action="download",actor=request.user)
     # if obj.task_transcript_details.exists()==False:
     #     tt = text_to_speech_task(obj,language,gender,user)
     file = obj.task_transcript_details.first().source_audio_file
