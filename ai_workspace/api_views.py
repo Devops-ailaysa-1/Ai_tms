@@ -1438,8 +1438,6 @@ class ProjectAnalysis(APIView):
 
     permission_classes = [IsAuthenticated]
     def get(self, request, project_id):
-        pro=get_object_or_404(Project,id=project_id)
-        authorize(request,actor=request.user,resource=pro,action="read")
         return Response(ProjectAnalysisProperty.get(project_id))
 
 #########################################
@@ -1487,7 +1485,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         tsk = Task.objects.get(id=task)
         print(self.request.user)
-        # authorize(request, resource=tsk, actor=self.request.user, action="update")
+        authorize(request, resource=tsk, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
