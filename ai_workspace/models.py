@@ -1212,7 +1212,7 @@ class Task(models.Model):
             if self.document:
                 cached_value = self.document.converted_audio_file_exists
             else:
-                cached_value = 'Not exists'
+                cached_value = None#'Not exists'
             cache.set(cache_key, cached_value)
         return cached_value
 
@@ -1272,8 +1272,8 @@ class Task(models.Model):
                     if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
                         cached_value = True
                     else:cached_value = False
-                else:cached_value = "Not exists"
-            else:cached_value= "Not exists"
+                else:cached_value = None#"Not exists"
+            else:cached_value= None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1289,9 +1289,9 @@ class Task(models.Model):
                         if self.task_transcript_details.exists():
                             catched_value = False
                         else:catched_value =  True
-                    else:catched_value =  "Not exists"
-                else:catched_value =  "Not exists"
-            else:catched_value =  "Not exists"
+                    else:catched_value = None# "Not exists"
+                else:catched_value =  None#"Not exists"
+            else:catched_value =  None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1373,7 +1373,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_word_count
         else:
-            cached_value ="Not exists"
+            cached_value = None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1395,7 +1395,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_char_count
         else:
-            cached_value ="Not exists"
+            cached_value =None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1431,18 +1431,14 @@ class Task(models.Model):
 
     @cached_property
     def corrected_segment_count(self):
-        print("----------------prop------------------------")
         cache_key = f'seg_progress_{self.document.pk}' if self.document else None
         cached_value = cache.get(cache_key)
-        print("Cached Value in progress---------->",cached_value)
         if cached_value is None:
             confirm_list = [102, 104, 106, 110, 107]
             total_seg_count = 0
             confirm_count = 0
             doc = self.document
-            print("Doc----------->",doc)
             segs = Segment.objects.filter(text_unit__document=doc)
-            print("Segs----------->",segs)
             for seg in segs:
 
                 if (seg.is_merged == True and seg.is_merge_start != True):
@@ -1465,16 +1461,13 @@ class Task(models.Model):
                     confirm_count += 1
 
             cached_value ={"total_segments":total_seg_count,"confirmed_segments": confirm_count}
-            print("CV------------>",cached_value)
             cache.set(cache_key,cached_value)
         return cached_value
 
     @cached_property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
-            print("-----------------------Inside--------------------------------")
             data = self.corrected_segment_count
-            print("Data------------------------------------------>",data)
             return data
         else:
             cache_key = f'seg_progress_{self.job.pk}'
@@ -1792,10 +1785,6 @@ class Instructionfiles(models.Model):
     @property
     def owner_pk(self):
         return self.task_assign_info.owner_pk
-    
-    @property
-    def task_obj(self):
-        return self.task_assign_info.task_obj
 # post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
@@ -1940,10 +1929,6 @@ class ReferenceFiles(models.Model):
     @property
     def owner_pk(self):
         return self.project.owner_pk
-    
-    @property
-    def proj_obj(self):
-        return self.project
 
 def tbx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
@@ -1964,11 +1949,7 @@ class TbxFile(models.Model):
     @property
     def owner_pk(self):
         return self.project.owner_pk
-    
-    @property
-    def proj_obj(self):
-        return self.project
-     
+
 def tbx_template_file_upload_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx_template", filename)
 
