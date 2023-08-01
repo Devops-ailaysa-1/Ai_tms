@@ -156,7 +156,7 @@ class WriterProject(models.Model):
                             ai_user=self.ai_user,).count()
             self.proj_name = self.proj_name + "(" + str(proj_count) + ")"
 
-        return super().save()
+        return super().save(*args, **kwargs)
 
 class MyDocuments(models.Model):
     project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
@@ -193,7 +193,7 @@ class MyDocuments(models.Model):
                             ai_user=self.ai_user,).count()
             self.doc_name = self.doc_name + "(" + str(doc_count) + ")"
 
-        return super().save()
+        return super().save(*args, **kwargs)
 
 
 ##########################Need to add project type################################
@@ -262,12 +262,12 @@ class Project(models.Model):
                         else:
                             count_num = queryset.filter(project_name__icontains=self.project_name).count()
                         self.project_name = self.project_name + "(" + str(count_num) + ")"
-                        super().save()
+                        super().save(*args, **kwargs)
                         break
                     except:
                         count_num = count_num+1
                         self.project_name = self.project_name + "(" + str(count_num) + ")"
-            return super().save()
+            return super().save(*args, **kwargs)
 
 
             # if not self.ai_project_id:
@@ -932,7 +932,7 @@ class Job(models.Model):
             # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project)\
                 .count()+1)
-        super().save()
+        super().save(*args, **kwargs)
 
     @property
     def can_delete(self):
@@ -1091,7 +1091,7 @@ class File(models.Model):
             # self.ai_user shoould be set before save
             self.fid = str(self.project.ai_project_id)+"f"+str(File.objects\
                 .filter(project=self.project.id).count()+1)
-        super().save()
+        super().save(*args, **kwargs)
 
     objects = FileManager()
 
@@ -1200,7 +1200,7 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
         if not self.ai_taskid:
             self.ai_taskid = create_task_id()
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'audio_file_exists_{self.pk}'
         cache.delete(cache_key)
 
@@ -1606,7 +1606,7 @@ class TaskAssign(models.Model):
 
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
         # cache_key = f'task_assign_info_{self.task.pk}'
@@ -1655,7 +1655,7 @@ class TaskAssignInfo(models.Model):
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
-        super().save()
+        super().save(*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
         # cache_key = f'task_assign_info_{self.task_assign.task.pk}'
@@ -1814,7 +1814,7 @@ class TaskDetails(models.Model):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'task_word_count_{self.task.pk}'
         cache.delete(cache_key)
         cache_key = f'task_char_count_{self.task.pk}'
@@ -1852,7 +1852,7 @@ class TaskTranscriptDetails(models.Model):
         return self.task.owner_pk
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'audio_file_exists_{self.task.pk}'
         cache.delete(cache_key)
         cache_key = f'transcribed_{self.task.pk}'

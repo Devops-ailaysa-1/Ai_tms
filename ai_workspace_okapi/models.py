@@ -146,7 +146,7 @@ class Segment(BaseSegment):
 
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'seg_progress_{self.text_unit.document.pk}'
         cache.delete(cache_key)
 
@@ -225,7 +225,7 @@ class MergeSegment(BaseSegment):
 
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
         cache.delete(cache_key)
 
@@ -305,7 +305,7 @@ class SplitSegment(BaseSegment):
     is_split = models.BooleanField(default=True, null=True)
 
     def save(self, *args, **kwargs):
-        super().save()
+        super().save(*args, **kwargs)
         cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
         cache.delete(cache_key)
 
@@ -656,12 +656,12 @@ class ChoiceLists(models.Model):
                         else:
                             count= queryset.filter(name__icontains=self.name).count()
                         self.name = self.name + "(" + str(count) + ")"
-                        super().save()
+                        super().save(*args, **kwargs)
                         break
                     except:
                         count= count+1
                         self.name = self.name + "(" + str(count) + ")"
-            return super().save()
+            return super().save(*args, **kwargs)
 
 
 
