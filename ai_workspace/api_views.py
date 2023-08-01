@@ -1485,7 +1485,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         tsk = Task.objects.get(id=task)
         print(self.request.user)
-        authorize(request, resource=tsk, actor=self.request.user, action="update")
+        # authorize(request, resource=tsk, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])

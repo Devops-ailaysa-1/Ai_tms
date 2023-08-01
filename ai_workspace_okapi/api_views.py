@@ -3118,7 +3118,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target
                 else:                   
-                    raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                    try:raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+                    except:raw_mt = ''
                 mt_edited=seg.target
                 print("raw_mt normal>>>>>>",raw_mt)
             else:
@@ -3129,7 +3130,8 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
                 if len(seg_his)>=2:
                    raw_mt=seg_his[len(seg_his)-2].target 
                 else:
-                    raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                    try:raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+                    except:raw_mt=''
                 mt_edited=split_seg.target               
                 print("raw_mt split>>>>>>>",raw_mt)
            
@@ -3217,7 +3219,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         s1=source.split()
         target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
         s2=target.split()
-        stopwords=stop_words if lang.lang=='English' else {}
+        stopwords=stop_words if lang.language=='English' else {}
         assets={}
         print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )

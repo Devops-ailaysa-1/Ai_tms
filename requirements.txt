@@ -233,3 +233,4 @@ pygame
 symspellpy
 pillow-avif-plugin
 symspellpy
+django-redis
