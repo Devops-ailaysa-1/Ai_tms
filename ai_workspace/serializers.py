@@ -1250,7 +1250,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 						try:task_assign_info.append(i.task_assign_info)
 						except:pass
 					cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
-				else: cached_value = "Not exists"
+				else: cached_value = None#"Not exists"
 			else:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 				print("Task Assign-------->",task_assign)
