@@ -432,6 +432,18 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         return super().update(instance=instance, validated_data=validated_data)
 
 
+import io
+def read_avif_image(image_path):
+    output_buffer=io.BytesIO()
+    image=Image.open(image_path)
+    img = image.convert('PNG')
+    img.save(output_buffer, format=format.upper(), optimize=True, quality=96)
+    compressed_data=output_buffer.getvalue()
+    return compressed_data
+
+
+
+
 class CanvasDesignListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     translate_available = serializers.BooleanField(required=False,default=False)
@@ -478,6 +490,11 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             extension=instance.image.path.split('.')[-1]
             if extension=='jpg':
                 extension='jpeg'
+            if extension == 'avif':
+                image = read_avif_image(instance.image.path)
+                im =core.files.base.ContentFile(image,name=instance.image.name.split('/')[-1])
+                instance.image=im
+                instance.save()
             im = cv2.imread(instance.image.path)
             if not instance.image_name:
                 instance.image_name=instance.image.path.split('/')[-1]

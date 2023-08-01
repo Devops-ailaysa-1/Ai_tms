@@ -152,7 +152,7 @@ def thumbnail_create(json_str,formats):
         multiplierValue=min([300 /width, 300 / height])
 
     json_=json.dumps(json_str)
-    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue,"dpi":300}
     thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
 
     if thumb_image.status_code ==200:
@@ -263,3 +263,31 @@ def paginate_items(items, page_number, items_per_page):
     end_index = start_index + items_per_page
     paginated_items = items[start_index:end_index]
     return paginated_items, total_pages
+
+
+
+def download_font(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.content
+    else:
+        print(f"Failed to download font from {url}")
+        return None
+
+def convert_to_base64(font_url):
+    font_data = download_font(font_url)
+    if font_data:
+        return base64.b64encode(font_data).decode("utf-8")
+    return None
+
+
+
+def replace_url_with_base64(input_string):
+    font_url_pattern = r"url\('([^']+)'\)"
+    font_urls = re.findall(font_url_pattern, input_string)
+    for url in font_urls:
+        base64_data = convert_to_base64(url)
+        if base64_data:
+            input_string = input_string.replace(url, f"data:application/font-ttf;base64,{base64_data}")
+    return input_string
+

@@ -12,7 +12,7 @@ from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove,background_merge
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
-
+import pillow_avif
 HOST_NAME=os.getenv('HOST_NAME')
 
 def create_thumbnail_img_load(base_dimension,image):

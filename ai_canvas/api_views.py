@@ -156,7 +156,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
     def create(self,request):
         image = request.FILES.get('image')
-        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request})
         if serializer.is_valid():
