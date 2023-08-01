@@ -3060,6 +3060,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
+            authorize(request,resource=pr,action="create",actor=self.request.user)
             source_lang = pr.project_jobs_set.first().source_language_id
             res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
             return Response({'project_id':pr.id,'source_lang_id':source_lang,'Res':res})
