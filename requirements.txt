@@ -224,3 +224,4 @@ quickemailverification
 tiktoken==0.4.0
 ptvsd
 symspellpy
+django-redis
