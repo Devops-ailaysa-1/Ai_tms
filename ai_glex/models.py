@@ -98,6 +98,10 @@ class TermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'audio_file_exists_{self.pk}'
+        cache.delete(cache_key)
     # @property
     # def source_language(self):
     #     return str(self.job.source_language)
