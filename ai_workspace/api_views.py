@@ -3231,6 +3231,8 @@ def task_get_segments(request):
     from ai_workspace.models import ExpressProjectDetail
     user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
+    task=get_object_or_404(Task,id=task_id)
+    authorize(request,resource=task,actor=request.user,action="read")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     obj = Task.objects.get(id=task_id)
     if express_obj.source_text == None:
@@ -3331,6 +3333,8 @@ import difflib
 @permission_classes([IsAuthenticated])
 def task_segments_save(request):
     task_id = request.POST.get('task_id')
+    task=get_object_or_404(Task,id=task_id)
+    authorize(request,resource=task,actor=request.user,action="update")
     if not task_id:
         return Response({'msg':'task_id required'},status=400)
     from_history = request.POST.get('from_history',None)
