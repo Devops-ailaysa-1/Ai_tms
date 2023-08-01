@@ -11,6 +11,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
     MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
+from django.core.cache import cache
 
 
 class TaskStatus(models.Model):
@@ -143,6 +144,12 @@ class Segment(BaseSegment):
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
 
+
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete(cache_key)
+
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
@@ -215,6 +222,12 @@ class MergeSegment(BaseSegment):
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
         related_name="text_unit_merge_segment_set")
     is_split = models.BooleanField(default=False, null=True, blank=True)
+
+
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
+        cache.delete(cache_key)
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
@@ -290,6 +303,11 @@ class SplitSegment(BaseSegment):
                                   related_name="text_unit_split_segment_set")
     is_first = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=True, null=True)
+
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
+        cache.delete(cache_key)
 
     @property
     def get_parent_seg_id(self):
@@ -374,7 +392,12 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        cache_key = f'task_word_count_{self.pk}'
+        cache.delete(cache_key)
+        cache_key = f'task_char_count_{self.pk}'
+        cache.delete(cache_key)
+
 
     def get_user_email(self):
         return self.created_by.email
