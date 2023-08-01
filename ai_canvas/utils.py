@@ -152,7 +152,7 @@ def thumbnail_create(json_str,formats):
         multiplierValue=min([300 /width, 300 / height])
 
     json_=json.dumps(json_str)
-    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue,"dpi":300}
+    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
     thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
 
     if thumb_image.status_code ==200:
@@ -178,7 +178,7 @@ import copy
 def export_download(json_str,format,multipliervalue):
     if format in ["png","jpeg","pdf"]:
         json_ = json.dumps(json_str)
-        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue,'dpi':300}
     
     elif format =='svg':
         json_ = json.dumps(json_str)
@@ -206,7 +206,7 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
-            img.save(output_buffer, format=format.upper(), optimize=True, quality=85)
+            img.save(output_buffer, format=format.upper(),dpi=(300,300))
             compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
