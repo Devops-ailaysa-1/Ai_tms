@@ -135,6 +135,8 @@ class BaseSegment(models.Model):
 
     def save(self, *args, **kwargs):
         return super(BaseSegment, self).save(*args, **kwargs)
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete(cache_key)
 
 # post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 # post_save.connect(translate_segments,sender=Segment)
@@ -145,10 +147,9 @@ class Segment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True)
 
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        cache.delete(cache_key)
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+
 
     @property
     def get_merge_target_if_have(self):
@@ -224,10 +225,10 @@ class MergeSegment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True, blank=True)
 
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
-        cache.delete(cache_key)
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
+    #     cache.delete(cache_key)
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
