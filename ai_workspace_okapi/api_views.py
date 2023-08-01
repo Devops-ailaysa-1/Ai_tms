@@ -3131,7 +3131,6 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 self_learning=None
             print("self Learn------->",self_learning)
-            print(lang,"llllllllllllllllllll")
             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning,lang)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
