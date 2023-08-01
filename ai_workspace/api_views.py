@@ -4082,6 +4082,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def list(self,request):
         task_id = request.GET.get('task')
+        task=get_object_or_404(Task,id=task_id)
+        authorize(request,resource=task,action="read",actor=self.request.user)
         queryset = ExpressTaskHistory.objects.filter(task_id=task_id).exclude(target_text=None).all().order_by('-id')
         print("QR----------->",queryset)
         serializer = ExpressTaskHistorySerializer(queryset,many=True)
@@ -4092,6 +4094,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         target = request.POST.get('target_text')
         task = request.POST.get('task')
         action = request.POST.get('action')
+        task=get_object_or_404(Task,id=task)
+        authorize(request,resource=task,action="create",actor=self.request.user)
         serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'action':action,'task':task})
         if serializer.is_valid():
             serializer.save()
@@ -4103,6 +4107,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def delete(self,request,pk):
         obj = ExpressTaskHistory.objects.get(id=pk)
+        task=obj.task
+        authorize(request,resource=task,action="delete",actor=self.request.user)
         obj.delete()
         return Response(status=204)
 
