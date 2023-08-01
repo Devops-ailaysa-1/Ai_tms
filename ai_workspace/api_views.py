@@ -158,9 +158,12 @@ class JobView(viewsets.ModelViewSet):
         print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
-            for obj in objs:
+            objs=authorize_list(objs,"delete",request.user) 
+            for obj in objs: 
                 obj.delete()
             return Response(status=204)
+        obj=self.get_object(many=False) 
+        authorize(request,resource=obj,action="delete",actor=self.request.user)
         return super().destroy(request, *args, **kwargs)
 
 class ProjectSubjectView(viewsets.ModelViewSet):
@@ -304,9 +307,10 @@ class FileView(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
     def destroy(self, request, *args, **kwargs):
-        from ai_workspace_okapi.api_views import DocumentViewByTask
+        from ai_workspace_okapi.api_views import DocumentViewByTask  
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
+            objs=authorize_list(objs,"delete",request.user)
             for obj in objs:
                 tasks = obj.file_tasks_set.all()
                 for i in tasks:
@@ -317,6 +321,8 @@ class FileView(viewsets.ModelViewSet):
                 os.remove(obj.file.path)
                 obj.delete()
             return Response(status=204)
+        file=self.get_object(many=False)
+        authorize(request,resource=file,action="delete",actor=request.user)
         return super().destroy(request, *args, **kwargs)
 
 
@@ -571,7 +577,7 @@ class TmxFileView(viewsets.ViewSet):
 
     def create(self, request):
         data = {**request.POST.dict(), "tmx_files": request.FILES.getlist("tmx_files")}
-        ser_data = TmxFileSerializer.prepare_data(data)
+        ser_data = TmxFileSerializer.prepare_data(request,data)
         ser = TmxFileSerializer(data=ser_data, many=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
@@ -585,6 +591,8 @@ class TbxUploadView(APIView):
         if doc_id != 0:
             job_id = Document.objects.get(id=doc_id).job_id
             project_id = Job.objects.get(id=job_id).project_id
+        pro=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=pro,action="create",actor=self.request.user)
         serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
         # print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
@@ -592,6 +600,8 @@ class TbxUploadView(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        # else:
+        #     return JsonResponse({"msg":"You do not have permission to perform this action."})
 
 
 def docx_save_pdf(pdf_obj):
@@ -947,10 +957,12 @@ class TM_FetchConfigsView(viewsets.ViewSet):
 
     def update(self, request, pk, format=None):
         project = self.get_object(pk)
+        authorize(request,resource=project,action="update",actor=self.request.user)
         ser = ProjectSerializerV2(project, data=request.data, partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
+        # return JsonResponse({"msg":"You do not have permission to perform this action."},status=401)
 
 
 class ReferenceFilesView(viewsets.ModelViewSet):
@@ -994,9 +1006,12 @@ class ReferenceFilesView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
+            objs=authorize_list(objs,"delete",request.user)
             for obj in objs:
                 obj.delete()
             return Response(status=204)
+        obj=self.get_object()
+        authorize(request,resource=obj,action="delete",actor=self.request.user)
         return super().destroy(request, *args, **kwargs)
 
 @api_view(["DELETE"])
@@ -1015,6 +1030,8 @@ class TbxFileListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request, project_id):
+        project=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=project,action="create",actor=self.request.user)
         data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
         ser_data = TbxFileSerializer.prepare_data(data)
         serializer = TbxFileSerializer(data=ser_data,many=True)
@@ -1032,6 +1049,7 @@ class TbxFileDetail(APIView):
 
     def put(self, request, id):
         tbx_asset = self.get_object(id)
+        authorize(request,resource=tbx_asset,action="update",actor=self.request.user)
         #tbx_file = request.FILES.get('tbx_file')
         job_id = request.POST.get("job_id", None)
         serializer = TbxFileSerializer(tbx_asset, data={"job" : job_id}, partial=True)
@@ -1042,6 +1060,7 @@ class TbxFileDetail(APIView):
 
     def delete(self, request, id):
         tbx_asset = self.get_object(id)
+        authorize(request,resource=tbx_asset,action="delete",actor=self.request.user)
         tbx_asset.delete()
         return Response(data={"Message": "Removed Terminology asset"}, status=204)
 
@@ -1064,7 +1083,8 @@ def glossary_template_lite(request):
 class TbxTemplateUploadView(APIView):
 
     def post(self, request, project_id):
-
+        pro=get_object_or_404(Project,id=project_id)
+        authorize(request,resource=pro,action="create",actor=self.request.user)
         data = {**request.POST.dict(), "tbx_template_file" : request.FILES.get('tbx_template_file')}
         data.update({'project_id': project_id})
         prep_data = TbxTemplateSerializer.prepare_data(data)
@@ -1098,7 +1118,9 @@ class TbxTemplateUploadView(APIView):
 
 @api_view(['GET',])
 def tbx_download(request,tbx_file_id):
-    tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
+    obj = TbxFile.objects.get(id=tbx_file_id)
+    tbx_asset=obj.tbx_file
+    authorize(request,resource=obj,action="download",actor=request.user)
     return download_file(tbx_asset.path)
     # fl_path = tbx_asset.path
     # filename = os.path.basename(fl_path)
@@ -1222,6 +1244,7 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
+        authorize(request,resource=task,action="delete",actor=self.request.user)
         if task.task_info.filter(task_assign_info__isnull=False):
             print("assigned")
             return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
@@ -1460,6 +1483,10 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
+        tsk = Task.objects.get(id=task)
+        print(self.request.user)
+        authorize(request, resource=tsk, actor=self.request.user, action="update")
+
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
 
@@ -1516,12 +1543,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         step = request.GET.get('step')
         reassigned = request.GET.get('reassigned',False)
 
-        tsks = Task.objects.filter(id__in=tasks)
-        # for tsk in tsks:
-        #     authorize(request, resource=tsk, actor=request.user, action="read") #
+        tsks = get_list_or_404(Task,id__in=tasks)
+        task=authorize_list(tsks,"read",self.request.user)
+        task=[i.id for i in task]
 
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__reassigned = reassigned))
+            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = task) & Q(task_assign__reassigned = reassigned))
             # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
@@ -1765,6 +1792,7 @@ def get_assign_to_list(request):
     return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 
 def find_vendor(team,jobs):
+    externalmembers=[]
     for j in team:
         for job in jobs:
             try:profile = j.hired_editor.professional_identity_info.avatar_url
@@ -1893,7 +1921,9 @@ def tasks_list(request):
     # return Response(task_list)
 @api_view(['GET',])
 def instruction_file_download(request,instruction_file_id):
-    instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
+    inst = Instructionfiles.objects.get(id=instruction_file_id)
+    authorize(request,resource=inst,actor=request.user,action="download")
+    instruction_file =inst.instruction_file
     if instruction_file:
         return download_file(instruction_file.path)
         # fl_path = instruction_file.path
@@ -1937,6 +1967,11 @@ class AssignToListView(viewsets.ModelViewSet):
         job = self.request.GET.getlist('job')
         reassign = self.request.GET.get('reassign',None)
         pro = Project.objects.get(id = project)
+        
+        task=Task.objects.filter(job__project__id=5390)
+        tsk=filter_authorize(request,task,"read",self.request.user)
+        if not tsk:
+            return JsonResponse({"msg":"You do not have permission to perform this action."})
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
             #authorize(request, resource=job_obj, actor=request.user, action="read")
@@ -2135,6 +2170,7 @@ def file_write(pr):
 #@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
+    authorize(request,resource=pr,action="read",actor=request.user)
     if pr.project_type_id == 5:
         file_write(pr)
 
@@ -2381,6 +2417,8 @@ def transcribe_file(request):
 @permission_classes([IsAuthenticated])
 def transcribe_file_get(request):
     task_id = request.GET.get('task')
+    task=Task.objects.get(id=task_id)
+    authorize(request,resource=task,action="read",actor=request.user)
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     ser = TaskTranscriptDetailSerializer(queryset,many=True)
     return Response(ser.data)
@@ -2496,6 +2534,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender',None)
     pr = Project.objects.get(id=project)
+    authorize(request,resource=pr,action="read",actor=request.user)
     for _task in pr.get_source_only_tasks:
         if _task.task_transcript_details.first() == None:
             tasks.append(_task)
@@ -2629,6 +2668,7 @@ def download_text_to_speech_source(request):
     gender = request.GET.get('gender')
     user = request.user
     obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="download",actor=request.user)
     # if obj.task_transcript_details.exists()==False:
     #     tt = text_to_speech_task(obj,language,gender,user)
     file = obj.task_transcript_details.first().source_audio_file
@@ -2642,6 +2682,7 @@ def download_text_to_speech_source(request):
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="download",actor=request.user)
     try:
         output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
         return download_file(output_from_writer.path)
@@ -2684,16 +2725,23 @@ def zipit(folders, zip_filename):
 @permission_classes([IsAuthenticated])
 def project_list_download(request):
     projects = request.GET.getlist('project')
-    dest = []
-    for obj in projects:
-        pr = Project.objects.get(id=obj)
-        path = pr.project_dir_path + '/source'
-        dest.append(path)
-    zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
-    zipit(dest,zip_file_name)
-    tt = download_file(zip_file_name)
-    os.remove(zip_file_name)
-    return tt
+
+    pro = get_list_or_404(Project,id__in=projects)
+    proj=authorize_list(pro,"read",request.user)
+    projects=[str(i.id) for i in proj]
+    print(projects,"************************")
+    if projects:
+        dest = []
+        for obj in projects:
+            pr = Project.objects.get(id=obj)
+            path = pr.project_dir_path + '/source'
+            dest.append(path)
+        zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
+        zipit(dest,zip_file_name)
+        tt = download_file(zip_file_name)
+        os.remove(zip_file_name)
+        return tt
+    return JsonResponse({"msg":"you are not authorized to perform this action"})
 
 
 ############################Deprecated###########################################
@@ -3012,6 +3060,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
+            authorize(request,resource=pr,action="create",actor=self.request.user)
             source_lang = pr.project_jobs_set.first().source_language_id
             res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
             return Response({'project_id':pr.id,'source_lang_id':source_lang,'Res':res})
@@ -3183,6 +3232,8 @@ def task_get_segments(request):
     from ai_workspace.models import ExpressProjectDetail
     user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
+    task=get_object_or_404(Task,id=task_id)
+    authorize(request,resource=task,actor=request.user,action="read")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     obj = Task.objects.get(id=task_id)
     if express_obj.source_text == None:
@@ -3283,6 +3334,8 @@ import difflib
 @permission_classes([IsAuthenticated])
 def task_segments_save(request):
     task_id = request.POST.get('task_id')
+    task=get_object_or_404(Task,id=task_id)
+    authorize(request,resource=task,actor=request.user,action="update")
     if not task_id:
         return Response({'msg':'task_id required'},status=400)
     from_history = request.POST.get('from_history',None)
@@ -3385,6 +3438,7 @@ def task_segments_save(request):
 #@permission_classes([IsAuthenticated])
 def express_task_download(request,task_id):###############permission need to be added and checked##########################
     obj = Task.objects.get(id = task_id)
+    authorize(request,resource=obj,actor=request.user,action="download")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
@@ -3426,6 +3480,7 @@ def express_task_download(request,task_id):###############permission need to be 
 def express_project_detail(request,project_id):
     obj = Project.objects.get(id=project_id)
     jobs = obj.project_jobs_set.all()
+    authorize(request,resource=obj,actor=request.user,action="read")
     jobs_data = JobSerializer(jobs, many=True)
     #target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
     source_lang_id =  obj.project_jobs_set.first().source_language_id
@@ -4034,6 +4089,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def list(self,request):
         task_id = request.GET.get('task')
+        task=get_object_or_404(Task,id=task_id)
+        authorize(request,resource=task,action="read",actor=self.request.user)
         queryset = ExpressTaskHistory.objects.filter(task_id=task_id).exclude(target_text=None).all().order_by('-id')
         print("QR----------->",queryset)
         serializer = ExpressTaskHistorySerializer(queryset,many=True)
@@ -4044,6 +4101,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         target = request.POST.get('target_text')
         task = request.POST.get('task')
         action = request.POST.get('action')
+        task=get_object_or_404(Task,id=task)
+        authorize(request,resource=task,action="create",actor=self.request.user)
         serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'action':action,'task':task})
         if serializer.is_valid():
             serializer.save()
@@ -4055,6 +4114,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def delete(self,request,pk):
         obj = ExpressTaskHistory.objects.get(id=pk)
+        task=obj.task
+        authorize(request,resource=task,action="delete",actor=self.request.user)
         obj.delete()
         return Response(status=204)
 

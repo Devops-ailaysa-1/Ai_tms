@@ -1605,9 +1605,18 @@ class DocumentToFile(views.APIView):
         try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
         except:managers = []
 
-        if (request.user ==  document_user) or (request.user in managers):
+        user=self.request.user.team.owner if self.request.user.team  else self.request.user
+        assign_objs=TaskAssign.objects.filter(task_id=doc.task_obj.id,assign_to=user)
 
+        agency = []
+        if assign_objs.filter(assign_to__isnull=False):
+            assign_to = assign_objs.last().assign_to
 
+            if assign_to.is_agency :
+                agency.append(assign_to)
+                if assign_to.team:
+                    agency.append(assign_to.team.get_project_manager)
+        if (request.user ==  document_user) or (request.user in managers) or (request.user in agency) :
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":
                 return self.download_source_file(document_id)
@@ -3061,7 +3070,9 @@ import difflib
 from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError
 
-
+from nltk.corpus import stopwords
+# nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
@@ -3117,7 +3128,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             else:
                 self_learning=None
             print("self Learn------->",self_learning)
-            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning)
+            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning,lang)
             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             if asset:
                 return Response(asset,status=status.HTTP_200_OK)
@@ -3189,11 +3200,12 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return  Response(status=204)
     
     @staticmethod
-    def seq_match_seg_diff(words1,words2,self_learning):
+    def seq_match_seg_diff(words1,words2,self_learning,lang):
         source = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words1)
         s1=source.split()
         target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
         s2=target.split()
+        stopwords=stop_words if lang.lang=='English' else {}
         assets={}
         print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
@@ -3202,11 +3214,12 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
             if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
                 source=" ".join(s1[i1:i2])
                 edited=" ".join(s2[j1:j2])
-                if self_learning:
-                    if not self_learning.filter(source_word=source ,edited_word=edited): 
+                if source not in stopwords and edited not in stopwords:
+                    if self_learning:
+                        if not self_learning.filter(source_word=source ,edited_word=edited): 
+                            assets[source]=edited
+                    else:
                         assets[source]=edited
-                else:
-                    assets[source]=edited
         print("------------------",assets)  
         return assets
 
