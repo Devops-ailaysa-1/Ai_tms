@@ -45,7 +45,8 @@ resource ai_workspace::Task{
 
 resource ai_workspace::Project{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner","Reviewer"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
 
     "read" if "Editor";
     "create" if "Project owner";
@@ -53,6 +54,13 @@ resource ai_workspace::Project{
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "update" if "Agency Project owner";
+    "create" if "Agency Project owner";
+    "Agency Editor" if "Agency Project owner";
+    "Agency Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
 
 }
 
