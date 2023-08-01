@@ -1968,7 +1968,7 @@ class AssignToListView(viewsets.ModelViewSet):
         reassign = self.request.GET.get('reassign',None)
         pro = Project.objects.get(id = project)
         
-        task=Task.objects.filter(job__project__id=5390)
+        task=Task.objects.filter(job__project__id=project)
         tsk=filter_authorize(request,task,"read",self.request.user)
         if not tsk:
             return JsonResponse({"msg":"You do not have permission to perform this action."})
