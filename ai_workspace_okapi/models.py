@@ -253,6 +253,8 @@ class MergeSegment(BaseSegment):
         self.save()
         self.update_segment_is_merged_true(segs=segs)
         return self
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete(cache_key)
 
     def delete(self, using=None, keep_parents=False):
         for seg in self.segments.all():
@@ -305,10 +307,6 @@ class SplitSegment(BaseSegment):
     is_first = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=True, null=True)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
-        cache.delete(cache_key)
 
     @property
     def get_parent_seg_id(self):
@@ -329,6 +327,8 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
+        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
+        cache.delete(cache_key)
 
 class MT_RawTranslation(models.Model):
 
