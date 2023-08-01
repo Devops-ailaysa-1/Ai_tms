@@ -1154,6 +1154,10 @@ class File(models.Model):
     @property
     def target_language(self):
         return "ta"
+      
+    @property
+    def proj_obj(self):
+        return self.project
 
 class VersionChoices(Enum):# '''need to discuss with senthil sir, what are the choices?'''
 
@@ -1788,6 +1792,10 @@ class Instructionfiles(models.Model):
     @property
     def owner_pk(self):
         return self.task_assign_info.owner_pk
+    
+    @property
+    def task_obj(self):
+        return self.task_assign_info.task_obj
 # post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
@@ -1932,6 +1940,10 @@ class ReferenceFiles(models.Model):
     @property
     def owner_pk(self):
         return self.project.owner_pk
+    
+    @property
+    def proj_obj(self):
+        return self.project
 
 def tbx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
@@ -1952,7 +1964,11 @@ class TbxFile(models.Model):
     @property
     def owner_pk(self):
         return self.project.owner_pk
-
+    
+    @property
+    def proj_obj(self):
+        return self.project
+     
 def tbx_template_file_upload_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx_template", filename)
 
