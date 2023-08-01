@@ -232,3 +232,4 @@ ptvsd
 pygame
 symspellpy
 pillow-avif-plugin
+symspellpy

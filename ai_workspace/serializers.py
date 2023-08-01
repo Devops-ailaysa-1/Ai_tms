@@ -408,7 +408,9 @@ class TaskSerializerv2(TaskSerializer):
 		pass
 	def to_internal_value(self, data):
 		return super(TaskSerializer, self).to_internal_value(data=data)
-
+	
+from django.shortcuts import get_object_or_404
+from ai_auth.utils import authorize
 class TmxFileSerializer(serializers.ModelSerializer):
 	# serializers.FileField(man)
 	is_processed = serializers.BooleanField(required=False, write_only=True)
@@ -419,10 +421,12 @@ class TmxFileSerializer(serializers.ModelSerializer):
 		fields = ("id", "project", "tmx_file", "is_processed", "is_failed", "filename")
 
 	@staticmethod
-	def prepare_data(data):
+	def prepare_data(request,data):
 		if not (("project" in data) and ("tmx_files" in data)) :
 			raise serializers.ValidationError("required fields missing!!!")
 		project = data["project"]
+		obj=get_object_or_404(Project,id=project)
+		authorize(request,resource=obj,action="create",actor=request.user)
 		return [
 			{"project": project, "tmx_file": tmx_file} for tmx_file in data["tmx_files"]
 		]
@@ -1904,13 +1908,13 @@ class CombinedSerializer(ProjectQuickSetupSerializer):
         return data
 
 
-class ToolkitSerializer(ProjectQuickSetupSerializer):
+class AssertSerializer(ProjectQuickSetupSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        from ai_exportpdf.serializer import PdfFileSerializer
-        from ai_exportpdf.models import Ai_PdfUpload
-        if type(instance) is Ai_PdfUpload:
-            pdf_data = PdfFileSerializer(instance).data
-            data.update(pdf_data)
+        from ai_workspace_okapi.serializers import ChoiceListsSerializer
+        from ai_workspace_okapi.models import ChoiceLists
+        if type(instance) is ChoiceLists:
+            ch_data = ChoiceListsSerializer(instance).data
+            data.update(ch_data)
         return data

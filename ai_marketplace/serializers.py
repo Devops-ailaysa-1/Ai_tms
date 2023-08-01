@@ -307,6 +307,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         job_id= request.query_params.get('job')
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
@@ -318,7 +319,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
         else:
             queryset = obj.vendor_lang_pair.filter(deleted_at=None)
 
-        query = queryset.filter(currency = obj.currency_based_on_country)
+        query = queryset.filter(currency = user.currency_based_on_country)
 
         if query.exists():
             #if query[0].service.exists() or query[0].servicetype.exists():
@@ -822,6 +823,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         job_id= request.query_params.get('job')
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
@@ -829,8 +831,8 @@ class GetVendorListSerializer(serializers.ModelSerializer):
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
-        query = queryset.filter(currency=obj.currency_based_on_country)
-        print("Obj_Currency--------->",obj.currency_based_on_country)
+        query = queryset.filter(currency=user.currency_based_on_country)
+        print("Obj_Currency--------->",user.currency_based_on_country)
         print("Query--------->",query)
         if query.exists():
             if query[0].service.exists():
@@ -981,10 +983,11 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
+        user = request.user.team.owner if (request.user.team) else request.user
         source_lang = self.context['sl']
         target_lang = self.context['tl']
         queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
-        query = queryset.filter(currency=obj.currency_based_on_country)
+        query = queryset.filter(currency=user.currency_based_on_country)
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data

@@ -133,12 +133,13 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         return queryset
 
     def get(self, request):
-        #try:
+        pr_managers = request.user.team.get_project_manager if request.user.team else [] 
+        user = request.user.team.owner if request.user.team and request.user in pr_managers else request.user 
         projectpost_id = request.GET.get('project_post_id')
         if projectpost_id:
             queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
         else:
-            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
+            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = user.id)).order_by('-id').distinct()# | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
             # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
@@ -700,7 +701,7 @@ class GetVendorListViewNew(generics.ListAPIView):
 
     def get_queryset(self):
         self.validate()
-        user = self.request.user
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
