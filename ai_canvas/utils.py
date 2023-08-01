@@ -178,7 +178,7 @@ import copy
 def export_download(json_str,format,multipliervalue):
     if format in ["png","jpeg","pdf"]:
         json_ = json.dumps(json_str)
-        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue,'dpi':300}
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
     
     elif format =='svg':
         json_ = json.dumps(json_str)
@@ -195,7 +195,6 @@ def export_download(json_str,format,multipliervalue):
         format='png'
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
          
-        
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
     if thumb_image.status_code ==200:
         if format=='svg':
