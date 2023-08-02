@@ -18,6 +18,7 @@ from ai_staff.models import Languages
 from django.db.models import Q
 import math 
 import urllib
+from django.utils import timezone
 logger = logging.getLogger('django')
 # credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient()
@@ -70,7 +71,13 @@ def convertiopdf2docx(id ,language,ocr = None ):
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
     pdf_len = pdf.getNumPages()
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
-    user_credit = UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    user_credit = UserCredits.objects.filter(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None) \
+                                          &~Q(expiry__month__gte=timezone.now().month) &~Q(expiry__year__gte=timezone.now().year) \
+                                           &~Q(expiry__day__gte=timezone.now().day))
+    
+    if len(user_credit) >1:
+        logger.error(["user_credit_id_{}".format(i.id) for i in user_credit])
+    user_credit = user_credit.last()
     # user_credit =UserCredits.objects.filter(Q(user_id=80) & Q(ended_at=None)).filter(Q(credit_pack_type__icontains="Addon") or Q(credit_pack_type__icontains="Subscription"))[0]
     
     with open(fp, "rb") as pdf_path:

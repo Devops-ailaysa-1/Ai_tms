@@ -254,7 +254,9 @@ class MergeSegment(BaseSegment):
         self.update_segment_is_merged_true(segs=segs)
         return self
         cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
         cache.delete(cache_key)
+        
 
     def delete(self, using=None, keep_parents=False):
         for seg in self.segments.all():
@@ -329,6 +331,7 @@ class SplitSegment(BaseSegment):
         self.save()
         cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
         cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
 
 class MT_RawTranslation(models.Model):
 
@@ -398,6 +401,7 @@ class Document(models.Model):
         cache.delete(cache_key)
         cache_key = f'task_char_count_{self.pk}'
         cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
 
     def get_user_email(self):
