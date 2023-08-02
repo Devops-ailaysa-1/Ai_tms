@@ -661,22 +661,22 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if self.context.get("request")!=None:
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
-			cache_key = f'check_role_{instance.id}_{user.pk}'
-			cached_value = cache.get(cache_key)
-			if cached_value is None:
-				if instance.team :
-					cached_value = True if ((instance.team.owner == user)\
-						or(instance.team.internal_member_team_info.all().\
-						filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-						or(instance.team.owner.user_info.all()\
-						.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-						else False
-				else:
-					cached_value = True if ((instance.ai_user == user) or\
-					(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			# cache_key = f'check_role_{instance.id}_{user.pk}'
+			# cached_value = cache.get(cache_key)
+			# if cached_value is None:
+			if instance.team :
+				cached_value = True if ((instance.team.owner == user)\
+					or(instance.team.internal_member_team_info.all().\
+					filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+					or(instance.team.owner.user_info.all()\
+					.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 					else False
+			else:
+				cached_value = True if ((instance.ai_user == user) or\
+				(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+				else False
 		else:cached_value = None
-		cache.set(cache_key,cached_value)
+		#cache.set(cache_key,cached_value)
 		return cached_value
 
 
