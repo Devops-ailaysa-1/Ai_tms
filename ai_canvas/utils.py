@@ -177,12 +177,11 @@ def svg_convert_base64(response_text):
 import copy
 def export_download(json_str,format,multipliervalue):
     dpi = (96,96)
+    json_ = json.dumps(json_str)
     if format in ["png","jpeg","pdf"]:
-        json_ = json.dumps(json_str)
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
     
     elif format =='svg':
-        json_ = json.dumps(json_str)
         data = {'json':json_ ,'format':'svg'}
     elif format=='png-transparent':
         json_trans = copy.deepcopy(json_str)

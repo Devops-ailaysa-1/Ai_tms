@@ -994,13 +994,20 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
 
 
 def format_extension_change(file_format):
-    if file_format == 'png-transparent':
-        format_ext = 'png'
-    elif file_format == 'pdf-print':
-        format_ext = 'pdf'
-    else:
-        format_ext = file_format
-    return format_ext
+
+    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf'}
+    return files.get(file_format,file_format)
+
+
+    # if file_format == 'png-transparent':
+    #     format_ext = 'png'
+    # elif file_format == 'pdf-print':
+    #     format_ext = 'pdf'
+    # elif file_format == 'pdf-standard':
+    #     format_ext = 'pdf'
+    # else:
+    #     format_ext = file_format
+    # return format_ext
     
 
 
