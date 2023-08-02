@@ -436,8 +436,8 @@ import io
 def read_avif_image(image_path):
     output_buffer=io.BytesIO()
     image=Image.open(image_path)
-    img = image.convert('PNG')
-    img.save(output_buffer, format=format.upper(), optimize=True, quality=96)
+    # image = image.convert('PNG')
+    image.save(output_buffer, format="PNG", optimize=True, quality=96)
     compressed_data=output_buffer.getvalue()
     return compressed_data
 
