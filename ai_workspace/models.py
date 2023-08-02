@@ -262,14 +262,12 @@ class Project(models.Model):
                         else:
                             count_num = queryset.filter(project_name__icontains=self.project_name).count()
                         self.project_name = self.project_name + "(" + str(count_num) + ")"
-                        super().save(*args, **kwargs)
+                        super().save()
                         break
                     except:
                         count_num = count_num+1
                         self.project_name = self.project_name + "(" + str(count_num) + ")"
-            cache.delete_pattern(f'pr_progress_property_{self.id}_*')
-            cache.delete_pattern(f'check_role_{self.id}_*')
-            return super().save(*args, **kwargs)
+            return super().save()
 
 
             # if not self.ai_project_id:
@@ -928,7 +926,7 @@ class Job(models.Model):
             # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project)\
                 .count()+1)
-        super().save(*args, **kwargs)
+        super().save()#*args, **kwargs)
 
     @property
     def can_delete(self):
@@ -1087,7 +1085,7 @@ class File(models.Model):
             # self.ai_user shoould be set before save
             self.fid = str(self.project.ai_project_id)+"f"+str(File.objects\
                 .filter(project=self.project.id).count()+1)
-        super().save(*args, **kwargs)
+        super().save()#*args, **kwargs)
 
     objects = FileManager()
 
@@ -1196,7 +1194,7 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
         if not self.ai_taskid:
             self.ai_taskid = create_task_id()
-        super().save(*args, **kwargs)
+        super().save()#*args, **kwargs)
         cache_key = f'audio_file_exists_{self.pk}'
         cache.delete(cache_key)
         cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
@@ -1534,7 +1532,7 @@ class ExpressProjectDetail(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
 
 class ExpressTaskHistory(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")
@@ -1612,7 +1610,7 @@ class TaskAssign(models.Model):
         super().save(*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
-        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
         # cache_key = f'task_assign_info_{self.task.pk}'
         # cache.delete(cache_key)
 
@@ -1659,10 +1657,10 @@ class TaskAssignInfo(models.Model):
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
-        super().save(*args, **kwargs)
+        super().save()#*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
-        cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.project.id}_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.job.project.id}_*')
         # cache_key = f'task_assign_info_{self.task_assign.task.pk}'
         # cache.delete(cache_key)
 
@@ -1864,7 +1862,7 @@ class TaskTranscriptDetails(models.Model):
         cache.delete(cache_key)
         cache_key = f'txt_to_spc_convert_{self.task.pk}'
         cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
 
 
     # @property
