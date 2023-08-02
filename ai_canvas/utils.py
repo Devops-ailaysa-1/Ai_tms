@@ -198,8 +198,10 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
     elif format == 'pdf-print':
         format='png'
+        print("pdf-print",format)
         multipliervalue=3
         data = {'json':json_ ,'format':'png','multiplierValue':multipliervalue,'dpi':300}
+        print(data)
         dpi=(300,300)
          
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
