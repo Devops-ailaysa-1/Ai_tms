@@ -175,6 +175,7 @@ def svg_convert_base64(response_text):
     
     
 import copy
+from ai_canvas.cmyk_conversion import convertImage
 def export_download(json_str,format,multipliervalue):
     dpi = (96,96)
     json_ = json.dumps(json_str)
@@ -214,7 +215,8 @@ def export_download(json_str,format,multipliervalue):
             img = Image.open(im_file)
             output_buffer=io.BytesIO()
             if format=='jpeg':
-                img = img.convert('RGB')
+                img=convertImage(im_file).image
+                # img = img.convert('RGB')
             img.save(output_buffer, format=format.upper())
             compressed_data=output_buffer.getvalue()
         return compressed_data
