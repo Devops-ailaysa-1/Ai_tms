@@ -197,6 +197,7 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
     elif format == 'pdf-print':
         format='png'
+        multipliervalue=3
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue,dpi:300}
         dpi=(300,300)
          
@@ -210,6 +211,7 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
+            print("format--------->",format)
             img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
         return compressed_data
