@@ -267,6 +267,8 @@ class Project(models.Model):
                     except:
                         count_num = count_num+1
                         self.project_name = self.project_name + "(" + str(count_num) + ")"
+            cache.delete_pattern(f'pr_progress_property_{self.id}_*')
+            cache.delete_pattern(f'check_role_{self.id}_*')
             return super().save(*args, **kwargs)
 
 
@@ -342,12 +344,6 @@ class Project(models.Model):
 
     # @property
     def pr_progress(self,tasks):
-        # cache_key = f'pr_progress_property_{self.id}'
-        # cached_value = cache.get(cache_key)
-        # if cached_value:
-        #     return cached_value
-        # else:
-        #     cache.set(cache_key, result, timeout=60)
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
@@ -1203,6 +1199,7 @@ class Task(models.Model):
         super().save(*args, **kwargs)
         cache_key = f'audio_file_exists_{self.pk}'
         cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
     @cached_property
     def converted_audio_file_exists(self):
@@ -1533,6 +1530,10 @@ class ExpressProjectDetail(models.Model):
     def task_obj(self):
         return self.task
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
+
 class ExpressTaskHistory(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")
     source_text = models.TextField(null=True,blank=True)
@@ -1609,6 +1610,7 @@ class TaskAssign(models.Model):
         super().save(*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
         # cache_key = f'task_assign_info_{self.task.pk}'
         # cache.delete(cache_key)
 
@@ -1658,6 +1660,7 @@ class TaskAssignInfo(models.Model):
         super().save(*args, **kwargs)
         cache.delete_pattern('task_assign_info_*')
         cache.delete_pattern('task_reassign_info_*')
+        cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.project.id}_*')
         # cache_key = f'task_assign_info_{self.task_assign.task.pk}'
         # cache.delete(cache_key)
 
@@ -1859,6 +1862,7 @@ class TaskTranscriptDetails(models.Model):
         cache.delete(cache_key)
         cache_key = f'txt_to_spc_convert_{self.task.pk}'
         cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.task.project.id}_*')
 
 
     # @property
