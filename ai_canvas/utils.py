@@ -201,9 +201,8 @@ def export_download(json_str,format,multipliervalue):
 
     elif format == 'pdf-print':
         format='pdf'
-        print("pdf-print------------->",format)
         dpi=(300,300)
-        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+        data = {'json':json_ , 'format':'png','multiplierValue':3,'dpi':dpi[0]}
         
          
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
@@ -216,7 +215,6 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
-            print("format--------->",format)
             img.save(output_buffer, format=format.upper())
             compressed_data=output_buffer.getvalue()
         return compressed_data
