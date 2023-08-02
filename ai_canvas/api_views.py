@@ -1122,17 +1122,10 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
-        return queryset 
-    
- 
+        return queryset
 
  
  ######################################################canvas______download################################
-
-
-
-
-
 
 
 # @api_view(["POST"])

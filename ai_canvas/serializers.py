@@ -995,3 +995,9 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
             #                                        "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
             #             can_tar_ins.json=tar_json_pro
             #             can_tar_ins.save()
+
+
+
+
+
+            
