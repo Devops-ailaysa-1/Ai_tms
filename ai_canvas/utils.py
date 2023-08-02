@@ -180,11 +180,13 @@ def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
     print("format__form_export_download",format)
     format = 'pdf' if format=='pdf-standard' else format
+
     if format in ["png","jpeg","pdf"]:
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
     
     elif format =='svg':
         data = {'json':json_ ,'format':'svg'}
+
     elif format=='png-transparent':
         json_trans = copy.deepcopy(json_str)
         json_trans['background']='transparent'
@@ -196,13 +198,13 @@ def export_download(json_str,format,multipliervalue):
         json_ = json.dumps(json_trans)
         format='png'
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
+
     elif format == 'pdf-print':
-        format='png'
-        print("pdf-print",format)
-        multipliervalue=3
-        data = {'json':json_ ,'format':'png','multiplierValue':multipliervalue}
-         
+        format='pdf'
+        print("pdf-print------------->",format)
         dpi=(300,300)
+        data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
+        
          
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
     if thumb_image.status_code ==200:
@@ -215,7 +217,7 @@ def export_download(json_str,format,multipliervalue):
             if format=='jpeg':
                 img = img.convert('RGB')
             print("format--------->",format)
-            img.save(output_buffer, format=format.upper(),dpi=dpi)
+            img.save(output_buffer, format=format.upper())
             compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
