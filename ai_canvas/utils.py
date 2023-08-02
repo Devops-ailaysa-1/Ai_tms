@@ -230,11 +230,13 @@ def convert_image_url_to_file(image_url,no_pil_object=True):
     img_io = io.BytesIO()
     if no_pil_object:
         im=Image.open(requests.get(image_url, stream=True).raw)
+        im=im.convert("RGB")
         im.save(img_io, format='PNG')
         img_byte_arr = img_io.getvalue()
         return core.files.File(core.files.base.ContentFile(img_byte_arr),image_url.split('/')[-1])
     else:
         im=image_url
+        im=im.convert("RGB")
         im.save(img_io, format='PNG')
         img_byte_arr = img_io.getvalue()
         return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
