@@ -176,6 +176,7 @@ def svg_convert_base64(response_text):
     
 import copy
 def export_download(json_str,format,multipliervalue):
+    dpi = (96,96)
     if format in ["png","jpeg","pdf"]:
         json_ = json.dumps(json_str)
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
@@ -194,6 +195,10 @@ def export_download(json_str,format,multipliervalue):
         json_ = json.dumps(json_trans)
         format='png'
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
+    elif format == 'pdf-print':
+        format='png'
+        data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue,dpi:300}
+        dpi=(300,300)
          
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
     if thumb_image.status_code ==200:
@@ -205,7 +210,8 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
-            img.save(output_buffer, format=format.upper(),dpi=(300,300))
+            print("dpi",dpi)
+            img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
@@ -252,7 +258,6 @@ def json_sr_url_change(json,instance):
         if 'objects' in i.keys():
             json_sr_url_change(i,instance)
     return json
-
 
 
 def paginate_items(items, page_number, items_per_page):

@@ -472,7 +472,6 @@ def download_file_canvas(file_path,mime_type,name):
     return response
 
 
-
 # @api_view(["GET"])
 # @permission_classes([IsAuthenticated])
 # def canvas_download_combine(request):
@@ -497,8 +496,6 @@ def download_file_canvas(file_path,mime_type,name):
 #                 return img_res
                 # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
 
-
-
 #####################
 ####free_____pix
 
@@ -521,7 +518,6 @@ def free_pix_api(request):
         return Response(response.json(),status=200)
     else:
         return Response({'error':'something went wrong'},status=response.status_code)
-
 
 ################################################################
 
@@ -997,6 +993,18 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
     return response
 
 
+def format_extension_change(file_format):
+    if file_format == 'png-transparent':
+        format_ext = 'png'
+    elif file_format == 'pdf-print':
+        format_ext = 'pdf'
+    else:
+        format_ext = file_format
+    return format_ext
+    
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def DesignerDownload(request):
@@ -1011,7 +1019,9 @@ def DesignerDownload(request):
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
     page_src=[]
     file_format = file_format.replace(" ","-") if file_format else ""
-    format_ext = 'png' if file_format == 'png-transparent' else file_format
+    # format_ext = 'png' if file_format == 'png-transparent' else file_format
+    format_ext = format_extension_change(file_format=file_format)
+    print("format_ext",format_ext)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
