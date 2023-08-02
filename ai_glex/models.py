@@ -98,11 +98,11 @@ class TermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache_key = f'seg_progress_{self.job.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache_key = f'seg_progress_{self.job.pk}'
+    #     cache.delete(cache_key)
+    #     cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
     # @property
     # def source_language(self):
     #     return str(self.job.source_language)
