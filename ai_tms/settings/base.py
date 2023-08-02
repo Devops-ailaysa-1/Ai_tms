@@ -166,9 +166,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.cache.UpdateCacheMiddleware',
+    #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
+    #'django.middleware.cache.FetchFromCacheMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -454,17 +454,17 @@ CHANNEL_LAYERS = {
 }
 # settings.py
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'KEY_PREFIX': '',  
-        },
-        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
-    }
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'KEY_PREFIX': '',  
+#         },
+#         'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+#     }
+# }
 
 
 STATICFILES_DIRS = [
