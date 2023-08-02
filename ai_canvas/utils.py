@@ -178,6 +178,7 @@ import copy
 def export_download(json_str,format,multipliervalue):
     dpi = (96,96)
     json_ = json.dumps(json_str)
+    print("format__form_export_download",format)
     format = 'pdf' if format=='pdf-standard' else format
     if format in ["png","jpeg","pdf"]:
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
