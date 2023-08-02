@@ -210,8 +210,8 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
-            print("dpi",dpi)
-            img.save(output_buffer, format=format.upper(),dpi=dpi)
+            
+            img.save(output_buffer, format=format.upper())
             compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
