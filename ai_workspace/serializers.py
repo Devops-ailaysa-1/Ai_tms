@@ -1198,18 +1198,19 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				return "Transeditor"
 
 	def get_bid_job_detail_info(self,obj):
-		# cache_key = f'bid_job_detail_{obj.job.project.pk}'
-		# cached_value = cache.get(cache_key)
-		# print("Cached Value in bid_jb---------->",cached_value)
-		# if cached_value is None:
-		from ai_marketplace.serializers import ProjectPostJobDetailSerializer
-		if obj.job.project.proj_detail.all():
-			qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
-			cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
-		else:
-			cached_value = None#'Not exists'
+		cache_key = f'bid_job_detail_{obj.job.project.pk}'
+		cached_value = cache.get(cache_key)
+		print("Cached Value in bid_jb---------->",cached_value)
+		if cached_value is None:
+			from ai_marketplace.serializers import ProjectPostJobDetailSerializer
+			if obj.job.project.proj_detail.all():
+				qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
+				cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
+			else:
+				cached_value = None#'Not exists'
 		# print("Cached Value in bid_job--------->",cached_value)
-		# cache.set(cache_key,cached_value)
+		cache.set(cache_key,cached_value)
+		print("---------------------------cache setted--------------------------")
 		return cached_value
 
 	# def get_bid_job_detail_info(self,obj):
