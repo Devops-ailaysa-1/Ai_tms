@@ -217,6 +217,7 @@ def export_download(json_str,format,multipliervalue):
                 img = img.convert('RGB')
             if format == 'jpeg-print':
                 img=convertImage(im_file).image
+                format='jpeg'
             img.save(output_buffer, format=format.upper())
             compressed_data=output_buffer.getvalue()
         return compressed_data
