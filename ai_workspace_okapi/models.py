@@ -134,9 +134,10 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete(cache_key)
         return super(BaseSegment, self).save(*args, **kwargs)
-        # cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        # cache.delete(cache_key)
+
 
 # post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 # post_save.connect(translate_segments,sender=Segment)
@@ -252,10 +253,11 @@ class MergeSegment(BaseSegment):
         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
         self.save()
         self.update_segment_is_merged_true(segs=segs)
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
+        cache.delete(cache_key)
         return self
-        # cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        # cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
-        # cache.delete(cache_key)
+
         
 
     def delete(self, using=None, keep_parents=False):
@@ -329,9 +331,9 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
-        # cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
-        # cache.delete(cache_key)
-        # cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
+        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
+        cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
 
 class MT_RawTranslation(models.Model):
 
@@ -397,11 +399,11 @@ class Document(models.Model):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
         super().save(*args, **kwargs)
-        # cache_key = f'task_word_count_{self.pk}'
-        # cache.delete(cache_key)
-        # cache_key = f'task_char_count_{self.pk}'
-        # cache.delete(cache_key)
-        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+        cache_key = f'task_word_count_{self.pk}'
+        cache.delete(cache_key)
+        cache_key = f'task_char_count_{self.pk}'
+        cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
 
     def get_user_email(self):
