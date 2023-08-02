@@ -441,9 +441,6 @@ def read_avif_image(image_path):
     compressed_data=output_buffer.getvalue()
     return compressed_data
 
-
-
-
 class CanvasDesignListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     translate_available = serializers.BooleanField(required=False,default=False)
@@ -510,8 +507,8 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     new_height = round(scale_val*height)
                     im=cv2.resize(im ,(new_width,new_height)) #
                     content=image_content(im)
-                    instance.height=new_height #
-                    instance.width=new_width
+                    instance.height=new_width #  to change
+                    instance.width=new_height
                     # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
                     im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
                     instance.image=im
