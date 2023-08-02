@@ -178,8 +178,8 @@ import copy
 def export_download(json_str,format,multipliervalue):
     dpi = (96,96)
     json_ = json.dumps(json_str)
-    format = 'png' if format=='pdf-standard' else format
-    if format in ["png","jpeg","pdf-standard"]:
+    format = 'pdf' if format=='pdf-standard' else format
+    if format in ["png","jpeg","pdf"]:
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
     
     elif format =='svg':
@@ -210,8 +210,7 @@ def export_download(json_str,format,multipliervalue):
             output_buffer=io.BytesIO()
             if format=='jpeg':
                 img = img.convert('RGB')
-            
-            img.save(output_buffer, format=format.upper())
+            img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
         return compressed_data
     else:
