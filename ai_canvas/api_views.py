@@ -462,7 +462,8 @@ mime_type={'svg':'image/svg+xml',
         'png-transparent':'image/png',
         'pdf':'application/pdf',
         'text':'text/plain',
-        'pdf-print':'application/pdf'}
+        'pdf-print':'application/pdf',
+        'pdf-standard':'application/pdf'}
 
 def download_file_canvas(file_path,mime_type,name):
     response = HttpResponse(file_path, content_type=mime_type)
@@ -996,7 +997,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
 
 def format_extension_change(file_format):
 
-    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf'}
+    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf'}
     return files.get(file_format,file_format)
 
 
