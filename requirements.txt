@@ -234,3 +234,4 @@ symspellpy
 pillow-avif-plugin
 symspellpy
 django-redis
+littlecms

@@ -350,58 +350,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
     #     return queryset
 
 
-# class TemplateGlobalDesignViewset(viewsets.ViewSet ,PageNumberPagination):
-#     pagination_class = TemplateGlobalPagination 
-#     permission_classes = [IsAuthenticated,]
-#     def list(self,request):
-#         queryset = TemplateGlobalDesign.objects.all().order_by('-updated_at')
-#         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-#         serializer = TemplateGlobalDesignSerializer(pagin_tc,many=True)
-#         response = self.get_paginated_response(serializer.data)
-#         return response
-    
-#     def create(self,request):
-#         thumbnail_page = request.FILES.get('thumbnail_page')
-#         export_page = request.FILES.get('export_page')
-#         serializer = TemplateGlobalDesignSerializer(data = request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
-    
-#     def update(self,request,pk):
-#         thumbnail_page = request.FILES.get('thumbnail_page')
-#         export_page = request.FILES.get('export_page')
-#         queryset = TemplateGlobalDesign.objects.get(id=pk)
-#         serializer = TemplateGlobalDesignSerializer(queryset ,data=request.data,partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors,status=400)
-    
-#     def get(self,request,pk):
-#         queryset = TemplateGlobalDesign.objects.get(id=pk)
-#         serializer = TemplateGlobalDesignSerializer(queryset)
-#         return Response(serializer.data)
-    
-#     def destroy(self,request,pk):
-#         page_no = request.query_params.get('page_no',None)
-#         try:
-#             if page_no:
-#                 temp_design = TemplateGlobalDesign.objects.get(id=pk)
-#                 TemplatePage.objects.get(template_page=temp_design,page_no=page_no).delete()
-#             else:
-#                 TemplateGlobalDesign.objects.get(id=pk).delete()
-#             return Response({'msg':'deleted'})
-#         except:
-#             print("error in del")
-#             return Response({'msg':'template Does not exist'})
 
-
-# class TemplateGlobalDesignRetrieveViewset(generics.RetrieveAPIView):
-#     queryset = TemplateGlobalDesign.objects.all()
-#     serializer_class = TemplateGlobalDesignRetrieveSerializer
-#     lookup_field = 'id'
 
 
 class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
@@ -463,7 +412,8 @@ mime_type={'svg':'image/svg+xml',
         'pdf':'application/pdf',
         'text':'text/plain',
         'pdf-print':'application/pdf',
-        'pdf-standard':'application/pdf'}
+        'pdf-standard':'application/pdf',
+        'jpeg-print':'image/jpeg'}
 
 def download_file_canvas(file_path,mime_type,name):
     response = HttpResponse(file_path, content_type=mime_type)
@@ -474,31 +424,7 @@ def download_file_canvas(file_path,mime_type,name):
     return response
 
 
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-# def canvas_download_combine(request):
-#     design_id = request.query_params.get('design_id')
-#     file_format_id=request.query_params.get('file_format_id')
-#     export_size=request.query_params.get('export_size')
-#     select_language=request.query_params.get('select_language')
-#     page=request.query_params.get('page')
-#     src_id=request.query_params.get('src_id')
-#     file_format=CanvasDownloadFormat.get(id=file_format_id).format_name
-#     canvas_inst=CanvasDesign.objects.get(id=design_id)
-#     if src_id:
- 
-#         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
-#         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
-#         if src__single_inst.json:
-#             print("contains src__json")
-#             if file_format=='png':
- 
-#                 values=export_download(src__single_inst.json,file_format,export_size)
-#                 img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
-#                 return img_res
-                # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
 
-#####################
 ####free_____pix
 
 @api_view(['GET'])
@@ -966,7 +892,7 @@ def text_download(json):
     return "".join(text)
 
 def format_extension_change(file_format):
-    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf'}
+    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf','jpeg-print':'jpeg'}
     return files.get(file_format,file_format)
 
 
@@ -1217,3 +1143,82 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 #########################################################################################################################################
+
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def canvas_download_combine(request):
+#     design_id = request.query_params.get('design_id')
+#     file_format_id=request.query_params.get('file_format_id')
+#     export_size=request.query_params.get('export_size')
+#     select_language=request.query_params.get('select_language')
+#     page=request.query_params.get('page')
+#     src_id=request.query_params.get('src_id')
+#     file_format=CanvasDownloadFormat.get(id=file_format_id).format_name
+#     canvas_inst=CanvasDesign.objects.get(id=design_id)
+#     if src_id:
+ 
+#         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
+#         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
+#         if src__single_inst.json:
+#             print("contains src__json")
+#             if file_format=='png':
+ 
+#                 values=export_download(src__single_inst.json,file_format,export_size)
+#                 img_res=download_file_canvas(file_path=values,mime_type=mime_type[file_format],name=src_lang_name+'.'+file_format)
+#                 return img_res
+                # thumbnail_src=core.files.File(core.files.base.ContentFile(values),src_lang_name+'.'+file_format)
+
+#####################
+
+# class TemplateGlobalDesignViewset(viewsets.ViewSet ,PageNumberPagination):
+#     pagination_class = TemplateGlobalPagination 
+#     permission_classes = [IsAuthenticated,]
+#     def list(self,request):
+#         queryset = TemplateGlobalDesign.objects.all().order_by('-updated_at')
+#         pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         serializer = TemplateGlobalDesignSerializer(pagin_tc,many=True)
+#         response = self.get_paginated_response(serializer.data)
+#         return response
+    
+#     def create(self,request):
+#         thumbnail_page = request.FILES.get('thumbnail_page')
+#         export_page = request.FILES.get('export_page')
+#         serializer = TemplateGlobalDesignSerializer(data = request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+    
+#     def update(self,request,pk):
+#         thumbnail_page = request.FILES.get('thumbnail_page')
+#         export_page = request.FILES.get('export_page')
+#         queryset = TemplateGlobalDesign.objects.get(id=pk)
+#         serializer = TemplateGlobalDesignSerializer(queryset ,data=request.data,partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
+    
+#     def get(self,request,pk):
+#         queryset = TemplateGlobalDesign.objects.get(id=pk)
+#         serializer = TemplateGlobalDesignSerializer(queryset)
+#         return Response(serializer.data)
+    
+#     def destroy(self,request,pk):
+#         page_no = request.query_params.get('page_no',None)
+#         try:
+#             if page_no:
+#                 temp_design = TemplateGlobalDesign.objects.get(id=pk)
+#                 TemplatePage.objects.get(template_page=temp_design,page_no=page_no).delete()
+#             else:
+#                 TemplateGlobalDesign.objects.get(id=pk).delete()
+#             return Response({'msg':'deleted'})
+#         except:
+#             print("error in del")
+#             return Response({'msg':'template Does not exist'})
+
+
+# class TemplateGlobalDesignRetrieveViewset(generics.RetrieveAPIView):
+#     queryset = TemplateGlobalDesign.objects.all()
+#     serializer_class = TemplateGlobalDesignRetrieveSerializer
+#     lookup_field = 'id'
