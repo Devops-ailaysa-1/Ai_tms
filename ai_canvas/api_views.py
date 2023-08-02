@@ -461,7 +461,8 @@ mime_type={'svg':'image/svg+xml',
         'zip':'application/zip',
         'png-transparent':'image/png',
         'pdf':'application/pdf',
-        'text':'text/plain'}
+        'text':'text/plain',
+        'pdf-print':'application/pdf'}
 
 def download_file_canvas(file_path,mime_type,name):
     response = HttpResponse(file_path, content_type=mime_type)
