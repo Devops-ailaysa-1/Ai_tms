@@ -673,8 +673,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					cached_value = True if ((instance.ai_user == user) or\
 					(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 					else False
+			cache.set(cache_key,cached_value)
 		else:cached_value = None
-		cache.set(cache_key,cached_value)
 		return cached_value
 
 
