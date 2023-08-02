@@ -6,6 +6,7 @@ from ai_workspace.models import Project,Job,Task
 import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
+from django.core.cache import cache
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete
