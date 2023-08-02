@@ -1355,6 +1355,7 @@ class Task(models.Model):
 
     @cached_property
     def task_word_count(self):
+        cache_key = f'task_word_count_{self.pk}'
         if self.document_id:
             cache_key = f'task_word_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
@@ -1377,6 +1378,7 @@ class Task(models.Model):
 
     @property
     def task_char_count(self):
+        cache_key = f'task_word_count_{self.pk}'
         if self.document_id:
             cache_key = f'task_char_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
