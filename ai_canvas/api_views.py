@@ -965,9 +965,13 @@ def text_download(json):
             text.append("\n")
     return "".join(text)
 
+def format_extension_change(file_format):
+    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf'}
+    return files.get(file_format,file_format)
+
 
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
-    format_ext = 'png' if file_format == 'png-transparent' else file_format
+    format_ext = format_extension_change(file_format)
     if len(pages_list)==1:
         if file_format=="text":
             export_src=text_download(pages_list[0].json)
@@ -988,30 +992,10 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 else:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                     path='{}/{}'.format(lang,file_name)
-                    # file_format = 'png' if file_format == 'png-transparent' else file_format
                     values=export_download(src_json.json,file_format,export_size)
                 archive.writestr(path,values)
         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
-
-
-def format_extension_change(file_format):
-
-    files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf'}
-    return files.get(file_format,file_format)
-
-
-    # if file_format == 'png-transparent':
-    #     format_ext = 'png'
-    # elif file_format == 'pdf-print':
-    #     format_ext = 'pdf'
-    # elif file_format == 'pdf-standard':
-    #     format_ext = 'pdf'
-    # else:
-    #     format_ext = file_format
-    # return format_ext
-    
-
 
 
 @api_view(['GET'])
