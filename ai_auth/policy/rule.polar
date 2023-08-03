@@ -23,19 +23,23 @@ actor ai_auth::AiUser {
 }
 
 resource ai_workspace::Task{
-    permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner","Reviewer","Invitee","Agency Project owner",
+    permissions = ["read", "create","update","delete","download"];
+    roles = ["Editor", "Project owner","Reviewer","Invitee Editor","Invitee Reviewer","Agency Project owner",
             "Agency Editor","Agency Reviewer","Agency Admin"];
 
     "read" if "Editor";
     "create" if "Editor";
-    "update" if "Editor";
+    "update" if "Project owner";
     "delete" if "Project owner";
-    "Editor" if "Project owner";
+    "download" if "Project owner";
     "Editor" if "Reviewer";
 
-    "Editor" if "Invitee";
+    "download" if "Invitee Reviewer";
+    "update" if "Invitee Reviewer";
+    "Invitee Reviewer" if "Invitee Editor";
+    
     "Editor" if "Agency Editor";
+    "download" if "Agency Project owner";
     "update" if "Agency Project owner";
     "Agency Editor" if "Agency Project owner";
     "Agency Editor" if "Agency Reviewer";
@@ -44,13 +48,14 @@ resource ai_workspace::Task{
 }
 
 resource ai_workspace::Project{
-    permissions = ["read", "create","update","delete"];
+    permissions = ["read", "create","update","delete","download"];
     roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
             "Agency Editor","Agency Reviewer","Agency Admin"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
+    "download" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
@@ -58,10 +63,10 @@ resource ai_workspace::Project{
     "Editor" if "Agency Editor";
     "update" if "Agency Project owner";
     "create" if "Agency Project owner";
+    "download" if "Agency Project owner";
     "Agency Editor" if "Agency Project owner";
     "Agency Editor" if "Agency Reviewer";
-    "Agency Project owner" if "Agency Admin";
-
+    "Agency Project owner" if "Agency Admin";   
 }
 
 resource ai_tm::TmxFileNew{
@@ -499,6 +504,14 @@ resource ai_workspace::TaskAssign{
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
+
+    "read" if "Agency Editor";
+    "create" if "Agency Project owner";
+    "update" if "Agency Project owner";
+    "delete" if "Agency Project owner";
+    "Editor" if "Agency Project owner";
+    "Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
 
 }
 
