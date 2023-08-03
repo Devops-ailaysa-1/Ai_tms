@@ -661,14 +661,12 @@ class SocialMediaSize(models.Model):
 
     def __str__(self) -> str:
         return self.social_media_name
-
+    
 class ImageCategories(models.Model):
     category= models.CharField(max_length=50,blank=True ,null=True)
 
     def __str__(self):
         return self.category
-    
-
 
 
 class DesignShape(models.Model):

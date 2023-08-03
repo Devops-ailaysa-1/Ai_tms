@@ -370,3 +370,8 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
+    
+    def delete(self,request,pk):
+        query_obj = StableDiffusionAPI.objects.get(id = pk)
+        query_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
