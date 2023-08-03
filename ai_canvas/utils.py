@@ -219,6 +219,7 @@ def export_download(json_str,format,multipliervalue):
                 img=convertImage(im_file).image
                 format='jpeg'
                 dpi=(300,300)
+            # img=convertImage(im_file).image.save("book-cover.pdf",format=format.upper(),dpi=dpi)
             img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
         return compressed_data
