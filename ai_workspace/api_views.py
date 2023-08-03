@@ -4101,8 +4101,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         target = request.POST.get('target_text')
         task = request.POST.get('task')
         action = request.POST.get('action')
-        task=get_object_or_404(Task,id=task)
-        authorize(request,resource=task,action="create",actor=self.request.user)
+        obj=get_object_or_404(Task,id=task)
+        authorize(request,resource=obj,action="create",actor=self.request.user)
         serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'action':action,'task':task})
         if serializer.is_valid():
             serializer.save()
