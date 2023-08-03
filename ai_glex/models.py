@@ -6,6 +6,7 @@ from ai_workspace.models import Project,Job,Task
 import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
+from django.core.cache import cache
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete
@@ -99,9 +100,10 @@ class TermsModel(models.Model):
         return self.sl_term
 
     def save(self, *args, **kwargs):
-        super().save()
-        cache_key = f'audio_file_exists_{self.pk}'
+        super().save(*args, **kwargs)
+        cache_key = f'seg_progress_{self.job.pk}'
         cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
     # @property
     # def source_language(self):
     #     return str(self.job.source_language)
