@@ -162,14 +162,14 @@ company_members_list = [
 ]
 
 
-def get_assignment_role(step,reassigned=False):
+def get_assignment_role(instance,step,reassigned=False):
     from ai_workspace.models import AiRoleandStep
     
-    # ins=instance.task_ven_status
-    # if ins=="null":
-    #     res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Invitee')).last()
-    if reassigned:
+    ins=instance.task_ven_status
+    if ins==None and ins.task_assign.assign_to.is_internal_member == False:
+        res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Invitee')).last()
+    elif reassigned:
         res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Agency')).last()
     else:
-        res = AiRoleandStep.objects.filter(Q(step=step)&~Q(role__name__icontains='Agency')).last()
+        res = AiRoleandStep.objects.filter(Q(step=step)&~Q(role__name__icontains='Agency')&~Q(role__name__icontains='Invitee')).last()
     return res.role.name
