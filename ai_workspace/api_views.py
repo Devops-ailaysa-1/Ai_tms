@@ -2629,6 +2629,7 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
+        authorize(request,resource=obj,action="read",actor=request.user)
         tt = text_to_speech_task(obj,language,gender,user,voice_name)
         if tt!=None and tt.status_code == 400:
             return tt
