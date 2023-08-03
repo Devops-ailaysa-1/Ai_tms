@@ -2643,6 +2643,7 @@ def convert_text_to_speech_source(request):
         for _task in pr.get_source_only_tasks:
             if _task.task_transcript_details.first() == None:
                 tasks.append(_task)
+        tasks=filter_authorize(request,tasks,"read",request.user)
         if tasks:
             for obj in tasks:
                 print("Obj-------------->",obj)
