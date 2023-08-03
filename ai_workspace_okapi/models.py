@@ -11,6 +11,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
     MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
+from django.core.cache import cache
 
 
 class TaskStatus(models.Model):
@@ -133,7 +134,10 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete(cache_key)
         return super(BaseSegment, self).save(*args, **kwargs)
+
 
 # post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 # post_save.connect(translate_segments,sender=Segment)
@@ -142,6 +146,11 @@ class Segment(BaseSegment):
     is_merged = models.BooleanField(default=False, null=True)
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
+
+
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+
 
     @property
     def get_merge_target_if_have(self):
@@ -216,6 +225,12 @@ class MergeSegment(BaseSegment):
         related_name="text_unit_merge_segment_set")
     is_split = models.BooleanField(default=False, null=True, blank=True)
 
+
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
+    #     cache.delete(cache_key)
+
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
         self.target = ""
@@ -238,7 +253,12 @@ class MergeSegment(BaseSegment):
         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
         self.save()
         self.update_segment_is_merged_true(segs=segs)
+        cache_key = f'seg_progress_{self.text_unit.document.pk}'
+        cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
+        cache.delete(cache_key)
         return self
+
+        
 
     def delete(self, using=None, keep_parents=False):
         for seg in self.segments.all():
@@ -291,6 +311,7 @@ class SplitSegment(BaseSegment):
     is_first = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=True, null=True)
 
+
     @property
     def get_parent_seg_id(self):
         return self.segment_id
@@ -310,6 +331,9 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
+        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
+        cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
 
 class MT_RawTranslation(models.Model):
 
@@ -374,7 +398,13 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        cache_key = f'task_word_count_{self.pk}'
+        cache.delete(cache_key)
+        cache_key = f'task_char_count_{self.pk}'
+        cache.delete(cache_key)
+        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+
 
     def get_user_email(self):
         return self.created_by.email
@@ -633,12 +663,12 @@ class ChoiceLists(models.Model):
                         else:
                             count= queryset.filter(name__icontains=self.name).count()
                         self.name = self.name + "(" + str(count) + ")"
-                        super().save()
+                        super().save(*args, **kwargs)
                         break
                     except:
                         count= count+1
                         self.name = self.name + "(" + str(count) + ")"
-            return super().save()
+            return super().save(*args, **kwargs)
 
 
 
