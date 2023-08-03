@@ -621,27 +621,36 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	
 	def get_progress(self,instance):
+		
 		if type(instance) is Project:
+			
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
-				.context.get("ai_user", None)
+					.context.get("ai_user", None)
 
-			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+			cache_key = f'pr_progress_property_{instance.id}_{user.pk}'
+			cached_value = cache.get(cache_key)
+			print("---------------Cached value in pr_progress------------")
+			if not cached_value:
+				print("-----------------------new---------------------")
+				user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
-			if instance.ai_user == user:
-				tasks = instance.get_tasks
-			elif instance.team:
-				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+				if instance.ai_user == user:
 					tasks = instance.get_tasks
+				elif instance.team:
+					if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+						tasks = instance.get_tasks
+					else:
+						tasks = [task for job in instance.project_jobs_set.all() for task \
+								in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
 				else:
 					tasks = [task for job in instance.project_jobs_set.all() for task \
 							in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
-
-			else:
-				tasks = [task for job in instance.project_jobs_set.all() for task \
-						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 	
-			res = instance.pr_progress(tasks)
-			return res
+				cached_value = instance.pr_progress(tasks)
+				print("cached_value_calculated--------------->",cached_value)
+				cache.set(cache_key, cached_value)#, timeout=60)
+			return cached_value
 		else:
 			return None
 
@@ -650,18 +659,23 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if self.context.get("request")!=None:
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
-			if instance.team :
-				return True if ((instance.team.owner == user)\
-					or(instance.team.internal_member_team_info.all().\
-					filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-					or(instance.team.owner.user_info.all()\
-					.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			cache_key = f'check_role_{instance.id}_{user.pk}'
+			cached_value = cache.get(cache_key)
+			if cached_value is None:
+				if instance.team :
+					cached_value = True if ((instance.team.owner == user)\
+						or(instance.team.internal_member_team_info.all().\
+						filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+						or(instance.team.owner.user_info.all()\
+						.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+						else False
+				else:
+					cached_value = True if ((instance.ai_user == user) or\
+					(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 					else False
-			else:
-				return True if ((instance.ai_user == user) or\
-				(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-				else False
-		else:return None
+			cache.set(cache_key,cached_value)
+		else:cached_value = None
+		return cached_value
 
 
 	def create(self, validated_data):

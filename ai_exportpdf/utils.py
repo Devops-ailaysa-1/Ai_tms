@@ -79,7 +79,6 @@ def convertiopdf2docx(id ,language,ocr = None ):
     if len(user_credit) >1:
         logger.error(["user_credit_id_{}".format(i.id) for i in user_credit])
     user_credit = user_credit.last()
- 
     # user_credit =UserCredits.objects.filter(Q(user_id=80) & Q(ended_at=None)).filter(Q(credit_pack_type__icontains="Addon") or Q(credit_pack_type__icontains="Subscription"))[0]
     
     with open(fp, "rb") as pdf_path:

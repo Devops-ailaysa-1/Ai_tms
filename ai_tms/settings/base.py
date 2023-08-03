@@ -169,9 +169,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.cache.UpdateCacheMiddleware',
+    #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
+    #'django.middleware.cache.FetchFromCacheMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -463,7 +463,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv("REDIS_CHANNEL_HOST"),  
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'KEY_PREFIX': '',  
