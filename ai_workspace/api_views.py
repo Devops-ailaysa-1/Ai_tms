@@ -1726,7 +1726,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     obj.task_assign.status = 1
                     obj.task_assign.client_response = None
                     obj.task_assign.save()
-                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    role = get_assignment_role(obj,obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
                     unassign_task(assigned_user,role,obj.task_obj)   
                     obj.delete()
@@ -1760,7 +1760,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     obj.task_assign.client_response = None
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    role = get_assignment_role(obj,obj.task_assign.step,obj.task_assign.reassigned)
                     unassign_task(assigned_user,role,obj.task_obj)             
                     obj.delete()
                 
