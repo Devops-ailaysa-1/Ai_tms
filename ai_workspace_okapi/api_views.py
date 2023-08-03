@@ -3205,7 +3205,7 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         s1=source.split()
         target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
         s2=target.split()
-        stopwords=stop_words if lang.lang=='English' else {}
+        stopwords=stop_words if lang.language=='English' else {}
         assets={}
         print(s1,s2)
         matcher=difflib.SequenceMatcher(None,s1,s2 )
