@@ -92,7 +92,7 @@ def task_assing_role_ls(task_assign_info_ls):
 	from ai_workspace.models import AiRoleandStep
 	objs = TaskAssignInfo.objects.filter(id__in=task_assign_info_ls)
 	for instance in objs:
-		role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned)
+		role = get_assignment_role(instance,instance.task_assign.step,instance.task_assign.reassigned)
 		# role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
 		assign_object.send(
 			sender=TaskAssignInfo,
