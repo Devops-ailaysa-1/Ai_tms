@@ -443,9 +443,15 @@ CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
 CACHEOPS_ENABLED = True
 
+CACHEOPS_DEGRADE_ON_FAILURE = True 
+
+CACHEOPS_DEFAULTS = {
+    'timeout': 60 * 60,  # Default cache timeout (1 hour)
+}
+
 CACHEOPS = {
-    'ai_workspace.project': {'ops': 'all', 'timeout': 60 * 15},
-    'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
+    'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+    #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
     
 }
 

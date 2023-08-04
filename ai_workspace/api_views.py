@@ -4514,4 +4514,41 @@ class AssertList(viewsets.ModelViewSet):
         # return response
     
 
+    # @staticmethod
+    # @cached(timeout=60 * 15)
+    # def get_tasks_by_projectid(request, pk):
+    #     project = get_object_or_404(Project.objects.all(),
+    #                 id=pk)
+    #     pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
+    #     user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
+    #     if project.ai_user == request.user:
+    #         print("Owner")
+    #         return project.get_tasks
+    #     if project.team:
+    #         print("Team")
+    #         print(project.team.get_project_manager)
+    #         if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
+    #             return project.get_tasks
+    #         # elif self.request.user in project.team.get_project_manager:
+    #         #     return project.get_tasks
+    #         else:
+    #             return [task for job in project.project_jobs_set.all() for task \
+    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+    #     else:
+    #         print("Indivual")
+    #         # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
+    #         #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
+    #         return [task for job in project.project_jobs_set.all() for task \
+    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+    # @staticmethod
+    # def get_queryset_with_caching(request,pk):
+    #     try:
+    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
+    #         print("Cache HIT")  # This will be printed if the queryset is fetched from the cache
+    #         res = "CacheHit"
+    #     except CacheMiss:
+    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
+    #         print("Cache MISS")  # This will be printed if the queryset is fetched from the database
+    #         res = "CatchMiss"
+    #     return res
 
