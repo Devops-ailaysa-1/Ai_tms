@@ -183,6 +183,7 @@ def export_download(json_str,format,multipliervalue):
     format = 'pdf' if format=='pdf-standard' else format
 
     if format in ["png","jpeg","pdf",'jpeg-print']:
+        multipliervalue=3 if format=='jpeg-print' else multipliervalue
         data = {'json':json_ , 'format':'png','multiplierValue':multipliervalue}
     
     elif format =='svg':
