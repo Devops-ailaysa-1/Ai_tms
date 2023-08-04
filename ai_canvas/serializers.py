@@ -568,8 +568,9 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
         print("------------")
-        print(json)
+        
         json=copy.copy(instance.json)
+        print(json)
         # if "projectid" in json.keys():
         #     del json['projectid']
         #     json['projectid']=None
