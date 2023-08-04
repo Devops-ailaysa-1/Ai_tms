@@ -34,12 +34,12 @@ resource ai_workspace::Task{
     "download" if "Project owner";
     "Editor" if "Reviewer";
 
-    "download" if "Invitee Reviewer";
+    # "download" if "Invitee Reviewer";
     "update" if "Invitee Reviewer";
     "Invitee Reviewer" if "Invitee Editor";
-    
+
     "Editor" if "Agency Editor";
-    "download" if "Agency Project owner";
+    # "download" if "Agency Project owner";
     "update" if "Agency Project owner";
     "Agency Editor" if "Agency Project owner";
     "Agency Editor" if "Agency Reviewer";
@@ -63,7 +63,7 @@ resource ai_workspace::Project{
     "Editor" if "Agency Editor";
     "update" if "Agency Project owner";
     "create" if "Agency Project owner";
-    "download" if "Agency Project owner";
+    # "download" if "Agency Project owner";
     "Agency Editor" if "Agency Project owner";
     "Agency Editor" if "Agency Reviewer";
     "Agency Project owner" if "Agency Admin";   
@@ -133,7 +133,7 @@ has_role(actor: ai_auth::AiUser, _role_name: "Project owner", resource:Resource)
 has_role(actor: ai_auth::AiUser, _role_name: "Agency Project owner", resource:Resource) if
 resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_workspace::File,ai_workspace::ReferenceFiles,ai_workspace::TbxFile] 
 and actor.internal_member.count() != 0
-and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk__in:resource.proj_obj.get_tasks_pk,role__role__name__in:["Editor","Reviewer"]));
+and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk__in:resource.proj_obj.get_tasks_pk,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]));
 
 # For models with task obj
 has_role(actor: ai_auth::AiUser, _role_name: "Agency Project owner",resource:Resource) if
@@ -141,7 +141,7 @@ resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace:
     ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
     ,ai_workspace::Instructionfiles]
 and actor.internal_member.count() != 0
-and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]));
+and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]));
 
 # and ai_auth::TaskRoles.objects.filter(user:actor.team.owner,task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]).count() != 0
 
@@ -151,7 +151,7 @@ and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_
 has_role(actor: ai_auth::AiUser,_role_name: "Agency Admin", resource:Resource) if
 resource.__class__ in [ai_workspace::Project,ai_workspace::Job,ai_workspace::File,ai_workspace::ReferenceFiles,ai_workspace::TbxFile] 
 and actor.is_agency
-and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name__in:["Editor","Reviewer"]).count() != 0;
+and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]).count() != 0;
 
 # For models with task obj
 has_role(actor: ai_auth::AiUser,_role_name: "Agency Admin",resource:Resource) if
@@ -159,7 +159,7 @@ resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace:
     ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
     ai_workspace::Instructionfiles]
 and actor.is_agency
-and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer"]).count() != 0;
+and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]).count() != 0;
 
 
 team_resource(actor,assignes) if
