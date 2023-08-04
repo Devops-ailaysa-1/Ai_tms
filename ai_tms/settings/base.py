@@ -111,7 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'cacheops',
+    'cacheops',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -439,9 +439,15 @@ LOGOUT_REDIRECT_URL = '/'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
+CACHEOPS_ENABLED = True
 
+CACHEOPS = {
+    'ai_workspace.project': {'ops': 'all', 'timeout': 60 * 15},
+    'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
+    
+}
 
 CHANNEL_LAYERS = {
     "default": {
