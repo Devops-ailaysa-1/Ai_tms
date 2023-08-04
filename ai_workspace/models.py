@@ -1933,6 +1933,10 @@ class ReferenceFiles(models.Model):
     @property
     def owner_pk(self):
         return self.project.owner_pk
+    
+    @property
+    def proj_obj(self):
+        return self.project
 
 def tbx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
