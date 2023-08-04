@@ -2169,7 +2169,11 @@ def file_write(pr):
 #@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    authorize(request,resource=pr,action="read",actor=request.user)
+    authorize(request,resource=pr,action="download",actor=request.user)
+    # task=Task.objects.filter(job__project=pr)
+    # obj=filter_authorize(request,task,"download",request.user)
+    # if not obj:
+    #     return JsonResponse({"msg":"you have not authorized to perfom this action"})
     if pr.project_type_id == 5:
         file_write(pr)
 
