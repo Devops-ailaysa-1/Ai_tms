@@ -112,7 +112,7 @@ class TemplateGlobalDesign(models.Model):
     description=models.CharField(max_length=600,blank=True,null=True)
     thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
     export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-    json=models.JSONField(blank=True , null=True)
+    json=models.JSONField(blank=True,null=True)
     template_lang=models.ForeignKey(Languages,related_name='template_page_lang', on_delete=models.CASCADE)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)

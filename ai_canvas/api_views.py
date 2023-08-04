@@ -820,7 +820,8 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
     def create(self,request):
-        serializer=TemplateGlobalDesignSerializerV2(data=request.data)
+        print("request.data",request.POST.dict())
+        serializer=TemplateGlobalDesignSerializerV2(data=request.POST.dict())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

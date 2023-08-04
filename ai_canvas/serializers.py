@@ -536,7 +536,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
     template_list=serializers.CharField(required=False)
     category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
-    # json=serializers.JSONField(required=True)
+    json=serializers.JSONField(required=True)
     template_lang=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=True)
     is_pro=serializers.BooleanField(default=False)
     is_published=serializers.BooleanField(default=False)
@@ -544,7 +544,7 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     class Meta:
         model=TemplateGlobalDesign
         fields=('id','template_tag','template_list','template_name','category','is_pro','is_published',
-                'template_lang','description','thumbnail_page') #json
+                'template_lang','description','thumbnail_page','json') #
         extra_kwargs = { 
             'template_list':{'write_only':True},}
 
@@ -567,9 +567,10 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         if not template_list:raise serializers.ValidationError("need some tags")
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
-        print("------------")
+        print("val",validated_data)
+        print("------------",instance.json)
         
-        json=copy.copy(instance.json)
+        json=copy.deepcopy(instance.json)
         print(json)
         # if "projectid" in json.keys():
         #     del json['projectid']
