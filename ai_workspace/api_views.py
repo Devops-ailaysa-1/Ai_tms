@@ -95,6 +95,7 @@ from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrap
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
+from django.views.decorators.cache import never_cache
 
 class IsCustomer(permissions.BasePermission):
 
@@ -712,7 +713,7 @@ class ProjectFilter(django_filters.FilterSet):
         #     queryset = queryset.filter(project_type_id=5)
         return queryset
 
-
+#@never_cache
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -3099,7 +3100,8 @@ def exp_proj_save(task_id,mt_change):
     for i in exp_obj.distinct('src_text_unit'):
         rr = exp_obj.filter(src_text_unit=i.src_text_unit)
         for i in rr:
-            tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
+            try:tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
+            except:tar_1 = None
             tar = tar +' '+tar_1 if tar_1 else ''
         tar = tar + '\n\n'
     express_obj.mt_raw = tar.strip().strip('\n')
