@@ -202,7 +202,7 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
 
     elif format == 'pdf-print':
-        format='pdf'
+        
         dpi=(300,300)
         data = {'json':json_ , 'format':'png','multiplierValue':3,'dpi':dpi[0]}
          
@@ -220,7 +220,9 @@ def export_download(json_str,format,multipliervalue):
                 img=convertImage(im_file).image
                 format='jpeg'
                 dpi=(300,300)
-            # img=convertImage(im_file).image.save("book-cover.pdf",format=format.upper(),dpi=dpi)
+            if format == 'pdf-print':
+                img=convertImage(im_file).image
+                format='pdf'
             img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
         return compressed_data
