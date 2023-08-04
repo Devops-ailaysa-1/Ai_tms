@@ -2629,7 +2629,7 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
-        authorize(request,resource=obj,action="read",actor=request.user)
+        # authorize(request,resource=obj,action="read",actor=request.user)
         tt = text_to_speech_task(obj,language,gender,user,voice_name)
         if tt!=None and tt.status_code == 400:
             return tt
@@ -2643,7 +2643,7 @@ def convert_text_to_speech_source(request):
         for _task in pr.get_source_only_tasks:
             if _task.task_transcript_details.first() == None:
                 tasks.append(_task)
-        tasks=filter_authorize(request,tasks,"read",request.user)
+        # tasks=filter_authorize(request,tasks,"read",request.user)
         if tasks:
             for obj in tasks:
                 print("Obj-------------->",obj)
@@ -3234,7 +3234,7 @@ def task_get_segments(request):
     user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
     task=get_object_or_404(Task,id=task_id)
-    authorize(request,resource=task,actor=request.user,action="read")
+    # authorize(request,resource=task,actor=request.user,action="read")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     obj = Task.objects.get(id=task_id)
     if express_obj.source_text == None:
