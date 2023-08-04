@@ -24,6 +24,7 @@ urlpatterns += [
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
     path('credit_blog_check/',api_views.credit_check_blog),
+    path('article_generate_test/',api_views.generate),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 
