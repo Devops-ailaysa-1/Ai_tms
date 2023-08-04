@@ -1484,9 +1484,8 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
-        tsk = Task.objects.get(id=task)
-        print(self.request.user)
-        # authorize(request, resource=tsk, actor=self.request.user, action="update")
+        inst = Task.objects.get(id=task)
+        authorize(request, resource=inst, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -1728,7 +1727,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     obj.task_assign.status = 1
                     obj.task_assign.client_response = None
                     obj.task_assign.save()
-                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    role = get_assignment_role(obj,obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
                     unassign_task(assigned_user,role,obj.task_obj)   
                     obj.delete()
@@ -1762,7 +1761,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     obj.task_assign.client_response = None
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    role = get_assignment_role(obj,obj.task_assign.step,obj.task_assign.reassigned)
                     unassign_task(assigned_user,role,obj.task_obj)             
                     obj.delete()
                 
@@ -2171,7 +2170,11 @@ def file_write(pr):
 #@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    authorize(request,resource=pr,action="read",actor=request.user)
+    authorize(request,resource=pr,action="download",actor=request.user)
+    # task=Task.objects.filter(job__project=pr)
+    # obj=filter_authorize(request,task,"download",request.user)
+    # if not obj:
+    #     return JsonResponse({"msg":"you have not authorized to perfom this action"})
     if pr.project_type_id == 5:
         file_write(pr)
 
@@ -2631,6 +2634,7 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
+        # authorize(request,resource=obj,action="read",actor=request.user)
         tt = text_to_speech_task(obj,language,gender,user,voice_name)
         if tt!=None and tt.status_code == 400:
             return tt
@@ -2644,6 +2648,7 @@ def convert_text_to_speech_source(request):
         for _task in pr.get_source_only_tasks:
             if _task.task_transcript_details.first() == None:
                 tasks.append(_task)
+        # tasks=filter_authorize(request,tasks,"read",request.user)
         if tasks:
             for obj in tasks:
                 print("Obj-------------->",obj)
@@ -3235,7 +3240,7 @@ def task_get_segments(request):
     user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
     task=get_object_or_404(Task,id=task_id)
-    authorize(request,resource=task,actor=request.user,action="read")
+    # authorize(request,resource=task,actor=request.user,action="read")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     obj = Task.objects.get(id=task_id)
     if express_obj.source_text == None:
@@ -4103,8 +4108,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         target = request.POST.get('target_text')
         task = request.POST.get('task')
         action = request.POST.get('action')
-        task=get_object_or_404(Task,id=task)
-        authorize(request,resource=task,action="create",actor=self.request.user)
+        obj=get_object_or_404(Task,id=task)
+        authorize(request,resource=obj,action="create",actor=self.request.user)
         serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'action':action,'task':task})
         if serializer.is_valid():
             serializer.save()
