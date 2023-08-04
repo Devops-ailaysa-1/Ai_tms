@@ -567,7 +567,10 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
         json=copy.copy(instance.json)
-        json['projectid']=None
+        if "projectid" in json.key():
+            del json['projectid']
+            json['projectid']=None
+            print("deleteed")
         instance.json=json
         instance.save()
         thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
