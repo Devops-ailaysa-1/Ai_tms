@@ -1788,6 +1788,10 @@ class Instructionfiles(models.Model):
     @property
     def owner_pk(self):
         return self.task_assign_info.owner_pk
+    
+    @property
+    def task_obj(self):
+        return self.task_assign_info.task_obj
 # post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
