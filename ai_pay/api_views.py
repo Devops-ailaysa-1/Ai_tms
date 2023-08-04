@@ -578,7 +578,7 @@ def po_modify(task_assign_info_id,po_update):
         tsk_history = TaskAssignHistory.objects.filter(task_assign =instance.task_assign,unassigned_by__isnull=False)
 
         for tsk_c in tsk_history:
-            role_name = get_assignment_role(tsk_c.task_assign.step,tsk_c.task_assign.reassigned)
+            role_name = get_assignment_role(instance,tsk_c.task_assign.step,tsk_c.task_assign.reassigned)
             unassign_task(tsk_c.previous_assign,role_name,task)
 
 
@@ -587,7 +587,7 @@ def po_modify(task_assign_info_id,po_update):
             sender=TaskAssignInfo,
             instance = instance,
             user=instance.task_assign.assign_to,
-            role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
+            role = get_assignment_role(instance,instance.task_assign.step,instance.task_assign.reassigned )
             )
 
             # return True
@@ -601,7 +601,7 @@ def po_modify(task_assign_info_id,po_update):
             sender=TaskAssignInfo,
             instance = instance,
             user=instance.task_assign.assign_to,
-            role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
+            role = get_assignment_role(instance,instance.task_assign.step,instance.task_assign.reassigned )
         )
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task.id)&~Q(po__po_status='void'))
