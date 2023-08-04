@@ -821,7 +821,7 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     page_size = 20
     def create(self,request):
         print("request.data",request.POST.dict())
-        serializer=TemplateGlobalDesignSerializerV2(data=request.POST.dict())
+        serializer=TemplateGlobalDesignSerializerV2(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
