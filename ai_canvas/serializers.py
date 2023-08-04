@@ -534,7 +534,7 @@ class TemplateTagSerializer(serializers.ModelSerializer):
 
 class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
     template_tag =TemplateTagSerializer(many=True,required=False,source='template_global_page')
-    template_list=serializers.CharField(required=False)
+    template_list=serializers.CharField(required=True)
     category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=True)
     # json=serializers.JSONField(required=True)
     template_lang=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=True)
@@ -566,11 +566,13 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         template_list=validated_data.pop('template_list',None)
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
+        print("------------")
+        print(json)
         json=copy.copy(instance.json)
-        if "projectid" in json.keys():
-            del json['projectid']
-            json['projectid']=None
-            print("deleteed")
+        # if "projectid" in json.keys():
+        #     del json['projectid']
+        #     json['projectid']=None
+        #     print("deleteed")
         instance.json=json
         instance.save()
         thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
