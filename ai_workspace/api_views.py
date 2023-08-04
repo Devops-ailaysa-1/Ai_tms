@@ -3445,8 +3445,8 @@ def task_segments_save(request):
 #@permission_classes([IsAuthenticated])
 def express_task_download(request,task_id):###############permission need to be added and checked##########################
     obj = Task.objects.get(id = task_id)
-    authorize(request,resource=obj,actor=request.user,action="download")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    authorize(request,resource=obj,actor=request.user,action="download")
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
