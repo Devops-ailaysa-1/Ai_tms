@@ -3342,7 +3342,6 @@ import difflib
 def task_segments_save(request):
     task_id = request.POST.get('task_id')
     task=get_object_or_404(Task,id=task_id)
-    authorize(request,resource=task,actor=request.user,action="update")
     if not task_id:
         return Response({'msg':'task_id required'},status=400)
     from_history = request.POST.get('from_history',None)
@@ -3356,6 +3355,7 @@ def task_segments_save(request):
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    authorize(request,resource=express_obj,actor=request.user,action="update")
 
     if from_history:
         task_hist_obj = ExpressTaskHistory.objects.get(id = from_history)
@@ -3445,8 +3445,8 @@ def task_segments_save(request):
 #@permission_classes([IsAuthenticated])
 def express_task_download(request,task_id):###############permission need to be added and checked##########################
     obj = Task.objects.get(id = task_id)
-    authorize(request,resource=obj,actor=request.user,action="download")
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    authorize(request,resource=obj,actor=request.user,action="download")
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:

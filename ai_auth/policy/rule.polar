@@ -106,7 +106,8 @@ resource ai_workspace::Job{
 # For models with task obj
 has_role(actor: ai_auth::AiUser, role_name: String,resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
-    ai_workspace_okapi::Segment,,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,ai_workspace::Instructionfiles]
+    ai_workspace_okapi::Segment,,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,ai_workspace::Instructionfiles,
+    ai_workspace::ExpressProjectDetail]
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name:role_name).count() != 0;
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource : ai_workspace::Project,ai_workspace::ProjectContentType,ai_workspace::ProjectFilesCreateType,
@@ -139,7 +140,7 @@ and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk__in:resource.p
 has_role(actor: ai_auth::AiUser, _role_name: "Agency Project owner",resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
     ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
-    ,ai_workspace::Instructionfiles]
+    ,ai_workspace::Instructionfiles,ai_workspace::ExpressProjectDetail]
 and actor.internal_member.count() != 0
 and team_resource(actor,ai_auth::TaskRoles.objects.filter(task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]));
 
@@ -157,7 +158,7 @@ and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.g
 has_role(actor: ai_auth::AiUser,_role_name: "Agency Admin",resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
     ai_workspace_okapi::Segment,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment,
-    ai_workspace::Instructionfiles]
+    ai_workspace::Instructionfiles,ai_workspace::ExpressProjectDetail]
 and actor.is_agency
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name__in:["Editor","Reviewer","Invitee Reviewer","Invitee Editor"]).count() != 0;
 
@@ -443,7 +444,7 @@ resource ai_workspace_okapi::Document{
     "read" if "Agency Editor";
     "create" if "Agency Project owner";
     "update" if "Agency Project owner";
-    "download" if "Agency Project owner";
+    # "download" if "Agency Project owner";
     "delete" if "Agency Project owner";
     "Editor" if "Agency Project owner";
     "Editor" if "Agency Reviewer";
@@ -608,7 +609,7 @@ resource ai_workspace::Instructionfiles{
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
-    "download" if "Project owner";
+    "download" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
@@ -621,4 +622,25 @@ resource ai_workspace::Instructionfiles{
     "Editor" if "Agency Reviewer";
     "Agency Project owner" if "Agency Admin";
 
+}
+resource ai_workspace::ExpressProjectDetail{
+    permissions = ["read", "create","update","delete","download"];
+    roles = ["Editor", "Project owner","Reviewer","Agency Project owner",
+            "Agency Editor","Agency Reviewer","Agency Admin"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Editor";
+    "download" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+    "Editor" if "Agency Editor";
+    "create" if "Agency Project owner";
+    "update" if "Agency Project owner";
+    "download" if "Agency Project owner";
+    "Editor" if "Agency Project owner";
+    "Editor" if "Agency Reviewer";
+    "Agency Project owner" if "Agency Admin";
 }
