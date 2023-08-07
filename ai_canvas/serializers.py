@@ -509,7 +509,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     new_height = round(scale_val*height)
                     im=im.resize((new_width,new_height))
                     # im=cv2.resize(im ,(new_width,new_height)) #
-                    content=image_content(im)
+                    # content=image_content(im)
                     instance.height=new_width #  to change
                     instance.width=new_height
                     # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
