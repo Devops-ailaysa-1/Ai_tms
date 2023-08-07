@@ -630,7 +630,7 @@ resource ai_workspace::ExpressProjectDetail{
 
     "read" if "Editor";
     "create" if "Project owner";
-    "update" if "Project owner";
+    "update" if "Editor";
     "download" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
