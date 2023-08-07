@@ -1205,7 +1205,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
 				cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
 			else:
-				cached_value = "null"#None#'Not exists'
+				cached_value = None#"null"#None#'Not exists'
 			print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
 		return cached_value
@@ -1242,7 +1242,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					try:task_assign_info.append(i.task_assign_info)
 					except:pass
 				cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
-			else: cached_value = "null"#None#"Not exists"
+			else: cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
 		return cached_value
 
@@ -1264,14 +1264,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 						try:task_assign_info.append(i.task_assign_info)
 						except:pass
 					cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
-				else: cached_value ="null"# None#"Not exists"
+				else: cached_value =None#"null"# None#"Not exists"
 			else:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 				print("Task Assign-------->",task_assign)
 				if task_assign and task_assign.filter(assign_to=user):
 					cached_value = True
 					# else:return None
-				else:cached_value = "null"#None#"Not exists"
+				else:cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
 		return cached_value
 

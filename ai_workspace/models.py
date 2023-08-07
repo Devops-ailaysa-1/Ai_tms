@@ -2,6 +2,7 @@ import os
 import random
 import re
 import string
+from django.db.models import Prefetch
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
@@ -547,9 +548,12 @@ class Project(models.Model):
 
     @property
     def get_tasks(self):
-        task_list =  [task for job in self.project_jobs_set.all() for task \
-            in job.job_tasks_set.all()]
-        return sorted(task_list, key=lambda x: x.id)
+        task_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
+                Prefetch('job', queryset=Job.objects.select_related('project')))
+        return task_list
+        # task_list =  [task for job in self.project_jobs_set.all() for task \
+        #     in job.job_tasks_set.all()]
+        #return sorted(task_list, key=lambda x: x.id)
 
     @property
     def get_source_only_tasks(self):
@@ -1235,7 +1239,7 @@ class Task(models.Model):
             if self.document:
                 cached_value = self.document.converted_audio_file_exists
             else:
-                cached_value = 'null'#None#'Not exists'
+                cached_value = None#'null'#None#'Not exists'
             cache.set(cache_key, cached_value)
         return cached_value
 
@@ -1295,8 +1299,8 @@ class Task(models.Model):
                     if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
                         cached_value = True
                     else:cached_value = False
-                else:cached_value = "null"#"Not exists"
-            else:cached_value= "null"#"Not exists"
+                else:cached_value = None#"null"#"Not exists"
+            else:cached_value= None#"null"#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1312,9 +1316,9 @@ class Task(models.Model):
                         if self.task_transcript_details.exists():
                             catched_value = False
                         else:catched_value =  True
-                    else:catched_value = "null"# None# "Not exists"
-                else:catched_value =  "null"#None#"Not exists"
-            else:catched_value = "null"# None#"Not exists"
+                    else:catched_value = None#"null"# None# "Not exists"
+                else:catched_value =  None#"null"#None#"Not exists"
+            else:catched_value = None#"null"# None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1397,7 +1401,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_word_count
         else:
-            cached_value = "null"#None #"Not exists"
+            cached_value = None#"null"#None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1420,7 +1424,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_char_count
         else:
-            cached_value ="null"#None #"Not exists"
+            cached_value =None#"null"#None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
