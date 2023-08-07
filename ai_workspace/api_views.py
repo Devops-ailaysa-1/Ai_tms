@@ -71,7 +71,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
 from .models import Task
-from cacheops import cached
+#from cacheops import cached
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
@@ -744,7 +744,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             raise Http404
         return obj
 
-    @cached(timeout=60 * 15)
+    #@cached(timeout=60 * 15)
     def get_queryset(self):
         #print(self.request.user)
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
