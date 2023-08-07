@@ -12,15 +12,20 @@ from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove,background_merge
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
-import pillow_avif
+import pillow_avif,io
 HOST_NAME=os.getenv('HOST_NAME')
 
 def create_thumbnail_img_load(base_dimension,image):
     wpercent = (base_dimension/float(image.size[0]))
     hsize = int((float(image.size[1])*float(wpercent)))
     img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
-    img=convert_image_url_to_file(image_url=img,no_pil_object=False)
-    return img
+    # img=convert_image_url_to_file(image_url=img,no_pil_object=False)
+    img_io = io.BytesIO()
+    img.save(img_io, format='PNG')
+    img_byte_arr = img_io.getvalue()
+    # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+    im=core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
+    return im
 
 
 class ImageloadSerializer(serializers.ModelSerializer):
