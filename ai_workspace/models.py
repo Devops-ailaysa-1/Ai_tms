@@ -1199,7 +1199,7 @@ class Task(models.Model):
         cache.delete(cache_key)
         cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
-    @cached_property
+    @property
     def converted_audio_file_exists(self):
         cache_key = f'audio_file_exists_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1256,7 +1256,7 @@ class Task(models.Model):
         try:return self.document.doc_credit_check_open_alert
         except:return None
 
-    @cached_property
+    @property
     def transcribed(self):
         cache_key = f'transcribed_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1267,12 +1267,12 @@ class Task(models.Model):
                     if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
                         cached_value = True
                     else:cached_value = False
-                else:cached_value = None#"Not exists"
-            else:cached_value= None#"Not exists"
+                else:cached_value = "null"#"Not exists"
+            else:cached_value= "null"#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
-    @cached_property
+    @property
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1351,7 +1351,7 @@ class Task(models.Model):
     def processor_name(self):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
-    @cached_property
+    @property
     def task_word_count(self):
         cache_key = f'task_word_count_{self.pk}'
         if self.document_id:
@@ -1426,7 +1426,7 @@ class Task(models.Model):
         except:
             return None
 
-    @cached_property
+    @property
     def corrected_segment_count(self):
         cache_key = f'seg_progress_{self.document.pk}' if self.document else None
         cached_value = cache.get(cache_key)
@@ -1461,7 +1461,7 @@ class Task(models.Model):
             cache.set(cache_key,cached_value)
         return cached_value
 
-    @cached_property
+    @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
             data = self.corrected_segment_count
