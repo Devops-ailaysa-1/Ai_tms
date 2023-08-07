@@ -442,8 +442,7 @@ class PromptTones(models.Model):
         return self.tone 
 
 class PromptSubCategories(models.Model):
-    category = models.ForeignKey(PromptCategories,related_name='prompt_category',
-                                 on_delete = models.CASCADE,blank=True, null=True)
+    category = models.ForeignKey(PromptCategories,related_name='prompt_category',on_delete = models.CASCADE,blank=True, null=True)
     sub_category = models.CharField(max_length=1000, null=True, blank=True)
     # fields = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -649,6 +648,9 @@ class FontData(models.Model):
     font_lang = models.ForeignKey(FontLanguage,related_name='font_data_language', on_delete=models.CASCADE)
     font_family = models.ForeignKey(FontFamily,related_name='font_data_family', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+ 
+
 
 class SocialMediaSize(models.Model):
     social_media_name=models.CharField(max_length=200,blank=True ,null=True)

@@ -1079,6 +1079,10 @@ def generate_article(request):
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
+
+#####for testing streaming #############
+
+
 @api_view(["GET"])
 def generate(request):
     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
@@ -1099,7 +1103,7 @@ However, building and maintaining quantum computers is very challenging because 
                 if chunk:
                     yield '\ndata: {}\n\n'.format({"t":chunk})
                 else:
-                    print("sstream is finished")
+                    print("stream is finished")
         return StreamingHttpResponse(stream(),content_type='text/event-stream')
     
     return JsonResponse({'error':'Method not allowed.'},status=405)

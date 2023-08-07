@@ -492,12 +492,14 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                 im =core.files.base.ContentFile(image,name=instance.image.name.split('/')[-1])
                 instance.image=im
                 instance.save()
-            im = cv2.imread(instance.image.path)
+            # im = cv2.imread(instance.image.path)
             if not instance.image_name:
                 instance.image_name=instance.image.path.split('/')[-1]
             if extension !='svg':
-                height,width,_ = im.shape
-                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+                im=Image.open(instance.image.path)
+                width,height=im.size
+                # height,width,_ = im.shape
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
                 instance.height=height
                 instance.width=width
                 instance.save()
@@ -505,12 +507,13 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     scale_val = min([2048/width, 2048/ height])
                     new_width = round(scale_val*width)
                     new_height = round(scale_val*height)
-                    im=cv2.resize(im ,(new_width,new_height)) #
+                    im=im.resize((new_width,new_height))
+                    # im=cv2.resize(im ,(new_width,new_height)) #
                     content=image_content(im)
                     instance.height=new_width #  to change
                     instance.width=new_height
                     # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-                    im =core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
+                    im =core.files.base.ContentFile(im.tobytes(),name=instance.image.name.split('/')[-1]) #content
                     instance.image=im
                     instance.save()
         return instance
@@ -567,15 +570,8 @@ class TemplateGlobalDesignSerializerV2(serializers.ModelSerializer):
         if not template_list:raise serializers.ValidationError("need some tags")
         template_lists=template_list.split(",")
         instance = TemplateGlobalDesign.objects.create(**validated_data)
-        print("val",validated_data)
-        print("------------",instance.json)
-        
         json=copy.deepcopy(instance.json)
-        print(json)
-        # if "projectid" in json.keys():
-        #     del json['projectid']
-        #     json['projectid']=None
-        #     print("deleteed")
+        json['projectid']=None
         instance.json=json
         instance.save()
         thumbnail_page = self.thumb_create(json_str=instance.json,formats='png',multiplierValue=1)
