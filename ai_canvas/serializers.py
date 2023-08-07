@@ -512,8 +512,12 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     # content=image_content(im)
                     instance.height=new_width #  to change
                     instance.width=new_height
+                    img_io = io.BytesIO()
+                    im.save(img_io, format='PNG')
+                    img_byte_arr = img_io.getvalue()
                     # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-                    im =core.files.base.ContentFile(im.tobytes(),name=instance.image.name.split('/')[-1]) #content
+                    im=core.files.File(core.files.base.ContentFile(img_byte_arr),instance.image.name.split('/')[-1])
+                    # im =core.files.base.ContentFile(im.tobytes(),name=instance.image.name.split('/')[-1]) #content
                     instance.image=im
                     instance.save()
         return instance
