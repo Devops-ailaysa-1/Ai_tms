@@ -902,10 +902,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
                 return project.get_tasks
             else:
-                return project.get_tasks.filter(assign_to=user_1)
+                return project.get_tasks.filter(task_info__assign_to=user_1)
         else:
             print("Indivual")
-            return project.get_tasks.filter(assign_to=user_1)
+            return project.get_tasks.filter(task_info__assign_to=user_1)
 
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
