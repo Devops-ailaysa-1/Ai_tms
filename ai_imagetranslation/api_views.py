@@ -375,3 +375,22 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         query_obj = StableDiffusionAPI.objects.get(id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+photo_options={'Shot_type':['Close-up','Extreme Close-up','POV','Medium shot','Long shot'],
+'Style':['polaroid','monochrome','long exposure','color splash','Tilt-shift'],
+'Subject':['Woman','Old man','Grey cat','Bunny','Ferrari'],
+'Lighting':['Soft','Ambient','Ring','Sun','Cinematic'],
+'Context':['Indoor','Outdoor','At night','In the park','Studio'],
+'Lens':['Wide-angle','Telephoto','24mm','EF 70mm','Bokeh'],
+'Device':['iPhone','CCTV','Nikon Z FX','Canon','Gopro']}
+
+
+image_json = {
+    "photography":photo_options
+}
+
+@api_view(['GET'])
+def customize_image_generation(request):
+    return Response(image_json,status=200)

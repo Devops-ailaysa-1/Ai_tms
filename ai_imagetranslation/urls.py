@@ -12,7 +12,8 @@ urlpatterns =  router.urls
 urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),
               path('image-download',api_views.image_translation_project_view,name="image_download"),
               path('image-list',api_views.ImageTranslateListViewset.as_view({'get': 'list'}),name='image-trans-list'),
-              path('generated-image-download/<int:id>',api_views.download_ai_image_generated_file_stable,name='generated-image')
+              path('generated-image-download/<int:id>',api_views.download_ai_image_generated_file_stable,name='generated-image'),
+              path('custom-image-generator',api_views.customize_image_generation,name='image-custom-gen')
               ]
 urlpatterns+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

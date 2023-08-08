@@ -542,3 +542,11 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     img_tar.target_canvas_json=can_tar_json
         #     img_tar.save()
         #     return instance
+
+
+
+
+
+image_json = {
+    "photography":["",""],
+}
