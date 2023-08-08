@@ -6,6 +6,10 @@ import os
 from django.core.files.storage import FileSystemStorage
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
                               PromptSubCategories,PromptTones,ModelGPTName)
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
+from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
+
+
 
 def user_directory_path(instance, filename):
     count = Ai_PdfUpload.objects.filter(file_name__contains=filename).count()
@@ -71,9 +75,18 @@ class Ai_PdfUpload(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.pdf_file.file.name)
+
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_translated_{self.task.pk}',
+            f'task_converted_{self.task.pk}',
+        ]
+        return cache_keys
     # def __str__(self):
     #     return self.name
-
+post_save.connect(invalidate_cache_on_save, sender=Ai_PdfUpload)
+pre_delete.connect(invalidate_cache_on_delete, sender=Ai_PdfUpload) 
 
 # class MyStorage(FileSystemStorage):
 

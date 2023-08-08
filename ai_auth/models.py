@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries,\
                             TaskRoleLevel,Timezones,SupportType,JobPositions,\
                             SupportTopics,Role,Currencies,ApiServiceList,SuggestionType,Suggestion
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, pre_delete
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -23,6 +23,7 @@ from django.db.models.constraints import UniqueConstraint
 from simple_history.models import HistoricalRecords
 from ai_openai.signals import text_gen_credit_deduct
 from django.conf import settings
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -535,6 +536,15 @@ class InternalMember(models.Model):
 
     def __str__(self):
         return self.internal_member.email
+    
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'check_role_{self.team.owner.id}_*',
+        ]
+        return cache_keys
+
+post_save.connect(invalidate_cache_on_save, sender=InternalMember)
+pre_delete.connect(invalidate_cache_on_delete, sender=InternalMember) 
 
 
 def default_date_hired_editor_expiry():
@@ -562,6 +572,15 @@ class HiredEditors(models.Model):
     @property
     def owner_pk(self):
         return self.user.id
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'check_role_{self.user.id}_*',
+        ]
+        return cache_keys
+
+post_save.connect(invalidate_cache_on_save, sender=HiredEditors)
+pre_delete.connect(invalidate_cache_on_delete, sender=HiredEditors) 
 
 class ReferredUsers(models.Model):
     email = models.EmailField()
