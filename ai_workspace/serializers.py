@@ -508,6 +508,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
 	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
+	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
@@ -652,7 +653,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if self.context.get("request")!=None:
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
-			cache_key = f'check_role_{instance.id}_{user.pk}'
+			cache_key = f'check_role_{user.id}_{instance.pk}'
 			cached_value = cache.get(cache_key)
 			if cached_value is None:
 				if instance.team :
