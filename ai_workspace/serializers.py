@@ -1192,9 +1192,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_bid_job_detail_info(self,obj):
 		cache_key = f'bid_job_detail_{obj.job.project.pk}'
+		computed_key = f'bid_job_computed_{obj.job.project.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in bid_jb---------->",cached_value)
-		if cached_value is None:
+		print("computed in bid_jb------------------>",computation_done)
+		if cached_value is None and computation_done is None:
 			from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 			if obj.job.project.proj_detail.all():
 				qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
@@ -1203,7 +1206,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = None#"null"#None#'Not exists'
 			print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key, True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value
 
 	# def get_bid_job_detail_info(self,obj):
 	# 	if obj.job.project.proj_detail.all():
@@ -1220,9 +1228,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		print("User-------->",user)
 		# user = AiUser.objects.get(id=109)
 		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
+		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in Task Assign Info---------->",cached_value)
-		if cached_value is None:
+		print("computed in Task Assign Info------------------>",computation_done)
+		if cached_value is None and computation_done is None:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
 			print("TaskAssign----------->",task_assign)
 			if task_assign:
@@ -1239,7 +1250,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
 			else: cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key,True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value
+		#return cached_value
 
 	def get_task_reassign_info(self, obj):
 		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
@@ -1247,10 +1264,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		project_managers.append(user)
 		print("Pms----------->",project_managers)
 		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
+		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in Task ReAssign Info---------->",cached_value)
+		print("computed in Task ReAssign Info------------------>",computation_done)
 		# user = AiUser.objects.get(id=109)
-		if cached_value is None:
+		if cached_value is None and computation_done is None:
 			if user.is_agency == True:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True) & Q(task_assign_info__assigned_by__in = project_managers))
 				if task_assign:
@@ -1268,7 +1288,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					# else:return None
 				else:cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key,True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value	
+		#return cached_value
 
 	# def to_representation(self, instance):
 
