@@ -1603,6 +1603,8 @@ class TaskAssign(models.Model):
         cache_keys = [
             f'task_assign_info_*',
             f'task_reassign_info_*',
+            f'task_reassign_computed_*',
+            f'task_assign_computed_*',
             f'pr_progress_property_{self.task.job.project.id}_*',
             f'pr_assigned_{self.task.job.project.pk}'
         ]
@@ -1663,6 +1665,8 @@ class TaskAssignInfo(models.Model):
         cache_keys = [
             f'task_assign_info_*',
             f'task_reassign_info_*',
+            f'task_reassign_computed_*',
+            f'task_assign_computed_*',
             f'pr_progress_property_{self.task_assign.task.job.project.id}_*',
             f'pr_assigned_{self.task_assign.task.job.project.pk}'
         ]
