@@ -46,11 +46,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),#crontab(hour=1, minute=15),
         'args': (),
     },
-    'sync-bi-data': {
-        'task': 'ai_auth.tasks.sync_user_details_bi',
-        'schedule': crontab(minute=0, hour='*/4'),#crontab(hour=1, minute=15),
-        'args': (),
-    },
     # 'run-every-15-minutes': {
     #     'task': 'ai_auth.tasks.send_notification_email_for_unread_messages',
     #     'schedule': crontab(minute='*/15'),
