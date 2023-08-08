@@ -194,7 +194,6 @@ weasyprint==55.0
 gevent
 indic-nlp-library==0.81
 google.cloud.storage==1.44.0
-mutagen
 hunspell
 htmldocx
 quill-delta[html]
@@ -208,7 +207,6 @@ pdf2image==1.16.0
 PyPDF2==2.11.1
 google-cloud-vision==3.1.4
 google-cloud==0.34.0
-translate-toolkit==3.7.3
 rapidfuzz
 pyyaml
 django-silk
