@@ -901,18 +901,11 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             print(project.team.get_project_manager)
             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
                 return project.get_tasks
-            # elif self.request.user in project.team.get_project_manager:
-            #     return project.get_tasks
             else:
-                return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+                return project.get_tasks.filter(assign_to=user_1)
         else:
             print("Indivual")
-            # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-            #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-            return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-
+            return project.get_tasks.filter(assign_to=user_1)
 
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
@@ -4554,3 +4547,30 @@ class AssertList(viewsets.ModelViewSet):
     #         res = "CatchMiss"
     #     return res
 
+# @staticmethod
+#     def get_tasks_by_projectid(request, pk):
+#         project = get_object_or_404(Project.objects.all(),
+#                     id=pk)
+#         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
+#         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
+#         if project.ai_user == request.user:
+#             print("Owner")
+#             return project.get_tasks
+#         if project.team:
+#             print("Team")
+#             print(project.team.get_project_manager)
+#             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
+#                 return project.get_tasks
+#             # elif self.request.user in project.team.get_project_manager:
+#             #     return project.get_tasks
+#             else:
+#                 return project.get_tasks.filter(assign_to=user_1)
+#                 #return [task for job in project.project_jobs_set.all() for task \
+#                 #    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+#         else:
+#             print("Indivual")
+#             return project.get_tasks.filter(assign_to=user_1)
+#             # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
+#             #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
+#             # return [task for job in project.project_jobs_set.all() for task \
+#             #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
