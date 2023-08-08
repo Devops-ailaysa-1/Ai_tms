@@ -154,3 +154,10 @@ class StableDiffusionAPI(models.Model):
     sampler=models.CharField(max_length=100,blank=True,null=True)
     def __str__(self) -> str:
         return self.used_api
+    
+
+class CustomImageGenerationCategoty(models.Model):
+    name=models.CharField(max_length=200,blank=True,null=True)
+    def __str__(self) -> str:
+        return self.name
+    

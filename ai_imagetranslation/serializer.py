@@ -544,9 +544,5 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     return instance
 
 
+ 
 
-
-
-image_json = {
-    "photography":["",""],
-}
