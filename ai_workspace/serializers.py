@@ -605,12 +605,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
 					tasks = instance.get_tasks
 				else:
-					tasks = instance.get_tasks.filter(assign_to_id=user_1)
+					tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
 					# tasks = [task for job in instance.project_jobs_set.all() for task \
 					# 		in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
 			else:
-				tasks = instance.get_tasks.filter(assign_to_id=user_1)
+				tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
 			#print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
 			return res
@@ -637,9 +637,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
 						tasks = instance.get_tasks
 					else:
-						tasks = instance.get_tasks.filter(assign_to_id=user_1)
+						tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
 				else:
-					tasks = instance.get_tasks.filter(assign_to_id=user_1)
+					tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
 				cached_value = instance.pr_progress(tasks)
 				print("cached_value_calculated--------------->",cached_value)
 				cache.set(cache_key, cached_value)#, timeout=60)
