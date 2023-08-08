@@ -2,6 +2,7 @@ import os
 import random
 import re
 import string
+from django.db.models import Prefetch
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
@@ -18,7 +19,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Q, Sum
 from django.db.models.fields.files import FileField
-from django.db.models.signals import post_save, pre_save, post_delete
+from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
 from django.shortcuts import reverse
 from django.utils.functional import cached_property
 from django.db import transaction
@@ -33,7 +34,7 @@ from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
-    check_job_file_version_has_same_project)
+    check_job_file_version_has_same_project,invalidate_cache_on_save,invalidate_cache_on_delete)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
 from django.db.models.fields import Field
@@ -524,15 +525,21 @@ class Project(models.Model):
 
     @property
     def get_assignable_tasks_exists(self):
-        tasks=[]
-        for job in self.project_jobs_set.all():
-            for task in job.job_tasks_set.all():
-               if (task.job.target_language == None):
-                   if (task.file.get_file_extension == '.mp3'):
-                       tasks.append(task)
-                   else:pass
-               else:tasks.append(task)
-        return True if tasks else False
+        cache_key = f'pr_get_assignable_tasks_exists_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value in Assignable---------->",cached_value)
+        if cached_value is None:
+            tasks=[]
+            for job in self.project_jobs_set.all():
+                for task in job.job_tasks_set.all():
+                    if (task.job.target_language == None):
+                        if (task.file.get_file_extension == '.mp3'):
+                            tasks.append(task)
+                        else:pass
+                    else:tasks.append(task)
+            cached_value = True if tasks else False
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def get_mtpe_tasks(self):
@@ -541,9 +548,12 @@ class Project(models.Model):
 
     @property
     def get_tasks(self):
-        task_list =  [task for job in self.project_jobs_set.all() for task \
-            in job.job_tasks_set.all()]
-        return sorted(task_list, key=lambda x: x.id)
+        task_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
+                Prefetch('job', queryset=Job.objects.select_related('project')))
+        return task_list
+        # task_list =  [task for job in self.project_jobs_set.all() for task \
+        #     in job.job_tasks_set.all()]
+        #return sorted(task_list, key=lambda x: x.id)
 
     @property
     def get_source_only_tasks(self):
@@ -556,8 +566,14 @@ class Project(models.Model):
 
     @property
     def tasks_count(self):
-        return len([task for job in self.project_jobs_set.all() for task \
-            in job.job_tasks_set.all()])
+        cache_key = f'pr_tasks_count_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value in tasks_count---------->",cached_value)
+        if cached_value is None:
+            cached_value = len([task for job in self.project_jobs_set.all() for task \
+                                in job.job_tasks_set.all()])
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def files_jobs_choice_url(self):
@@ -680,14 +696,18 @@ class Project(models.Model):
     @property
     def assigned(self):
         if self.get_tasks:
-            for task in self.get_tasks:
-                try:
+            cache_key = f'pr_assigned_{self.pk}'
+            cached_value = cache.get(cache_key)
+            print("Cached Value in assigned---------->",cached_value)
+            if cached_value is None:
+                cached_value =False # Initialize
+                for task in self.get_tasks:
                     if task.task_info.filter(task_assign_info__isnull=False):
-                    # if task.task_assign_info:
-                        return True
-                except:
-                    pass
-            return False
+                        cached_value = True
+                        break
+                print("CV in  prop--------->",cached_value)
+                cache.set(cache_key,cached_value)
+            return cached_value
         else:
             return False
 
@@ -971,9 +991,9 @@ class Job(models.Model):
 
     @cached_property
     def source__language(self):
-        #print("called first time!!!")
+        print("called first time!!!")
         # return self.source_language.locale.first().language
-        return self.source_language_code
+        return self.source_language
 
     @property
     def type_of_job(self):
@@ -1195,11 +1215,23 @@ class Task(models.Model):
         if not self.ai_taskid:
             self.ai_taskid = create_task_id()
         super().save()#*args, **kwargs)
-        cache_key = f'audio_file_exists_{self.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+        # cache_key_1 = f'audio_file_exists_{self.pk}'
+        # cache_key_2 = f'pr_tasks_count_{self.job.project.pk}'
+        # cache.delete(cache_key_1)
+        # cache.delete(cache_key_2)
+        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
-    @cached_property
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'audio_file_exists_{self.pk}',
+            f'pr_tasks_count_{self.job.project.pk}',
+            f'pr_progress_property_{self.job.project.id}_*',
+            f'pr_get_assignable_tasks_exists_{self.job.project.pk}',
+            f'pr_assigned_{self.job.project.pk}'
+        ]
+        return cache_keys
+
+    @property
     def converted_audio_file_exists(self):
         cache_key = f'audio_file_exists_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1207,7 +1239,7 @@ class Task(models.Model):
             if self.document:
                 cached_value = self.document.converted_audio_file_exists
             else:
-                cached_value = None#'Not exists'
+                cached_value = None#'null'#None#'Not exists'
             cache.set(cache_key, cached_value)
         return cached_value
 
@@ -1256,7 +1288,7 @@ class Task(models.Model):
         try:return self.document.doc_credit_check_open_alert
         except:return None
 
-    @cached_property
+    @property
     def transcribed(self):
         cache_key = f'transcribed_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1267,12 +1299,12 @@ class Task(models.Model):
                     if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
                         cached_value = True
                     else:cached_value = False
-                else:cached_value = None#"Not exists"
-            else:cached_value= None#"Not exists"
+                else:cached_value = None#"null"#"Not exists"
+            else:cached_value= None#"null"#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
-    @cached_property
+    @property
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
         cached_value = cache.get(cache_key)
@@ -1284,9 +1316,9 @@ class Task(models.Model):
                         if self.task_transcript_details.exists():
                             catched_value = False
                         else:catched_value =  True
-                    else:catched_value = None# "Not exists"
-                else:catched_value =  None#"Not exists"
-            else:catched_value =  None#"Not exists"
+                    else:catched_value = None#"null"# None# "Not exists"
+                else:catched_value =  None#"null"#None#"Not exists"
+            else:catched_value = None#"null"# None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1351,7 +1383,7 @@ class Task(models.Model):
     def processor_name(self):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
-    @cached_property
+    @property
     def task_word_count(self):
         cache_key = f'task_word_count_{self.pk}'
         if self.document_id:
@@ -1369,7 +1401,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_word_count
         else:
-            cached_value = None #"Not exists"
+            cached_value = None#"null"#None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1392,7 +1424,7 @@ class Task(models.Model):
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_char_count
         else:
-            cached_value =None #"Not exists"
+            cached_value =None#"null"#None #"Not exists"
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1426,7 +1458,7 @@ class Task(models.Model):
         except:
             return None
 
-    @cached_property
+    @property
     def corrected_segment_count(self):
         cache_key = f'seg_progress_{self.document.pk}' if self.document else None
         cached_value = cache.get(cache_key)
@@ -1461,7 +1493,7 @@ class Task(models.Model):
             cache.set(cache_key,cached_value)
         return cached_value
 
-    @cached_property
+    @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
             data = self.corrected_segment_count
@@ -1496,6 +1528,8 @@ class Task(models.Model):
         return self
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+post_save.connect(invalidate_cache_on_save, sender=Task)
+pre_delete.connect(invalidate_cache_on_delete, sender=Task)
 
 def my_doc_image_upload_path(instance, filename):
     file_path = os.path.join(instance.ai_user.uid,"MyDocImages", filename)
@@ -1608,9 +1642,18 @@ class TaskAssign(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache.delete_pattern('task_assign_info_*')
-        cache.delete_pattern('task_reassign_info_*')
-        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_assign_info_*',
+            f'task_reassign_info_*',
+            f'pr_progress_property_{self.task.job.project.id}_*',
+            f'pr_assigned_{self.task.job.project.pk}'
+        ]
+        return cache_keys
+        # cache.delete_pattern('task_assign_info_*')
+        # cache.delete_pattern('task_reassign_info_*')
+        # cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
         # cache_key = f'task_assign_info_{self.task.pk}'
         # cache.delete(cache_key)
 
@@ -1622,7 +1665,8 @@ class TaskAssign(models.Model):
     def task_obj(self):
         return self.task
 
-    
+post_save.connect(invalidate_cache_on_save, sender=TaskAssign)
+pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssign) 
     # task_assign_obj = TaskAssign.objects.filter(
     #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
     #     Q(step_id=1)
@@ -1658,9 +1702,18 @@ class TaskAssignInfo(models.Model):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()#*args, **kwargs)
-        cache.delete_pattern('task_assign_info_*')
-        cache.delete_pattern('task_reassign_info_*')
-        cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.job.project.id}_*')
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_assign_info_*',
+            f'task_reassign_info_*',
+            f'pr_progress_property_{self.task_assign.task.job.project.id}_*',
+            f'pr_assigned_{self.task_assign.task.job.project.pk}'
+        ]
+        return cache_keys
+        # cache.delete_pattern('task_assign_info_*')
+        # cache.delete_pattern('task_reassign_info_*')
+        # cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.job.project.id}_*')
         # cache_key = f'task_assign_info_{self.task_assign.task.pk}'
         # cache.delete(cache_key)
 
@@ -1672,7 +1725,8 @@ class TaskAssignInfo(models.Model):
     def task_obj(self):
         return self.task_assign.task_obj
 
-
+post_save.connect(invalidate_cache_on_save, sender=TaskAssignInfo)
+pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssignInfo)
 # class TaskReassign(models.Model):
 #     YET_TO_START = 1
 #     IN_PROGRESS = 2
@@ -1822,10 +1876,19 @@ class TaskDetails(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache_key = f'task_word_count_{self.task.pk}'
-        cache.delete(cache_key)
-        cache_key = f'task_char_count_{self.task.pk}'
-        cache.delete(cache_key)
+
+    def generate_cache_keys(self):
+        cache_keys=[
+            f'task_word_count_{self.task.pk}',
+            f'task_char_count_{self.task.pk}'
+        ]
+        return cache_keys
+post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
+pre_delete.connect(invalidate_cache_on_delete, sender=TaskDetails)
+        # cache_key_1 = f'task_word_count_{self.task.pk}'
+        # cache.delete(cache_key_1)
+        # cache_key_2 = f'task_char_count_{self.task.pk}'
+        # cache.delete(cache_key_2)
 
 
 def audio_file_path(instance, filename):
@@ -1860,14 +1923,24 @@ class TaskTranscriptDetails(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache_key = f'audio_file_exists_{self.task.pk}'
-        cache.delete(cache_key)
-        cache_key = f'transcribed_{self.task.pk}'
-        cache.delete(cache_key)
-        cache_key = f'txt_to_spc_convert_{self.task.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'audio_file_exists_{self.task.pk}',
+            f'transcribed_{self.task.pk}',
+            f'txt_to_spc_convert_{self.task.pk}',
+            f'pr_progress_property_{self.task.job.project.id}_*'
+        ]
+        return cache_keys
+        # cache_key_1 = f'audio_file_exists_{self.task.pk}'
+        # cache.delete(cache_key_1)
+        # cache_key_2 = f'transcribed_{self.task.pk}'
+        # cache.delete(cache_key_2)
+        # cache_key_3 = f'txt_to_spc_convert_{self.task.pk}'
+        # cache.delete(cache_key_3)
+        # cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+post_save.connect(invalidate_cache_on_save, sender=TaskTranscriptDetails)
+pre_delete.connect(invalidate_cache_on_delete, sender=TaskTranscriptDetails) 
 
     # @property
     # def writer_filename(self):

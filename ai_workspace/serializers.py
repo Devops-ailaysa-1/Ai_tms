@@ -497,7 +497,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
 	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
-	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	progress = serializers.SerializerMethodField()
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
@@ -1035,9 +1034,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         if user1.is_internal_member == False:
           print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
           generate_client_po([i.id for i in task_assign_info])
-          task_assing_role_ls([i.id for i in task_assign_info])
-        else:
-          task_assing_role_ls([i.id for i in task_assign_info])
+          #task_assing_role_ls([i.id for i in task_assign_info])
+        #else:
+          #task_assing_role_ls([i.id for i in task_assign_info])
         return task_assign_info
 
 
@@ -1206,7 +1205,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
 				cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
 			else:
-				cached_value = None#'Not exists'
+				cached_value = None#"null"#None#'Not exists'
 			print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
 		return cached_value
@@ -1243,7 +1242,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					try:task_assign_info.append(i.task_assign_info)
 					except:pass
 				cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
-			else: cached_value = None#"Not exists"
+			else: cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
 		return cached_value
 
@@ -1265,14 +1264,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 						try:task_assign_info.append(i.task_assign_info)
 						except:pass
 					cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
-				else: cached_value = None#"Not exists"
+				else: cached_value =None#"null"# None#"Not exists"
 			else:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 				print("Task Assign-------->",task_assign)
 				if task_assign and task_assign.filter(assign_to=user):
 					cached_value = True
 					# else:return None
-				else:cached_value = None#"Not exists"
+				else:cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
 		return cached_value
 
