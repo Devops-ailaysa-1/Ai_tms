@@ -271,59 +271,6 @@ class Project(models.Model):
             return super().save()
 
 
-            # if not self.ai_project_id:
-            #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
-
-            # if not self.project_name:
-            #     queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
-            #     count = queryset.count()
-            #     print("Count for pr name-------->",count)
-            #     self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
-            #     print("Pr Name--------->",self.project_name)
-           
-            # project_count = self.get_queryset_count_safely()
-            # print("Pr Count if exists---------->",project_count)
-            # if project_count != 0:
-            #     count_num = self.get_count_num_safely()
-            #     print("Already Exists Count_num--------->",count_num)
-            #     self.project_name = self.project_name + "(" + str(count_num) + ")"
-            #     print("Name---------->",self.project_name)
-            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
-            # cache.delete(cache_key)
-            # return super().save()
-
-    # @transaction.atomic
-    # def get_count_for_project_name_safely(self):
-    #     query = Project.objects.filter(ai_user=self.ai_user)
-    #     queryset = query.select_for_update()
-    #     count = queryset.count()
-    #     #print("Count------------>",count)
-    #     return count
-
-    # @transaction.atomic
-    # def get_queryset_count_safely(self):
-    #     if self.id:
-    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
-    #     else:
-    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
-    #     queryset = queryset.select_for_update()
-    #     count = queryset.count()
-    #     #print("Count1---------->",count)
-    #     return count
-
-    # @transaction.atomic
-    # def get_count_num_safely(self):
-    #     if self.id:
-    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
-    #                         ai_user=self.ai_user).exclude(id=self.id)
-    #     else:
-    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
-    #                         ai_user=self.ai_user)
-    #     queryset = queryset.select_for_update()
-    #     count_num = queryset.count()
-    #     #print("Count_num------------>",count_num)
-    #     return count_num
-
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
@@ -336,12 +283,7 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    # def convert_to_tuple(self, value):
-    #     if isinstance(value, list):
-    #         return tuple(self.convert_to_tuple(item) for item in value)
-    #     return value
-
-    # @property
+  
     def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
@@ -365,7 +307,7 @@ class Project(models.Model):
                         count+=1
                 else:
                     return "Yet to start"
-            if len(tasks) == count:
+            if tasks.count() == count:
                 return "Completed"
             else:
                 return "In Progress"
@@ -378,12 +320,12 @@ class Project(models.Model):
             assigned_jobs = [i.job.id for i in tasks]
             docs = Document.objects.filter(job__in=assigned_jobs).all()
             #docs = Document.objects.filter(job__project_id=self.id).all()
-            tasks = len(tasks)
+            #tasks = len(tasks)
             total_segments = 0
             if not docs:
                 return "Yet to start"
             else:
-                if docs.count() == tasks:
+                if docs.count() == tasks.count():
 
                     total_seg_count = 0
                     confirm_count  = 0
@@ -421,83 +363,6 @@ class Project(models.Model):
                 return "In Progress"
                
 
-    #@cached_property
-    # @property
-    # def progress(self):
-    #     from ai_workspace.api_views import voice_project_progress
-    #     if self.project_type_id == 3:
-    #         terms = self.glossary_project.term.all()
-    #         if terms.count() == 0:
-    #             return "Yet to start"
-    #         elif terms.count() == terms.filter(Q(tl_term='') | Q(tl_term__isnull = True)).count():
-    #             return "Yet to start"
-    #         else:
-    #             if terms.count() == terms.filter(tl_term__isnull = False).exclude(tl_term='').count():
-    #                 return "Completed"
-    #             else:
-    #                 return "In Progress"
-
-    #     elif self.project_type_id == 5:
-    #         count=0
-    #         for i in self.get_tasks:
-    #             obj = ExpressProjectDetail.objects.filter(task=i)
-    #             if obj.exists():
-    #                 if obj.first().target_text!=None:
-    #                     count+=1
-    #             else:
-    #                 return "Yet to start"
-    #         if len(self.get_tasks) == count:
-    #             return "Completed"
-    #         else:
-    #             return "In Progress"
-
-    #     elif self.project_type_id == 4:
-    #         rr = voice_project_progress(self)
-    #         return rr
-
-    #     else:
-    #         docs = Document.objects.filter(job__project_id=self.id).all()
-    #         tasks = len(self.get_tasks)
-    #         total_segments = 0
-    #         if not docs:
-    #             return "Yet to start"
-    #         else:
-    #             if docs.count() == tasks:
-
-    #                 total_seg_count = 0
-    #                 confirm_count  = 0
-    #                 confirm_list = [102, 104, 106, 110, 107]
-
-    #                 segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
-
-    #                 for seg in segs:
-
-    #                     if (seg.is_merged == True and seg.is_merge_start != True):
-    #                         continue
-
-    #                     elif seg.is_split == True:
-    #                         total_seg_count += 2
-
-    #                     else:
-    #                         total_seg_count += 1
-
-    #                     seg_new = seg.get_active_object()
-
-    #                     if seg_new.is_split == True:
-    #                         for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
-    #                             if split_seg.status_id in confirm_list:
-    #                                 confirm_count += 1
-
-    #                     elif seg_new.status_id in confirm_list:
-    #                         confirm_count += 1
-
-    #             else:
-    #                 return "In Progress"
-
-    #         if total_seg_count == confirm_count:
-    #             return "Completed"
-    #         else:
-    #             return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -514,13 +379,12 @@ class Project(models.Model):
     @property
     def get_assignable_tasks(self):
         tasks=[]
-        for job in self.project_jobs_set.all():
-            for task in job.job_tasks_set.all():
-               if (task.job.target_language == None):
-                   if (task.file.get_file_extension == '.mp3'):
-                       tasks.append(task)
-                   else:pass
-               else:tasks.append(task)
+        for task in self.get_tasks:
+            if (task.job.target_language == None):
+                if (task.file.get_file_extension == '.mp3'):
+                    tasks.append(task)
+                else:pass
+            else:tasks.append(task)
         return tasks
 
     @property
@@ -530,50 +394,52 @@ class Project(models.Model):
         print("Cached Value in Assignable---------->",cached_value)
         if cached_value is None:
             tasks=[]
-            for job in self.project_jobs_set.all():
-                for task in job.job_tasks_set.all():
-                    if (task.job.target_language == None):
-                        if (task.file.get_file_extension == '.mp3'):
-                            tasks.append(task)
-                        else:pass
-                    else:tasks.append(task)
+            for task in self.get_tasks:
+                if (task.job.target_language == None):
+                    if (task.file.get_file_extension == '.mp3'):
+                        tasks.append(task)
+                    else:pass
+                else:tasks.append(task)
             cached_value = True if tasks else False
             cache.set(cache_key,cached_value)
         return cached_value
 
     @property
     def get_mtpe_tasks(self):
-        return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
-            in job.job_tasks_set.all()]
+        return self.get_tasks.filter(~Q(job__target_language=None))
+      
 
-    @property
+    @cached_property#property
     def get_tasks(self):
-        task_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
-                Prefetch('job', queryset=Job.objects.select_related('project')))
-        return task_list
-        # task_list =  [task for job in self.project_jobs_set.all() for task \
-        #     in job.job_tasks_set.all()]
-        #return sorted(task_list, key=lambda x: x.id)
+        tasks_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
+                     Prefetch('job', queryset=Job.objects.select_related('project')))
+        return tasks_list
+        # cache_key = f'pr_get_tasks_{self.pk}'
+        # cached_value = cache.get(cache_key)
+        # print("Cached Value in get_tasks---------->",cached_value)
+        # if cached_value is None:
+        #     cached_value = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
+        #             Prefetch('job', queryset=Job.objects.select_related('project')))
+        #     cache.set(cache_key,cached_value)
+        # return cached_value
+        
 
     @property
     def get_source_only_tasks(self):
-        tasks=[]
-        for job in self.project_jobs_set.all():
-            for task in job.job_tasks_set.all():
-               if (task.job.target_language == None):
-                       tasks.append(task)
+        tasks_id = self.project_jobs_set.filter(job_tasks_set__job__target_language=None).select_related('job_tasks_set__job').values_list('job_tasks_set', flat=True)
+        tasks = Task.objects.filter(id__in = tasks_id)
         return tasks
 
     @property
     def tasks_count(self):
-        cache_key = f'pr_tasks_count_{self.pk}'
-        cached_value = cache.get(cache_key)
-        print("Cached Value in tasks_count---------->",cached_value)
-        if cached_value is None:
-            cached_value = len([task for job in self.project_jobs_set.all() for task \
-                                in job.job_tasks_set.all()])
-            cache.set(cache_key,cached_value)
-        return cached_value
+        return self.get_tasks.count()
+        # cache_key = f'pr_tasks_count_{self.pk}'
+        # cached_value = cache.get(cache_key)
+        # print("Cached Value in tasks_count---------->",cached_value)
+        # if cached_value is None:
+        #     cached_value = self.get_tasks.count() 
+        #     cache.set(cache_key,cached_value)
+        # return cached_value
 
     @property
     def files_jobs_choice_url(self):
@@ -629,15 +495,6 @@ class Project(models.Model):
                     return False
             return True
 
-    # @property
-    # def assigned_date(self):
-    #     assigned = TaskAssignInfo.objects.filter(task_assign__task__job__project=self).order_by('-created_at')[0].created_at
-    #     if assigned > self.created_at:
-    #         return assigned
-    #     else:
-    #         return self.created_at
-
-
     @property
     def tmx_files_path(self):
         return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
@@ -660,13 +517,10 @@ class Project(models.Model):
 
     @property
     def is_all_doc_opened(self):
-        if self.get_tasks:
-            for task in self.get_tasks:
-                if bool(task.document) == False:
-                    return False
-            return True
-        else:
-            return False
+        docs = self.get_tasks.filter(document__isnull=True)
+        if docs:return False
+        else: return True
+      
 
     @property
     def text_to_speech_source_download(self):
@@ -679,7 +533,7 @@ class Project(models.Model):
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
             return True
-        if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
+        if self.get_tasks.count() == self.task_project.count() and self.get_tasks.count() != 0:
             return True
         else:
             return False
@@ -696,20 +550,27 @@ class Project(models.Model):
     @property
     def assigned(self):
         if self.get_tasks:
-            cache_key = f'pr_assigned_{self.pk}'
-            cached_value = cache.get(cache_key)
-            print("Cached Value in assigned---------->",cached_value)
-            if cached_value is None:
-                cached_value =False # Initialize
-                for task in self.get_tasks:
-                    if task.task_info.filter(task_assign_info__isnull=False):
-                        cached_value = True
-                        break
-                print("CV in  prop--------->",cached_value)
-                cache.set(cache_key,cached_value)
-            return cached_value
-        else:
-            return False
+            assigned = False
+            for task in self.get_tasks:
+                if task.task_info.filter(task_assign_info__isnull=False):
+                    assigned = True
+                    break
+            return assigned
+        else: return False
+        #     cache_key = f'pr_assigned_{self.pk}'
+        #     cached_value = cache.get(cache_key)
+        #     print("Cached Value in assigned---------->",cached_value)
+        #     if cached_value is None:
+        #         cached_value =False # Initialize
+        #         for task in self.get_tasks:
+        #             if task.task_info.filter(task_assign_info__isnull=False):
+        #                 cached_value = True
+        #                 break
+        #         print("CV in  prop--------->",cached_value)
+        #         cache.set(cache_key,cached_value)
+        #     return cached_value
+        # else:
+        #     return False
 
     @property
     def get_project_file_create_type(self):
@@ -719,7 +580,7 @@ class Project(models.Model):
     def clone_available(self):
         from ai_glex.models import TermsModel
         if self.project_type_id == 3:
-            if len(self.get_tasks)>1:
+            if self.get_tasks.count() >1:
                 jobs = [i.job.id for i in self.get_tasks]
                 if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
                     return True
@@ -1227,7 +1088,8 @@ class Task(models.Model):
             f'pr_tasks_count_{self.job.project.pk}',
             f'pr_progress_property_{self.job.project.id}_*',
             f'pr_get_assignable_tasks_exists_{self.job.project.pk}',
-            f'pr_assigned_{self.job.project.pk}'
+            f'pr_assigned_{self.job.project.pk}',
+            f'pr_get_tasks_{self.job.project.pk}'
         ]
         return cache_keys
 
@@ -2175,3 +2037,182 @@ class ExpressProjectAIMT(models.Model):
 #     tar_text_unit = models.IntegerField()
 #     tar_text = models.TextField(null=True,blank=True)
 #     seq_id=models.IntegerField()
+
+
+
+ #@cached_property
+    # @property
+    # def progress(self):
+    #     from ai_workspace.api_views import voice_project_progress
+    #     if self.project_type_id == 3:
+    #         terms = self.glossary_project.term.all()
+    #         if terms.count() == 0:
+    #             return "Yet to start"
+    #         elif terms.count() == terms.filter(Q(tl_term='') | Q(tl_term__isnull = True)).count():
+    #             return "Yet to start"
+    #         else:
+    #             if terms.count() == terms.filter(tl_term__isnull = False).exclude(tl_term='').count():
+    #                 return "Completed"
+    #             else:
+    #                 return "In Progress"
+
+    #     elif self.project_type_id == 5:
+    #         count=0
+    #         for i in self.get_tasks:
+    #             obj = ExpressProjectDetail.objects.filter(task=i)
+    #             if obj.exists():
+    #                 if obj.first().target_text!=None:
+    #                     count+=1
+    #             else:
+    #                 return "Yet to start"
+    #         if len(self.get_tasks) == count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
+
+    #     elif self.project_type_id == 4:
+    #         rr = voice_project_progress(self)
+    #         return rr
+
+    #     else:
+    #         docs = Document.objects.filter(job__project_id=self.id).all()
+    #         tasks = len(self.get_tasks)
+    #         total_segments = 0
+    #         if not docs:
+    #             return "Yet to start"
+    #         else:
+    #             if docs.count() == tasks:
+
+    #                 total_seg_count = 0
+    #                 confirm_count  = 0
+    #                 confirm_list = [102, 104, 106, 110, 107]
+
+    #                 segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
+    #                 for seg in segs:
+
+    #                     if (seg.is_merged == True and seg.is_merge_start != True):
+    #                         continue
+
+    #                     elif seg.is_split == True:
+    #                         total_seg_count += 2
+
+    #                     else:
+    #                         total_seg_count += 1
+
+    #                     seg_new = seg.get_active_object()
+
+    #                     if seg_new.is_split == True:
+    #                         for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+    #                             if split_seg.status_id in confirm_list:
+    #                                 confirm_count += 1
+
+    #                     elif seg_new.status_id in confirm_list:
+    #                         confirm_count += 1
+
+    #             else:
+    #                 return "In Progress"
+
+    #         if total_seg_count == confirm_count:
+    #             return "Completed"
+    #         else:
+    #             return "In Progress"
+
+
+     # if not self.ai_project_id:
+            #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+
+            # if not self.project_name:
+            #     queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
+            #     count = queryset.count()
+            #     print("Count for pr name-------->",count)
+            #     self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
+            #     print("Pr Name--------->",self.project_name)
+           
+            # project_count = self.get_queryset_count_safely()
+            # print("Pr Count if exists---------->",project_count)
+            # if project_count != 0:
+            #     count_num = self.get_count_num_safely()
+            #     print("Already Exists Count_num--------->",count_num)
+            #     self.project_name = self.project_name + "(" + str(count_num) + ")"
+            #     print("Name---------->",self.project_name)
+            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            # cache.delete(cache_key)
+            # return super().save()
+
+    # @transaction.atomic
+    # def get_count_for_project_name_safely(self):
+    #     query = Project.objects.filter(ai_user=self.ai_user)
+    #     queryset = query.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count------------>",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_queryset_count_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count1---------->",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_count_num_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count_num = queryset.count()
+    #     #print("Count_num------------>",count_num)
+    #     return count_num
+
+      # def convert_to_tuple(self, value):
+    #     if isinstance(value, list):
+    #         return tuple(self.convert_to_tuple(item) for item in value)
+    #     return value
+
+    # @property
+
+        # tasks=[]
+        # for job in self.project_jobs_set.all():
+        #     for task in job.job_tasks_set.all():
+        #        if (task.job.target_language == None):
+        #                tasks.append(task)
+        # return tasks
+
+         #len([task for job in self.project_jobs_set.all() for task \
+                            #    in job.job_tasks_set.all()])
+
+                # for job in self.project_jobs_set.all():
+            #     for task in job.job_tasks_set.all():
+            #         if (task.job.target_language == None):
+            #             if (task.file.get_file_extension == '.mp3'):
+            #                 tasks.append(task)
+            #             else:pass
+            #         else:tasks.append(task)
+
+              # if self.get_tasks:
+        #     for task in self.get_tasks:
+        #         if bool(task.document) == False:
+        #             return False
+        #     return True
+        # else:
+        #     return False
+            # @property
+    # def assigned_date(self):
+    #     assigned = TaskAssignInfo.objects.filter(task_assign__task__job__project=self).order_by('-created_at')[0].created_at
+    #     if assigned > self.created_at:
+    #         return assigned
+    #     else:
+    #         return self.created_at
+      # return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
+        #     in job.job_tasks_set.all()]
+        # task_list =  [task for job in self.project_jobs_set.all() for task \
+        #     in job.job_tasks_set.all()]
+        #return sorted(task_list, key=lambda x: x.id)
