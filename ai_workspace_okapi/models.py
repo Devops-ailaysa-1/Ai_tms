@@ -3,7 +3,7 @@ import re
 from django.db import transaction
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.utils.functional import cached_property
 from datetime import datetime, date
 from ai_auth.models import AiUser
@@ -12,6 +12,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 from django.core.cache import cache
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 
 
 class TaskStatus(models.Model):
@@ -399,11 +400,20 @@ class Document(models.Model):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
         super().save(*args, **kwargs)
-        cache_key = f'task_word_count_{self.pk}'
-        cache.delete(cache_key)
-        cache_key = f'task_char_count_{self.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_audio_output_file_{self.pk}',
+            f'task_word_count_{self.pk}',
+            f'task_char_count_{self.pk}',
+            f'pr_progress_property_{self.job.project.id}_*',
+        ]
+        return cache_keys
+        # cache_key = f'task_word_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache_key = f'task_char_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
 
     def get_user_email(self):
@@ -605,6 +615,9 @@ class Document(models.Model):
     @property
     def task_obj(self):
         return self.task_set.last()
+
+post_save.connect(invalidate_cache_on_save, sender=Document)
+pre_delete.connect(invalidate_cache_on_delete, sender=Document)
 
 class SegmentPageSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,

@@ -3501,7 +3501,7 @@ def voice_project_progress(pr,tasks):
     from ai_workspace_okapi.models import Document, Segment
     count=0
     progress = 0
-    source_tasks = [i for i in tasks if i.job.target_language==None]
+    source_tasks = tasks.filter(job__target_language=None)#[i for i in tasks if i.job.target_language==None]
     if source_tasks:
         if pr.voice_proj_detail.project_type_sub_category_id==1:
             for i in source_tasks:
@@ -3513,7 +3513,7 @@ def voice_project_progress(pr,tasks):
                 if TaskTranscriptDetails.objects.filter(task_id = i).exists():
                     if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
                         count+=1
-    mtpe_tasks = [i for i in tasks if i.job.target_language != None]
+    mtpe_tasks = tasks.filter(~Q(job__target_language=None))#[i for i in tasks if i.job.target_language != None]
     if mtpe_tasks:
         assigned_jobs = [i.job.id for i in mtpe_tasks]
         docs = Document.objects.filter(job__in=assigned_jobs).all()
@@ -3521,7 +3521,7 @@ def voice_project_progress(pr,tasks):
         print(docs)
         if not docs:
             count+=0
-        if docs.count() == len(mtpe_tasks):
+        if docs.count() == mtpe_tasks.count():
             total_seg_count = 0
             confirm_count  = 0
             confirm_list = [102, 104, 106, 110, 107]
@@ -3538,15 +3538,15 @@ def voice_project_progress(pr,tasks):
                         confirm_count += 1
 
             if total_seg_count == confirm_count:
-                count+=len(mtpe_tasks)
+                count+=mtpe_tasks.count()
             else:
                 progress+=1
     #print("count------------>",count)
     if count == 0 and progress == 0:
         return "Yet to Start"
-    elif count == len(tasks):
+    elif count == tasks.count():
         return "Completed"
-    elif count != len(tasks) or progress != 0:
+    elif count != tasks.count() or progress != 0:
         return "In Progress"
 
 

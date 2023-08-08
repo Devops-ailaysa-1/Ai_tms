@@ -9,8 +9,9 @@ from ai_staff.models import AssetUsageTypes
 from django.core.cache import cache
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
-from django.db.models.signals import post_save, pre_save, post_delete
+from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
 from ai_glex.signals import update_words_from_template,delete_words_from_term_model
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
 class Glossary(models.Model):
@@ -99,11 +100,22 @@ class TermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache_key = f'seg_progress_{self.job.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache_key = f'seg_progress_{self.job.pk}'
+    #     cache.delete(cache_key)
+    #     cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.job.pk}',
+            f'pr_progress_property_{self.job.project.id}_*',
+            f'pr_clone_available_{self.job.project.pk}',
+        ]
+        return cache_keys
+
+post_save.connect(invalidate_cache_on_save, sender=TermsModel)
+pre_delete.connect(invalidate_cache_on_delete, sender=TermsModel) 
     # @property
     # def source_language(self):
     #     return str(self.job.source_language)
