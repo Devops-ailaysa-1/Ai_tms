@@ -1,7 +1,8 @@
 from rest_framework import viewsets 
-from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer)
+from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
+                                            BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,CustomImageGenerationCategotySerializer)
 from rest_framework.response import Response
-from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel)
+from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,CustomImageGenerationCategoty)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +13,7 @@ from django.http import JsonResponse
 ###image_upload
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
-
+from rest_framework import generics
 from rest_framework.decorators import api_view,permission_classes
 from ai_canvas.utils import export_download
 from ai_canvas.api_views import download_file_canvas,mime_type,text_download
@@ -377,6 +378,15 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+
+class CustomImageGenerationCategotyListView(generics.ListCreateAPIView):
+    queryset = CustomImageGenerationCategoty.objects.all()
+    serializer_class = CustomImageGenerationCategotySerializer
+
+# class CustomImageGenerationCategotyRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = CustomImageGenerationCategoty.objects.all()
+#     serializer_class = CustomImageGenerationCategotySerializer
 
 photo_options={'Shot_type':['Close-up','Extreme Close-up','POV','Medium shot','Long shot'],
 'Style':['polaroid','monochrome','long exposure','color splash','Tilt-shift'],

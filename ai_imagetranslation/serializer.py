@@ -1,5 +1,5 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
-                                        StableDiffusionAPI,ImageTranslateResizeImage)
+                                        StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationCategoty,CustomImagePromptStyleModifications,ImageModification)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -545,4 +545,20 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
 
  
+class ImageModificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageModification
+        fields = ('id','custom_style_name')
 
+class CustomImagePromptStyleModificationsSerializer(serializers.ModelSerializer):
+    custom_image_style = ImageModificationSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CustomImagePromptStyleModifications
+        fields = ('id', 'modification_cat_name')
+
+class CustomImageGenerationCategotySerializer(serializers.ModelSerializer):
+    category=CustomImagePromptStyleModificationsSerializer(many=True, read_only=True)
+    class Meta:
+        model = CustomImageGenerationCategoty
+        fields = ('id', 'modification_cat_name')

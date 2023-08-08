@@ -160,4 +160,19 @@ class CustomImageGenerationCategoty(models.Model):
     name=models.CharField(max_length=200,blank=True,null=True)
     def __str__(self) -> str:
         return self.name
+
+class CustomImagePromptStyleModifications(models.Model):
+    category=models.ForeignKey(CustomImageGenerationCategoty,on_delete=models.CASCADE,related_name="custom_img_gen_cat")
+    modification_cat_name=models.CharField(max_length=200,blank=True,null=True)
+
+    def __str__(self) -> str:
+        return self.modification_cat_name +" "+self.category.name
     
+
+class ImageModification(models.Model):
+    custom_image_style=models.ForeignKey(CustomImagePromptStyleModifications,on_delete=models.CASCADE,related_name="custom_img_modification")
+    custom_style_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+
+    def __str__(self) -> str:
+        return self.custom_style_name
