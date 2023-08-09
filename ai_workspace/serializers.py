@@ -598,7 +598,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+			user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_tasks
@@ -630,7 +630,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			cached_value = cache.get(cache_key)
 			print("Cached---------->",cached_value)
 			if not cached_value:
-				user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+				user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 				if instance.ai_user == user:
 					tasks = instance.get_tasks
@@ -1222,11 +1222,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		request_user = self.context.get('request').user
-		print("RequestUser----------->",request_user)
-		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and (request_user in request_user.team.get_project_manager) else request_user
-		print("User-------->",user)
+		# request_user = self.context.get('request').user
+		# print("RequestUser----------->",request_user)
+		# user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and (request_user in request_user.team.get_project_manager) else request_user
+		# print("User-------->",user)
 		# user = AiUser.objects.get(id=109)
+		user = self.context.get('user')
 		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
 		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
@@ -1259,10 +1260,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		#return cached_value
 
 	def get_task_reassign_info(self, obj):
-		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
-		user = self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
-		project_managers.append(user)
-		print("Pms----------->",project_managers)
+		project_managers = self.context.get('pr_managers')#self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
+		user = self.context.get('user')#self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
+		#project_managers.append(user)
+		#print("Pms----------->",project_managers)
 		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
 		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
