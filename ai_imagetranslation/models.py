@@ -156,23 +156,35 @@ class StableDiffusionAPI(models.Model):
         return self.used_api
     
 
-class CustomImageGenerationCategoty(models.Model):
-    name=models.CharField(max_length=200,blank=True,null=True)
-    def __str__(self) -> str:
-        return self.name
+class CustomImageGenerationStyle(models.Model):
+    style_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
-class CustomImagePromptStyleModifications(models.Model):
-    category=models.ForeignKey(CustomImageGenerationCategoty,on_delete=models.CASCADE,related_name="custom_img_gen_cat")
-    modification_cat_name=models.CharField(max_length=200,blank=True,null=True)
 
-    def __str__(self) -> str:
-        return self.modification_cat_name +" "+self.category.name
-    
+class ImageStyleCategory(models.Model):
+    style_category_name=models.CharField(max_length=200,blank=True,null=True)
 
-class ImageModification(models.Model):
-    custom_image_style=models.ForeignKey(CustomImagePromptStyleModifications,on_delete=models.CASCADE,related_name="custom_img_modification")
+class ImageModificationTechnique(models.Model):
+    custom_image_style=models.ForeignKey(ImageStyleCategory,on_delete=models.CASCADE,related_name="style_category")
     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
-    def __str__(self) -> str:
-        return self.custom_style_name
+class ImageGenCustomization(models.Model):
+    image_style=models.ForeignKey(CustomImageGenerationStyle,on_delete=models.CASCADE,related_name="custom_image_gen_style")
+    style_category=models.ForeignKey(ImageStyleCategory,on_delete=models.CASCADE,related_name="image_style_category")
+
+
+# class X1(models.Model):
+#     name=models.CharField(max_length=200,blank=True,null=True)
+
+# class X2(models.Model):
+#     name=models.CharField(max_length=200,blank=True,null=True)
+
+# class X3(models.Model):
+#     x1_c=models.ForeignKey(X2,on_delete=models.CASCADE,related_name="x3data")
+#     name=models.CharField(max_length=200,blank=True,null=True)
+
+# class X4(models.Model):
+#     x1_a=models.ForeignKey(X1,on_delete=models.CASCADE,related_name="x1data")
+#     x1_b=models.ForeignKey(X2,on_delete=models.CASCADE,related_name="x2data")
+

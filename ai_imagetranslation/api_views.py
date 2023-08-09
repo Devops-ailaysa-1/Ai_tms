@@ -1,8 +1,9 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
-                                            BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,CustomImageGenerationCategotySerializer)
+                                            BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
+                                            ImageGenCustomizationSerializers)
 from rest_framework.response import Response
-from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,CustomImageGenerationCategoty)
+from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,ImageGenCustomization)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -380,17 +381,53 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 
-class CustomImageGenerationCategotyListView(generics.ListCreateAPIView):
-    queryset = CustomImageGenerationCategoty.objects.all()
-    serializer_class = CustomImageGenerationCategotySerializer
+class ImageGenCustomizationListView(generics.ListCreateAPIView):
+    queryset = ImageGenCustomizationSerializers.objects.all()
+    serializer_class = ImageGenCustomizationSerializers
+    pagination_class = None
 
-# class CustomImageGenerationCategotyRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = CustomImageGenerationCategoty.objects.all()
-#     serializer_class = CustomImageGenerationCategotySerializer
+
+
+# class X4ListView(generics.ListCreateAPIView):
+#     queryset = X4.objects.all()
+#     serializer_class = X4Serializer
+#     pagination_class = None
+
+
+
+
+
+
+# class CustomImageGenerationCategotyViewset(viewsets.ViewSet,PageNumberPagination):
+#     permission_classes = [IsAuthenticated,]
+ 
+
+#     def get(self, request):
+#         queryset = CustomImageGenerationCategoty.objects.all()
+#         serializer = CustomImageGenerationCategotySerializer(queryset ,many =True)
+#         return Response(serializer.data)
+    
+ 
+    
+    # def create(self,request):    
+    #     serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
+
+
+
+
 
 photo_options={'Shot_type':['Close-up','Extreme Close-up','POV','Medium shot','Long shot'],
+               
+
 'Style':['polaroid','monochrome','long exposure','color splash','Tilt-shift'],
-'Subject':['Woman','Old man','Grey cat','Bunny','Ferrari'],
+
+
+
 'Lighting':['Soft','Ambient','Ring','Sun','Cinematic'],
 'Context':['Indoor','Outdoor','At night','In the park','Studio'],
 'Lens':['Wide-angle','Telephoto','24mm','EF 70mm','Bokeh'],
