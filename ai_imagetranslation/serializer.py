@@ -562,7 +562,7 @@ class ImageStyleCategorySerializers(serializers.ModelSerializer):
 
     class Meta:
         model = ImageStyleCategories
-        fields = ('id','style_category')
+        fields = ('id','style_category_name','style_category')
  
 class ImageGenCustomizationSerializers(serializers.ModelSerializer):
     custom_image_gen_style=CustomImageGenerationStyleSerializers(read_only=True,source='image_style')
