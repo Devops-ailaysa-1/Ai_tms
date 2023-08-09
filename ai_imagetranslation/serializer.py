@@ -1,5 +1,5 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
-                                        StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategory,
+                                        StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
                                             ImageModificationTechnique,ImageGenCustomization)
 from ai_staff.models import Languages
 from rest_framework import serializers
@@ -561,7 +561,7 @@ class ImageStyleCategorySerializers(serializers.ModelSerializer):
     style_category=ImageModificationTechniqueSerializers(many=True,read_only=True)
 
     class Meta:
-        model = ImageStyleCategory
+        model = ImageStyleCategories
         fields = ('id','style_category')
  
 class ImageGenCustomizationSerializers(serializers.ModelSerializer):
