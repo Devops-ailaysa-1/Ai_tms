@@ -555,10 +555,10 @@ class CustomImagePromptStyleModificationsSerializer(serializers.ModelSerializer)
 
     class Meta:
         model = CustomImagePromptStyleModifications
-        fields = ('id', 'modification_cat_name')
+        fields = ('id', 'modification_cat_name','custom_image_style')
 
 class CustomImageGenerationCategotySerializer(serializers.ModelSerializer):
     category=CustomImagePromptStyleModificationsSerializer(many=True, read_only=True)
     class Meta:
         model = CustomImageGenerationCategoty
-        fields = ('id', 'modification_cat_name')
+        fields = ('id', 'modification_cat_name','category')

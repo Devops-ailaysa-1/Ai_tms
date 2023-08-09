@@ -63,6 +63,7 @@ urlpatterns = [
     path("qa/", include("ai_qa.urls")),
     path("canvas/", include("ai_canvas.urls")),
     path("bi/", include("ai_bi.urls")),
+    
     #path("celery-progress/", include("celery_progress.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
 #     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
@@ -72,6 +73,6 @@ urlpatterns = [
 
 # if settings.MANAGEMENT:
 #     urlpatterns += [path("management/", include("ai_management.urls"))]
-# urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
