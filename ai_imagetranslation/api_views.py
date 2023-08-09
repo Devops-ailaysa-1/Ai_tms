@@ -382,7 +382,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 class ImageGenCustomizationListView(generics.ListCreateAPIView):
-    queryset = ImageGenCustomizationSerializers.objects.all()
+    queryset = ImageGenCustomization.objects.all()
     serializer_class = ImageGenCustomizationSerializers
     pagination_class = None
 
