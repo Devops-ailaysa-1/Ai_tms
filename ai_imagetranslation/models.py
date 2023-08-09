@@ -161,17 +161,17 @@ class CustomImageGenerationStyle(models.Model):
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
 
-class ImageStyleCategory(models.Model):
+class ImageStyleCategories(models.Model):
     style_category_name=models.CharField(max_length=200,blank=True,null=True)
 
 class ImageModificationTechnique(models.Model):
-    custom_image_style=models.ForeignKey(ImageStyleCategory,on_delete=models.CASCADE,related_name="style_category")
+    custom_image_style=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="style_category")
     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
 class ImageGenCustomization(models.Model):
     image_style=models.ForeignKey(CustomImageGenerationStyle,on_delete=models.CASCADE,related_name="custom_image_gen_style")
-    style_category=models.ForeignKey(ImageStyleCategory,on_delete=models.CASCADE,related_name="image_style_category")
+    style_category=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="image_style_category")
 
 
 # class X1(models.Model):
