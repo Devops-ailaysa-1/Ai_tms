@@ -252,8 +252,6 @@ class CustomizationSettings(models.Model):
 
 
 
- 
- 
 
 
 
