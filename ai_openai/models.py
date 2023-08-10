@@ -252,12 +252,6 @@ class CustomizationSettings(models.Model):
 
 
 
-<<<<<<< HEAD
- 
-
-
-=======
->>>>>>> origin/v4-merged-production
 
 
 
