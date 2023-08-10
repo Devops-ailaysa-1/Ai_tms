@@ -174,7 +174,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
