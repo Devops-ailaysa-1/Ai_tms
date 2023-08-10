@@ -3,7 +3,7 @@ import re
 from django.db import transaction
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save 
+from django.db.models.signals import post_save, pre_delete
 from django.utils.functional import cached_property
 from datetime import datetime, date
 from ai_auth.models import AiUser
@@ -12,6 +12,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 from django.core.cache import cache
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 
 
 
@@ -99,6 +100,13 @@ class BaseSegment(models.Model):
             seg = SplitSegment.objects.filter(id=self.id).first()
             return seg.split_segment_comments_set.all().count()>0
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
+
 
     @property
     def get_id(self):
@@ -133,8 +141,7 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
-        cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        cache.delete(cache_key)
+        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
 
 
@@ -147,9 +154,13 @@ class Segment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True)
 
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     @property
     def get_merge_target_if_have(self):
@@ -215,6 +226,9 @@ class Segment(BaseSegment):
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
+post_save.connect(invalidate_cache_on_save, sender=Segment)
+pre_delete.connect(invalidate_cache_on_delete, sender=Segment)
+
 # post_save.connect(create_segment_controller, sender=Segment)
 
 class MergeSegment(BaseSegment):
@@ -225,10 +239,12 @@ class MergeSegment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True, blank=True)
 
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
-    #     cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
-    #     cache.delete(cache_key)
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
@@ -252,9 +268,6 @@ class MergeSegment(BaseSegment):
         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
         self.save()
         self.update_segment_is_merged_true(segs=segs)
-        cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
-        cache.delete(cache_key)
         return self
 
         
@@ -301,6 +314,9 @@ class MergeSegment(BaseSegment):
         return self.id
 
 
+post_save.connect(invalidate_cache_on_save, sender=MergeSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=MergeSegment)
+
 class SplitSegment(BaseSegment):
 
     segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
@@ -314,6 +330,12 @@ class SplitSegment(BaseSegment):
     @property
     def get_parent_seg_id(self):
         return self.segment_id
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.segment.text_unit.document.pk}',
+            f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*'
+        ]
 
     def remove_tags(self, tagged_source):
 
@@ -330,9 +352,10 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
-        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
+        
+
+post_save.connect(invalidate_cache_on_save, sender=SplitSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=SplitSegment)
 
 class MT_RawTranslation(models.Model):
 
@@ -398,11 +421,20 @@ class Document(models.Model):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
         super().save(*args, **kwargs)
-        cache_key = f'task_word_count_{self.pk}'
-        cache.delete(cache_key)
-        cache_key = f'task_char_count_{self.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_audio_output_file_{self.pk}',
+            f'task_word_count_{self.pk}',
+            f'task_char_count_{self.pk}',
+            f'pr_progress_property_{self.job.project.id}_*',
+        ]
+        return cache_keys
+        # cache_key = f'task_word_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache_key = f'task_char_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
 
     def get_user_email(self):
@@ -604,6 +636,9 @@ class Document(models.Model):
     @property
     def task_obj(self):
         return self.task_set.last()
+
+post_save.connect(invalidate_cache_on_save, sender=Document)
+pre_delete.connect(invalidate_cache_on_delete, sender=Document)
 
 class SegmentPageSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,

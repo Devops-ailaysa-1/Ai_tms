@@ -1,6 +1,6 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
                                         StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
-                                            ImageModificationTechnique,ImageGenCustomization)
+                                            ImageModificationTechnique)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -545,17 +545,11 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     return instance
 
 
-
-class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = CustomImageGenerationStyle
-        fields = '__all__'
-
-
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
+    
     class Meta:
         model = ImageModificationTechnique
-        fields = '__all__'
+        fields = ('id','custom_style_name','image')
    
 class ImageStyleCategorySerializers(serializers.ModelSerializer):
     style_category=ImageModificationTechniqueSerializers(many=True,read_only=True)
@@ -564,56 +558,9 @@ class ImageStyleCategorySerializers(serializers.ModelSerializer):
         model = ImageStyleCategories
         fields = ('id','style_category_name','style_category')
  
-class ImageGenCustomizationSerializers(serializers.ModelSerializer):
-    custom_image_gen_style=CustomImageGenerationStyleSerializers(read_only=True,source='image_style')
-    image_style_category=ImageStyleCategorySerializers(read_only=True,source='style_category')
 
+class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
+    style=ImageStyleCategorySerializers(many=True)
     class Meta:
-        model = ImageGenCustomization
-        fields = ('id','custom_image_gen_style','image_style_category')
-
-
-
-
-# class X1Serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model=X1 
-#         fields='__all__'
-
-# class X3Serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model=X3 
-#         fields=('id','name')
-
-# class X2Serializer(serializers.ModelSerializer):
-#     x3data=X3Serializer(many=True, read_only=True)
-#     class Meta:
-#         model=X2 
-#         fields=('id','name','x3data')
-
-
-# class X4Serializer(serializers.ModelSerializer):
-#     x1data=X1Serializer(read_only=True,source='x1_a')
-#     x2data=X2Serializer(read_only=True,source='x1_b')
-#     class Meta:
-#         model=X4 
-#         fields=('id','x1data','x2data')
-
-
-
-# class ImageModificationSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ImageModification
-#         fields = ('id','custom_style_name')
-
-# class CustomImagePromptStyleModificationsSerializer(serializers.ModelSerializer):
-#     custom_img_modification = ImageModificationSerializer(many=True,read_only=True)
-#     class Meta:
-#         model = CustomImagePromptStyleModifications
-#         fields = ('id','modification_cat_name','custom_img_modification')
-
-# class CustomImageGenerationCategotySerializer(serializers.ModelSerializer):
-#     custom_img_gen_cat=CustomImagePromptStyleModificationsSerializer(many=True, read_only=True)
-#     class Meta:
-#         model = CustomImageGenerationCategoty
-#         fields = ('id','name','custom_img_gen_cat')
+        model = CustomImageGenerationStyle
+        fields = ('id','style_name','style')

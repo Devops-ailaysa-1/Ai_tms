@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 import os 
 import requests
 import cv2,requests,base64,io 
-from PIL import Image
+from PIL import Image,ImageFilter
 import numpy as np
 from io import BytesIO
 from rest_framework import serializers
@@ -237,6 +237,7 @@ def background_merge(u2net_result,original_img):
     u2net_result=cv2.subtract(u2net_result,original_img)
     # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
+    u2net_result= u2net_result.filter(ImageFilter.GaussianBlur(radius = 10))
     original_img=Image.fromarray(original_img).convert("RGBA")
     u2net_data=u2net_result.getdata()
     original_img=original_img.getdata()

@@ -96,26 +96,36 @@ def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
 from django.core.cache import cache
 
 def invalidate_cache_on_save(sender, instance, **kwargs):
+    print("instance----------->",instance)
     cache_keys = instance.generate_cache_keys()
-    print("Keys----------->",cache_keys)
+    print("Keys on save----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
+                print("inside try save")
                 rr = cache.delete(cache_key)
-                print("Cache Deleted",rr)
+                rt = cache.delete_pattern(cache_key)
+                print("Cache Deleted",cache_key,rr)
+                print("Cache pattern Deleted",cache_key,rt)
             except:
-                rr = cache.delete_pattern(cache_key)
-                print("Cache Deleted",rr)
+                print("Not found")
+                pass
+                # print("inside except save")
+                # rr = cache.delete_pattern(cache_key)
+                # print("Cache Deleted",cache_key,rr)
                 
 
 def invalidate_cache_on_delete(sender, instance, **kwargs):
+    print("instance----------->",instance)
     cache_keys = instance.generate_cache_keys()
-    print("Keys----------->",cache_keys)
+    print("Keys on delete----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
                 rr = cache.delete(cache_key)
-                print("Cache Deleted",rr)
+                rt = cache.delete_pattern(cache_key)
+                print("Cache Deleted",cache_key,rr)
+                print("Cache pattern Deleted",cache_key,rt)
             except:
-                rr = cache.delete_pattern(cache_key)
-                print("Cache Deleted",rr)
+                print("Not found")
+                pass

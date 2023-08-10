@@ -271,6 +271,15 @@ class Project(models.Model):
             return super().save()
 
 
+    # def generate_cache_keys(self):
+    #     from .utils import get_pr_list_cache_key
+    #     cache_keys = [
+    #         get_pr_list_cache_key(self.ai_user_id)
+    #     ]
+    #     return cache_keys
+
+
+
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
@@ -279,9 +288,9 @@ class Project(models.Model):
     def files_count(self):
         return self.project_files_set.all().count()
 
-    @property
-    def get_project_type(self):
-        return self.project_type.id
+    # @property
+    # def get_project_type(self):
+    #     return self.project_type.id
 
   
     def pr_progress(self,tasks):
@@ -432,14 +441,14 @@ class Project(models.Model):
 
     @property
     def tasks_count(self):
-        return self.get_tasks.count()
-        # cache_key = f'pr_tasks_count_{self.pk}'
-        # cached_value = cache.get(cache_key)
-        # print("Cached Value in tasks_count---------->",cached_value)
-        # if cached_value is None:
-        #     cached_value = self.get_tasks.count() 
-        #     cache.set(cache_key,cached_value)
-        # return cached_value
+        #return self.get_tasks.count()
+        cache_key = f'pr_tasks_count_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value in tasks_count---------->",cached_value)
+        if cached_value is None:
+            cached_value = self.get_tasks.count() 
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def files_jobs_choice_url(self):
@@ -475,15 +484,15 @@ class Project(models.Model):
     def get_jobs(self):
         return [job for job in self.project_jobs_set.all()]
 
-    @property
+    @cached_property#@property
     def get_steps(self):
         return [obj.steps for obj in self.proj_steps.all()]
 
-    @property
+    @cached_property
     def get_steps_name(self):
         return [obj.steps.name for obj in self.proj_steps.all()]
 
-    @property
+    @cached_property #Need to check
     def PR_step_edit(self):
         if self.proj_detail.exists():
             if self.proj_detail.first().projectpost_steps.filter(steps_id=2).exists():
@@ -508,14 +517,14 @@ class Project(models.Model):
     def get_target_languages(self):
         return [job.target_language for job in self.project_jobs_set.all()]
 
-    @property
+    @cached_property
     def get_team(self):
         if self.team == None:
             return False
         else:
             return True
 
-    @property
+    @cached_property
     def is_all_doc_opened(self):
         docs = self.get_tasks.filter(document__isnull=True)
         if docs:return False
@@ -531,62 +540,89 @@ class Project(models.Model):
 
     @property
     def is_proj_analysed(self):
-        if self.is_all_doc_opened:
-            return True
-        if self.get_tasks.count() == self.task_project.count() and self.get_tasks.count() != 0:
-            return True
-        else:
-            return False
+        cache_key = f'pr_proj_analysed_{self.id}'
+        cached_value = cache.get(cache_key)
+        if cached_value is None:
+            if self.is_all_doc_opened:
+                cached_value = True
+            if self.get_tasks.count() == self.task_project.count() and self.get_tasks.count() != 0:
+                cached_value = True
+            else:
+                cached_value = False
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def show_analysis(self):
-        if self.project_type_id != 3:
-            if self.get_mtpe_tasks:
-                return True
-            else:return False
-        else:
-            return False
+        cache_key = f'pr_show_analysis_{self.id}'
+        cached_value = cache.get(cache_key)
+        if cached_value is None:
+            if (self.project_type_id != 3) and (self.get_mtpe_tasks):
+                cached_value = True
+            else:cached_value = False
+            cache.set(cache_key,cached_value)
+        return cached_value
+        
 
     @property
     def assigned(self):
         if self.get_tasks:
-            assigned = False
-            for task in self.get_tasks:
-                if task.task_info.filter(task_assign_info__isnull=False):
-                    assigned = True
-                    break
-            return assigned
-        else: return False
-        #     cache_key = f'pr_assigned_{self.pk}'
-        #     cached_value = cache.get(cache_key)
-        #     print("Cached Value in assigned---------->",cached_value)
-        #     if cached_value is None:
-        #         cached_value =False # Initialize
-        #         for task in self.get_tasks:
-        #             if task.task_info.filter(task_assign_info__isnull=False):
-        #                 cached_value = True
-        #                 break
-        #         print("CV in  prop--------->",cached_value)
-        #         cache.set(cache_key,cached_value)
-        #     return cached_value
-        # else:
-        #     return False
+            cache_key = f'pr_assigned_{self.pk}'
+            cached_value = cache.get(cache_key)
+            print("Cached Value in assigned---------->",cached_value)
+            if cached_value is None:
+                cached_value =False # Initialize
+                for task in self.get_tasks:
+                    if task.task_info.filter(task_assign_info__isnull=False):
+                        cached_value = True
+                        break
+                print("CV in  prop--------->",cached_value)
+                cache.set(cache_key,cached_value)
+            return cached_value
+        else:
+            return False
+                #     assigned = False
+        #     for task in self.get_tasks:
+        #         if task.task_info.filter(task_assign_info__isnull=False):
+        #             assigned = True
+        #             break
+        #     return assigned
+        # else: return False
 
     @property
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
 
+    # @property
+    # def clone_available(self):
+    #     from ai_glex.models import TermsModel
+    #     if self.project_type_id == 3:
+    #         if self.get_tasks.count() >1:
+    #             jobs = [i.job.id for i in self.get_tasks]
+    #             if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
+    #                 return True
+    #             else:return False
+    #         else:return False
+    #     else:return None
+
     @property
     def clone_available(self):
-        from ai_glex.models import TermsModel
-        if self.project_type_id == 3:
-            if self.get_tasks.count() >1:
-                jobs = [i.job.id for i in self.get_tasks]
-                if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
-                    return True
-                else:return False
-            else:return False
-        else:return None
+        cache_key = f'pr_clone_available_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value in clone available---------->",cached_value)
+        if cached_value is None:
+            from ai_glex.models import TermsModel
+            if self.project_type_id == 3:
+                cached_value = False
+                if self.get_tasks.count() >1:
+                    jobs = [i.job.id for i in self.get_tasks]
+                    if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
+                        cached_value = True
+            else:
+                cached_value = 'null'
+            cache.set(cache_key,cached_value)
+        return cached_value
+       
     
     @property
     def owner_pk(self):
@@ -697,6 +733,8 @@ class Project(models.Model):
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 post_delete.connect(delete_project_dir, sender=Project)
+# post_save.connect(invalidate_cache_on_save, sender=Project)
+# pre_delete.connect(invalidate_cache_on_delete, sender=Project)
 
 class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
@@ -1089,7 +1127,15 @@ class Task(models.Model):
             f'pr_progress_property_{self.job.project.id}_*',
             f'pr_get_assignable_tasks_exists_{self.job.project.pk}',
             f'pr_assigned_{self.job.project.pk}',
-            f'pr_get_tasks_{self.job.project.pk}'
+            f'pr_get_tasks_{self.job.project.pk}',
+            f'pr_clone_available_{self.job.project.pk}',
+            f'task_open_in_{self.pk}',
+            f'task_audio_source_file_{self.pk}',
+            f'task_audio_output_file_{self.pk}',
+            f'task_translated_{self.pk}',
+            f'task_converted_{self.pk}',
+            f'pr_show_analysis_{self.job.project.id}',
+            f'pr_proj_analysed_{self.job.project.id}',
         ]
         return cache_keys
 
@@ -1108,42 +1154,61 @@ class Task(models.Model):
 
     @property
     def download_audio_output_file(self):
-        if self.document:
-            return self.document.download_audio_output_file
-        else:
-            return None
+        cache_key = f'task_audio_output_file_{self.pk}'
+        cached_value = cache.get(cache_key)
+        if cached_value is None:
+            if self.document:
+                cache_key = f'task_audio_output_file_{self.document.pk}'
+                cached_value = self.document.download_audio_output_file
+                cache.set(cache_key,cached_value)
+            else:
+                cached_value = None#'null'
+                cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def converted(self):
-        if self.job.project.project_type_id == 4 :
-            if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-                if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
-                    return True
-                else:return False
-            elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-                if self.job.target_language==None:
-                    if self.task_transcript_details.exists():
-                        return True
-                    else:return False
-                else:return None
-            else:return None
-        elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-            if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
-                if self.pdf_task.all().exists() == True:
-                    return True
-                else:return False
-            else:return None
-        else:return None
+        cache_key = f'task_converted_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value---------->",cached_value)
+        if cached_value is None:
+            if self.job.project.project_type_id == 4 :
+                if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                    if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+                        cached_value = True
+                    else:cached_value = False
+                elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                    if self.job.target_language==None:
+                        if self.task_transcript_details.exists():
+                            cached_value = True
+                        else:cached_value= False
+                    else:cached_value = None
+                else:cached_value = None
+            elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+                if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                    if self.pdf_task.all().exists() == True:
+                        cached_value = True
+                    else:cached_value = False
+                else:cached_value = None
+            else:cached_value = "null"
+            cache.set(cache_key,cached_value)
+        return cached_value    
 	
     @property
     def is_task_translated(self):
-        if self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-            if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
-                if self.pdf_task.all().exists() == True and self.pdf_task.first().translation_task_created == True:
-                    return True
-                else:return False
-            else:return None
-        else:return None
+        cache_key = f'task_translated_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value---------->",cached_value)
+        if cached_value is None:
+            if self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+                if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                    if self.pdf_task.all().exists() == True and self.pdf_task.first().translation_task_created == True:
+                        cached_value = True
+                    else:cached_value = False
+                else:cached_value = None
+            else:cached_value = "null"
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def mt_only_credit_check(self):
@@ -1184,36 +1249,69 @@ class Task(models.Model):
             cache.set(cache_key,cached_value)
         return cached_value
 
-    @property
-    def open_in(self):
-        try:
-            if self.job.project.project_type_id == 5:
-                return "ExpressEditor"
-            elif self.job.project.project_type_id == 4:
-                if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-                    if self.job.target_language==None:
-                        return "Ailaysa Writer or Text Editor"
-                    else:
-                        return "Transeditor"
-                elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-                    if self.job.target_language==None:
-                        return "Download"
-                    else:return "Transeditor"
-            elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-                if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
-                    try:return self.pdf_task.last().pdf_api_use
-                    except:return None
-                else:return "Transeditor"	
-            else:return "Transeditor"
-        except:
-            try:
-                if self.job.project.glossary_project:
-                    return "GlossaryEditor"
-            except:
-                return "Transeditor"
+    # @property
+    # def open_in(self):
+    #     try:
+    #         if self.job.project.project_type_id == 5:
+    #             return "ExpressEditor"
+    #         elif self.job.project.project_type_id == 4:
+    #             if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+    #                 if self.job.target_language==None:
+    #                     return "Ailaysa Writer or Text Editor"
+    #                 else:
+    #                     return "Transeditor"
+    #             elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+    #                 if self.job.target_language==None:
+    #                     return "Download"
+    #                 else:return "Transeditor"
+    #         elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+    #             if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+    #                 try:return self.pdf_task.last().pdf_api_use
+    #                 except:return None
+    #             else:return "Transeditor"	
+    #         else:return "Transeditor"
+    #     except:
+    #         try:
+    #             if self.job.project.glossary_project:
+    #                 return "GlossaryEditor"
+    #         except:
+    #             return "Transeditor"
 
  
-
+    @property
+    def open_in(self):
+        cache_key = f'task_open_in_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value---------->",cached_value)
+        if cached_value is None:
+            try:
+                if self.job.project.project_type_id == 5:
+                    cached_value = "ExpressEditor"
+                elif self.job.project.project_type_id == 4:
+                    if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                        if self.job.target_language==None:
+                            cached_value = "Ailaysa Writer or Text Editor"
+                        else:
+                            cached_value = "Transeditor"
+                    elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                        if self.job.target_language==None:
+                            cached_value = "Download"
+                        else:cached_value = "Transeditor"
+                elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
+                    if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                        try:cached_value = self.pdf_task.last().pdf_api_use
+                        except:cached_value = None
+                    else:cached_value= "Transeditor"	
+                else:cached_value = "Transeditor"
+                cache.set(cache_key,cached_value)
+            except:
+                try:
+                    if self.job.project.glossary_project:
+                        cached_value= "GlossaryEditor"
+                except:
+                    cached_value = "Transeditor"
+                cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def get_document_url(self):
@@ -1300,25 +1398,32 @@ class Task(models.Model):
 
     @property
     def download_audio_source_file(self):
-        try:
-            voice_pro = self.job.project.voice_proj_detail
-            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
-                locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.source_language)
-                return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
-                        "voice_type":i.voice_type,"voice_name":i.voice_name}\
-                        for i in locale_list] if locale_list else []
-            elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:##speech_to_text(checking for speech_to_speech)
-                if self.job.target_language!=None:
-                    txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.source_language).first().text_to_speech
-                    if txt_to_spc:
-                        locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
-                        return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
-                                "voice_type":i.voice_type,"voice_name":i.voice_name}\
-                                for i in locale_list] if locale_list else []
-                    else: return False
-                else:return False
-        except:
-            return None
+        cache_key = f'task_audio_source_file_{self.pk}'
+        cached_value = cache.get(cache_key)
+        print("Cached Value---------->",cached_value)
+        if cached_value is None:
+            try:
+                if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
+                    locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.source_language)
+                    cached_value = [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                            "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                            for i in locale_list] if locale_list else []
+                elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:##speech_to_text(checking for speech_to_speech)
+                    if self.job.target_language!=None:
+                        txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.source_language).first().text_to_speech
+                        if txt_to_spc:
+                            locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
+                            cached_value =  [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                                    "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                                    for i in locale_list] if locale_list else []
+                        else: 
+                            cached_value = False
+                    else:
+                        cached_value = False
+            except:
+                cached_value = 'null'
+            cache.set(cache_key,cached_value)
+        return cached_value
 
     @property
     def corrected_segment_count(self):
@@ -1509,6 +1614,8 @@ class TaskAssign(models.Model):
         cache_keys = [
             f'task_assign_info_*',
             f'task_reassign_info_*',
+            f'task_reassign_computed_*',
+            f'task_assign_computed_*',
             f'pr_progress_property_{self.task.job.project.id}_*',
             f'pr_assigned_{self.task.job.project.pk}'
         ]
@@ -1569,6 +1676,8 @@ class TaskAssignInfo(models.Model):
         cache_keys = [
             f'task_assign_info_*',
             f'task_reassign_info_*',
+            f'task_reassign_computed_*',
+            f'task_assign_computed_*',
             f'pr_progress_property_{self.task_assign.task.job.project.id}_*',
             f'pr_assigned_{self.task_assign.task.job.project.pk}'
         ]
@@ -1742,7 +1851,8 @@ class TaskDetails(models.Model):
     def generate_cache_keys(self):
         cache_keys=[
             f'task_word_count_{self.task.pk}',
-            f'task_char_count_{self.task.pk}'
+            f'task_char_count_{self.task.pk}',
+            f'pr_proj_analysed_{self.project.id}',
         ]
         return cache_keys
 post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
@@ -1791,7 +1901,8 @@ class TaskTranscriptDetails(models.Model):
             f'audio_file_exists_{self.task.pk}',
             f'transcribed_{self.task.pk}',
             f'txt_to_spc_convert_{self.task.pk}',
-            f'pr_progress_property_{self.task.job.project.id}_*'
+            f'pr_progress_property_{self.task.job.project.id}_*',
+            f'task_converted_{self.task.pk}',
         ]
         return cache_keys
         # cache_key_1 = f'audio_file_exists_{self.task.pk}'
@@ -2216,3 +2327,5 @@ class ExpressProjectAIMT(models.Model):
         # task_list =  [task for job in self.project_jobs_set.all() for task \
         #     in job.job_tasks_set.all()]
         #return sorted(task_list, key=lambda x: x.id)
+
+

@@ -162,6 +162,7 @@ class CustomImageGenerationStyle(models.Model):
 
 
 class ImageStyleCategories(models.Model):
+    style_name=models.ManyToManyField(CustomImageGenerationStyle,related_name="style")
     style_category_name=models.CharField(max_length=200,blank=True,null=True)
 
 class ImageModificationTechnique(models.Model):
@@ -169,22 +170,16 @@ class ImageModificationTechnique(models.Model):
     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
-class ImageGenCustomization(models.Model):
-    image_style=models.ForeignKey(CustomImageGenerationStyle,on_delete=models.CASCADE,related_name="custom_image_gen_style")
-    style_category=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="image_style_category")
 
 
-# class X1(models.Model):
-#     name=models.CharField(max_length=200,blank=True,null=True)
 
-# class X2(models.Model):
-#     name=models.CharField(max_length=200,blank=True,null=True)
 
-# class X3(models.Model):
-#     x1_c=models.ForeignKey(X2,on_delete=models.CASCADE,related_name="x3data")
-#     name=models.CharField(max_length=200,blank=True,null=True)
-
-# class X4(models.Model):
-#     x1_a=models.ForeignKey(X1,on_delete=models.CASCADE,related_name="x1data")
-#     x1_b=models.ForeignKey(X2,on_delete=models.CASCADE,related_name="x2data")
-
+# from django.db import models
+# class ModelA(models.Model):
+#     name = models.CharField(max_length=800)
+#     categories = models.ManyToManyField('ModelB', related_name='authors', blank=True)
+# class ModelB(models.Model):
+#     category = models.CharField(max_length=800)
+# class ModelC(models.Model):
+#     name = models.ForeignKey(ModelA, on_delete=models.CASCADE, related_name='main_model_a')
+#     category = models.ForeignKey(ModelB, on_delete=models.CASCADE, related_name='category_model_b')

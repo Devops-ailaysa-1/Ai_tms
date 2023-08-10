@@ -1,9 +1,10 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
-                                            ImageGenCustomizationSerializers)
+                                            CustomImageGenerationStyleSerializers)
 from rest_framework.response import Response
-from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,ImageGenCustomization)
+from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
+                                        ImageStyleCategories,CustomImageGenerationStyle)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -380,12 +381,31 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 
-
-class ImageGenCustomizationListView(generics.ListCreateAPIView):
-    queryset = ImageGenCustomization.objects.all()
-    serializer_class = ImageGenCustomizationSerializers
+class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
+    queryset = CustomImageGenerationStyle.objects.all()
+    serializer_class = CustomImageGenerationStyleSerializers
     pagination_class = None
 
+
+    # def list(self, request):
+    #     # Note the use of `get_queryset()` instead of `self.queryset`
+    #     queryset = self.get_queryset()
+    #     x={}
+    #     for i in queryset:
+    #         style_name=i.image_style.style_name
+    #         style_cat_name=i.style_category.style_category_name
+    #         style_cat_list=list(i.style_category.style_category.all().values_list("custom_style_name",flat=True))
+    #         if not style_name in x.keys():
+    #             x[style_name]=[{style_cat_name:style_cat_list}]
+    #         else:
+    #             lst=x[style_name]
+    #             lst.append({style_cat_name:style_cat_list})
+    #             x[style_name]=lst
+
+
+    #     # serializer = ImageGenCustomizationSerializers(queryset, many=True)
+    #     # print(serializer.data)
+    #     return Response(x)
 
 
 # class X4ListView(generics.ListCreateAPIView):

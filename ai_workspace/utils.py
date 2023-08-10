@@ -100,3 +100,56 @@ def task_assing_role_ls(task_assign_info_ls):
 			user=instance.task_assign.assign_to,
 			role = role
 		)
+
+
+
+# def generate_list_cache_key(user):
+#     print("R---->",user)
+#     user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+#     return f'pr_list:{user_1.id}'
+
+
+# from functools import wraps
+# from django.core.cache import cache
+
+
+# def custom_cache_page(timeout, key_func):
+#     def decorator(view_func):
+#         @wraps(view_func)
+#         def _wrapped_view(request, *args, **kwargs):
+#             cache_key = key_func(request.user)
+#             response = cache.get(cache_key)
+#             if response is None:
+#                 response = view_func(request, *args, **kwargs)
+#                 cache.set(cache_key, response, timeout)
+#             return response
+#         return _wrapped_view
+#     return decorator
+
+
+
+
+
+
+
+
+
+
+
+# from functools import wraps
+# from django.core.cache import cache
+# def custom_cache_page(timeout):
+#     def decorator(view_func):
+#         @wraps(view_func)
+#         def _wrapped_view(request, *args, **kwargs):
+#             user = request.user
+#             cache_key = get_pr_list_cache_key(user)
+#             cached_data = cache.get(cache_key)
+#             if cached_data is not None:
+#                 return cached_data
+#             response = view_func(request, *args, **kwargs)
+#             cache.set(cache_key, response, timeout)
+#             return response
+#         return _wrapped_view
+#     return decorator
+

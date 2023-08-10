@@ -508,6 +508,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
 	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
+	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
@@ -597,7 +598,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+			user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_tasks
@@ -629,7 +630,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			cached_value = cache.get(cache_key)
 			print("Cached---------->",cached_value)
 			if not cached_value:
-				user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+				user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 				if instance.ai_user == user:
 					tasks = instance.get_tasks
@@ -652,7 +653,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if self.context.get("request")!=None:
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
-			cache_key = f'check_role_{instance.id}_{user.pk}'
+			cache_key = f'check_role_{user.id}_{instance.pk}'
 			cached_value = cache.get(cache_key)
 			if cached_value is None:
 				if instance.team :
@@ -1092,108 +1093,15 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
 			"converted_audio_file_exists","download_audio_output_file",)
 
-	# def get_converted_audio_file_exists(self,obj):
-	# 	if obj.document:
-	# 		return obj.document.converted_audio_file_exists
-	# 	else:
-	# 		return None
-	
-
-	# def get_download_audio_output_file(self,obj):
-	# 	if obj.document:
-	# 		return obj.document.download_audio_output_file
-	# 	else:
-	# 		return None
-
-
-	# def get_converted(self,obj):
-	# 	if obj.job.project.project_type_id == 4 :
-	# 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-	# 				if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
-	# 					return True
-	# 				else:return False
-	# 			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-	# 				if obj.job.target_language==None:
-	# 					if obj.task_transcript_details.exists():
-	# 						return True
-	# 					else:return False
-	# 				else:return None
-	# 			else:return None
-	# 	elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
-	# 		if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
-	# 			if obj.pdf_task.all().exists() == True:
-	# 				return True
-	# 			else:return False
-	# 		else:return None
-	# 	else:return None
-
-	# def get_is_task_translated(self,obj):
-	# 	if obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
-	# 		if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
-	# 			if obj.pdf_task.all().exists() == True and obj.pdf_task.first().translation_task_created == True:
-	# 				return True
-	# 			else:return False
-	# 		else:return None
-	# 	else:return None
-
-	# def get_mt_only_credit_check(self,obj):
-	# 	try:return obj.document.doc_credit_check_open_alert
-	# 	except:return None
-
-
-	# def get_transcribed(self,obj):
-	# 	if obj.job.project.project_type_id == 4 :
-	# 		if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-	# 			if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
-	# 				return True
-	# 			else:return False
-	# 		else:return None
-	# 	else:return None
-
-	# def get_text_to_speech_convert_enable(self,obj):
-	# 	if obj.job.project.project_type_id == 4 :
-	# 		if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-	# 			if obj.job.target_language==None:
-	# 				if obj.task_transcript_details.exists():
-	# 					return False
-	# 				else:return True
-	# 			else:return None
-	# 		else:return None
-	# 	else:return None
-
-
-	# def get_open_in(self,obj):
-	# 	try:
-	# 		if obj.job.project.project_type_id == 5:
-	# 			return "ExpressEditor"
-	# 		elif obj.job.project.project_type_id == 4:
-	# 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-	# 				if obj.job.target_language==None:
-	# 					return "Ailaysa Writer or Text Editor"
-	# 				else:
-	# 					return "Transeditor"
-	# 			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-	# 				if obj.job.target_language==None:
-	# 					return "Download"
-	# 				else:return "Transeditor"
-	# 		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
-	# 			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
-	# 				try:return obj.pdf_task.last().pdf_api_use
-	# 				except:return None
-	# 			else:return "Transeditor"	
-	# 		else:return "Transeditor"
-	# 	except:
-	# 		try:
-	# 			if obj.job.project.glossary_project:
-	# 				return "GlossaryEditor"
-	# 		except:
-	# 			return "Transeditor"
 
 	def get_bid_job_detail_info(self,obj):
 		cache_key = f'bid_job_detail_{obj.job.project.pk}'
+		computed_key = f'bid_job_computed_{obj.job.project.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in bid_jb---------->",cached_value)
-		if cached_value is None:
+		print("computed in bid_jb------------------>",computation_done)
+		if cached_value is None and computation_done is None:
 			from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 			if obj.job.project.proj_detail.all():
 				qs = obj.job.project.proj_detail.last().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
@@ -1202,7 +1110,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = None#"null"#None#'Not exists'
 			print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key, True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value
 
 	# def get_bid_job_detail_info(self,obj):
 	# 	if obj.job.project.proj_detail.all():
@@ -1213,15 +1126,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		request_user = self.context.get('request').user
-		print("RequestUser----------->",request_user)
-		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and (request_user in request_user.team.get_project_manager) else request_user
-		print("User-------->",user)
-		# user = AiUser.objects.get(id=109)
+		user = self.context.get('user')
 		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
+		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in Task Assign Info---------->",cached_value)
-		if cached_value is None:
+		print("computed in Task Assign Info------------------>",computation_done)
+		if cached_value is None and computation_done is None:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
 			print("TaskAssign----------->",task_assign)
 			if task_assign:
@@ -1238,18 +1150,25 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = TaskAssignInfoSerializer(task_assign_info,many=True).data
 			else: cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key,True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value
+		#return cached_value
 
 	def get_task_reassign_info(self, obj):
-		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
-		user = self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
-		project_managers.append(user)
-		print("Pms----------->",project_managers)
+		project_managers = self.context.get('pr_managers')
+		user = self.context.get('user')
 		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
+		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
 		cached_value = cache.get(cache_key)
+		computation_done = cache.get(computed_key)
 		print("Cached Value in Task ReAssign Info---------->",cached_value)
+		print("computed in Task ReAssign Info------------------>",computation_done)
 		# user = AiUser.objects.get(id=109)
-		if cached_value is None:
+		if cached_value is None and computation_done is None:
 			if user.is_agency == True:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True) & Q(task_assign_info__assigned_by__in = project_managers))
 				if task_assign:
@@ -1267,7 +1186,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					# else:return None
 				else:cached_value = None#"null"#None#"Not exists"
 			cache.set(cache_key,cached_value)
-		return cached_value
+			cache.set(computed_key,True)
+			return cached_value
+		elif cached_value is None and computation_done is True:
+			return None
+		else:
+			return cached_value	
+		#return cached_value
 
 	# def to_representation(self, instance):
 
@@ -1959,3 +1884,104 @@ class AssertSerializer(ProjectQuickSetupSerializer):
             ch_data = ChoiceListsSerializer(instance).data
             data.update(ch_data)
         return data
+
+
+
+
+
+	# def get_converted_audio_file_exists(self,obj):
+	# 	if obj.document:
+	# 		return obj.document.converted_audio_file_exists
+	# 	else:
+	# 		return None
+	
+
+	# def get_download_audio_output_file(self,obj):
+	# 	if obj.document:
+	# 		return obj.document.download_audio_output_file
+	# 	else:
+	# 		return None
+
+
+	# def get_converted(self,obj):
+	# 	if obj.job.project.project_type_id == 4 :
+	# 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+	# 				if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+	# 					return True
+	# 				else:return False
+	# 			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+	# 				if obj.job.target_language==None:
+	# 					if obj.task_transcript_details.exists():
+	# 						return True
+	# 					else:return False
+	# 				else:return None
+	# 			else:return None
+	# 	elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+	# 		if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+	# 			if obj.pdf_task.all().exists() == True:
+	# 				return True
+	# 			else:return False
+	# 		else:return None
+	# 	else:return None
+
+	# def get_is_task_translated(self,obj):
+	# 	if obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+	# 		if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+	# 			if obj.pdf_task.all().exists() == True and obj.pdf_task.first().translation_task_created == True:
+	# 				return True
+	# 			else:return False
+	# 		else:return None
+	# 	else:return None
+
+	# def get_mt_only_credit_check(self,obj):
+	# 	try:return obj.document.doc_credit_check_open_alert
+	# 	except:return None
+
+
+	# def get_transcribed(self,obj):
+	# 	if obj.job.project.project_type_id == 4 :
+	# 		if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+	# 			if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+	# 				return True
+	# 			else:return False
+	# 		else:return None
+	# 	else:return None
+
+	# def get_text_to_speech_convert_enable(self,obj):
+	# 	if obj.job.project.project_type_id == 4 :
+	# 		if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+	# 			if obj.job.target_language==None:
+	# 				if obj.task_transcript_details.exists():
+	# 					return False
+	# 				else:return True
+	# 			else:return None
+	# 		else:return None
+	# 	else:return None
+
+
+	# def get_open_in(self,obj):
+	# 	try:
+	# 		if obj.job.project.project_type_id == 5:
+	# 			return "ExpressEditor"
+	# 		elif obj.job.project.project_type_id == 4:
+	# 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+	# 				if obj.job.target_language==None:
+	# 					return "Ailaysa Writer or Text Editor"
+	# 				else:
+	# 					return "Transeditor"
+	# 			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+	# 				if obj.job.target_language==None:
+	# 					return "Download"
+	# 				else:return "Transeditor"
+	# 		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+	# 			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+	# 				try:return obj.pdf_task.last().pdf_api_use
+	# 				except:return None
+	# 			else:return "Transeditor"	
+	# 		else:return "Transeditor"
+	# 	except:
+	# 		try:
+	# 			if obj.job.project.glossary_project:
+	# 				return "GlossaryEditor"
+	# 		except:
+	# 			return "Transeditor"

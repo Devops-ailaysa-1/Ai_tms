@@ -715,6 +715,9 @@ class ProjectFilter(django_filters.FilterSet):
         return queryset
 
 #@never_cache
+#from django.utils.decorators import method_decorator
+# from django.views.decorators.cache import cache_page
+#from .utils import custom_cache_page, generate_list_cache_key
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -746,30 +749,36 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
-        #print(self.request.user)
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        #print("Mnagers----------->",pr_managers)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        return queryset #parent_queryset
+        return queryset
 
+    def get_user(self):
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+        return user_1
 
+    #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
+    #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         print("QR------------>",queryset)
+        user_1 = self.get_user()
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         return  response
 
     
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
-        serializer = ProjectQuickSetupSerializer(query, many=False, context={'request': request})
+        user_1 = self.get_user()
+        serializer = ProjectQuickSetupSerializer(query, many=False, context={'request': request,'user_1':user_1})
         return Response(serializer.data)
 
     def create(self, request):
@@ -778,6 +787,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         ser = self.get_serializer_class()
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         audio_file = request.FILES.getlist('audio_file',None)
+        user_1 = self.get_user()
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
@@ -789,11 +799,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             files_ = request.FILES.getlist('files')
             file_obj = get_file_from_pdf(pdf_obj_id,None)
             files_.append(file_obj)
-            serlzr = ser(data={**request.data,"files":files_},context={"request": request})    
+            serlzr = ser(data={**request.data,"files":files_},context={"request": request,'user_1':user_1})    
              
         else:
             serlzr = ser(data=\
-            {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
+            {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
@@ -813,6 +823,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         team = request.POST.get('team',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
+
+        user_1 = self.get_user()
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -852,18 +864,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if task_id:
             file_obj = update_project_from_writer(task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
             
         elif pdf_obj_id or pdf_task_id:
             if pdf_obj_id:file_obj = get_file_from_pdf(pdf_obj_id,None)
             else:file_obj = get_file_from_pdf(None,pdf_task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
             
         else:
             serlzr = ser(instance, data=\
                 {**request.data, "files": request.FILES.getlist("files"),"team":[team]},
-                context={"request": request}, partial=True)
+                context={"request": request,'user_1':user_1}, partial=True)
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
@@ -907,6 +919,13 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             print("Indivual")
             return project.get_tasks.filter(task_info__assign_to=user_1)
 
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
@@ -916,15 +935,17 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         tasks = self.get_object()
         #print("TASKS------------>",tasks)
+        user,pr_managers = self.get_user()
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
-        serlzr = VendorDashBoardSerializer(pagin_queryset, many=True,context={'request':request})
+        serlzr = VendorDashBoardSerializer(pagin_queryset, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
+        user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
-        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
+        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         return Response(serlzr.data, status=200)
 
 class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
@@ -932,17 +953,26 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
-    def get_object(self, project_id):
 
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
+
+    def get_object(self, project_id):
         tasks = Task.objects.filter(job__project_id=project_id).all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
         return tasks
 
     def list(self, request, project_id, *args, **kwargs):
         tasks = self.get_object(project_id)
+        user,pr_managers = self.get_user()
         # pagin_queryset = self.paginator.paginate_queryset(tasks, request,
         # view=self)
-        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
+        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         return Response(serlzr.data, status=200)
 
 class TM_FetchConfigsView(viewsets.ViewSet):
@@ -1269,6 +1299,7 @@ class TaskView(APIView):
 def create_project_from_temp_project_new(request):
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
+    user_1 = ai_user.team.owner if ai_user.team and ai_user.team.owner.is_agency and (ai_user in ai_user.team.get_project_manager) else ai_user
     temp_proj_id = request.POST.get("temp_project")
     temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
     files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
@@ -1280,7 +1311,7 @@ def create_project_from_temp_project_new(request):
     filename,extension = os.path.splitext((files_list[0].filename))
     serializer = ProjectQuickSetupSerializer(data={'project_name':[filename +'-tmp'+ str(temp_proj.id)],\
     'source_language':source_language,'target_languages':target_languages,'files':files,'mt_engine':mt_engine},\
-    context={'ai_user':ai_user})
+    context={'ai_user':ai_user,'user_1':user_1})
     if serializer.is_valid():
         serializer.save()
         print(serializer.data)
@@ -1886,6 +1917,10 @@ class WriterProjectListView(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 @api_view(['GET',])####changed
 def tasks_list(request):
+    project_managers = request.user.team.get_project_manager if request.user.team else []
+    user = request.user.team.owner if request.user.team and request.user in project_managers else request.user
+    project_managers.append(user)
+    print("Pms----------->",project_managers)
     job_id = request.GET.get("job")
     project_id = request.GET.get('project')
     if job_id:
@@ -1905,7 +1940,7 @@ def tasks_list(request):
                 else:pass
             else:tasks.append(task)
         print("Tasks----------->",tasks)
-        ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
+        ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request,'user':user,'pr_managers':project_managers})
         return Response(ser.data)
     except:
         return JsonResponse({"msg":"something went wrong"})
@@ -3055,9 +3090,11 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         text_data=request.POST.get('text_data')
         text_data = text_data.replace('\r','')
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
         im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request})
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request,'user_1':user_1})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
@@ -3501,7 +3538,7 @@ def voice_project_progress(pr,tasks):
     from ai_workspace_okapi.models import Document, Segment
     count=0
     progress = 0
-    source_tasks = [i for i in tasks if i.job.target_language==None]
+    source_tasks = tasks.filter(job__target_language=None)#[i for i in tasks if i.job.target_language==None]
     if source_tasks:
         if pr.voice_proj_detail.project_type_sub_category_id==1:
             for i in source_tasks:
@@ -3513,7 +3550,7 @@ def voice_project_progress(pr,tasks):
                 if TaskTranscriptDetails.objects.filter(task_id = i).exists():
                     if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
                         count+=1
-    mtpe_tasks = [i for i in tasks if i.job.target_language != None]
+    mtpe_tasks = tasks.filter(~Q(job__target_language=None))#[i for i in tasks if i.job.target_language != None]
     if mtpe_tasks:
         assigned_jobs = [i.job.id for i in mtpe_tasks]
         docs = Document.objects.filter(job__in=assigned_jobs).all()
@@ -3521,7 +3558,7 @@ def voice_project_progress(pr,tasks):
         print(docs)
         if not docs:
             count+=0
-        if docs.count() == len(mtpe_tasks):
+        if docs.count() == mtpe_tasks.count():
             total_seg_count = 0
             confirm_count  = 0
             confirm_list = [102, 104, 106, 110, 107]
@@ -3538,15 +3575,15 @@ def voice_project_progress(pr,tasks):
                         confirm_count += 1
 
             if total_seg_count == confirm_count:
-                count+=len(mtpe_tasks)
+                count+=mtpe_tasks.count()
             else:
                 progress+=1
     #print("count------------>",count)
     if count == 0 and progress == 0:
         return "Yet to Start"
-    elif count == len(tasks):
+    elif count == tasks.count():
         return "Completed"
-    elif count != len(tasks) or progress != 0:
+    elif count != tasks.count() or progress != 0:
         return "In Progress"
 
 
@@ -3557,6 +3594,8 @@ def translate_from_pdf(request,task_id):
     from ai_exportpdf.views import get_docx_file_path
     task_obj = Task.objects.get(id = task_id)
     pdf_obj = Ai_PdfUpload.objects.filter(task_id = task_id).last()
+    user = request.user
+    user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
     # updated_count = pdf_obj.updated_count+1 if pdf_obj.updated_count else 1
     # pdf_obj.updated_count = updated_count
     # pdf_obj.save()
@@ -3569,7 +3608,7 @@ def translate_from_pdf(request,task_id):
         file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
     ins = task_obj.job.project
     team = True if ins.team else False
-    serlzr = ProjectQuickSetupSerializer(ins, data={"files":[file_obj],'team':[team]},context={"request": request}, partial=True)
+    serlzr = ProjectQuickSetupSerializer(ins, data={"files":[file_obj],'team':[team]},context={"request": request,'user_1':user_1}, partial=True)
     if serlzr.is_valid():
         serlzr.save()
         return Response(serlzr.data)
@@ -4576,3 +4615,23 @@ class AssertList(viewsets.ModelViewSet):
 #             #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
 #             # return [task for job in project.project_jobs_set.all() for task \
 #             #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+    # from .utils import custom_cache_page
+    # @custom_cache_page(timeout=60 * 15)
+    # #@custom_cache_page(60 * 15, key_func=lambda req: get_pr_list_cache_key(req.user))
+        # def list(self, request, *args, **kwargs):
+        # queryset = self.filter_queryset(self.get_queryset())
+        # print("QR------------>",queryset)
+        # user_1 = self.get_user()
+        # cache_key = f'pr_list_{user_1.pk}'
+        # cached_value = cache.get(cache_key)
+        # print("Cached Value in pr_list---------->",cached_value)
+        # if cached_value is not None:
+        #     paginated_data = self.paginate_queryset(cached_value)
+        #     return self.get_paginated_response(paginated_data)
+        #     #return Response(cached_value)
+        # else:
+        #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        #     serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        #     cache.set(cache_key,serializer.data, 60 * 15)
+        #     response = self.get_paginated_response(serializer.data)
+        #     return  response
