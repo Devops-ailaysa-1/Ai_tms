@@ -715,6 +715,8 @@ class ProjectFilter(django_filters.FilterSet):
         return queryset
 
 #@never_cache
+# from django.utils.decorators import method_decorator
+# from django.views.decorators.cache import cache_page
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -746,23 +748,21 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
-        #print(self.request.user)
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        #print("Mnagers----------->",pr_managers)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        return queryset #parent_queryset
+        return queryset
 
     def get_user(self):
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
 
-
+    #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         print("QR------------>",queryset)
@@ -4611,3 +4611,23 @@ class AssertList(viewsets.ModelViewSet):
 #             #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
 #             # return [task for job in project.project_jobs_set.all() for task \
 #             #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+    # from .utils import custom_cache_page
+    # @custom_cache_page(timeout=60 * 15)
+    # #@custom_cache_page(60 * 15, key_func=lambda req: get_pr_list_cache_key(req.user))
+        # def list(self, request, *args, **kwargs):
+        # queryset = self.filter_queryset(self.get_queryset())
+        # print("QR------------>",queryset)
+        # user_1 = self.get_user()
+        # cache_key = f'pr_list_{user_1.pk}'
+        # cached_value = cache.get(cache_key)
+        # print("Cached Value in pr_list---------->",cached_value)
+        # if cached_value is not None:
+        #     paginated_data = self.paginate_queryset(cached_value)
+        #     return self.get_paginated_response(paginated_data)
+        #     #return Response(cached_value)
+        # else:
+        #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        #     serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        #     cache.set(cache_key,serializer.data, 60 * 15)
+        #     response = self.get_paginated_response(serializer.data)
+        #     return  response
