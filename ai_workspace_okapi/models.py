@@ -101,6 +101,13 @@ class BaseSegment(models.Model):
             seg = SplitSegment.objects.filter(id=self.id).first()
             return seg.split_segment_comments_set.all().count()>0
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
+
 
     @property
     def get_id(self):
@@ -135,8 +142,7 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
-        cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        cache.delete(cache_key)
+        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
 
 
@@ -149,9 +155,13 @@ class Segment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True)
 
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     @property
     def get_merge_target_if_have(self):
@@ -217,6 +227,9 @@ class Segment(BaseSegment):
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
+post_save.connect(invalidate_cache_on_save, sender=Segment)
+pre_delete.connect(invalidate_cache_on_delete, sender=Segment)
+
 # post_save.connect(create_segment_controller, sender=Segment)
 
 class MergeSegment(BaseSegment):
@@ -227,10 +240,12 @@ class MergeSegment(BaseSegment):
     is_split = models.BooleanField(default=False, null=True, blank=True)
 
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
-    #     cache_key = f'seg_progress_{self.segments.text_unit.document.pk}'
-    #     cache.delete(cache_key)
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
@@ -254,9 +269,6 @@ class MergeSegment(BaseSegment):
         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
         self.save()
         self.update_segment_is_merged_true(segs=segs)
-        cache_key = f'seg_progress_{self.text_unit.document.pk}'
-        cache.delete_pattern(f'pr_progress_property_{self.text_unit.document.job.project.id}_*')
-        cache.delete(cache_key)
         return self
 
         
@@ -303,6 +315,9 @@ class MergeSegment(BaseSegment):
         return self.id
 
 
+post_save.connect(invalidate_cache_on_save, sender=MergeSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=MergeSegment)
+
 class SplitSegment(BaseSegment):
 
     segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
@@ -316,6 +331,12 @@ class SplitSegment(BaseSegment):
     @property
     def get_parent_seg_id(self):
         return self.segment_id
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.segment.text_unit.document.pk}',
+            f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*'
+        ]
 
     def remove_tags(self, tagged_source):
 
@@ -332,9 +353,10 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
-        cache_key = f'seg_progress_{self.segment.text_unit.document.pk}'
-        cache.delete(cache_key)
-        cache.delete_pattern(f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*')
+        
+
+post_save.connect(invalidate_cache_on_save, sender=SplitSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=SplitSegment)
 
 class MT_RawTranslation(models.Model):
 
