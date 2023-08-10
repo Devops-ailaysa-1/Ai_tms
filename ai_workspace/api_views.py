@@ -715,8 +715,9 @@ class ProjectFilter(django_filters.FilterSet):
         return queryset
 
 #@never_cache
-# from django.utils.decorators import method_decorator
+#from django.utils.decorators import method_decorator
 # from django.views.decorators.cache import cache_page
+#from .utils import custom_cache_page, generate_list_cache_key
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -763,6 +764,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return user_1
 
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
+    #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         print("QR------------>",queryset)
