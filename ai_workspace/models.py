@@ -271,6 +271,15 @@ class Project(models.Model):
             return super().save()
 
 
+    # def generate_cache_keys(self):
+    #     from .utils import get_pr_list_cache_key
+    #     cache_keys = [
+    #         get_pr_list_cache_key(self.ai_user_id)
+    #     ]
+    #     return cache_keys
+
+
+
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
@@ -724,6 +733,8 @@ class Project(models.Model):
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 post_delete.connect(delete_project_dir, sender=Project)
+# post_save.connect(invalidate_cache_on_save, sender=Project)
+# pre_delete.connect(invalidate_cache_on_delete, sender=Project)
 
 class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
