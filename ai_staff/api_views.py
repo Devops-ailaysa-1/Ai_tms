@@ -29,13 +29,20 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
+from cacheops import cached
 
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
-    def get(self, request, format=None):
+    
+    @cached
+    def get_queryset(self):
         queryset = ServiceTypes.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = ServiceTypesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -74,8 +81,15 @@ class CountriesView(APIView):
     permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
-    def get(self, request, format=None):
+
+    @cached
+    def get_queryset(self):
         queryset = Countries.objects.all()
+        return queryset
+
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = CountriesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -126,8 +140,13 @@ class CurrenciesView(APIView):
         except Currencies.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = Currencies.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = CurrenciesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -171,8 +190,13 @@ class SubjectFieldsView(APIView):
         except SubjectFields.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = SubjectFields.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = SubjectFieldsSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -217,8 +241,13 @@ class ContentTypesView(APIView):
         except ContentTypes.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = ContentTypes.objects.all().order_by(Lower('name'))
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = ContentTypesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -262,8 +291,13 @@ class MtpeEnginesView(APIView):
         except MtpeEngines.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = MtpeEngines.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = MtpeEnginesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -306,8 +340,14 @@ class SupportFilesView(APIView):
         except SupportFiles.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+
+    @cached
+    def get_queryset(self):
         queryset = SupportFiles.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = SupportFilesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -351,8 +391,14 @@ class TimezonesView(APIView):
         except Timezones.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+
+    @cached
+    def get_queryset(self):
         queryset = Timezones.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = TimezonesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -393,8 +439,13 @@ class LanguagesView(APIView):
         except Languages.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = Languages.objects.all().order_by('language')
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = LanguagesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -478,8 +529,13 @@ class BillingunitsView(APIView):
         except Billingunits.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = Billingunits.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = BillingunitsSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -510,8 +566,14 @@ class BillingunitsView(APIView):
 class ServiceTypeunitsView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
+
+    @cached
+    def get_queryset(self):
         queryset = ServiceTypeunits.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = ServiceTypeUnitsSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -526,8 +588,13 @@ class ServiceTypeunitsView(APIView):
 class SupportTypeView(APIView):
     permission_classes = []
 
-    def get(self, request, format=None):
+    @cached
+    def get_queryset(self):
         queryset = SupportType.objects.all()
+        return queryset
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
         serializer = SupportTypeSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -537,8 +604,15 @@ for klass in [LanguagesView]:
 
 class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+        return queryset
+
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -546,8 +620,14 @@ class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
 
 class SubscriptionPricingCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = SubscriptionPricing.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = SubscriptionPricingSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -577,8 +657,15 @@ class SubscriptionPricingCreateView(viewsets.ViewSet):
 
 class SubscriptionFeaturesCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = SubscriptionFeatures.objects.all()
+        return queryset
+
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = SubscriptionFeatureSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -609,8 +696,14 @@ class SubscriptionFeaturesCreateView(viewsets.ViewSet):
 
 class StripeTaxIdView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = StripeTaxId.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = StripeTaxIdSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -649,8 +742,14 @@ def get_addons_details(request):
 
 class CreditsAddonsCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = CreditsAddons.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = CreditsAddonSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -688,16 +787,29 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 
 class IndianStatesView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = IndianStates.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = IndianStatesSerializer(queryset,many=True)
         return Response(serializer.data)
 
 
 class SupportTopicsView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = SupportTopics.objects.all()
+        return queryset
+
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = SupportTopicSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -729,8 +841,14 @@ class SupportTopicsView(viewsets.ViewSet):
 
 class SuggestionTypeView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = SuggestionType.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = SuggestionTypeSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -761,8 +879,14 @@ class SuggestionTypeView(viewsets.ViewSet):
 
 class SuggestionView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = Suggestion.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = SuggestionSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -793,8 +917,14 @@ class SuggestionView(viewsets.ViewSet):
 
 class JobPositionsView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = JobPositions.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = JobPositionSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -824,8 +954,15 @@ class JobPositionsView(viewsets.ViewSet):
 
 class TeamRoleView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+
+    @cached
+    def get_queryset(self):
         queryset = Role.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = TeamRoleSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -856,22 +993,41 @@ class TeamRoleView(viewsets.ViewSet):
 
 class MTLanguageSupportView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+
+    @cached
+    def get_queryset(self):
         queryset = MTLanguageSupport.objects.all()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = MTLanguageSupportSerializer(queryset,many=True)
         return Response(serializer.data)
 
 class ProjectTypeView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = ProjectType.objects.all()
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = ProjectTypeSerializer(queryset,many=True)
         return Response(serializer.data)
 
 class ProjectTypeDetailView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-    def list(self,request):
+
+    @cached
+    def get_queryset(self):
         queryset = ProjectTypeDetail.objects.all()
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
         serializer = ProjectTypeDetailSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -956,23 +1112,42 @@ class FileExtensionImage(APIView):
 
 class PromptCategoriesViewset(viewsets.ViewSet):
     # permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = PromptCategories.objects.all().exclude(id = 9) 
+        return queryset
+
+
     def list(self,request):
-        query_set = PromptCategories.objects.all().exclude(id = 9) 
+        query_set = self.get_queryset()
         serializer = PromptCategoriesSerializer(query_set,many=True)
         return Response(serializer.data)  
     
     
 class PromptTonesViewset(viewsets.ViewSet):
     # permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = PromptTones.objects.all()
+        return queryset
+
     def list(self,request):
-        query_set = PromptTones.objects.all()
+        query_set = self.get_queryset()
         serializer = PromptTonesSerializer(query_set,many=True)
         return Response(serializer.data)  
 
 
 class AiCustomizeViewset(viewsets.ViewSet):
+    
+    @cached
+    def get_queryset(self):
+        queryset = AiCustomize.objects.all()
+        return queryset
+    
     def list(self, request):
-        query_set = AiCustomize.objects.all()
+        query_set = self.get_queryset()
         serializer = AiCustomizeGroupingSerializer(query_set)
         return Response(serializer.data)
 
