@@ -242,10 +242,11 @@ class TaskAssignManager(models.Manager):
         self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
 
     def assign_task(self,project):
-        #print("PRO---->",project.id)
+        print("PRO---->",project.id)
         if hasattr(project, "ai_user"):
             assign_to = project.created_by
         tasks = project.get_tasks
+        print("Tasks------->",tasks)
         mt_engine = project.mt_engine_id
         mt_enable = project.mt_enable
         pre_translate = project.pre_translate
