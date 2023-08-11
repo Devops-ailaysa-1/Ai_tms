@@ -1531,9 +1531,17 @@ class ExpressProjectDetail(models.Model):
     def task_obj(self):
         return self.task
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'pr_progress_property_{self.task.job.project.id}_*',
+        ]
+        return cache_keys
+
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+post_save.connect(invalidate_cache_on_save, sender=ExpressProjectDetail)
+pre_delete.connect(invalidate_cache_on_delete, sender=ExpressProjectDetail) 
 
 class ExpressTaskHistory(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")
