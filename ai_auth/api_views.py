@@ -32,7 +32,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -2567,4 +2567,58 @@ def reports_dashboard(request):
         data_sub[f"{sub.get('plan__product__name')} Trial"]=sub.get('plan__product__name__count')
     data["subscriptions"] = data_sub
 
+    return JsonResponse(data,status=200)
+
+
+def subscription_order(plan=None):
+    if plan!=None:
+        current_plan = SubscriptionOrder.objects.get(plan__name=plan).id
+        ls = list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
+        ind = ls.index(current_plan)
+        return ls[ind+1:]
+    else:
+        return list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def subscription_customer_portal(request):
+
+    user = request.user
+    # if user.internal_member:
+    #     user = user.team.owner,user
+    try:
+        sub = user.djstripe_customers.last().subscription 
+        # if sub.status!='active':
+        #     sub = None
+    except:
+        logger.error("too many subscriptions returned")
+        return JsonResponse({'msg':'something went wrong'},status=400)
+
+    if sub!=None:
+        if sub.status != 'active':
+            invoice = None
+        else:
+            invoice = sub.invoices.last()
+
+        current_plan = {
+            'plan_name':sub.plan.product.name ,
+            'plan_status':sub.status,
+            'plan_sub_total':invoice.subtotal if invoice!=None else None,
+            'plan_tax':invoice.tax if invoice!=None else None,
+            'plan_total':invoice.total if invoice!=None else None
+        }
+        sub_order = subscription_order(sub.plan.product.name if sub.status=='active' else None)
+    else:
+        current_plan = None
+        sub_order = subscription_order()
+
+    
+    data = {
+        'current_plan':current_plan,
+        'upgrades':[SubscriptionOrder.objects.get(id= order_id).plan.id for order_id in sub_order],
+        'downgrades':[]
+
+    }
     return JsonResponse(data,status=200)

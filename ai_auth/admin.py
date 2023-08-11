@@ -3,7 +3,7 @@ from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
                     BillingAddress,UserTaxInfo,Team,InternalMember, 
                     VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,
-                    AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage)
+                    AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage,SubscriptionOrder)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -214,5 +214,5 @@ admin.site.register(InternalMember)
 admin.site.register(AilaysaCampaigns)
 admin.site.register(TaskRoles)
 admin.site.register(ProjectRoles)
-
+admin.site.register(SubscriptionOrder)
 #admin.site.register(PersonalInformation)
