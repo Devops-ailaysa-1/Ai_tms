@@ -24,6 +24,7 @@ from simple_history.models import HistoricalRecords
 from ai_openai.signals import text_gen_credit_deduct
 from django.conf import settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
+from django.core.exceptions import ValidationError
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -669,3 +670,28 @@ class ApiUsage(models.Model):
        constraints = [
             UniqueConstraint(fields=['uid', 'email', 'service'], name='unique_user_usage')
         ]
+
+
+class SubscriptionOrder(models.Model):
+    plan =models.ForeignKey(Product,related_name='sub_order_product',on_delete=models.CASCADE)
+    lower_plan = models.ForeignKey(Product,related_name='sub_order_product_lw',null=True,blank=True,on_delete=models.CASCADE)
+    higher_plan = models.ForeignKey(Product,related_name='sub_order_product_up',null=True,blank=True,on_delete=models.CASCADE)
+
+    class Meta:
+        # Create a unique constraint across all three fields
+        constraints = [
+            models.UniqueConstraint(fields=['plan', 'lower_plan','higher_plan'], name='subscriptins_order')
+        ]
+
+    def clean(self):
+        # Custom validation logic to check for blank values
+        if self.higher_plan!=None and self.lower_plan!=None:
+            raise ValidationError("Either 'higher_plan' or 'lower_plan' must have a value.")
+        elif self.higher_plan!=None and self.lower_plan==None:
+            self.lower_plan = None  # Ensure lower_plan is blank if higher_plan is blank
+        elif self.higher_plan==None and self.lower_plan!=None:
+            self.higher_plan = None  # Ensure higher_plan is blank if lower_plan is blank
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Run clean() before saving
+        super().save(*args, **kwargs)
