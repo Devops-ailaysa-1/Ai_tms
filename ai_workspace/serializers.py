@@ -601,18 +601,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
-				tasks = instance.get_tasks
+				tasks = instance.get_analysis_tasks
 			elif instance.team:
 				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
-					tasks = instance.get_tasks
+					tasks = instance.get_analysis_tasks
 				else:
-					tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
+					tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
 					# tasks = [task for job in instance.project_jobs_set.all() for task \
 					# 		in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
 			else:
-				tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
-			#print("TT---------->",tasks)
+				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+			print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
 			return res
 		else:
@@ -1796,6 +1796,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
+		
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail) or ('mtpe_count_unit' in task_detail)):
