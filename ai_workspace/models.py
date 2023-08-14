@@ -417,13 +417,15 @@ class Project(models.Model):
     def get_mtpe_tasks(self):
         return self.get_tasks.filter(~Q(job__target_language=None))
 
-    @property
-    def get_analysis_tasks(self):
-        if self.project_type_id == 3:
-            return None
-        else:
-            tsks = self.get_tasks.filter(~Q(job__target_language=None))
-            return tsks if tsks else None
+    # @property
+    # def get_analysis_tasks(self):
+    #     if self.project_type_id == 3:
+    #         return None
+    #     if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
+    #         return self.get_tasks
+    #     else:
+    #         tsks = self.get_tasks.filter(~Q(job__target_language=None))
+    #         return tsks if tsks else None
       
 
     @property
@@ -651,10 +653,10 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
 
-        if tasks == None:
-            print("In")
-            return {"proj_word_count": 0, "proj_char_count": 0, \
-                "proj_seg_count": 0, "task_words":[]} 
+        # if tasks == None:
+        #     print("In")
+        #     return {"proj_word_count": 0, "proj_char_count": 0, \
+        #         "proj_seg_count": 0, "task_words":[]} 
 
         if self.is_proj_analysed == True:
             print("In2")
