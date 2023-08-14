@@ -94,38 +94,34 @@ def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
 #         cache.delete(cache_key)
 #         print("Deleted")
 from django.core.cache import cache
+#from cacheops import invalidate_obj
 
 def invalidate_cache_on_save(sender, instance, **kwargs):
     print("instance----------->",instance)
+    #invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
     print("Keys on save----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
-                print("inside try save")
-                rr = cache.delete(cache_key)
-                rt = cache.delete_pattern(cache_key)
-                print("Cache Deleted",cache_key,rr)
-                print("Cache pattern Deleted",cache_key,rt)
+                cache.delete(cache_key)
+                cache.delete_pattern(cache_key)
             except:
                 print("Not found")
                 pass
-                # print("inside except save")
-                # rr = cache.delete_pattern(cache_key)
-                # print("Cache Deleted",cache_key,rr)
+               
                 
 
 def invalidate_cache_on_delete(sender, instance, **kwargs):
     print("instance----------->",instance)
+    #invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
     print("Keys on delete----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
-                rr = cache.delete(cache_key)
-                rt = cache.delete_pattern(cache_key)
-                print("Cache Deleted",cache_key,rr)
-                print("Cache pattern Deleted",cache_key,rt)
+                cache.delete(cache_key)
+                cache.delete_pattern(cache_key)
             except:
                 print("Not found")
                 pass
