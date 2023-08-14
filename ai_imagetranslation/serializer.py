@@ -1,6 +1,6 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
                                         StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
-                                            ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,ImageModificationTechnique)
+                                            ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,ImageModificationTechnique,GeneralPromptList)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -562,3 +562,9 @@ class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
     class Meta:
         model = CustomImageGenerationStyle
         fields = ('id','style_name','style')
+
+
+class GeneralPromptListStyleSerializers(serializers.ModelSerializer):
+    class Meta:
+        model =  GeneralPromptList
+        fields = "__all__"

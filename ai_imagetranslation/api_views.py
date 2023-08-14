@@ -1,10 +1,10 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
-                                            CustomImageGenerationStyleSerializers)
+                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
-                                        ImageStyleCategories,CustomImageGenerationStyle)
+                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -361,7 +361,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.data)
     
     def create(self,request):
-        
+
         serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -382,9 +382,16 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 
+
 class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
     queryset = CustomImageGenerationStyle.objects.all()
     serializer_class = CustomImageGenerationStyleSerializers
+    pagination_class = None
+
+
+class GeneralPromptListView(generics.ListCreateAPIView):
+    queryset = GeneralPromptList.objects.all()
+    serializer_class = GeneralPromptListStyleSerializers
     pagination_class = None
 
 
