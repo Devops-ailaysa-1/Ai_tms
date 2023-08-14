@@ -1247,6 +1247,7 @@ class Task(models.Model):
             cache.set(cache_key,cached_value)
         return cached_value
 
+
     @property
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
@@ -1257,11 +1258,11 @@ class Task(models.Model):
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
                     if self.job.target_language==None:
                         if self.task_transcript_details.exists():
-                            catched_value = False
-                        else:catched_value =  True
-                    else:catched_value = None#"null"# None# "Not exists"
-                else:catched_value =  None#"null"#None#"Not exists"
-            else:catched_value = None#"null"# None#"Not exists"
+                            cached_value = False
+                        else:cached_value =  True
+                    else:cached_value = None#"null"# None# "Not exists"
+                else:cached_value =  None#"null"#None#"Not exists"
+            else:cached_value = None#"null"# None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 
