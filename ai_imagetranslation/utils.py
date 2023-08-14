@@ -311,9 +311,10 @@ import random
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
     # url="https://stablediffusionapi.com/api/v3/text2img"
+    #midjourney  sdxl
     data = {
     "key":STABLE_DIFFUSION_PUBLIC_API ,
-    "model_id": "sdxl",
+    "model_id": "realistic-vision-v13",
     "prompt": prompt,
     "width": "1024",
     "height": "1024",
@@ -335,14 +336,10 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     }
     if negative_prompt:
         data['negative_prompt']=negative_prompt
-    print(data)
-
     payload = json.dumps(data) 
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
-    print(response.json())
-    print(response.status_code)
     process=False
  
     while True:
