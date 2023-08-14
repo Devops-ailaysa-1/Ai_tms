@@ -78,10 +78,12 @@ class Ai_PdfUpload(models.Model):
 
 
     def generate_cache_keys(self):
-        cache_keys = [
-            f'task_translated_{self.task.pk}',
-            f'task_converted_{self.task.pk}',
-        ]
+        if self.task:
+            cache_keys = [
+                f'task_translated_{self.task.pk}',
+                f'task_converted_{self.task.pk}',
+            ]
+        else: cache_keys = None
         return cache_keys
     # def __str__(self):
     #     return self.name
