@@ -906,6 +906,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
+        print("User1=============>",user_1)
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -944,6 +945,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
+        print("#######",tasks)
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
