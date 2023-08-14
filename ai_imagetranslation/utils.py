@@ -310,45 +310,15 @@ import random
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
- 
     # url="https://stablediffusionapi.com/api/v3/text2img"
-    if not negative_prompt:
-        print("no negative prompt")
-        negative_prompt=ngv_pmt
-    else:
-        negative_prompt+=ngv_pmt
-    # payload = json.dumps({
-    #     "key":  STABLE_DIFFUSION_PUBLIC_API,
-    #     # "model_id": "midjourney",
-    #     "prompt": prompt,
-    #     "negative_prompt": negative_prompt,
-    #     "width": "512",
-    #     "height": "512",
-    #     "samples": "1",
-    #     "num_inference_steps": "30",
-    #     "seed": None,
-    #     "guidance_scale": 7.5,
-    #     "safety_checker": "yes",
-    #     "multi_lingual": "no",
-    #     "panorama": "no",
-    #     "self_attention": "no",
-    #     "upscale": "no",
-    #     "embeddings_model": None,
-    #     "webhook": None,
-    #     "track_id": None,
-    #     # 'scheduler':'DDIMScheduler',
-    #     })
-    print(negative_prompt)
-    payload = json.dumps({
+    data = {
     "key":STABLE_DIFFUSION_PUBLIC_API ,
     "model_id": "sdxl",
     "prompt": prompt,
-    "negative_prompt": negative_prompt,
     "width": "1024",
     "height": "1024",
     "samples": "1",
     "num_inference_steps": 41,   
-    # "num_inference_steps": "51",
     "seed": random.randint(0,99999999999),
     "guidance_scale": 7.5,
     "safety_checker": "yes",
@@ -362,17 +332,23 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "enhance_prompt":'no',
     'scheduler':'DDIMScheduler',
     "self_attention":'yes',
-    #     "base64":True,
-    #     "vae":"stabilityai/sdxl-vae",
-    #     "clip_skip":4
-    }) 
+    }
+    if negative_prompt:
+        data['negative_prompt']=negative_prompt
+    print(data)
+
+    payload = json.dumps(data) 
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
+    print(response.json())
+    print(response.status_code)
     process=False
  
     while True:
         x=sd_status_check(response.json()['id'])
+        print("stable_loading")
+        print("-----",x)
         if not x['status']=='processing' or x['status']=='success':
             process=True
             break
@@ -381,11 +357,6 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     else:
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
-
-
-
-
-
 
     # headers = {'Content-Type': 'application/json'}
     # response = requests.request("POST", url, headers=headers, data=payload)

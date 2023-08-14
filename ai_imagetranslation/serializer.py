@@ -500,8 +500,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         technique_name=validated_data.pop('technique_name',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         if style:prompt+=style.style_name
-        # if style_cat:prompt+=style_cat.style_category_name
-        # if technique_name:prompt+=technique_name.custom_style_name
         print("prompt",prompt)
         image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
                                       style_preset="",sampler="",negative_prompt=negative_prompt)
