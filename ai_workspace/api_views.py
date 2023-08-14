@@ -4209,7 +4209,7 @@ def project_word_char_count(request):
     final =[]
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
-        print("Tasks--------->",pr_obj.get_tasks)
+        print("Tasks--------->",pr_obj.get_analysis_tasks)
         obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         print("State-------->",state)
@@ -4220,7 +4220,7 @@ def project_word_char_count(request):
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
-            tasks = pr_obj.get_tasks
+            tasks = pr_obj.get_analysis_tasks
             if pr_obj.is_all_doc_opened:
 
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
@@ -4425,6 +4425,25 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         return response
 
 
+
+def analysed_true(pr,tasks):
+    task_words = []
+    if pr.is_all_doc_opened:
+        [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+        out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+            Sum('total_char_count'),Sum('total_segment_count'))
+
+        return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+            "proj_seg_count":out.get('total_segment_count__sum'),\
+                            "task_words" : task_words }
+    else:
+        out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        task_words = []
+        [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+            "proj_seg_count":out.get('task_seg_count__sum'),
+                        "task_words":task_words}
 
 
 # @api_view(['GET'])
