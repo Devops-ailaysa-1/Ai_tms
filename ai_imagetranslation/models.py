@@ -152,6 +152,8 @@ class StableDiffusionAPI(models.Model):
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
     sampler=models.CharField(max_length=100,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     def __str__(self) -> str:
         return self.used_api
     
@@ -172,7 +174,10 @@ class ImageModificationTechnique(models.Model):
 
 
 
-
+class GeneralPromptList(models.Model):
+    prompt=models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 # from django.db import models
 # class ModelA(models.Model):

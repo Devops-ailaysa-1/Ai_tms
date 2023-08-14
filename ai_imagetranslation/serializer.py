@@ -1,6 +1,6 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
                                         StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
-                                            ImageModificationTechnique)
+                                            ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,ImageModificationTechnique)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -480,31 +480,29 @@ samplers = {0:'DDIM',1:'DDPM',2:'K_DPMPP_2M',3:'K_DPMPP_2S_ANCESTRAL',4:'K_DPM_2
            5:'K_DPM_2_ANCESTRAL',6:'K_EULER',7:'K_EULER_ANCESTRAL',8:'K_HEUN',9:'K_LMS'}
 
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
-    # used_api=serializers.CharField(allow_null=True,required=True) 
+
     prompt=serializers.CharField(allow_null=True,required=True)
-    # style =serializers.IntegerField(allow_null=True,required=True)
-    # height=serializers.IntegerField(allow_null=True,required=True)
-    # width=serializers.IntegerField(allow_null=True,required=True)
-    # sampler=serializers.IntegerField(allow_null=True,required=True)
+    style=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CustomImageGenerationStyle.objects.all()),required=False,write_only=True)
+    style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
+    technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False)
+
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt') #style height width sampler used_api
+        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name') #style height width sampler used_api
         model=StableDiffusionAPI
 
     def create(self, validated_data):
         user=self.context['request'].user
         # used_api=validated_data.get('used_api',None)
         prompt=validated_data.get('prompt',None)
-        # style =validated_data.pop('style',None)
-        # height=validated_data.pop('height',None)
-        # width=validated_data.pop('width',None)
-        # sampler=validated_data.pop('sampler',None)
+        style=validated_data.pop('style',None)
+        style_cat=validated_data.pop('style_cat',None)
+        technique_name=validated_data.pop('technique_name',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
-        # if used_api == 'stability':
-        #     image=stable_diffusion_api(prompt=prompt,weight=1,steps=20,height=height,negative_prompt=negative_prompt,width=width,
-        #                                style_preset=styles[int(style)],sampler=samplers[int(sampler)])
-        #     model_name='stable-diffusion-xl-beta-v2-2-2'
-        # if used_api == 'stable_diffusion_api':
+        if style:prompt+=style.style_name
+        # if style_cat:prompt+=style_cat.style_category_name
+        # if technique_name:prompt+=technique_name.custom_style_name
+        print("prompt",prompt)
         image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
                                       style_preset="",sampler="",negative_prompt=negative_prompt)
         model_name='mid-j'
@@ -546,7 +544,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
-    
+
     class Meta:
         model = ImageModificationTechnique
         fields = ('id','custom_style_name','image')

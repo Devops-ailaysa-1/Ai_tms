@@ -360,7 +360,8 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         serializer = StableDiffusionAPISerializer(query_set )
         return Response(serializer.data)
     
-    def create(self,request):    
+    def create(self,request):
+        
         serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         if serializer.is_valid():
             serializer.save()
