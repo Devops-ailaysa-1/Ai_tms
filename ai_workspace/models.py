@@ -647,6 +647,8 @@ class Project(models.Model):
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
+
+
                             
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
@@ -657,10 +659,10 @@ class Project(models.Model):
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
-
+    
         if self.is_proj_analysed == True:
             return analysed_true(self,tasks)
-           
+
         else:
             from .api_views import ProjectAnalysisProperty,analysed_true
             
@@ -671,7 +673,7 @@ class Project(models.Model):
                 print("st------->",state)
                 if state == 'STARTED':
                     return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-                elif state == 'SUCCESS':
+                elif state == 'SUCCESS' and self.is_proj_analysed == True:
                     return analysed_true(self,tasks)
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), )
