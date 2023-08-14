@@ -900,7 +900,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     @staticmethod
-    @cached(timeout=60 * 15)
+    #@cached(timeout=60 * 15)
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
