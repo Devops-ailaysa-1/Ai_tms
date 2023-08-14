@@ -1212,6 +1212,7 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_credits( user, actual_used_credits):
+        #query = UserCredits.objects.get(Q(user=user))
         credit_status = UpdateTaskCreditStatus.update_usercredit(user, actual_used_credits)
 
         if credit_status:
@@ -1529,6 +1530,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         # try:
         task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned=reassigned))
+        #print("RTRTRTR------------------------------------------------>",task_assign,task_assign.assign_to)
         if file:
             serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
         else:
@@ -4207,7 +4209,7 @@ def project_word_char_count(request):
     final =[]
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
-        print("Tasks--------->",pr_obj.get_tasks)
+        print("Tasks--------->",pr_obj.get_analysis_tasks)
         obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         print("State-------->",state)
@@ -4218,7 +4220,7 @@ def project_word_char_count(request):
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
-            tasks = pr_obj.get_tasks
+            tasks = pr_obj.get_analysis_tasks
             if pr_obj.is_all_doc_opened:
 
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]

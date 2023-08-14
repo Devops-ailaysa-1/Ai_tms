@@ -94,11 +94,11 @@ def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
 #         cache.delete(cache_key)
 #         print("Deleted")
 from django.core.cache import cache
-#from cacheops import invalidate_obj
+from cacheops import invalidate_obj
 
 def invalidate_cache_on_save(sender, instance, **kwargs):
     print("instance----------->",instance)
-    #invalidate_obj(instance)
+    invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
     print("Keys on save----------->",cache_keys)
     if cache_keys:
@@ -114,7 +114,7 @@ def invalidate_cache_on_save(sender, instance, **kwargs):
 
 def invalidate_cache_on_delete(sender, instance, **kwargs):
     print("instance----------->",instance)
-    #invalidate_obj(instance)
+    invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
     print("Keys on delete----------->",cache_keys)
     if cache_keys:

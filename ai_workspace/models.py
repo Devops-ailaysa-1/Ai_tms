@@ -416,6 +416,14 @@ class Project(models.Model):
     @property
     def get_mtpe_tasks(self):
         return self.get_tasks.filter(~Q(job__target_language=None))
+
+    @property
+    def get_analysis_tasks(self):
+        if self.project_type_id == 3:
+            return None
+        else:
+            tsks = self.get_tasks.filter(~Q(job__target_language=None))
+            return tsks if tsks else None
       
 
     @property
@@ -643,7 +651,13 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
 
+        if tasks == None:
+            print("In")
+            return {"proj_word_count": 0, "proj_char_count": 0, \
+                "proj_seg_count": 0, "task_words":[]} 
+
         if self.is_proj_analysed == True:
+            print("In2")
             task_words = []
             if self.is_all_doc_opened:
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
