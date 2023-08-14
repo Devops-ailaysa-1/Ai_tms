@@ -418,7 +418,7 @@ class Project(models.Model):
         return self.get_tasks.filter(~Q(job__target_language=None))
       
 
-    @cached_property#property
+    @property
     def get_tasks(self):
         tasks_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
                      Prefetch('job', queryset=Job.objects.select_related('project')))
@@ -484,15 +484,15 @@ class Project(models.Model):
     def get_jobs(self):
         return [job for job in self.project_jobs_set.all()]
 
-    @cached_property#@property
+    @property
     def get_steps(self):
         return [obj.steps for obj in self.proj_steps.all()]
 
-    @cached_property
+    @property#@cached_property
     def get_steps_name(self):
         return [obj.steps.name for obj in self.proj_steps.all()]
 
-    @cached_property #Need to check
+    @property#@cached_property #Need to check
     def PR_step_edit(self):
         if self.proj_detail.exists():
             if self.proj_detail.first().projectpost_steps.filter(steps_id=2).exists():
@@ -517,14 +517,14 @@ class Project(models.Model):
     def get_target_languages(self):
         return [job.target_language for job in self.project_jobs_set.all()]
 
-    @cached_property
+    @property#@cached_property
     def get_team(self):
         if self.team == None:
             return False
         else:
             return True
 
-    @cached_property
+    @property#@cached_property
     def is_all_doc_opened(self):
         docs = self.get_tasks.filter(document__isnull=True)
         if docs:return False
@@ -1531,9 +1531,17 @@ class ExpressProjectDetail(models.Model):
     def task_obj(self):
         return self.task
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'pr_progress_property_{self.task.job.project.id}_*',
+        ]
+        return cache_keys
+
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+post_save.connect(invalidate_cache_on_save, sender=ExpressProjectDetail)
+pre_delete.connect(invalidate_cache_on_delete, sender=ExpressProjectDetail) 
 
 class ExpressTaskHistory(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")

@@ -71,7 +71,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
 from .models import Task
-#from cacheops import cached
+from cacheops import cached
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
@@ -747,7 +747,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             raise Http404
         return obj
 
-    #@cached(timeout=60 * 15)
+    @cached(timeout=60 * 15)
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
@@ -900,6 +900,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     @staticmethod
+    @cached(timeout=60 * 15)
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
@@ -1511,7 +1512,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         req_copy.method = "DELETE"
 
         inst = Task.objects.get(id=task)
-        authorize(request, resource=inst, actor=self.request.user, action="update")
+        #authorize(request, resource=inst, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])

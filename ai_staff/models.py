@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
 from django.apps import apps
-
+from django.utils.functional import cached_property
 
 
 # Create your models here.
@@ -112,6 +112,10 @@ class Languages(ParanoidModel):
 
     class Meta:
         db_table = 'languages'
+
+    @cached_property
+    def locale_code(self):
+        return self.locale.first().locale_code
 
 class LanguagesLocale(ParanoidModel):
     language = models.ForeignKey(Languages,related_name='locale', on_delete=models.CASCADE)
