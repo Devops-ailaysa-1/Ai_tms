@@ -452,7 +452,7 @@ CACHEOPS_DEFAULTS = {
 }
 
 CACHEOPS = {
-    #'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+   # 'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
     'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
     #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
     
