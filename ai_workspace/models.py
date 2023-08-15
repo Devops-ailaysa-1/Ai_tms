@@ -420,12 +420,12 @@ class Project(models.Model):
     @property
     def get_analysis_tasks(self):
         if self.project_type_id == 3:
-            return None
+            return Task.objects.none()
         if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
             return self.get_tasks
         else:
             tsks = self.get_tasks.filter(~Q(job__target_language=None))
-            return tsks if tsks else None
+            return tsks if tsks else Task.objects.none()
       
 
     @property
@@ -655,7 +655,7 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if tasks == None:
+        if not tasks:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
