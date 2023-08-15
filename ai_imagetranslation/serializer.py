@@ -563,7 +563,7 @@ class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
     style=ImageStyleCategorySerializers(many=True)
     class Meta:
         model = CustomImageGenerationStyle
-        fields = ('id','style_name','style')
+        fields = ('id','style_name','style','image')
 
 
 class GeneralPromptListStyleSerializers(serializers.ModelSerializer):
