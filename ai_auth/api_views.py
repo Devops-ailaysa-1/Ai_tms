@@ -515,6 +515,11 @@ def create_checkout_session(user,price,customer=None,trial=False):
     # except BillingAddress.DoesNotExist:
     #     addr_collect= 'required'
 
+    coupon = check_campaign_coupon(user)
+    if coupon:
+        if price.recurring.get('interval') == 'month':
+            coupon = False
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
@@ -533,6 +538,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
         #billing_address_collection=addr_collect,
         customer_update={'address':'never','name':'never'},
         #tax_id_collection={'enabled':'True'},
+        allow_promotion_codes=coupon,
         subscription_data={
         'default_tax_rates':tax_rate,
         'trial_end':None,
@@ -1023,6 +1029,19 @@ def campaign_subscribe(user,camp):
                 quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
     return sub
 
+def check_campaign_coupon(user):
+    camp = CampaignUsers.objects.filter(user=user)
+    if camp.count() > 0:
+        if camp.last().coupon_used == False:
+
+            # camp.name.subscription_name
+            return True
+        elif camp.last().coupon_used == True:
+            logger.warning(f"user already user campaign coupon :{user.uid}")
+            return False
+    else:
+        return False
+    
 def check_campaign(user):
     camp = CampaignUsers.objects.filter(user=user)
     if camp.count() > 0:
@@ -1287,6 +1306,20 @@ def TransactionSessionInfo(request):
     # print("Bank Details")
     # print()
     # print(response)
+    try:
+        amount = response.get("total_details").get("amount_discount")
+
+        if amount != 0:
+            email = response.get("customer_details").get("email")
+            camp = CampaignUsers.objects.filter(user__email=email,coupon_used=False)
+            if camp.count() > 0:
+                camp = camp.last()
+                camp.coupon_used= True
+                camp.save()
+                # if camp.last().coupon_used == False:
+    except BaseException as e:
+        logger.error(f"Issue in campaign update sess_id :{session_id}")
+
     if response.mode == "subscription":
         try:
             invoice =Invoice.objects.get(subscription=response.subscription)
@@ -2515,7 +2548,18 @@ def oso_test_querys(request):
 
 
 from .models import CoCreateForm
-from .serializers import CoCreateFormSerializer
+from .serializers import CoCreateFormSerializer,CampaignRegisterSerializer
+
+class CampaignRegistrationView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def create(self,request):
+        # email = request.POST.get('email')
+        serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"msg":"successfully created"},status=201)
+        return Response(serializer.errors)
+    
 class CoCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):

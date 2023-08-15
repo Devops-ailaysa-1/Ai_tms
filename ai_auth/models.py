@@ -598,6 +598,7 @@ class AilaysaCampaigns(models.Model):
     subscription_credits=models.IntegerField()
     Addon_name = models.CharField(max_length=100, blank=True, null=True)
     Addon_quantity =models.IntegerField(default=1)
+    coupon = models.CharField(max_length=60, blank=True, null=True)
 
     @property
     def owner_pk(self):
@@ -607,6 +608,7 @@ class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
     campaign_name =  models.ForeignKey(AilaysaCampaigns,on_delete=models.CASCADE,related_name='ai_campaigns')
     subscribed = models.BooleanField(default=False)
+    coupon_used = models.BooleanField(null=True)
 
     @property
     def owner_pk(self):
