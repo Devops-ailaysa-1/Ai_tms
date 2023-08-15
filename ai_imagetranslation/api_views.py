@@ -388,6 +388,8 @@ class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
     serializer_class = CustomImageGenerationStyleSerializers
     pagination_class = None
 
+    # def get_queryset(self):
+    #     return RackItem.objects.filter(shopper=self.request.user)
 
 class GeneralPromptListView(generics.ListCreateAPIView):
     queryset = GeneralPromptList.objects.all()

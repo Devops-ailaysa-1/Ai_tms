@@ -539,21 +539,25 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     img_tar.target_canvas_json=can_tar_json
         #     img_tar.save()
         #     return instance
-
+from django.db.models import Case, When
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = ImageModificationTechnique
         fields = ('id','custom_style_name','image')
+
    
 class ImageStyleCategorySerializers(serializers.ModelSerializer):
-    style_category=ImageModificationTechniqueSerializers(many=True,read_only=True)
-
+    # style_category=ImageModificationTechniqueSerializers(many=True,read_only=True)
+    style_category = serializers.SerializerMethodField()
     class Meta:
         model = ImageStyleCategories
         fields = ('id','style_category_name','style_category')
- 
+
+    def get_style_category(self, instance):
+        songs = instance.style_category.all().order_by('None')
+        return ImageModificationTechniqueSerializers(songs, many=True).data
 
 class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
     style=ImageStyleCategorySerializers(many=True)
