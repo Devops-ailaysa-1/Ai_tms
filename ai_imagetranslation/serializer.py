@@ -556,7 +556,7 @@ class ImageStyleCategorySerializers(serializers.ModelSerializer):
         fields = ('id','style_category_name','style_category')
 
     def get_style_category(self, instance):
-        songs = instance.style_category.all().order_by(Case(When(custom_style_name=None, then=0), default=1))
+        songs = instance.style_category.all().order_by(Case(When(custom_style_name="None", then=0), default=1))
         return ImageModificationTechniqueSerializers(songs, many=True).data
 
 class CustomImageGenerationStyleSerializers(serializers.ModelSerializer):
