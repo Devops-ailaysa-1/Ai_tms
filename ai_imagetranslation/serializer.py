@@ -540,7 +540,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     img_tar.save()
         #     return instance
 from django.db.models import Case, When
-
+from django.http import HttpRequest
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
     class Meta:
@@ -548,9 +548,12 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
         fields = ('id','custom_style_name','image')
 
     def to_representation(self, instance):
+        
+        print("0---",self.context)
         representation=super().to_representation(instance)
         if representation.get('image' , None):
-            representation['image']=instance.image.url
+            representation['image']=HOST_NAME+instance.image.url
+            print(representation['image'])
         return representation
         
 
