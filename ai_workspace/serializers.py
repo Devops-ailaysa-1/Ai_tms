@@ -632,7 +632,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			print("Cached---------->",cached_value)
 			if not cached_value:
 				user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-
+				print("User_1------------------------------------->",user_1)
 				if instance.ai_user == user:
 					tasks = instance.get_tasks
 				elif instance.team:
