@@ -431,7 +431,7 @@ class Project(models.Model):
     @property
     def get_tasks(self):
         tasks_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
-                     Prefetch('job', queryset=Job.objects.select_related('project')))
+                     Prefetch('job', queryset=Job.objects.select_related('project'))).distinct()
         return tasks_list
         # cache_key = f'pr_get_tasks_{self.pk}'
         # cached_value = cache.get(cache_key)
