@@ -148,7 +148,7 @@ INSTALLED_APPS = [
     'ai_openai',
     'simple_history',
     "ai_bi",
-    "silk",
+    #"silk",
 ]
 
 
@@ -170,7 +170,7 @@ MIDDLEWARE = [
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    #'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
