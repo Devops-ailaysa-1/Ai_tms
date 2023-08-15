@@ -82,5 +82,6 @@ urlpatterns+= [
      # path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
     path('reports-dashboard/',api_views.reports_dashboard,name='reports-dashboard'),
-    path('subs-cust-portal/',api_views.subscription_customer_portal,name='subs_cust_portal') 
+    path('subs-cust-portal/',api_views.subscription_customer_portal,name='subs_cust_portal'),
+    path('campaign-register/',api_views.CampaignRegistrationView.as_view({'post':'create'}),name='campaign_register') 
 ]
