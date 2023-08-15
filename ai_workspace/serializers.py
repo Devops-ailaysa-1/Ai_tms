@@ -628,6 +628,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 			cache_key = f'pr_progress_property_{instance.id}_{user.pk}'
 			cached_value = cache.get(cache_key)
+			print("key------------>",cache_key)
 			print("Cached---------->",cached_value)
 			if not cached_value:
 				user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
@@ -641,6 +642,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 						tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
 				else:
 					tasks = instance.get_tasks.filter(task_info__assign_to_id=user_1)
+				print("Tskss--------------->",tasks)
 				cached_value = instance.pr_progress(tasks)
 				print("cached_value_calculated--------------->",cached_value)
 				cache.set(cache_key, cached_value)#, timeout=60)
