@@ -311,10 +311,10 @@ import random
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
     # url="https://stablediffusionapi.com/api/v3/text2img"
-    #midjourney  sdxl
+    #midjourney  sdxl realistic-vision-v13
     data = {
     "key":STABLE_DIFFUSION_PUBLIC_API ,
-    "model_id": "realistic-vision-v13",
+    "model_id": "sdxl",
     "prompt": prompt,
     "width": "1024",
     "height": "1024",
