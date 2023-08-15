@@ -547,6 +547,13 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
         model = ImageModificationTechnique
         fields = ('id','custom_style_name','image')
 
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if representation.get('image' , None):
+            representation['image']=instance.image.url
+        return representation
+        
+
    
 class ImageStyleCategorySerializers(serializers.ModelSerializer):
     # style_category=ImageModificationTechniqueSerializers(many=True,read_only=True)
