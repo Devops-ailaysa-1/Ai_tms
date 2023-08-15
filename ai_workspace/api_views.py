@@ -4392,7 +4392,8 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
         queryset2 = view_instance_2.get_queryset_for_combined()
         print("Queryset@------------>",queryset2)
-
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
         owner = request.user.team.owner if request.user.team  else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
@@ -4420,7 +4421,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
         # final_queryset = self.filter_queryset(merged_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request})
+        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 
@@ -4522,6 +4523,9 @@ class AssertList(viewsets.ModelViewSet):
         queryset1 = queryset.filter(glossary_project__isnull=False)
         queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
         search_query = request.GET.get('search')
 
         if query:
@@ -4550,7 +4554,7 @@ class AssertList(viewsets.ModelViewSet):
             ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'name',None)),reverse=reverse_order)
         print("Or---------->",ordered_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = AssertSerializer(pagin_tc,many=True,context={'request': request})
+        ser = AssertSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 
