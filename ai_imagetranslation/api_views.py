@@ -1,7 +1,7 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
-                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers)
+                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,CustomImageGenerationStyleSerializerV2)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
                                         ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList)
@@ -306,25 +306,7 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
-#     if len(pages_list)==1:
-#         print("single___page",pages_list[0].json)
-#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
-#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
-#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
-        
-#     else:
-#         print("multiple___page")
-#         buffer=io.BytesIO()
-#         with ZipFile(buffer, mode="a") as archive:
-#             for src_json in pages_list:
-#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
-#                 path='{}/{}'.format(lang,file_name)
-#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
-#                 values=export_download(src_json.json,file_format,export_size)
-#                 archive.writestr(path,values)
-#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
-#     return response
+
 
 
 model_list = ['stability','stable_diffusion_api']
@@ -347,6 +329,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
     search_fields =['prompt','sampler','style']
+
     def get(self, request):
         queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
         queryset = self.filter_queryset(queryset)
@@ -381,20 +364,50 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-
 class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
     queryset = CustomImageGenerationStyle.objects.all()
     serializer_class = CustomImageGenerationStyleSerializers
     pagination_class = None
 
-    # def get_queryset(self):
-    #     return RackItem.objects.filter(shopper=self.request.user)
-
 class GeneralPromptListView(generics.ListCreateAPIView):
     queryset = GeneralPromptList.objects.all()
     serializer_class = GeneralPromptListStyleSerializers
     pagination_class = None
+
+
+class CustomImageGenerationStyleViewSet(viewsets.ViewSet):
+
+    def update(self,request,pk):
+        query_set = CustomImageGenerationStyle.objects.get(id=pk)
+        serializer = CustomImageGenerationStyleSerializerV2(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+
+
+# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
+#     if len(pages_list)==1:
+#         print("single___page",pages_list[0].json)
+#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        
+#     else:
+#         print("multiple___page")
+#         buffer=io.BytesIO()
+#         with ZipFile(buffer, mode="a") as archive:
+#             for src_json in pages_list:
+#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+#                 path='{}/{}'.format(lang,file_name)
+#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
+#                 values=export_download(src_json.json,file_format,export_size)
+#                 archive.writestr(path,values)
+#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+#     return response
 
 
     # def list(self, request):

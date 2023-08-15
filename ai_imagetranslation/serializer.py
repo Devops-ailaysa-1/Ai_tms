@@ -570,3 +570,23 @@ class GeneralPromptListStyleSerializers(serializers.ModelSerializer):
     class Meta:
         model =  GeneralPromptList
         fields = "__all__"
+
+
+
+
+class CustomImageGenerationStyleSerializerV2(serializers.ModelSerializer):
+    class Meta:
+        model =  CustomImageGenerationStyle
+        fields = "__all__"
+
+    
+    def update(self, instance, validated_data):
+        image = validated_data.get('image',None)
+        instance.image=image
+        instance.save()
+        im=Image.open(instance.image.path).resize((100,100))
+        im=convert_image_url_to_file(im,no_pil_object=False)
+        instance.image=im
+        instance.save()
+        return instance
+

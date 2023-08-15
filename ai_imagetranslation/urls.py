@@ -8,6 +8,7 @@ router.register(r'imageloadlist',api_views.ImageloadViewset ,basename= 'imageupl
 router.register(r'imagetranslate' , api_views.ImageTranslateViewset ,basename= 'inpaintimage') ########
 router.register(r'backgroundremove' , api_views.BackgroundRemovelViewset ,basename= 'background-remove')
 router.register(r'stable-diffusion',api_views.StableDiffusionAPIViewset,basename='stablediffusion')
+router.register(r'sd-image-style',api_views.CustomImageGenerationStyleViewSet,basename='sd-im')
 urlpatterns =  router.urls
 urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),
               path('image-download',api_views.image_translation_project_view,name="image_download"),
