@@ -104,8 +104,9 @@ def invalidate_cache_on_save(sender, instance, **kwargs):
     if cache_keys:
         for cache_key in cache_keys:
             try:
-                cache.delete(cache_key)
-                cache.delete_pattern(cache_key)
+                rt = cache.delete(cache_key)
+                rs = cache.delete_pattern(cache_key)
+                print('cache deleted------>',rt,rs)
             except:
                 print("Not found")
                 pass
