@@ -574,9 +574,9 @@ class GeneralPromptListStyleSerializers(serializers.ModelSerializer):
 
 
 
-class CustomImageGenerationStyleSerializerV2(serializers.ModelSerializer):
+class ImageModificationTechniqueSerializerV2(serializers.ModelSerializer):
     class Meta:
-        model =  CustomImageGenerationStyle
+        model =  ImageModificationTechnique
         fields = "__all__"
 
     

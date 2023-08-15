@@ -1,10 +1,10 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
-                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,CustomImageGenerationStyleSerializerV2)
+                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,ImageModificationTechniqueSerializerV2)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
-                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList)
+                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -375,11 +375,11 @@ class GeneralPromptListView(generics.ListCreateAPIView):
     pagination_class = None
 
 
-class CustomImageGenerationStyleViewSet(viewsets.ViewSet):
+class ImageModificationTechniqueViewSet(viewsets.ViewSet):
 
     def update(self,request,pk):
-        query_set = CustomImageGenerationStyle.objects.get(id=pk)
-        serializer = CustomImageGenerationStyleSerializerV2(query_set,data=request.data ,partial=True)
+        query_set = ImageModificationTechnique.objects.get(id=pk)
+        serializer = ImageModificationTechniqueSerializerV2(query_set,data=request.data ,partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

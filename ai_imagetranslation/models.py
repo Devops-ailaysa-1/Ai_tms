@@ -172,8 +172,6 @@ class ImageModificationTechnique(models.Model):
     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
-
-
 class GeneralPromptList(models.Model):
     prompt=models.TextField()
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
