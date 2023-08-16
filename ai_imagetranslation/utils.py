@@ -329,9 +329,9 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "embeddings_model": None,
     "webhook": None,"track_id": None,
     "enhance_prompt":'no',
-    'scheduler':'EulerAncestralDiscreteScheduler', 
+    'scheduler':'DDIMScheduler', 
     "self_attention":'yes',
-    } # DDIMScheduler
+    } # DDIMScheduler EulerAncestralDiscreteScheduler
     if negative_prompt:
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 
@@ -343,6 +343,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     while True:
         x=sd_status_check(response.json()['id'])
         if not x['status']=='processing' or x['status']=='success':
+            print("processing")
             process=True
             break
     if process:
