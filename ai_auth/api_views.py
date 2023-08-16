@@ -2644,7 +2644,7 @@ def subscription_customer_portal(request):
         #     sub = None
     except:
         logger.error(f"too many subscriptions returned {user.id}")
-        sub = user.djstripe_customers.subscriptions.last()
+        sub = user.djstripe_customers.last().subscriptions.last()
         # return JsonResponse({'msg':'something went wrong'},status=400)  return JsonResponse({'msg':'something went wrong'},status=400)
 
     if sub!=None:
