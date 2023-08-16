@@ -7,6 +7,7 @@ from PIL import Image
 from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_api,stable_diffusion_public
 from ai_workspace_okapi.utils import get_translation
 from django import core
+from django.db.models import Case, When
 from ai_canvas.utils import thumbnail_create
 import copy,os,cv2,numpy
 from ai_canvas.utils import convert_image_url_to_file 
@@ -479,6 +480,8 @@ styles = {0:'3d-model',1:'analog-film',2:'anime',3:'cinematic' ,4:'comic-book' ,
 samplers = {0:'DDIM',1:'DDPM',2:'K_DPMPP_2M',3:'K_DPMPP_2S_ANCESTRAL',4:'K_DPM_2',
            5:'K_DPM_2_ANCESTRAL',6:'K_EULER',7:'K_EULER_ANCESTRAL',8:'K_HEUN',9:'K_LMS'}
 
+
+from ai_openai.utils import get_prompt_chatgpt_turbo
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
     prompt=serializers.CharField(allow_null=True,required=True)
@@ -500,10 +503,15 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         technique_name=validated_data.pop('technique_name',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         if style:prompt+=style.style_name
-        print("prompt",prompt)
+
+        
+        text = prompt+" form a prompt sentence using this keyword."
+        print("text",text)
+        prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
         image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
                                       style_preset="",sampler="",negative_prompt=negative_prompt)
-        model_name='mid-j'
+        print("prompt",prompt)
+        model_name='SDXL'
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name=model_name,
                                                    style="",height=512,width=512,sampler="",negative_prompt=negative_prompt)
         instance.image=image
@@ -539,8 +547,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         #     img_tar.target_canvas_json=can_tar_json
         #     img_tar.save()
         #     return instance
-from django.db.models import Case, When
-from django.http import HttpRequest
+
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
     class Meta:
@@ -548,8 +555,6 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
         fields = ('id','custom_style_name','image')
 
     def to_representation(self, instance):
-        
-        print("0---",self.context)
         representation=super().to_representation(instance)
         if representation.get('image' , None):
             representation['image']=HOST_NAME+instance.image.url

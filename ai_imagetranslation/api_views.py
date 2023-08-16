@@ -388,7 +388,6 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
 
 
 
-
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:
 #         print("single___page",pages_list[0].json)

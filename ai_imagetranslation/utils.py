@@ -4,6 +4,7 @@ from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
 import extcolors 
 from django import core
+import random
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
 credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
@@ -306,7 +307,7 @@ def sd_status_check(id):
     return response.json()
 
 
-import random
+
 
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
@@ -323,13 +324,10 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "seed": random.randint(0,99999999999),
     "guidance_scale": 7.5,
     "safety_checker": "yes",
-    "multi_lingual": "no",
-    "panorama": "no",
-    "self_attention": "yes",
-    "upscale": "no",
+    "multi_lingual": "no","panorama": "no",
+    "self_attention": "yes","upscale": "no",
     "embeddings_model": None,
-    "webhook": None,
-    "track_id": None,
+    "webhook": None,"track_id": None,
     "enhance_prompt":'no',
     'scheduler':'DDIMScheduler',
     "self_attention":'yes',
@@ -344,8 +342,6 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
  
     while True:
         x=sd_status_check(response.json()['id'])
-        print("stable_loading")
-        print("-----",x)
         if not x['status']=='processing' or x['status']=='success':
             process=True
             break

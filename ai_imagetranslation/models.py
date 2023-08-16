@@ -210,7 +210,6 @@ class ImageModificationTechnique(models.Model):
             known_info+= "--"+self.default_prompt
         return known_info
 
-
 # from django.db import models
 # class ModelA(models.Model):
 #     name = models.CharField(max_length=800)
