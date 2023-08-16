@@ -999,13 +999,13 @@ def campaign_subscribe(user,camp):
     else:
         sub=subscribe(price=price,customer=cust)
         if sub:
-            camp.subscribed =True
-            camp.save()
-            send_campaign_email.send(
-            sender=camp.__class__,
-            instance = camp,
-            user=user,
-            )
+            # camp.subscribed =True
+            # camp.save()
+            # send_campaign_email.send(
+            # sender=camp.__class__,
+            # instance = camp,
+            # user=user,
+            # )
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
             print("error in creating subscription ",user.uid)
@@ -2554,11 +2554,13 @@ class CampaignRegistrationView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
     def create(self,request):
         # email = request.POST.get('email')
-        serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"msg":"successfully created"},status=201)
-        return Response(serializer.errors)
+        try:
+            serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
+            if serializer.is_valid():
+                serializer.save()
+            return Response({"msg":"User registerd successfully"},status=201)
+        except ValueError as e:
+            return Response({"msg":str(e)},status=409)
     
 class CoCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -2637,8 +2639,9 @@ def subscription_customer_portal(request):
         # if sub.status!='active':
         #     sub = None
     except:
-        logger.error("too many subscriptions returned")
-        return JsonResponse({'msg':'something went wrong'},status=400)
+        logger.error(f"too many subscriptions returned {user.id}")
+        sub = user.djstripe_customers.subscriptions.last()
+        # return JsonResponse({'msg':'something went wrong'},status=400)  return JsonResponse({'msg':'something went wrong'},status=400)
 
     if sub!=None:
         if sub.status != 'active':
@@ -2649,9 +2652,9 @@ def subscription_customer_portal(request):
         current_plan = {
             'plan_name':sub.plan.product.name ,
             'plan_status':sub.status,
-            'plan_sub_total':invoice.subtotal if invoice!=None else None,
-            'plan_tax':invoice.tax if invoice!=None else None,
-            'plan_total':invoice.total if invoice!=None else None
+            'plan_sub_total':invoice.subtotal if invoice!=None else 0,
+            'plan_tax':invoice.tax if invoice!=None else 0,
+            'plan_total':invoice.total if invoice!=None else 0
         }
         sub_order = subscription_order(sub.plan.product.name if sub.status=='active' else None)
     else:
