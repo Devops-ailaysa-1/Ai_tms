@@ -588,7 +588,6 @@ class ImageModificationTechniqueSerializerV2(serializers.ModelSerializer):
     class Meta:
         model =  ImageModificationTechnique
         fields = "__all__"
-
     
     def update(self, instance, validated_data):
         image = validated_data.get('image',None)

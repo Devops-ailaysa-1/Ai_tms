@@ -158,24 +158,54 @@ class StableDiffusionAPI(models.Model):
         return self.used_api
     
 
-class CustomImageGenerationStyle(models.Model):
-    style_name=models.CharField(max_length=200,blank=True,null=True)
-    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+# class CustomImageGenerationStyle(models.Model):
+#     style_name=models.CharField(max_length=200,blank=True,null=True)
+#     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
 
-class ImageStyleCategories(models.Model):
-    style_name=models.ManyToManyField(CustomImageGenerationStyle,related_name="style")
-    style_category_name=models.CharField(max_length=200,blank=True,null=True)
+# class ImageStyleCategories(models.Model):
+#     style_name=models.ManyToManyField(CustomImageGenerationStyle,related_name="style")
+#     style_category_name=models.CharField(max_length=200,blank=True,null=True)
 
-class ImageModificationTechnique(models.Model):
-    custom_image_style=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="style_category")
-    custom_style_name=models.CharField(max_length=200,blank=True,null=True)
-    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+# class ImageModificationTechnique(models.Model):
+#     custom_image_style=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="style_category")
+#     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
+#     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
 class GeneralPromptList(models.Model):
     prompt=models.TextField()
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
+
+class CustomImageGenerationStyle(models.Model):
+    style_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    def __str__(self) -> str:
+        return self.style_name
+
+class ImageStyleCategories(models.Model):
+    style_name=models.ForeignKey(CustomImageGenerationStyle,on_delete=models.CASCADE,related_name="style")
+    style_category_name=models.CharField(max_length=200,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    def __str__(self) -> str:
+        return self.style_category_name +"--"+ self.style_name.style_name
+
+
+class ImageModificationTechnique(models.Model):
+    custom_image_style=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="style_category")
+    custom_style_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.custom_style_name +"--"+ self.custom_image_style.style_category_name +"--"+ self.custom_image_style.style_name.style_name
+
 
 # from django.db import models
 # class ModelA(models.Model):
