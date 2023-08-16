@@ -584,11 +584,16 @@ class CampaignRegisterSerializer(serializers.Serializer):
     campaign = serializers.CharField()
 
     def create(self, validated_data):
+        from ai_auth.api_views import check_campaign
         email = validated_data.get('email')
         campaign = validated_data.get('campaign')
-        print("email-->",email)
-        print("email-->",campaign)
-        user,password = create_user(email=email,country=101)
+        # print("email-->",email)
+        # print("email-->",campaign)
+        res = create_user(email=email,country=101)
+        if res==None:
+            raise ValueError('email already registerd')
+
+        user,password = res
         ai_camp = AilaysaCampaigns.objects.get(campaign_name=campaign)
         if ai_camp.coupon != None:
             coupon = False
@@ -596,4 +601,5 @@ class CampaignRegisterSerializer(serializers.Serializer):
             coupon = None
         CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
         campaign_user_invite_email(user=user,gen_password=password)
+        camp = check_campaign(user)
         return user
