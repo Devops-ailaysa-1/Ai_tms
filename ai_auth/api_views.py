@@ -516,9 +516,9 @@ def create_checkout_session(user,price,customer=None,trial=False):
     #     addr_collect= 'required'
 
     coupon = check_campaign_coupon(user)
-    if coupon:
-        if price.recurring.get('interval') == 'month':
-            coupon = False
+    # if coupon:
+    #     if price.recurring.get('interval') == 'month':
+    #         coupon = False
 
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
@@ -698,6 +698,9 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     #     addr_collect='auto'
     # except BillingAddress.DoesNotExist:
     #     addr_collect= 'required'
+
+    coupon = check_campaign_coupon(Aicustomer.subscriber)
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
@@ -708,6 +711,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         #billing_address_collection=addr_collect,
         customer_update={'address':'never','name':'never'},
         #tax_id_collection={'enabled':'True'},
+        allow_promotion_codes=coupon,
         line_items=[
             {
                 'price': price.id,
