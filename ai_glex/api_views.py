@@ -39,6 +39,7 @@ import pandas as pd
 from ai_staff.models import LanguageMetaDetails
 from django.db.models import Value, IntegerField, CharField
 from django_oso.auth import authorize
+from ai_workspace.signals import invalidate_cache_on_save
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
