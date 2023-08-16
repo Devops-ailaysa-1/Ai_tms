@@ -119,7 +119,7 @@ class ConversionPortableDoc(APIView):
     serializer = PdfFileSerializer
     def get(self,request):
         celery_task = {}
-        user = request.user
+        user = request.user.team.owner if request.user.team else request.user
         ids = request.query_params.getlist('id', None)
         initial_credit = user.credit_balance.get("total_left")
         for id in ids:

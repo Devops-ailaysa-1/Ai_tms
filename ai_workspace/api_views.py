@@ -747,7 +747,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             raise Http404
         return obj
 
-    @cached(timeout=60 * 15)
+    #@cached(timeout=60 * 15)
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
@@ -900,12 +900,13 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     @staticmethod
-    @cached(timeout=60 * 15)
+    #@cached(timeout=60 * 15)
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
+        print("User1=============>",user_1)
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -944,6 +945,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
+        print("#######",tasks)
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -1210,6 +1212,7 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_credits( user, actual_used_credits):
+        #query = UserCredits.objects.get(Q(user=user))
         credit_status = UpdateTaskCreditStatus.update_usercredit(user, actual_used_credits)
 
         if credit_status:
@@ -1527,6 +1530,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         # try:
         task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned=reassigned))
+        #print("RTRTRTR------------------------------------------------>",task_assign,task_assign.assign_to)
         if file:
             serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
         else:
@@ -4205,7 +4209,7 @@ def project_word_char_count(request):
     final =[]
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
-        print("Tasks--------->",pr_obj.get_tasks)
+        print("Tasks--------->",pr_obj.get_analysis_tasks)
         obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         print("State-------->",state)
@@ -4216,7 +4220,7 @@ def project_word_char_count(request):
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
-            tasks = pr_obj.get_tasks
+            tasks = pr_obj.get_analysis_tasks
             if pr_obj.is_all_doc_opened:
 
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
@@ -4390,7 +4394,8 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
         queryset2 = view_instance_2.get_queryset_for_combined()
         print("Queryset@------------>",queryset2)
-
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
         owner = request.user.team.owner if request.user.team  else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
@@ -4418,11 +4423,30 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
         # final_queryset = self.filter_queryset(merged_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request})
+        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 
 
+
+def analysed_true(pr,tasks):
+    task_words = []
+    if pr.is_all_doc_opened:
+        [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+        out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+            Sum('total_char_count'),Sum('total_segment_count'))
+
+        return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+            "proj_seg_count":out.get('total_segment_count__sum'),\
+                            "task_words" : task_words }
+    else:
+        out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        task_words = []
+        [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+            "proj_seg_count":out.get('task_seg_count__sum'),
+                        "task_words":task_words}
 
 
 # @api_view(['GET'])
@@ -4501,6 +4525,9 @@ class AssertList(viewsets.ModelViewSet):
         queryset1 = queryset.filter(glossary_project__isnull=False)
         queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
         search_query = request.GET.get('search')
 
         if query:
@@ -4529,7 +4556,7 @@ class AssertList(viewsets.ModelViewSet):
             ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'name',None)),reverse=reverse_order)
         print("Or---------->",ordered_queryset)
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = AssertSerializer(pagin_tc,many=True,context={'request': request})
+        ser = AssertSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 

@@ -328,6 +328,7 @@ class Project(models.Model):
         else:
             assigned_jobs = [i.job.id for i in tasks]
             docs = Document.objects.filter(job__in=assigned_jobs).all()
+            print("Docs------------------->",docs)
             #docs = Document.objects.filter(job__project_id=self.id).all()
             #tasks = len(tasks)
             total_segments = 0
@@ -416,12 +417,22 @@ class Project(models.Model):
     @property
     def get_mtpe_tasks(self):
         return self.get_tasks.filter(~Q(job__target_language=None))
+
+    @property
+    def get_analysis_tasks(self):
+        if self.project_type_id == 3:
+            return Task.objects.none()
+        if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
+            return self.get_tasks
+        else:
+            tsks = self.get_tasks.filter(~Q(job__target_language=None))
+            return tsks if tsks else Task.objects.none()
       
 
     @property
     def get_tasks(self):
         tasks_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
-                     Prefetch('job', queryset=Job.objects.select_related('project')))
+                     Prefetch('job', queryset=Job.objects.select_related('project'))).distinct()
         return tasks_list
         # cache_key = f'pr_get_tasks_{self.pk}'
         # cached_value = cache.get(cache_key)
@@ -638,31 +649,24 @@ class Project(models.Model):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
 
+
+                            
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
-
+        from .api_views import analysed_true
+        if not tasks:
+            print("In")
+            return {"proj_word_count": 0, "proj_char_count": 0, \
+                "proj_seg_count": 0, "task_words":[]} 
+    
         if self.is_proj_analysed == True:
-            task_words = []
-            if self.is_all_doc_opened:
-                [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
-                out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
-                    Sum('total_char_count'),Sum('total_segment_count'))
+            return analysed_true(self,tasks)
 
-                return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-                    "proj_seg_count":out.get('total_segment_count__sum'),\
-                                  "task_words" : task_words }
-            else:
-                out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-                task_words = []
-                [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
-
-                return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-                    "proj_seg_count":out.get('task_seg_count__sum'),
-                                "task_words":task_words}
         else:
-            from .api_views import ProjectAnalysisProperty
+            from .api_views import ProjectAnalysisProperty,analysed_true
+            
             try:
                 print("Inside Try. Checking celery")
                 obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
@@ -670,6 +674,8 @@ class Project(models.Model):
                 print("st------->",state)
                 if state == 'STARTED':
                     return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+                elif state == 'SUCCESS' and self.is_proj_analysed == True:
+                    return analysed_true(self,tasks)
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), )
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
@@ -729,6 +735,26 @@ class Project(models.Model):
             #     print("Inside Except")
             #     return {"proj_word_count": 0, "proj_char_count": 0, \
             #     "proj_seg_count": 0, "task_words":[]}
+             # rr = analysed_true(self,tasks)
+            # print("RRRRRRRRRR------------------------>",rr)
+            # return rr
+            # task_words = []
+            # if self.is_all_doc_opened:
+            #     [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+            #     out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+            #         Sum('total_char_count'),Sum('total_segment_count'))
+
+            #     return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+            #         "proj_seg_count":out.get('total_segment_count__sum'),\
+            #                       "task_words" : task_words }
+            # else:
+            #     out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+            #     task_words = []
+            #     [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+            #     return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+            #         "proj_seg_count":out.get('task_seg_count__sum'),
+            #                     "task_words":task_words}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -1231,6 +1257,7 @@ class Task(models.Model):
             cache.set(cache_key,cached_value)
         return cached_value
 
+
     @property
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
@@ -1241,11 +1268,11 @@ class Task(models.Model):
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
                     if self.job.target_language==None:
                         if self.task_transcript_details.exists():
-                            catched_value = False
-                        else:catched_value =  True
-                    else:catched_value = None#"null"# None# "Not exists"
-                else:catched_value =  None#"null"#None#"Not exists"
-            else:catched_value = None#"null"# None#"Not exists"
+                            cached_value = False
+                        else:cached_value =  True
+                    else:cached_value = None#"null"# None# "Not exists"
+                else:cached_value =  None#"null"#None#"Not exists"
+            else:cached_value = None#"null"# None#"Not exists"
             cache.set(cache_key,cached_value)
         return cached_value
 

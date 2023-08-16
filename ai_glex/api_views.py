@@ -39,6 +39,7 @@ import pandas as pd
 from ai_staff.models import LanguageMetaDetails
 from django.db.models import Value, IntegerField, CharField
 from django_oso.auth import authorize
+from ai_workspace.signals import invalidate_cache_on_save
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -512,6 +513,7 @@ def clone_source_terms_from_multiple_to_single_task(request):
             i.glossary_id = current_job.project.glossary_project.id
             #i.save()
         TermsModel.objects.bulk_create(queryset)
+        invalidate_cache_on_save(sender=TermsModel, instance=queryset.last())
     return JsonResponse({'msg':'SourceTerms Cloned'})
 
 @api_view(['GET',])
@@ -539,6 +541,7 @@ def clone_source_terms_from_single_to_multiple_task(request):
             )for j in to_job_ids for i in queryset ]
     print(obj)
     TermsModel.objects.bulk_create(obj)
+    invalidate_cache_on_save(sender=TermsModel, instance=queryset.last())
     return JsonResponse({'msg':'SourceTerms Cloned'})
 
 

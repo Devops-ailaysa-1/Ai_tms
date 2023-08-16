@@ -150,7 +150,11 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
+<<<<<<< HEAD
     # "silk",
+=======
+    #"silk",
+>>>>>>> origin/v4-merged-production
 ]
 
 
@@ -174,7 +178,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
+<<<<<<< HEAD
     # 'silk.middleware.SilkyMiddleware',
+=======
+    #'silk.middleware.SilkyMiddleware',
+>>>>>>> origin/v4-merged-production
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -459,7 +467,7 @@ CACHEOPS_DEFAULTS = {
 }
 
 CACHEOPS = {
-    'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+   # 'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
     'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
     #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
     
