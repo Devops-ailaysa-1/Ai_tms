@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries,\
                             TaskRoleLevel,Timezones,SupportType,JobPositions,\
                             SupportTopics,Role,Currencies,ApiServiceList,SuggestionType,Suggestion
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, pre_delete
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -23,6 +23,8 @@ from django.db.models.constraints import UniqueConstraint
 from simple_history.models import HistoricalRecords
 from ai_openai.signals import text_gen_credit_deduct
 from django.conf import settings
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
+from django.core.exceptions import ValidationError
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -535,6 +537,15 @@ class InternalMember(models.Model):
 
     def __str__(self):
         return self.internal_member.email
+    
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'check_role_{self.team.owner.id}_*',
+        ]
+        return cache_keys
+
+post_save.connect(invalidate_cache_on_save, sender=InternalMember)
+pre_delete.connect(invalidate_cache_on_delete, sender=InternalMember) 
 
 
 def default_date_hired_editor_expiry():
@@ -563,6 +574,15 @@ class HiredEditors(models.Model):
     def owner_pk(self):
         return self.user.id
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'check_role_{self.user.id}_*',
+        ]
+        return cache_keys
+
+post_save.connect(invalidate_cache_on_save, sender=HiredEditors)
+pre_delete.connect(invalidate_cache_on_delete, sender=HiredEditors) 
+
 class ReferredUsers(models.Model):
     email = models.EmailField()
 
@@ -578,6 +598,7 @@ class AilaysaCampaigns(models.Model):
     subscription_credits=models.IntegerField()
     Addon_name = models.CharField(max_length=100, blank=True, null=True)
     Addon_quantity =models.IntegerField(default=1)
+    coupon = models.CharField(max_length=60, blank=True, null=True)
 
     @property
     def owner_pk(self):
@@ -587,6 +608,7 @@ class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
     campaign_name =  models.ForeignKey(AilaysaCampaigns,on_delete=models.CASCADE,related_name='ai_campaigns')
     subscribed = models.BooleanField(default=False)
+    coupon_used = models.BooleanField(null=True)
 
     @property
     def owner_pk(self):
@@ -650,3 +672,28 @@ class ApiUsage(models.Model):
        constraints = [
             UniqueConstraint(fields=['uid', 'email', 'service'], name='unique_user_usage')
         ]
+
+
+class SubscriptionOrder(models.Model):
+    plan =models.ForeignKey(Product,related_name='sub_order_product',on_delete=models.CASCADE)
+    lower_plan = models.ForeignKey(Product,related_name='sub_order_product_lw',null=True,blank=True,on_delete=models.CASCADE)
+    higher_plan = models.ForeignKey(Product,related_name='sub_order_product_up',null=True,blank=True,on_delete=models.CASCADE)
+
+    class Meta:
+        # Create a unique constraint across all three fields
+        constraints = [
+            models.UniqueConstraint(fields=['plan', 'lower_plan','higher_plan'], name='subscriptins_order')
+        ]
+
+    def clean(self):
+        # Custom validation logic to check for blank values
+        if self.higher_plan!=None and self.lower_plan!=None:
+            raise ValidationError("Either 'higher_plan' or 'lower_plan' must have a value.")
+        elif self.higher_plan!=None and self.lower_plan==None:
+            self.lower_plan = None  # Ensure lower_plan is blank if higher_plan is blank
+        elif self.higher_plan==None and self.lower_plan!=None:
+            self.higher_plan = None  # Ensure higher_plan is blank if lower_plan is blank
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Run clean() before saving
+        super().save(*args, **kwargs)

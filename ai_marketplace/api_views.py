@@ -765,7 +765,7 @@ def get_previous_accepted_rate(request):
         authorize(request, resource=job_obj, actor=request.user, action="read")
         print(job_obj.source_language,job_obj.target_language)
         vendor = AiUser.objects.get(id=vendor_id)
-        query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+        query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('id')
         query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language)).last()
         rates ={}
         out = {'currency':query_final.currency.id,'mtpe_rate':query_final.mtpe_rate,'mtpe_count_unit':query_final.mtpe_count_unit_id,'step':query_final.task_assign.step.id} if query_final else {}

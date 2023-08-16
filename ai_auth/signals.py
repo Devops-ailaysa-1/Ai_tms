@@ -282,13 +282,23 @@ assign_object= Signal()
 def assign_object_task(sender, instance,user,role,*args, **kwargs):
     from ai_auth.models import TaskRoles
     from ai_staff.models import TaskRoleLevel
+    from django.db import transaction
     # instance.step = 
     # role_name = {1:''Project owner'}  
     # tsk.task_assign.task.job.project.project_manager
-    role = TaskRoleLevel.objects.get(role__name=role)
-    try:
-        TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
-    except IntegrityError as e: 
-         logger.warning("task_role already exist {instance.task_assign.task.id},{user.uid}")    
-    print("task created")
-    
+    with transaction.atomic():
+        ins=taskrole_update(instance,user)
+        role = TaskRoleLevel.objects.get(role__name=role)
+        try:
+            TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
+        except IntegrityError as e: 
+            logger.warning("task_role already exist {instance.task_assign.task.id},{user.uid}")    
+        print("task created")
+
+def taskrole_update(instance,user):
+    from ai_workspace.models import AiRoleandStep
+    from ai_auth.models import TaskRoles
+    tsk_role = AiRoleandStep.objects.filter(Q(step=instance.task_assign.step)&Q(role__name__icontains='Invitee')).last().role
+    obj=TaskRoles.objects.filter(task_pk=instance.task_assign.task.id,user=user,role__role=tsk_role).last()
+    if obj:
+        obj.delete()

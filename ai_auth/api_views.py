@@ -32,7 +32,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -515,6 +515,11 @@ def create_checkout_session(user,price,customer=None,trial=False):
     # except BillingAddress.DoesNotExist:
     #     addr_collect= 'required'
 
+    coupon = check_campaign_coupon(user)
+    # if coupon:
+    #     if price.recurring.get('interval') == 'month':
+    #         coupon = False
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
@@ -533,6 +538,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
         #billing_address_collection=addr_collect,
         customer_update={'address':'never','name':'never'},
         #tax_id_collection={'enabled':'True'},
+        allow_promotion_codes=coupon,
         subscription_data={
         'default_tax_rates':tax_rate,
         'trial_end':None,
@@ -692,6 +698,9 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     #     addr_collect='auto'
     # except BillingAddress.DoesNotExist:
     #     addr_collect= 'required'
+
+    coupon = check_campaign_coupon(Aicustomer.subscriber)
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
@@ -702,6 +711,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         #billing_address_collection=addr_collect,
         customer_update={'address':'never','name':'never'},
         #tax_id_collection={'enabled':'True'},
+        allow_promotion_codes=coupon,
         line_items=[
             {
                 'price': price.id,
@@ -993,13 +1003,13 @@ def campaign_subscribe(user,camp):
     else:
         sub=subscribe(price=price,customer=cust)
         if sub:
-            camp.subscribed =True
-            camp.save()
-            send_campaign_email.send(
-            sender=camp.__class__,
-            instance = camp,
-            user=user,
-            )
+            # camp.subscribed =True
+            # camp.save()
+            # send_campaign_email.send(
+            # sender=camp.__class__,
+            # instance = camp,
+            # user=user,
+            # )
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
             print("error in creating subscription ",user.uid)
@@ -1023,6 +1033,19 @@ def campaign_subscribe(user,camp):
                 quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
     return sub
 
+def check_campaign_coupon(user):
+    camp = CampaignUsers.objects.filter(user=user)
+    if camp.count() > 0:
+        if camp.last().coupon_used == False:
+
+            # camp.name.subscription_name
+            return True
+        elif camp.last().coupon_used == True:
+            logger.warning(f"user already user campaign coupon :{user.uid}")
+            return False
+    else:
+        return False
+    
 def check_campaign(user):
     camp = CampaignUsers.objects.filter(user=user)
     if camp.count() > 0:
@@ -1287,6 +1310,20 @@ def TransactionSessionInfo(request):
     # print("Bank Details")
     # print()
     # print(response)
+    try:
+        amount = response.get("total_details").get("amount_discount")
+
+        if amount != 0:
+            email = response.get("customer_details").get("email")
+            camp = CampaignUsers.objects.filter(user__email=email,coupon_used=False)
+            if camp.count() > 0:
+                camp = camp.last()
+                camp.coupon_used= True
+                camp.save()
+                # if camp.last().coupon_used == False:
+    except BaseException as e:
+        logger.error(f"Issue in campaign update sess_id :{session_id}")
+
     if response.mode == "subscription":
         try:
             invoice =Invoice.objects.get(subscription=response.subscription)
@@ -2512,7 +2549,20 @@ def oso_test_querys(request):
 
 
 from .models import CoCreateForm
-from .serializers import CoCreateFormSerializer
+from .serializers import CoCreateFormSerializer,CampaignRegisterSerializer
+
+class CampaignRegistrationView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def create(self,request):
+        # email = request.POST.get('email')
+        try:
+            serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
+            if serializer.is_valid():
+                serializer.save()
+            return Response({"msg":"User registerd successfully"},status=201)
+        except ValueError as e:
+            return Response({"msg":str(e)},status=409)
+    
 class CoCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
@@ -2564,4 +2614,59 @@ def reports_dashboard(request):
         data_sub[f"{sub.get('plan__product__name')} Trial"]=sub.get('plan__product__name__count')
     data["subscriptions"] = data_sub
 
+    return JsonResponse(data,status=200)
+
+
+def subscription_order(plan=None):
+    if plan!=None:
+        current_plan = SubscriptionOrder.objects.get(plan__name=plan).id
+        ls = list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
+        ind = ls.index(current_plan)
+        return ls[ind+1:]
+    else:
+        return list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def subscription_customer_portal(request):
+
+    user = request.user
+    # if user.internal_member:
+    #     user = user.team.owner,user
+    try:
+        sub = user.djstripe_customers.last().subscription 
+        # if sub.status!='active':
+        #     sub = None
+    except:
+        logger.error(f"too many subscriptions returned {user.id}")
+        sub = user.djstripe_customers.last().subscriptions.last()
+        # return JsonResponse({'msg':'something went wrong'},status=400)  return JsonResponse({'msg':'something went wrong'},status=400)
+
+    if sub!=None:
+        if sub.status != 'active':
+            invoice = None
+        else:
+            invoice = sub.invoices.last()
+
+        current_plan = {
+            'plan_name':sub.plan.product.name ,
+            'plan_status':sub.status,
+            'plan_sub_total':invoice.subtotal if invoice!=None else 0,
+            'plan_tax':invoice.tax if invoice!=None else 0,
+            'plan_total':invoice.total if invoice!=None else 0
+        }
+        sub_order = subscription_order(sub.plan.product.name if sub.status=='active' else None)
+    else:
+        current_plan = None
+        sub_order = subscription_order()
+
+    
+    data = {
+        'current_plan':current_plan,
+        'upgrades':[SubscriptionOrder.objects.get(id= order_id).plan.id for order_id in sub_order],
+        'downgrades':[]
+
+    }
     return JsonResponse(data,status=200)
