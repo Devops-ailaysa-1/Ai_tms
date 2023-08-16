@@ -21,6 +21,8 @@ UserModel = get_user_model()
 from .validators import file_size
 import logging
 from rest_framework.validators import UniqueValidator
+from ai_auth.utils import create_user
+from ai_auth.forms import campaign_user_invite_email
 
 logger = logging.getLogger('django')
 try:
@@ -575,3 +577,29 @@ class HiredEditorSerializer(serializers.ModelSerializer):
             }
     def get_hired_editor_detail(self, obj):
         return {'name':obj.hired_editor.fullname,'email':obj.hired_editor.email}
+
+
+class CampaignRegisterSerializer(serializers.Serializer):
+    email = serializers.EmailField(allow_blank=False)
+    campaign = serializers.CharField()
+
+    def create(self, validated_data):
+        from ai_auth.api_views import check_campaign
+        email = validated_data.get('email')
+        campaign = validated_data.get('campaign')
+        # print("email-->",email)
+        # print("email-->",campaign)
+        res = create_user(email=email,country=101)
+        if res==None:
+            raise ValueError('email already registerd')
+
+        user,password = res
+        ai_camp = AilaysaCampaigns.objects.get(campaign_name=campaign)
+        if ai_camp.coupon != None:
+            coupon = False
+        else:
+            coupon = None
+        CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
+        campaign_user_invite_email(user=user,gen_password=password)
+        camp = check_campaign(user)
+        return user

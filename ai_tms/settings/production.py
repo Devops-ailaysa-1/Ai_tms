@@ -130,8 +130,34 @@ EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
+CACHEOPS_ENABLED = True
 
+CACHEOPS_DEGRADE_ON_FAILURE = True 
+
+CACHEOPS_DEFAULTS = {
+    'timeout': 60 * 60,  # Default cache timeout (1 hour)
+}
+
+CACHEOPS = {
+   # 'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+    #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
+    
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+    }
+}
 
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': [

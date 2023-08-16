@@ -3,7 +3,7 @@ import re
 from django.db import transaction
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.utils.functional import cached_property
 from datetime import datetime, date
 from ai_auth.models import AiUser
@@ -11,6 +11,8 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
     MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
+from django.core.cache import cache
+from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 
 
 class TaskStatus(models.Model):
@@ -99,6 +101,13 @@ class BaseSegment(models.Model):
             seg = SplitSegment.objects.filter(id=self.id).first()
             return seg.split_segment_comments_set.all().count()>0
 
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
+
 
     @property
     def get_id(self):
@@ -133,7 +142,9 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
+        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
+
 
 # post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 # post_save.connect(translate_segments,sender=Segment)
@@ -142,6 +153,15 @@ class Segment(BaseSegment):
     is_merged = models.BooleanField(default=False, null=True)
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
+
+
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     @property
     def get_merge_target_if_have(self):
@@ -207,6 +227,9 @@ class Segment(BaseSegment):
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
+post_save.connect(invalidate_cache_on_save, sender=Segment)
+pre_delete.connect(invalidate_cache_on_delete, sender=Segment)
+
 # post_save.connect(create_segment_controller, sender=Segment)
 
 class MergeSegment(BaseSegment):
@@ -215,6 +238,14 @@ class MergeSegment(BaseSegment):
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
         related_name="text_unit_merge_segment_set")
     is_split = models.BooleanField(default=False, null=True, blank=True)
+
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.text_unit.document.pk}',
+            f'pr_progress_property_{self.text_unit.document.job.project.id}_*'
+        ]
+        return cache_keys
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
@@ -239,6 +270,8 @@ class MergeSegment(BaseSegment):
         self.save()
         self.update_segment_is_merged_true(segs=segs)
         return self
+
+        
 
     def delete(self, using=None, keep_parents=False):
         for seg in self.segments.all():
@@ -282,6 +315,9 @@ class MergeSegment(BaseSegment):
         return self.id
 
 
+post_save.connect(invalidate_cache_on_save, sender=MergeSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=MergeSegment)
+
 class SplitSegment(BaseSegment):
 
     segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
@@ -291,9 +327,16 @@ class SplitSegment(BaseSegment):
     is_first = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=True, null=True)
 
+
     @property
     def get_parent_seg_id(self):
         return self.segment_id
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'seg_progress_{self.segment.text_unit.document.pk}',
+            f'pr_progress_property_{self.segment.text_unit.document.job.project.id}_*'
+        ]
 
     def remove_tags(self, tagged_source):
 
@@ -310,6 +353,10 @@ class SplitSegment(BaseSegment):
         self.is_first = True if is_first != None else False
         self.random_tag_ids = "[]"
         self.save()
+        
+
+post_save.connect(invalidate_cache_on_save, sender=SplitSegment)
+pre_delete.connect(invalidate_cache_on_delete, sender=SplitSegment)
 
 class MT_RawTranslation(models.Model):
 
@@ -374,7 +421,22 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         if self.google_api_cost_est == None:
             self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
+    def generate_cache_keys(self):
+        cache_keys = [
+            f'task_audio_output_file_{self.pk}',
+            f'task_word_count_{self.pk}',
+            f'task_char_count_{self.pk}',
+            f'pr_progress_property_{self.job.project.id}_*',
+        ]
+        return cache_keys
+        # cache_key = f'task_word_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache_key = f'task_char_count_{self.pk}'
+        # cache.delete(cache_key)
+        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+
 
     def get_user_email(self):
         return self.created_by.email
@@ -576,6 +638,9 @@ class Document(models.Model):
     def task_obj(self):
         return self.task_set.last()
 
+post_save.connect(invalidate_cache_on_save, sender=Document)
+pre_delete.connect(invalidate_cache_on_delete, sender=Document)
+
 class SegmentPageSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
                                    related_name="user_default_page_size")
@@ -633,12 +698,12 @@ class ChoiceLists(models.Model):
                         else:
                             count= queryset.filter(name__icontains=self.name).count()
                         self.name = self.name + "(" + str(count) + ")"
-                        super().save()
+                        super().save(*args, **kwargs)
                         break
                     except:
                         count= count+1
                         self.name = self.name + "(" + str(count) + ")"
-            return super().save()
+            return super().save(*args, **kwargs)
 
 
 

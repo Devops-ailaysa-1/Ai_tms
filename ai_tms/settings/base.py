@@ -147,7 +147,8 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
-    "ai_bi"
+    "ai_bi",
+    #"silk",
 ]
 
 
@@ -161,12 +162,15 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'django.middleware.cache.UpdateCacheMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    #'django.middleware.cache.FetchFromCacheMiddleware',
+    #'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -437,9 +441,22 @@ LOGOUT_REDIRECT_URL = '/'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
+CACHEOPS_ENABLED = True
 
+CACHEOPS_DEGRADE_ON_FAILURE = True 
+
+CACHEOPS_DEFAULTS = {
+    'timeout': 60 * 60,  # Default cache timeout (1 hour)
+}
+
+CACHEOPS = {
+   # 'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+    #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
+    
+}
 
 CHANNEL_LAYERS = {
     "default": {
@@ -449,6 +466,26 @@ CHANNEL_LAYERS = {
 
         },
     },
+}
+# settings.py
+
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+#     }
+# }
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+    }
 }
 
 

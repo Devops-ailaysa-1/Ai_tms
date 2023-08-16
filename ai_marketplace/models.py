@@ -13,6 +13,7 @@ import os,random
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import get_user_model
 from ai_auth.signals import create_postjob_id
+from django.core.cache import cache
 # Create your models here.
 
 
@@ -44,6 +45,13 @@ class ProjectboardDetails(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'bid_job_detail_{self.project.pk}'
+        cache.delete(cache_key)
+        computed_key = f'bid_job_computed_{self.project.pk}'
+        cache.delete(computed_key)
+
     @property
     def get_postedjobs(self):
         return [job for job in self.projectpost_jobs.all()]
@@ -68,6 +76,7 @@ class ProjectboardDetails(models.Model):
     def get_services(self):
         return [obj.steps.name for obj in self.projectpost_steps.all()]
 
+    
 
 class ProjectPostJobDetails(models.Model):
     postjob_id = models.CharField(max_length=191,blank=True,null=True)
@@ -85,6 +94,15 @@ class ProjectPostJobDetails(models.Model):
             self.src_lang.language,
             self.tar_lang.language
         )
+
+
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
+        cache.delete(cache_key)
+        computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
+        cache.delete(computed_key)
+
 post_save.connect(create_postjob_id, sender=ProjectPostJobDetails)
 
 class ProjectPostContentType(models.Model):
@@ -237,6 +255,14 @@ class BidPropasalDetails(models.Model):
 
     class Meta:
         unique_together = ['bidpostjob', 'vendor','bid_step']
+
+
+    def save(self, *args, **kwargs):
+        super().save()
+        cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
+        cache.delete(cache_key)
+        computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
+        cache.delete(computed_key)
 
     @property
     def filename(self):

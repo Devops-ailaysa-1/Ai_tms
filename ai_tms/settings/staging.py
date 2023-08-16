@@ -402,7 +402,7 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
 
 # ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
+# CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
 # CACHEOPS_DEFAULTS = {
 #     'timeout': 60*60
@@ -418,22 +418,22 @@ CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 #     }
 #     }
 
-CACHEOPS = {
+# CACHEOPS = {
 
-    # Cache all queries to Permission
-    # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
-    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+#     # Cache all queries to Permission
+#     # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
+#     'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
 
 
-    # # And since ops is empty by default you can rewrite last line as:
-    # '*.*': {'timeout': 60*60},
+#     # # And since ops is empty by default you can rewrite last line as:
+#     # '*.*': {'timeout': 60*60},
 
-    # # NOTE: binding signals has its overhead, like preventing fast mass deletes,
-    # #       you might want to only register whatever you cache and dependencies.
+#     # # NOTE: binding signals has its overhead, like preventing fast mass deletes,
+#     # #       you might want to only register whatever you cache and dependencies.
 
-    # # Finally you can explicitely forbid even manual caching with:
-    # 'some_app.*': None,
-}
+#     # # Finally you can explicitely forbid even manual caching with:
+#     # 'some_app.*': None,
+# }
 
 # CHANNEL_LAYERS = {
 #     "default": {

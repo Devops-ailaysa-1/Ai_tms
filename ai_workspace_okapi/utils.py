@@ -203,7 +203,7 @@ def ms_translation(source_string, source_lang_code, target_lang_code):
     # This is required if using a Cognitive Services resource.
     location = os.getenv("MST_LOCATION")
 
-    path = '/translate'
+    path = 'translate'
     constructed_url = endpoint + path
 
     params = {

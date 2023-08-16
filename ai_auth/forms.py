@@ -399,3 +399,32 @@ def send_campaign_welcome_mail(user):
         logger.info(f"Campaign welcome mail sent for {user.uid}")
     else:
         logger.error(f"Campaign welocome mail sending failed for {user.uid}")
+
+def campaign_user_invite_email(user,gen_password):
+    context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
+    email = user.email
+    msg_html = render_to_string("campaign_user_registration.html",context)
+    # sent =send_mail(
+    #     'Become a member of Ailaysa freelancer marketplace',None,
+    #     'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+    #     [email],
+    #     html_message=msg_html,
+    # )
+
+    msg = EmailMessage(
+        'Welcome to Ailaysa!',
+         msg_html,
+        'Ailaysa <noreply@ailaysa.com>',
+        [email],
+        bcc=['support@ailaysa.com'],
+        reply_to=['support@ailaysa.com'],
+    )
+
+    msg.content_subtype = "html"
+
+    sent=msg.send()
+    print("campaign_user_onboarding_mail-->>>")
+    if sent==0:
+        return False
+    else:
+        return True

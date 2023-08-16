@@ -7,6 +7,10 @@ from django_oso.auth import authorize
 import django_oso
 import logging
 logger = logging.getLogger('django')
+import copy
+from django.contrib.auth.hashers import check_password,make_password
+from allauth.account.models import EmailAddress
+from django.db import IntegrityError
 
 # from ai_auth.api_views import resync_instances
 
@@ -76,11 +80,12 @@ def filter_authorize(request,query,action,user):
 	return query.filter(id__in = auth_ids)
 
 def authorize_list(obj_list,action,user):
+	obj=copy.deepcopy(obj_list)
 	for instance in obj_list:
 		if not django_oso.oso.Oso.is_allowed(
 			actor=user, resource=instance, action=action):
-			obj_list.remove(instance)
-	return obj_list
+			obj.remove(instance)
+	return obj
 			
 
 	# 	try:
@@ -157,11 +162,37 @@ company_members_list = [
 ]
 
 
-def get_assignment_role(step,reassigned=False):
-    from ai_workspace.models import AiRoleandStep
+def get_assignment_role(instance,step,reassigned=False):
+	from ai_workspace.models import AiRoleandStep
     
-    if reassigned:
-        res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Agency')).last()
-    else:
-        res = AiRoleandStep.objects.filter(Q(step=step)&~Q(role__name__icontains='Agency')).last()
-    return res.role.name
+	role= ven_status_check(instance,step)
+	if role !=None:
+		return role
+	
+	if reassigned:
+		res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Agency')).last()
+	else:
+		res = AiRoleandStep.objects.filter(Q(step=step)&~Q(role__name__icontains='Agency')&~Q(role__name__icontains='Invitee')).last()
+	return res.role.name
+
+def ven_status_check(instance,step):
+	from ai_workspace.models import AiRoleandStep
+	ins=instance.task_ven_status
+	if ins==None and instance.task_assign.assign_to.is_internal_member == False:
+		res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Invitee')).last()
+		return res.role.name
+	return None
+
+def create_user(email,country,name=''):
+    from ai_auth.models import AiUser,UserAttribute
+
+    password = AiUser.objects.make_random_password()
+    hashed = make_password(password)
+    try:
+        user = AiUser.objects.create(fullname =name,email = email,country_id=country,password = hashed)
+        user_attribute = UserAttribute.objects.create(user=user)
+        EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
+    except IntegrityError as e:
+        logger.error(f"Intergrity error {email}: ",str(e))
+        return None
+    return user,password
