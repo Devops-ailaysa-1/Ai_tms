@@ -3744,7 +3744,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         if file:
             ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
         else:
-             ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
+            ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=200)
@@ -3843,8 +3843,9 @@ def express_custom(request,exp_obj,option):
     inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
                 'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else result_txt.strip()}
     print("inst_data--->",inst_data)
-    queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
-    if queryset:
+    ins = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize)
+    if ins:
+        queryset = ins.last()
         serializer = ExpressProjectAIMTSerializer(queryset,data=inst_data,partial=True)
     else:
         serializer = ExpressProjectAIMTSerializer(data=inst_data)
@@ -3866,8 +3867,9 @@ def instant_translation_custom(request):
     customize = AiCustomize.objects.get(customize = option)
     exp_obj = ExpressProjectDetail.objects.get(task_id = task)
     user = exp_obj.task.job.project.ai_user
-    queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
-    if queryset:
+    ins = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize)
+    if ins:
+        queryset = ins.last()
         text1 = exp_obj.source_text.strip()
         text2 = queryset.source.strip()
         print("Text1-------->",text1)
@@ -3906,7 +3908,7 @@ def instant_translation_custom(request):
             if res.get('msg'):return Response(res,status=400)
             else:return Response(res)
             
-    elif not queryset:
+    elif not ins:
         res = express_custom(request,exp_obj,option)
         if res.get('msg'):return Response(res,status=400)
         else:return Response(res)
