@@ -150,11 +150,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
-<<<<<<< HEAD
-    # "silk",
-=======
     #"silk",
->>>>>>> origin/v4-merged-production
 ]
 
 
@@ -178,11 +174,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-<<<<<<< HEAD
-    # 'silk.middleware.SilkyMiddleware',
-=======
     #'silk.middleware.SilkyMiddleware',
->>>>>>> origin/v4-merged-production
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
