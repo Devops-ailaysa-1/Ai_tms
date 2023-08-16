@@ -584,6 +584,7 @@ class CampaignRegisterSerializer(serializers.Serializer):
     campaign = serializers.CharField()
 
     def create(self, validated_data):
+        from ai_auth.api_views import check_campaign
         email = validated_data.get('email')
         campaign = validated_data.get('campaign')
         # print("email-->",email)
@@ -600,4 +601,5 @@ class CampaignRegisterSerializer(serializers.Serializer):
             coupon = None
         CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
         campaign_user_invite_email(user=user,gen_password=password)
+        camp = check_campaign(user)
         return user
