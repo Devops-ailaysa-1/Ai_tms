@@ -412,7 +412,7 @@ def campaign_user_invite_email(user,gen_password):
     # )
 
     msg = EmailMessage(
-        'Onbording Camapign user',
+        'Welcome to Ailaysa!',
          msg_html,
         'Ailaysa <noreply@ailaysa.com>',
         [email],
