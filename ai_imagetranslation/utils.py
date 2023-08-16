@@ -320,18 +320,18 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "width": "1024",
     "height": "1024",
     "samples": "1",
-    "num_inference_steps": 41,   
+    "num_inference_steps": 40,   
     "seed": random.randint(0,99999999999),
-    "guidance_scale": 7.5,
+    "guidance_scale": 7,
     "safety_checker": "yes",
     "multi_lingual": "no","panorama": "no",
     "self_attention": "yes","upscale": "no",
     "embeddings_model": None,
     "webhook": None,"track_id": None,
     "enhance_prompt":'no',
-    'scheduler':'DDIMScheduler',
+    'scheduler':'EulerAncestralDiscreteScheduler', 
     "self_attention":'yes',
-    }
+    } # DDIMScheduler
     if negative_prompt:
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 

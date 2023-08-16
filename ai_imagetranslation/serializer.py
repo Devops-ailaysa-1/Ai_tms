@@ -489,9 +489,9 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
     technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False)
-
+    enhance_prompt=serializers.BooleanField(required=False,write_only=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name') #style height width sampler used_api
+        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt') #style height width sampler used_api
         model=StableDiffusionAPI
 
     def create(self, validated_data):
@@ -502,17 +502,17 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         style_cat=validated_data.pop('style_cat',None)
         technique_name=validated_data.pop('technique_name',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
-        if style:prompt+=style.style_name
-
+        enhance_prompt=validated_data.pop('enhance_prompt',None)
         
-        text = prompt+" form a prompt sentence using this keyword."
-        print("text",text)
-        prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
+
+        if enhance_prompt:
+            text = prompt+" form a prompt sentence using this keyword."
+            print("done enhance")
+            prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
         image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
                                       style_preset="",sampler="",negative_prompt=negative_prompt)
         print("prompt",prompt)
-        model_name='SDXL'
-        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name=model_name,
+        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
                                                    style="",height=512,width=512,sampler="",negative_prompt=negative_prompt)
         instance.image=image
         instance.save()

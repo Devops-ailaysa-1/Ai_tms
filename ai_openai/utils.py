@@ -46,6 +46,10 @@ def get_prompt(prompt ,model_name , max_token ,n ):
     response = openai.Completion.create(model=model_name, prompt=prompt.strip(),temperature=temperature,
                                         max_tokens=int(max_token),top_p=top_p,frequency_penalty=frequency_penalty,
                                         presence_penalty=presence_penalty,n=n)    # stop = ['#'],#logit_bias = {"50256": -100}        
+    choic=[]
+    for i in response["choices"]:
+        choic.append({'text':i['message']['content']})
+    response["choices"]=choic
     return response
 
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
