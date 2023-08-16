@@ -202,7 +202,7 @@ class ImageModificationTechnique(models.Model):
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
-
+    default_prompt=models.CharField(max_length=700,blank=True,null=True)
     def __str__(self) -> str:
         return self.custom_style_name +"--"+ self.custom_image_style.style_category_name +"--"+ self.custom_image_style.style_name.style_name
 
