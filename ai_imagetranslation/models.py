@@ -205,8 +205,10 @@ class ImageModificationTechnique(models.Model):
     default_prompt=models.CharField(max_length=700,blank=True,null=True)
 
     def __str__(self) -> str:
-        return self.custom_style_name +"--"+ self.custom_image_style.style_category_name +"--"+ self.custom_image_style.style_name.style_name \
-        +"--"+self.default_prompt
+        known_info=self.custom_style_name +"--"+ self.custom_image_style.style_category_name +"--"+ self.custom_image_style.style_name.style_name 
+        if self.default_prompt:
+            known_info+= "--"+self.default_prompt
+        return known_info
 
 
 # from django.db import models
