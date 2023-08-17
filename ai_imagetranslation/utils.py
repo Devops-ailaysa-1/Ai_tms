@@ -237,7 +237,7 @@ def background_merge(u2net_result,original_img):
     u2net_result=cv2.subtract(u2net_result,original_img)
     # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
-    # u2net_result= u2net_result.filter(ImageFilter.GaussianBlur(radius = 3))
+    u2net_result= u2net_result.filter(ImageFilter.GaussianBlur(radius=1))
     original_img=Image.fromarray(original_img).convert("RGBA")
     u2net_data=u2net_result.getdata()
     original_img=original_img.getdata()
