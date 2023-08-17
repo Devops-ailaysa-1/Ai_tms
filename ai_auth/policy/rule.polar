@@ -32,6 +32,7 @@ resource ai_workspace::Task{
     "update" if "Project owner";
     "Editor" if "Project owner";
     "delete" if "Project owner";
+    "Editor" if "Project owner";
     "download" if "Project owner";
     "Editor" if "Reviewer";
 
@@ -99,6 +100,10 @@ resource ai_workspace::Job{
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
+    "Editor" if "Agency Editor";
+    "Agency Editor" if "Agency Reviewer";
+    "Project owner"if "Agency Project owner";
+    "Agency Project owner" if "Agency Admin";
 
 }
 # has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
