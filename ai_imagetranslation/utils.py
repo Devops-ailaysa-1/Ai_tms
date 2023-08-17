@@ -233,7 +233,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
 
 
 def convert_transparent_for_image(image,value):
-    img=Image.fromarray(image).convert('RGBA')
+    img=image.convert('RGBA')
     data = img.getdata()
     new_data = []
     for pixel in data:
@@ -297,8 +297,12 @@ def background_remove(instance):
     user_image=cv2.imread(image_path)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
-    mask_store = convert_image_url_to_file(y0,no_pil_object=False,name="mask.png")
-    eraser_transparent_mask=convert_transparent_for_image(y0,255)
+
+    im_mask=Image.fromarray(y0).convert('RGBA')
+    mask_store = convert_image_url_to_file(im_mask,no_pil_object=False,name="mask.png")
+    
+    eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
+
     instance.eraser_transparent_mask=eraser_transparent_mask
     instance.mask=mask_store
     instance.save()
