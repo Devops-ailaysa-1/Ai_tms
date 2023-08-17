@@ -15,6 +15,7 @@ from ai_imagetranslation.utils import background_remove,background_merge
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 import pillow_avif,io
+from ai_openai.utils import get_prompt_chatgpt_turbo
 HOST_NAME=os.getenv('HOST_NAME')
 
 def create_thumbnail_img_load(base_dimension,image):
@@ -417,7 +418,9 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     erase_mask_json=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
-        fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im','erase_mask_json')
+        fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
+                'erase_mask_json','mask','eraser_transparent_mask')
+        
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
                       'image':{'write_only':True},}
@@ -432,7 +435,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.image=image_path_create
             instance.save()
-            back_ground_create=background_remove(instance.image.path)
+            back_ground_create=background_remove(instance)
             instance.image=back_ground_create
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
@@ -457,6 +460,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if erase_mask_json:  ##
             mask_image=thumbnail_create(erase_mask_json,formats='mask') 
             image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
+            instance.mask=image_data
             mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
             original_img=cv2.imread(instance.image.path)
             back_ground_create=background_merge(mask_img,original_img)
@@ -473,15 +477,9 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance.save()
         return instance
 
-styles = {0:'3d-model',1:'analog-film',2:'anime',3:'cinematic' ,4:'comic-book' ,5:'digital-art',
-  6:'enhance',7:'fantasy-art',8:'isometric',9:'line-art',10:'low-poly',11:'modeling-compound',12:'neon-punk',
-  13:'origami',14:'photographic',15:'pixel-art',16:'tile-texture'}
-
-samplers = {0:'DDIM',1:'DDPM',2:'K_DPMPP_2M',3:'K_DPMPP_2S_ANCESTRAL',4:'K_DPM_2',
-           5:'K_DPM_2_ANCESTRAL',6:'K_EULER',7:'K_EULER_ANCESTRAL',8:'K_HEUN',9:'K_LMS'}
 
 
-from ai_openai.utils import get_prompt_chatgpt_turbo
+
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
     prompt=serializers.CharField(allow_null=True,required=True)
@@ -507,7 +505,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
-            print("done enhance")
             prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
         image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
                                       style_preset="",sampler="",negative_prompt=negative_prompt)

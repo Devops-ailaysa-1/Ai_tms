@@ -231,6 +231,20 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
         else:
             return ValidationError(output)
 
+
+def convert_transparent_for_image(image,value):
+    img=Image.fromarray(image).convert('RGBA')
+    data = img.getdata()
+    new_data = []
+    for pixel in data:
+        if pixel[0] == value and pixel[1] == value and pixel[2] == value:
+            new_data.append((231, 232, 234, 0))
+        else:
+            new_data.append(pixel)
+    img.putdata(new_data)
+    img=convert_image_url_to_file(img,no_pil_object=False,name="erase_mask.png")
+    return img
+
 def background_merge(u2net_result,original_img):
     newdata=[]
     original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
@@ -265,18 +279,14 @@ from cv2 import (
 )
 kernel = getStructuringElement(MORPH_ELLIPSE, (3, 3))
 def post_process(mask: np.ndarray) -> np.ndarray:
-    """
-    Post Process the mask for a smooth boundary by applying Morphological Operations
-    args:
-        mask: Binary Numpy Mask
-    """
     mask = morphologyEx(mask, MORPH_OPEN, kernel)
     mask = GaussianBlur(mask, (5, 5), sigmaX=2, sigmaY=2, borderType=BORDER_DEFAULT)
     mask = np.where(mask < 127, 0, 255).astype(np.uint8)  # convert again to binary
     return mask
 
 
-def background_remove(image_path):
+def background_remove(instance):
+    image_path=instance.image.path
     headers={}
     data={}
     files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
@@ -287,10 +297,13 @@ def background_remove(image_path):
     user_image=cv2.imread(image_path)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
+    mask_store = convert_image_url_to_file(y0,no_pil_object=False,name="mask.png")
+    eraser_transparent_mask=convert_transparent_for_image(y0,255)
+    instance.eraser_transparent_mask=eraser_transparent_mask
+    instance.mask=mask_store
+    instance.save()
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
-
-
 
 #########stabilityai
  
