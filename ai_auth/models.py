@@ -64,6 +64,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
 
+
     @property
     def agency(self):
         if self.is_agency == True:
@@ -210,9 +211,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def owner_pk(self):
         return self.id
-    
+
+
 post_save.connect(update_internal_member_status, sender=AiUser)
 post_save.connect(get_currency_based_on_country, sender=AiUser)
+
 
 
 class BaseAddress(models.Model):
@@ -514,7 +517,7 @@ class Team(models.Model):
 
     @property
     def owner_pk(self):
-        return self.owner.user.id
+        return self.owner.id
 
 
 class InternalMember(models.Model):
