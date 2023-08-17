@@ -100,6 +100,8 @@ class ProjectPostJobDetails(models.Model):
         super().save()
         cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
         cache.delete(cache_key)
+        computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
+        cache.delete(computed_key)
 
 post_save.connect(create_postjob_id, sender=ProjectPostJobDetails)
 

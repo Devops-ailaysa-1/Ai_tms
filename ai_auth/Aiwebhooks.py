@@ -85,9 +85,12 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
         user_credits = models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
         if user_credits.count() == 0: 
             expiry = subscription.current_period_end
-            camp = models.CampaignUsers.objects.filter(user=user)
+            camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
             if camp.count() > 0:
-                payg_credits = 0
+                camp_obj = camp.last()
+                payg_credits = camp_obj.campaign_name.subscription_credits
+                camp_obj.subscribed = True
+                camp_obj.save()
             else:
                 payg_credits = pack.credits
         else:
@@ -201,6 +204,11 @@ def remove_trial_sub(customer,subscription):
     trials = customer.subscriptions.filter(status='trialing').filter(~Q(id=subscription.id))
     for trial in trials:
         trial.cancel(at_period_end=False)
+    free_plans = customer.subscriptions.filter(plan__product__name=os.environ.get("PLAN_PAYG")).filter(~Q(id=subscription.id))
+    for plan in free_plans:
+        plan.cancel(at_period_end=False)
+
+        
 def remove_pro_v_sub(customer,subscription):
     subs = customer.subscriptions.filter(status='active').filter(plan__product__name='Pro - V').filter(~Q(id=subscription.id))
     for sub in subs:

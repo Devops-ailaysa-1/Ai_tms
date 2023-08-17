@@ -98,6 +98,10 @@ resource ai_workspace::Job{
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "Editor" if "Reviewer";
+    "Editor" if "Agency Editor";
+    "Agency Editor" if "Agency Reviewer";
+    "Project owner"if "Agency Project owner";
+    "Agency Project owner" if "Agency Admin";
 
 }
 # has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
