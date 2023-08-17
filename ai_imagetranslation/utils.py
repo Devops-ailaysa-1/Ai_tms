@@ -320,17 +320,20 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "width": "1024",
     "height": "1024",
     "samples": "1",
-    "num_inference_steps": 40,   
+    "num_inference_steps": 41,   
     "seed": random.randint(0,99999999999),
-    "guidance_scale": 7,
+    "guidance_scale": 5,
     "safety_checker": "yes",
-    "multi_lingual": "no","panorama": "no",
-    "self_attention": "yes","upscale": "no",
+    "multi_lingual": "no",
+    "panorama": "no",
+    "self_attention": "yes",
+    "upscale": "no",
     "embeddings_model": None,
     "webhook": None,"track_id": None,
-    "enhance_prompt":'no',
-    'scheduler':'DDIMScheduler', 
+    "enhance_prompt":'yes',
+    'scheduler':'PNDMScheduler', 
     "self_attention":'yes',
+    'use_karras_sigmas':"yes"
     } # DDIMScheduler EulerAncestralDiscreteScheduler
     if negative_prompt:
         data['negative_prompt']=negative_prompt
@@ -339,7 +342,6 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
     process=False
- 
     while True:
         x=sd_status_check(response.json()['id'])
         if not x['status']=='processing' or x['status']=='success':
