@@ -386,6 +386,12 @@ class PromptCategoriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = PromptCategories
         fields = ('id','category','prompt_category',)
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        sub_categories = instance.prompt_category.order_by('sub_category')
+        representation['prompt_category'] = PromptSubCategoriesSerializer(sub_categories, many=True).data
+        return representation
         
         
 class PromptTonesSerializer(serializers.ModelSerializer):
