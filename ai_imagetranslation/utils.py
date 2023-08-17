@@ -234,7 +234,6 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
 def background_merge(u2net_result,original_img):
     newdata=[]
     original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
-    print(u2net_result.shape ,original_img.shape)
     u2net_result=cv2.subtract(u2net_result,original_img)
     # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
@@ -253,6 +252,30 @@ def background_merge(u2net_result,original_img):
     img_byte_arr = img_io.getvalue()
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
+
+import numpy as np
+
+from cv2 import (
+    BORDER_DEFAULT,
+    MORPH_OPEN,
+    GaussianBlur,
+    morphologyEx,
+    getStructuringElement,
+    MORPH_ELLIPSE
+)
+kernel = getStructuringElement(MORPH_ELLIPSE, (3, 3))
+def post_process(mask: np.ndarray) -> np.ndarray:
+    """
+    Post Process the mask for a smooth boundary by applying Morphological Operations
+    args:
+        mask: Binary Numpy Mask
+    """
+    mask = morphologyEx(mask, MORPH_OPEN, kernel)
+    mask = GaussianBlur(mask, (5, 5), sigmaX=2, sigmaY=2, borderType=BORDER_DEFAULT)
+    mask = np.where(mask < 127, 0, 255).astype(np.uint8)  # convert again to binary
+    return mask
+
+
 def background_remove(image_path):
     headers={}
     data={}
@@ -260,6 +283,7 @@ def background_remove(image_path):
     response = requests.request("POST",BACKGROUND_REMOVAL_URL, headers=headers, data=data, files=files)
     arr = np.frombuffer(response.content, dtype=np.uint8)
     res=np.reshape(arr,(320,320,3))
+    res = post_process(res)
     user_image=cv2.imread(image_path)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
@@ -298,7 +322,6 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
     # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     pass
-ngv_pmt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs, cartoon, cg, 3d, unreal, animate"
 def sd_status_check(id):
     url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
