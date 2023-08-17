@@ -242,7 +242,7 @@ def convert_transparent_for_image(image,value):
         else:
             new_data.append(pixel)
     img.putdata(new_data)
-    img=convert_image_url_to_file(img,no_pil_object=False,name="erase_mask.png")
+    img=convert_image_url_to_file(img,no_pil_object=False,name="erase_mask.png",transparent=False)
     return img
 
 def background_merge(u2net_result,original_img):
