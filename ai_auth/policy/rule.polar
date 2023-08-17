@@ -30,7 +30,6 @@ resource ai_workspace::Task{
     "read" if "Editor";
     "create" if "Editor";
     "update" if "Project owner";
-    "Editor" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
     "download" if "Project owner";
