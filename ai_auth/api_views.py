@@ -2620,11 +2620,13 @@ def reports_dashboard(request):
     return JsonResponse(data,status=200)
 
 
-def subscription_order(plan=None):
+def subscription_order(plan=None,trial=False):
     if plan!=None:
         current_plan = SubscriptionOrder.objects.get(plan__name=plan).id
         ls = list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
         ind = ls.index(current_plan)
+        if trial:
+            ind = ind-1
         return ls[ind+1:]
     else:
         return list(SubscriptionOrder.objects.all().order_by('id').values_list('id',flat=True))
@@ -2645,7 +2647,7 @@ def subscription_customer_portal(request):
     except:
         logger.error(f"too many subscriptions returned {user.id}")
         sub = user.djstripe_customers.last().subscriptions.last()
-        # return JsonResponse({'msg':'something went wrong'},status=400)  return JsonResponse({'msg':'something went wrong'},status=400)
+        # return JsonResponse({'msg':'something went wrong'},status=400)
 
     if sub!=None:
         if sub.status != 'active':
@@ -2660,7 +2662,16 @@ def subscription_customer_portal(request):
             'plan_tax':invoice.tax if invoice!=None else 0,
             'plan_total':invoice.total if invoice!=None else 0
         }
-        sub_order = subscription_order(sub.plan.product.name if sub.status=='active' else None)
+        if sub.status=='active':
+            plan = sub.plan.product.name
+            trial = False
+        elif sub.status=='trialing':
+            plan = sub.plan.product.name
+            trial = True
+        else:
+            plan = None
+            trial = False
+        sub_order = subscription_order(plan,trial)
     else:
         current_plan = None
         sub_order = subscription_order()
