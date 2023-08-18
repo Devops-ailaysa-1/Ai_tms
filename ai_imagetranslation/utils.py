@@ -370,17 +370,18 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     "upscale": "no",
     "embeddings_model": None,
     "webhook": None,"track_id": None,
-    "enhance_prompt":'yes',
-    'scheduler':'PNDMScheduler', 
+    "enhance_prompt":'no',
+    'scheduler':'DDIMScheduler', 
     "self_attention":'yes',
     'use_karras_sigmas':"yes"
-    } # DDIMScheduler EulerAncestralDiscreteScheduler
+    } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
     if negative_prompt:
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
+    print(x)
     process=False
     while True:
         x=sd_status_check(response.json()['id'])
