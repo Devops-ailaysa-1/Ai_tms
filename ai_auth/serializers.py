@@ -337,7 +337,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
     is_social = serializers.SerializerMethodField(source="get_is_social",read_only=True)
     is_campaign =  serializers.SerializerMethodField(source="get_is_campaign",read_only=True)
-    
+
     class Meta:
         extra_fields = []
         # see https://github.com/iMerica/dj-rest-auth/issues/181
@@ -371,7 +371,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             return False
     
     def get_is_campaign(self,obj):
-        if CampaignUsers.objects.filter(user=obj).count()!=0:
+        if CampaignUsers.objects.filter(user=obj,coupon_used=True).count()!=0:
             return True
         else :
             return False
