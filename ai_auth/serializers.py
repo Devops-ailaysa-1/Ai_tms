@@ -371,7 +371,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             return False
     
     def get_is_campaign(self,obj):
-        if CampaignUsers.objects.filter(user=obj,coupon_used=True).count()!=0:
+        if CampaignUsers.objects.filter(user=obj,coupon_used=False).count()!=0:
             return True
         else :
             return False
