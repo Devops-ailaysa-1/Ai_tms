@@ -603,8 +603,7 @@ class ImageModificationTechniqueSerializerV2(serializers.ModelSerializer):
 class ImageModificationTechniqueSerializerV3(serializers.ModelSerializer):
     class Meta:
         model =  ImageStyleSD
-        fields = "__all__"
-    
+        fields = ("id","style_name","image")
     def update(self, instance, validated_data):
         image = validated_data.get('image',None)
         instance.image=image
