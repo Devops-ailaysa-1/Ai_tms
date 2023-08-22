@@ -1,6 +1,7 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
                                         StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
-                                            ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,ImageModificationTechnique,GeneralPromptList)
+                                            ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,
+                                            GeneralPromptList,ImageStyleSD)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -597,3 +598,19 @@ class ImageModificationTechniqueSerializerV2(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+
+class ImageModificationTechniqueSerializerV3(serializers.ModelSerializer):
+    class Meta:
+        model =  ImageStyleSD
+        fields = "__all__"
+    
+    def update(self, instance, validated_data):
+        image = validated_data.get('image',None)
+        instance.image=image
+        instance.save()
+        im=Image.open(instance.image.path).resize((100,100))
+        im=convert_image_url_to_file(im,no_pil_object=False)
+        instance.image=im
+        instance.save()
+        return instance

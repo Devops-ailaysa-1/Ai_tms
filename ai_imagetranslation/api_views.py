@@ -1,10 +1,11 @@
 from rest_framework import viewsets 
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
-                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,ImageModificationTechniqueSerializerV2)
+                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,ImageModificationTechniqueSerializerV2,
+                                            ImageModificationTechniqueSerializerV3)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
-                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique)
+                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique,ImageStyleSD)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -387,6 +388,18 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
             return Response(serializer.errors)
 
 
+class ImageModificationTechniqueV2ViewSet(viewsets.ViewSet):
+
+    def update(self,request,pk):
+        query_set = ImageStyleSD.objects.get(id=pk)
+        serializer = ImageModificationTechniqueSerializerV3(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
 
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:
@@ -462,24 +475,3 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
 
 
 
-
-photo_options={'Shot_type':['Close-up','Extreme Close-up','POV','Medium shot','Long shot'],
-               
-
-'Style':['polaroid','monochrome','long exposure','color splash','Tilt-shift'],
-
-
-
-'Lighting':['Soft','Ambient','Ring','Sun','Cinematic'],
-'Context':['Indoor','Outdoor','At night','In the park','Studio'],
-'Lens':['Wide-angle','Telephoto','24mm','EF 70mm','Bokeh'],
-'Device':['iPhone','CCTV','Nikon Z FX','Canon','Gopro']}
-
-
-image_json = {
-    "photography":photo_options
-}
-
-@api_view(['GET'])
-def customize_image_generation(request):
-    return Response(image_json,status=200)

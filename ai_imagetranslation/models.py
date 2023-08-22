@@ -223,3 +223,14 @@ class ImageModificationTechnique(models.Model):
 # class ModelC(models.Model):
 #     name = models.ForeignKey(ModelA, on_delete=models.CASCADE, related_name='main_model_a')
 #     category = models.ForeignKey(ModelB, on_delete=models.CASCADE, related_name='category_model_b')
+
+
+class ImageStyleSD(models.Model):
+    style_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    default_prompt=models.CharField(max_length=700,blank=True,null=True)
+    negative_prompt=models.CharField(max_length=700,blank=True,null=True)
+
+
