@@ -558,7 +558,7 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = ImageModificationTechnique
-        fields = ('id','custom_style_name','image','default_prompt','negative_prompt')
+        fields = ('id','custom_style_name','image')
 
     def to_representation(self, instance):
         representation=super().to_representation(instance)
@@ -574,7 +574,7 @@ class ImageStyleCategorySerializers(serializers.ModelSerializer):
     style_category = serializers.SerializerMethodField()
     class Meta:
         model = ImageStyleCategories
-        fields = ('id','style_category_name','style_category')
+        fields = ('id','style_category_name','style_category','default_prompt','negative_prompt')
 
     def get_style_category(self, instance):
         songs = instance.style_category.all().order_by(Case(When(custom_style_name="None", then=0), default=1))
