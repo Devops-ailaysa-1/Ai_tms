@@ -390,6 +390,15 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
 
 class ImageModificationTechniqueV2ViewSet(viewsets.ViewSet):
 
+
+    def get(self, request):
+        queryset = ImageStyleSD.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageModificationTechniqueSerializerV3(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+
     def update(self,request,pk):
         query_set = ImageStyleSD.objects.get(id=pk)
         serializer = ImageModificationTechniqueSerializerV3(query_set,data=request.data ,partial=True)
