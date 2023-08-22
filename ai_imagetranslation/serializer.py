@@ -506,11 +506,12 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         
         if sdstylecategoty and sdstylecategoty.id not in [1]:
             default_prompt = sdstylecategoty.default_prompt
-            neg_prompt=sdstylecategoty.negative_prompt
-            negative_prompt = negative_prompt+" "+neg_prompt if not negative_prompt else negative_prompt
+            if sdstylecategoty.negative_prompt:
+                negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
         prompt = default_prompt.format(prompt)
         print("------",prompt)
         print("-----",negative_prompt)
+
         
 
         if enhance_prompt:
