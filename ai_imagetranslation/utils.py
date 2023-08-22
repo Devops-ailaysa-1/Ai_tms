@@ -340,7 +340,8 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     pass
 def sd_status_check(id):
-    url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
+    # url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
+    url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
@@ -407,12 +408,10 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
-    print(x)
     process=False
     while True:
-        x=sd_status_check(response.json()['id'])
+        # x=sd_status_check(response.json()['id'])  for enterprice purpse
         if not x['status']=='processing' or x['status']=='success':
-            print("processing")
             process=True
             break
     if process:
