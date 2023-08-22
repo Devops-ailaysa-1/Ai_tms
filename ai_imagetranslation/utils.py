@@ -349,8 +349,9 @@ def sd_status_check(id):
 STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     # url = "https://stablediffusionapi.com/api/v4/dreambooth"
-    url="https://stablediffusionapi.com/api/v3/text2img"
+    # url="https://stablediffusionapi.com/api/v3/text2img"
                                           #midjourney  sdxl realistic-vision-v13
+    url = "https://stablediffusionapi.com/api/v1/enterprise/text2img"      #######for enterprice acc
     # data = {
     # "key":STABLE_DIFFUSION_PUBLIC_API ,
     # "model_id": "sdxl",
