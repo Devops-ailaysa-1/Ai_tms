@@ -346,35 +346,60 @@ def sd_status_check(id):
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json()
 
-
-
-
+STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
     # url="https://stablediffusionapi.com/api/v3/text2img"
-    #midjourney  sdxl realistic-vision-v13
-    data = {
-    "key":STABLE_DIFFUSION_PUBLIC_API ,
+                                          #midjourney  sdxl realistic-vision-v13
+    # data = {
+    # "key":STABLE_DIFFUSION_PUBLIC_API ,
+    # "model_id": "sdxl",
+    # "prompt": prompt,
+    # "width": "1024",
+    # "height": "1024",
+    # "samples": "1",
+    # "num_inference_steps": 41,   
+    # "seed": random.randint(0,99999999999),
+    # "guidance_scale": 5,
+    # "safety_checker": "yes",
+    # "multi_lingual": "no",
+    # "panorama": "no",
+    # "self_attention": "yes",
+    # "upscale": "no",
+    # "embeddings_model": None,
+    # "webhook": None,"track_id": None,
+    # "enhance_prompt":'no',
+    # 'scheduler':'DDIMScheduler', 
+    # "self_attention":'yes',
+    # 'use_karras_sigmas':"yes"
+    # } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
+    data={
+    "key": "45405da04e97b0c596e7",
     "model_id": "sdxl",
     "prompt": prompt,
     "width": "1024",
     "height": "1024",
     "samples": "1",
-    "num_inference_steps": 41,   
-    "seed": random.randint(0,99999999999),
-    "guidance_scale": 5,
-    "safety_checker": "yes",
+    "num_inference_steps": "30",
+    "safety_checker": "no",
+    "enhance_prompt": "yes",
+    "seed": None,
+    "guidance_scale": 7.5,
     "multi_lingual": "no",
     "panorama": "no",
-    "self_attention": "yes",
+    "self_attention": "no",
     "upscale": "no",
     "embeddings_model": None,
-    "webhook": None,"track_id": None,
-    "enhance_prompt":'no',
-    'scheduler':'DDIMScheduler', 
-    "self_attention":'yes',
-    'use_karras_sigmas':"yes"
-    } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
+    "tomesd": "yes",
+    "use_karras_sigmas": "yes",
+    "vae": None,
+    "lora_strength": None,
+    "lora_model": None,
+    "scheduler": "UniPCMultistepScheduler",
+    "webhook": None,
+    "track_id": None
+    }
+
     if negative_prompt:
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 

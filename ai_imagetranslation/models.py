@@ -155,6 +155,7 @@ class StableDiffusionAPI(models.Model):
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
     sampler=models.CharField(max_length=100,blank=True,null=True)
+    thumbnail=models.FileField(upload_to='stable-diffusion-image-thumbnail',blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     def __str__(self) -> str:
