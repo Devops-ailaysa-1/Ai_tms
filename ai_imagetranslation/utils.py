@@ -408,16 +408,20 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
-    process=False
-    while True:
-        # x=sd_status_check(response.json()['id'])  for enterprice purpse
-        if not x['status']=='processing' or x['status']=='success':
-            process=True
-            break
-    if process:
+    if x['id'] == None:
         return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
-    else:
-        raise serializers.ValidationError({'msg':"error on processing SD"})
+    
+    # else:
+    #     process=False
+    #     while True:
+    #         # x=sd_status_check(response.json()['id'])  for enterprice purpse
+    #         if not x['status']=='processing' or x['status']=='success':
+    #             process=True
+    #             break
+    #     if process:
+    #         return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
+    #     else:
+    #         raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
     # headers = {'Content-Type': 'application/json'}
