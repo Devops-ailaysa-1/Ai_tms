@@ -484,7 +484,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     style=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CustomImageGenerationStyle.objects.all()),required=False,write_only=True)
     style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
     technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
-    sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all(),required=False,write_only=True)
+    sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
     
     negative_prompt=serializers.CharField(allow_null=True,required=False)
     enhance_prompt=serializers.BooleanField(required=False,write_only=True)
@@ -558,7 +558,7 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = ImageModificationTechnique
-        fields = ('id','custom_style_name','image')
+        fields = ('id','custom_style_name','image','default_prompt','negative_prompt')
 
     def to_representation(self, instance):
         representation=super().to_representation(instance)
