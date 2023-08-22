@@ -340,8 +340,8 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     pass
 def sd_status_check(id):
-    # url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
-    url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
+    url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
+    # url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
@@ -350,57 +350,32 @@ def sd_status_check(id):
 STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     # url = "https://stablediffusionapi.com/api/v4/dreambooth"
-    # url="https://stablediffusionapi.com/api/v3/text2img"
+    url="https://stablediffusionapi.com/api/v3/text2img"
                                           #midjourney  sdxl realistic-vision-v13
-    url = "https://stablediffusionapi.com/api/v1/enterprise/text2img"      #######for enterprice acc
-    # data = {
-    # "key":STABLE_DIFFUSION_PUBLIC_API ,
-    # "model_id": "sdxl",
-    # "prompt": prompt,
-    # "width": "1024",
-    # "height": "1024",
-    # "samples": "1",
-    # "num_inference_steps": 41,   
-    # "seed": random.randint(0,99999999999),
-    # "guidance_scale": 5,
-    # "safety_checker": "yes",
-    # "multi_lingual": "no",
-    # "panorama": "no",
-    # "self_attention": "yes",
-    # "upscale": "no",
-    # "embeddings_model": None,
-    # "webhook": None,"track_id": None,
-    # "enhance_prompt":'no',
-    # 'scheduler':'DDIMScheduler', 
-    # "self_attention":'yes',
-    # 'use_karras_sigmas':"yes"
-    # } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
-    data={
-    "key": "45405da04e97b0c596e7",
+    # url = "https://stablediffusionapi.com/api/v1/enterprise/text2img"      #######for enterprice acc
+    data = {
+    "key":STABLE_DIFFUSION_PUBLIC_API ,
     "model_id": "sdxl",
     "prompt": prompt,
     "width": "1024",
     "height": "1024",
     "samples": "1",
-    "num_inference_steps": "30",
-    "safety_checker": "no",
-    "enhance_prompt": "yes",
-    "seed": None,
-    "guidance_scale": 7.5,
+    "num_inference_steps": 41,   
+    "seed": random.randint(0,99999999999),
+    "guidance_scale": 5,
+    "safety_checker": "yes",
     "multi_lingual": "no",
     "panorama": "no",
-    "self_attention": "no",
+    "self_attention": "yes",
     "upscale": "no",
     "embeddings_model": None,
-    "tomesd": "yes",
-    "use_karras_sigmas": "yes",
-    "vae": None,
-    "lora_strength": None,
-    "lora_model": None,
-    "scheduler": "UniPCMultistepScheduler",
-    "webhook": None,
-    "track_id": None
-    }
+    "webhook": None,"track_id": None,
+    "enhance_prompt":'no',
+    'scheduler':'DDIMScheduler', 
+    "self_attention":'yes',
+    'use_karras_sigmas':"yes"
+    } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
+   
 
     if negative_prompt:
         data['negative_prompt']=negative_prompt
@@ -408,20 +383,16 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     x=response.json()
-    if x['id'] == None:
+    process=False
+    while True:
+        # x=sd_status_check(response.json()['id'])  for enterprice purpse
+        if not x['status']=='processing' or x['status']=='success':
+            process=True
+            break
+    if process:
         return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
-    
-    # else:
-    #     process=False
-    #     while True:
-    #         # x=sd_status_check(response.json()['id'])  for enterprice purpse
-    #         if not x['status']=='processing' or x['status']=='success':
-    #             process=True
-    #             break
-    #     if process:
-    #         return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
-    #     else:
-    #         raise serializers.ValidationError({'msg':"error on processing SD"})
+    else:
+        raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
     # headers = {'Content-Type': 'application/json'}
@@ -517,3 +488,32 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 #     if isinstance(obj, dict):
 #         return {name: move_to_device(val, device) for name, val in obj.items()}
 #     raise ValueError(f'Unexpected type {type(obj)}')
+
+
+
+ # data={
+    # "key": "45405da04e97b0c596e7",
+    # "model_id": "sdxl",
+    # "prompt": prompt,
+    # "width": "1024",
+    # "height": "1024",
+    # "samples": "1",
+    # "num_inference_steps": "30",
+    # "safety_checker": "no",
+    # "enhance_prompt": "yes",
+    # "seed": None,
+    # "guidance_scale": 7.5,
+    # "multi_lingual": "no",
+    # "panorama": "no",
+    # "self_attention": "no",
+    # "upscale": "no",
+    # "embeddings_model": None,
+    # "tomesd": "yes",
+    # "use_karras_sigmas": "yes",
+    # "vae": None,
+    # "lora_strength": None,
+    # "lora_model": None,
+    # "scheduler": "UniPCMultistepScheduler",
+    # "webhook": None,
+    # "track_id": None
+    # }

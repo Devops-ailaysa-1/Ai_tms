@@ -392,7 +392,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         return instance 
 
 
-
 class ImageTranslateListSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageTranslate
@@ -478,8 +477,6 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         return instance
 
 
-
-
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
     prompt=serializers.CharField(allow_null=True,required=True)
@@ -502,7 +499,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         negative_prompt = validated_data.pop('negative_prompt',None)
         enhance_prompt=validated_data.pop('enhance_prompt',None)
         
-
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
             prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
