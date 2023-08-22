@@ -484,10 +484,13 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     style=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CustomImageGenerationStyle.objects.all()),required=False,write_only=True)
     style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
     technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
+    sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all(),required=False,write_only=True)
+    
     negative_prompt=serializers.CharField(allow_null=True,required=False)
     enhance_prompt=serializers.BooleanField(required=False,write_only=True)
+
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt') #style height width sampler used_api
+        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty') #style height width sampler used_api
         model=StableDiffusionAPI
 
     def create(self, validated_data):
@@ -497,17 +500,26 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         style=validated_data.pop('style',None)
         style_cat=validated_data.pop('style_cat',None)
         technique_name=validated_data.pop('technique_name',None)
+        sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         enhance_prompt=validated_data.pop('enhance_prompt',None)
         
+        if sdstylecategoty and sdstylecategoty.id not in [1]:
+            default_prompt = sdstylecategoty.default_prompt
+            neg_prompt=sdstylecategoty.negative_prompt
+            negative_prompt = negative_prompt+" "+neg_prompt if negative_prompt else negative_prompt
+        prompt = default_prompt.format(prompt)
+        print("------",prompt)
+        print("-----",negative_prompt)
+        
+
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
             prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
-        image=stable_diffusion_public(prompt,weight=1,steps=31,height=512,width=512,
-                                      style_preset="",sampler="",negative_prompt=negative_prompt)
-        print("prompt",prompt)
+        image=stable_diffusion_public(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",negative_prompt=negative_prompt)
+
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
-                                                   style="",height=512,width=512,sampler="",negative_prompt=negative_prompt)
+                                                   style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
         instance.image=image
         instance.save()
         return instance

@@ -395,6 +395,7 @@ class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
     queryset = ImageStyleSD.objects.all()
     serializer_class = ImageModificationTechniqueSerializerV3
     pagination_class = None
+    
 
 
 
