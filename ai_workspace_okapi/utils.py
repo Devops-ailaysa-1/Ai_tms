@@ -509,7 +509,7 @@ def get_general_prompt(opt,sent):
     return prompt
 
 
-def get_prompt(opt,sent):
+def get_prompt_sent(opt,sent):
 
     if opt == "Rewrite":
         if len(sent)>200:

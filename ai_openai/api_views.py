@@ -27,7 +27,7 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 #from langdetect import detect
 #import langid
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -128,8 +128,9 @@ def instant_customize_response(customize ,user_text,used_tokens):
         prompt = customize.prompt +' "{}"'.format(text_)
         #prompt = customize.prompt+" "+text+"."
         print("Prompt------------------->",prompt)
-        response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
-        text = response['choices'][0]['text']
+        response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
+        #text = response['choices'][0]['text']
+        text = response["choices"][0]["message"]["content"]
         text = text.strip('\n').strip('\"')
         final = final + "\n\n" + text
         tokens = response['usage']['total_tokens']
@@ -151,7 +152,7 @@ def customize_response(customize ,user_text,tone,used_tokens):
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
-            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
+            response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =150,n=1)
         else:
             if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
@@ -160,7 +161,7 @@ def customize_response(customize ,user_text,tone,used_tokens):
                 prompt = customize.prompt +' "{}"'.format(user_text)
                 #prompt = customize.prompt+" "+user_text+"."
             print("Pr-------->",prompt)
-            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
+            response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
         total_tokens += used_tokens
@@ -266,7 +267,8 @@ def customize_text_openai(request):
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
-            result_txt = response['choices'][0]['text']
+            #result_txt = response['choices'][0]['text']
+            result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
@@ -276,7 +278,8 @@ def customize_text_openai(request):
         
     else:##english      
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-        result_txt = response['choices'][0]['text']
+        #result_txt = response['choices'][0]['text']
+        result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
     data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
