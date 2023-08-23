@@ -528,7 +528,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance.image=image
         instance.save()
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-        return instance.save()
+        instance.save()
+        return instance
         
 
 
