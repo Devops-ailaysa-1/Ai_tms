@@ -235,3 +235,6 @@ class Lighting(models.Model):
 class Composition(models.Model):
     composition_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+
+
+
