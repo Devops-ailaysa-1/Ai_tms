@@ -616,7 +616,7 @@ class ImageModificationTechniqueSerializerV2(serializers.ModelSerializer):
 class ImageModificationTechniqueSerializerV3(serializers.ModelSerializer):
     class Meta:
         model =  ImageStyleSD
-        fields = ("id","style_name","image",'default_prompt','negative_prompt')
+        fields = ("id","style_name","image",'negative_prompt')
     def update(self, instance, validated_data):
         image = validated_data.get('image',None)
         instance.image=image
