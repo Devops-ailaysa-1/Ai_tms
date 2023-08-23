@@ -399,11 +399,6 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
         fields=('id','width','height','project_name','updated_at','created_at','types',
                 'thumbnail','source_language','image_load','image')
 
-
-def back_groung_rm_json_update():
-    pass
-
-
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:
         model=BackgroundRemovePreviewimg
@@ -493,6 +488,17 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty') #style height width sampler used_api
         model=StableDiffusionAPI
 
+
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if not representation.get('thumbnail' , None):
+            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+            instance.save()
+            representation['thumbnail']=instance.thumbnail.url
+            print("thumbnail _created")
+        return representation
+
+
     def create(self, validated_data):
         user=self.context['request'].user
         # used_api=validated_data.get('used_api',None)
@@ -512,8 +518,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         print("------",prompt)
         print("-----",negative_prompt)
 
-        
-
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
             prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
@@ -522,6 +526,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
                                                    style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
         instance.image=image
+        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
         instance.save()
         return instance
         

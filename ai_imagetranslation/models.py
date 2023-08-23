@@ -215,7 +215,12 @@ class ImageModificationTechnique(models.Model):
         return known_info
 
 
+class AIimageCategory(models.Model):
+    image_category=models.CharField(max_length=200,blank=True,null=True)
+
+
 class ImageStyleSD(models.Model):
+    # category=models.ForeignKey(AIimageCategory,on_delete=models.CASCADE,related_name="ai-image-cat")
     style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
