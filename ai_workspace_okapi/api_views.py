@@ -2538,7 +2538,7 @@ def get_src_tags(sent):
 
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
-from .utils import get_prompt
+from .utils import get_prompt_sent
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
 @api_view(['POST',])############### only available for english ###################
@@ -2565,7 +2565,7 @@ def paraphrasing_for_non_english(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt(option,clean_sentence)#,subj_fields,content_fields) 
+        prompt = get_prompt_sent(option,clean_sentence)#,subj_fields,content_fields) 
         print("Pr--------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         print("Resp--------->",result_prompt)
