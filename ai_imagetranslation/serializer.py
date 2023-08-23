@@ -474,34 +474,31 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
 
 
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
-
     prompt=serializers.CharField(allow_null=True,required=True)
     style=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CustomImageGenerationStyle.objects.all()),required=False,write_only=True)
     style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
     technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
     sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
-    
     negative_prompt=serializers.CharField(allow_null=True,required=False)
     enhance_prompt=serializers.BooleanField(required=False,write_only=True)
 
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty') #style height width sampler used_api
+        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty')
         model=StableDiffusionAPI
-
 
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if not representation.get('thumbnail' , None):
-            instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-            instance.save()
-            representation['thumbnail']=instance.thumbnail.url
-            print("thumbnail _created")
+            if instance.image:
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+                instance.save()
+                representation['thumbnail']=instance.thumbnail.url
+                print("thumbnail _created")
         return representation
 
 
     def create(self, validated_data):
         user=self.context['request'].user
-        # used_api=validated_data.get('used_api',None)
         prompt=validated_data.get('prompt',None)
         style=validated_data.pop('style',None)
         style_cat=validated_data.pop('style_cat',None)
@@ -510,13 +507,16 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         negative_prompt = validated_data.pop('negative_prompt',None)
         enhance_prompt=validated_data.pop('enhance_prompt',None)
         
-        if sdstylecategoty and sdstylecategoty.id not in [1]:
+        if sdstylecategoty.id not in [1]:
             default_prompt = sdstylecategoty.default_prompt
             if sdstylecategoty.negative_prompt:
                 negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
-        prompt = default_prompt.format(prompt)
-        print("------",prompt)
-        print("-----",negative_prompt)
+            prompt = default_prompt.format(prompt)
+
+
+        print(prompt)
+        print("neg_prompt")
+        print(negative_prompt)
 
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
@@ -526,9 +526,9 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
                                                    style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
         instance.image=image
-        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
         instance.save()
-        return instance
+        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+        return instance.save()
         
 
 
