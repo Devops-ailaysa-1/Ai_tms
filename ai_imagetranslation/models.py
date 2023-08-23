@@ -214,16 +214,6 @@ class ImageModificationTechnique(models.Model):
             known_info+= "--"+self.default_prompt
         return known_info
 
-# from django.db import models
-# class ModelA(models.Model):
-#     name = models.CharField(max_length=800)
-#     categories = models.ManyToManyField('ModelB', related_name='authors', blank=True)
-# class ModelB(models.Model):
-#     category = models.CharField(max_length=800)
-# class ModelC(models.Model):
-#     name = models.ForeignKey(ModelA, on_delete=models.CASCADE, related_name='main_model_a')
-#     category = models.ForeignKey(ModelB, on_delete=models.CASCADE, related_name='category_model_b')
-
 
 class ImageStyleSD(models.Model):
     style_name=models.CharField(max_length=200,blank=True,null=True)
@@ -234,3 +224,14 @@ class ImageStyleSD(models.Model):
     negative_prompt=models.CharField(max_length=700,blank=True,null=True)
 
 
+class ColorTone(models.Model):
+    color_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+
+class Lighting(models.Model):
+    lighting_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+
+class Composition(models.Model):
+    composition_name=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
