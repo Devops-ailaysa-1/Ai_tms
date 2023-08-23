@@ -224,7 +224,7 @@ class ImageStyleSD(models.Model):
     negative_prompt=models.CharField(max_length=700,blank=True,null=True)
 
 
-class ColorTone(models.Model):
+class Color(models.Model):
     color_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
