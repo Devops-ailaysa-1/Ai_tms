@@ -385,7 +385,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     x=response.json()
     process=False
     while True:
-        # x=sd_status_check(response.json()['id'])  for enterprice purpse
+        x=sd_status_check(response.json()['id']) 
         if not x['status']=='processing' or x['status']=='success':
             process=True
             break
