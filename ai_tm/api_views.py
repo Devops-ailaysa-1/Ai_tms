@@ -150,7 +150,7 @@ class TmxUploadView(viewsets.ViewSet):
         # authorize(request, resource=job_obj, actor=request.user, action="create") #
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            count_update.apply_async((job,))
+            count_update.apply_async((job,),queue='medium-priority')
             task_obj = Task.objects.filter(job_id=job).last()
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             if ins:
@@ -165,7 +165,7 @@ class TmxUploadView(viewsets.ViewSet):
         task_obj = Task.objects.filter(job_id=job_id).last()
         if serializer.is_valid():
             serializer.save()
-            count_update.apply_async((job_id,))
+            count_update.apply_async((job_id,), queue='medium-priority')
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             if ins:
                 MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
@@ -180,7 +180,7 @@ class TmxUploadView(viewsets.ViewSet):
         if ins:
             MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis')).update(status=1)
         os.remove(instance.tmx_file.path)
-        count_update.apply_async((instance.job.id,))
+        count_update.apply_async((instance.job.id,),queue='medium-priority')
         instance.delete()
         return Response(status=204)
 
@@ -209,7 +209,7 @@ def get_tm_analysis(doc_data,job):
         #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
-        print("Doc data in Analysis---------------->",doc_data)
+        #print("Doc data in Analysis---------------->",doc_data)
         sources = []
         sources_ = []
         tm_lists = []
@@ -252,7 +252,7 @@ def get_word_count(tm_analysis,project,task):
     tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition,raw_total =0,0,0,0,0,0,0,0,0,0
     char_tm_100,char_tm_95_99,char_tm_85_94,char_tm_75_84,char_tm_50_74,char_tm_101,char_tm_102,char_new,char_repetition,char_raw_total =0,0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
-        print("J-------------->",j)
+        #print("J-------------->",j)
         if i>0:
             previous = tm_analysis[i-1]
             pre_ratio = previous.get('ratio')*100
@@ -297,7 +297,7 @@ def get_word_count(tm_analysis,project,task):
     char_raw_total_final = char_raw_total + char_repetition
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
     cc = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
-    print("CCCCC-------------------------->",cc)
+    #print("CCCCC-------------------------->",cc)
     if cc:
         obj1 = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
         obj1.update(tm_100 = char_tm_100,tm_95_99 = char_tm_95_99,tm_85_94 = char_tm_85_94,tm_75_84 = char_tm_75_84,\
@@ -385,16 +385,16 @@ def get_project_analysis(request,project_id):
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
                     except TaskResult.DoesNotExist:
-                        cel_task = analysis.apply_async((task_ids,proj.id,), )
+                        cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                     #print("stst",ins.status)
-                elif (not ins) or state == 'FAILURE':
-                    cel_task = analysis.apply_async((task_ids,proj.id,), )
+                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
+                    cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 elif state == 'SUCCESS':
                     print("Ins Status---------->",ins.status)
                     if ins.status == 1:
-                        cel_task = analysis.apply_async((task_ids,proj.id,), )
+                        cel_task = analysis.apply_async((task_ids,proj.id,),queue='medium-priority' )
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                     else:
                         pass
