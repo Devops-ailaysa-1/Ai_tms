@@ -483,7 +483,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     enhance_prompt=serializers.BooleanField(required=False,write_only=True)
 
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty')
+        fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty','thumbnail')
         model=StableDiffusionAPI
 
     # def to_representation(self, instance):
