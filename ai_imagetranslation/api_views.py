@@ -2,10 +2,10 @@ from rest_framework import viewsets
 from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
                                             BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
                                             CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,ImageModificationTechniqueSerializerV2,
-                                            ImageModificationTechniqueSerializerV3)
+                                            ImageModificationTechniqueSerializerV3,AspectRatioSerializer)
 from rest_framework.response import Response
 from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
-                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique,ImageStyleSD)
+                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique,ImageStyleSD,AspectRatio)
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -397,6 +397,10 @@ class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
     filter_backend=[DjangoFilterBackend]
     
 
+class AspectRatioViewSet(generics.ListCreateAPIView):
+    queryset = AspectRatio.objects.all().order_by('id')
+    serializer_class = AspectRatioSerializer
+    pagination_class = None
 
 
 

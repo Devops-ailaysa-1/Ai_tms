@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from ai_imagetranslation.models import (CustomImageGenerationStyle ,ImageStyleCategories,ImageModificationTechnique,GeneralPromptList,
-                                        ImageStyleSD,Color , Lighting ,Composition)
+                                        ImageStyleSD,Color,Lighting ,Composition,AspectRatio,SDImageResolution)
 
 
 
@@ -14,4 +14,5 @@ admin.site.register(ImageStyleSD)
 admin.site.register(Color)
 admin.site.register(Lighting)
 admin.site.register(Composition)
-
+admin.site.register(AspectRatio)
+admin.site.register(SDImageResolution)

@@ -84,8 +84,6 @@ def calculate_font_size(box_width, box_height, text,font_size):
         font_size -= 1
     return font_size+15
 
-
-
 def canva_group(_dict,src_lang ,lang):
     for count , grp_data in enumerate(_dict):
         if grp_data['type']== 'textbox':

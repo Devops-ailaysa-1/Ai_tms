@@ -80,7 +80,8 @@ opencv-contrib-python = "4.7.0.72"
 tiktoken = "0.4.0"
 channels-redis = "^4.1.0"
 symspellpy = "^6.7.7"
-
+pygame = "^2.5.1"
+littlecms = "^0.1b3"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]

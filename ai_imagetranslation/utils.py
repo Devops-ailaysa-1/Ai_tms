@@ -7,8 +7,7 @@ from django import core
 import random
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
-credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
-client = vision.ImageAnnotatorClient(credentials=credentials)
+
 from django.core.exceptions import ValidationError
 import os 
 import requests
@@ -20,11 +19,28 @@ from rest_framework import serializers
 from ai_canvas.template_json import textbox_json
 import copy
 import uuid,math,json
+from cv2 import (
+    BORDER_DEFAULT,
+    MORPH_OPEN,
+    GaussianBlur,
+    morphologyEx,
+    getStructuringElement,
+    MORPH_ELLIPSE
+)
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
 from ai_canvas.utils import convert_image_url_to_file 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
 BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
+STABLE_DIFFUSION_API= os.getenv('STABLE_DIFFUSION_API') 
+STABILITY=os.getenv('STABILITY')   
+STABLE_DIFFUSION_API_URL =os.getenv('STABLE_DIFFUSION_API_URL')
+MODEL_VERSION =os.getenv('MODEL_VERSION')
+STABLE_DIFFUSION_PUBLIC_API=os.getenv('STABLE_DIFFUSION_PUBLIC_API')
+
+
+credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
+client = vision.ImageAnnotatorClient(credentials=credentials)
 
 def image_ocr_google_cloud_vision(image_path , inpaint):
     if inpaint:
@@ -267,16 +283,9 @@ def background_merge(u2net_result,original_img):
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
 
-import numpy as np
 
-from cv2 import (
-    BORDER_DEFAULT,
-    MORPH_OPEN,
-    GaussianBlur,
-    morphologyEx,
-    getStructuringElement,
-    MORPH_ELLIPSE
-)
+
+
 kernel = getStructuringElement(MORPH_ELLIPSE, (3, 3))
 def post_process(mask: np.ndarray) -> np.ndarray:
     mask = morphologyEx(mask, MORPH_OPEN, kernel)
@@ -297,12 +306,9 @@ def background_remove(instance):
     user_image=cv2.imread(image_path)
     image_h, image_w, _ = user_image.shape
     y0=cv2.resize(res, (image_w, image_h))
-
     im_mask=Image.fromarray(y0).convert('RGBA')
     mask_store = convert_image_url_to_file(im_mask,no_pil_object=False,name="mask.png")
-    
     eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
-
     instance.eraser_transparent_mask=eraser_transparent_mask
     instance.mask=mask_store
     instance.save()
@@ -311,11 +317,7 @@ def background_remove(instance):
 
 #########stabilityai
  
-STABLE_DIFFUSION_API= os.getenv('STABLE_DIFFUSION_API') 
-STABILITY=os.getenv('STABILITY')   
-STABLE_DIFFUSION_API_URL =os.getenv('STABLE_DIFFUSION_API_URL')
-MODEL_VERSION =os.getenv('MODEL_VERSION')
-STABLE_DIFFUSION_PUBLIC_API=os.getenv('STABLE_DIFFUSION_PUBLIC_API')
+
 
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     # token = "Bearer {}".format(STABILITY)
@@ -342,6 +344,7 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
 def sd_status_check(id):
     url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
     # url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
+    #url=https://stablediffusionapi.com/api/v3/fetch/"
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
@@ -354,29 +357,21 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
                                           #midjourney  sdxl realistic-vision-v13
     # url = "https://stablediffusionapi.com/api/v1/enterprise/text2img"      #######for enterprice acc
     data = {
-    "key":STABLE_DIFFUSION_PUBLIC_API ,
-    "model_id": "sdxl",
-    "prompt": prompt,
-    "width": "1024",
-    "height": "1024",
-    "samples": "1",
-    "num_inference_steps": 41,   
-    "seed": random.randint(0,99999999999),
-    "guidance_scale": 5,
-    "safety_checker": "yes",
-    "multi_lingual": "no",
-    "panorama": "no",
-    "self_attention": "yes",
-    "upscale": "no",
-    "embeddings_model": None,
-    "webhook": None,"track_id": None,
-    "enhance_prompt":'no',
-    'scheduler':'DDIMScheduler', 
-    "self_attention":'yes',
-    'use_karras_sigmas':"yes"
-    } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
+            "key":STABLE_DIFFUSION_PUBLIC_API ,
+            "model_id": "sdxl",
+            "prompt": prompt,
+            "width": "1024","height": "1024",
+            "samples": "1","num_inference_steps": 41,   
+            "seed": random.randint(0,99999999999),
+            "guidance_scale": 5,
+            "safety_checker": "yes","multi_lingual": "no",
+            "panorama": "no",
+            "self_attention": "yes","upscale": "no",
+            "embeddings_model": None,"webhook": None,"track_id": None,
+            "enhance_prompt":'no',
+            'scheduler':'DDIMScheduler', "self_attention":'yes','use_karras_sigmas':"yes"
+         } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
    
-
     if negative_prompt:
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 

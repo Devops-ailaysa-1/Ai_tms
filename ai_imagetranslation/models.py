@@ -242,4 +242,26 @@ class Composition(models.Model):
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
 
 
+class AspectRatio(models.Model):
+    resolution=models.CharField(max_length=200,blank=True,null=True)
+    image=models.FileField(upload_to="aspect-ratio",blank=True,null=True)
+    # height=models.IntegerField(blank=True,null=True)
+    # width=models.IntegerField(blank=True,null=True)
+
+    def __str__(self) -> str:
+        return self.resolution
+
+class SDImageResolution(models.Model):
+    sd_image_resolution=models.ForeignKey(AspectRatio,on_delete=models.CASCADE,related_name="sd_image_res")
+    resolution=models.CharField(max_length=200,blank=True,null=True)
+    height=models.IntegerField(blank=True,null=True)
+    width=models.IntegerField(blank=True,null=True)
+
+
+    def __str__(self) -> str:
+        return str(self.width)+"--"+str(self.height)
+
+
+
+
 

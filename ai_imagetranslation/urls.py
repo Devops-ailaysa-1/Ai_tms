@@ -19,6 +19,7 @@ urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView
               path('prompt-list',api_views.GeneralPromptListView.as_view(),name='general-prompt'),
               path('custom-image-generator/', api_views.CustomImageGenerationStyleListView.as_view(), name='post-list-create'),
               path('sdstyle/', api_views.ImageModificationTechniqueV2ViewSet.as_view(), name='post-list-create'),
+              path('image-gen-resolution',api_views.AspectRatioViewSet.as_view(),name='image-resolution' )
               ]
 urlpatterns+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

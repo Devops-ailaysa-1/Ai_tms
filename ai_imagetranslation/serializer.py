@@ -1,7 +1,7 @@
 from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,BackgroundRemovel,BackgroundRemovePreviewimg,
                                         StableDiffusionAPI,ImageTranslateResizeImage,CustomImageGenerationStyle,ImageStyleCategories,
                                             ImageModificationTechnique,CustomImageGenerationStyle,ImageStyleCategories,
-                                            GeneralPromptList,ImageStyleSD)
+                                            GeneralPromptList,ImageStyleSD,AspectRatio,SDImageResolution)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -15,7 +15,7 @@ from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove,background_merge
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
-import pillow_avif,io
+import io
 from ai_openai.utils import get_prompt_chatgpt_turbo
 HOST_NAME=os.getenv('HOST_NAME')
 
@@ -506,21 +506,17 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         enhance_prompt=validated_data.pop('enhance_prompt',None)
-        
+
         if sdstylecategoty.id not in [1]:
             default_prompt = sdstylecategoty.default_prompt
             if sdstylecategoty.negative_prompt:
                 negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
             prompt = default_prompt.format(prompt)
-
-
         print(prompt)
-        print("neg_prompt")
-        print(negative_prompt)
-
         if enhance_prompt:
             text = prompt+" form a prompt sentence using this keyword."
             prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
+
         image=stable_diffusion_public(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",negative_prompt=negative_prompt)
 
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
@@ -530,36 +526,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
         instance.save()
         return instance
-        
-
-
-        # if target_update_id and mask_json:
-        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
-        #     img_tar.mask_json=mask_json
-        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
-        #     img_tar.mask=mask
-        #     img_tar.save()
-        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
-        #     content=image_content(inpaint_out_image)
-        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
-        #     img_tar.inpaint_image=inpaint_image_file
-        #     img_tar.save()
-        #     text_box_list_new=[]
-        #     for text_box in text_box_list:
-        #         txt_box=copy.deepcopy(text_box)
-        #         if 'text' in txt_box:
-        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
-        #                                              target_lang_code=img_tar.target_language.locale_code)
-        #             txt_box['text']=translate_bbox
-        #         text_box_list_new.append(txt_box)
-        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
-        #     obj_list=can_tar_json['objects']
-        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
-        #     can_tar_json['objects']=obj_list+text_box_list_new
-        #     img_tar.target_canvas_json=can_tar_json
-        #     img_tar.save()
-        #     return instance
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
@@ -632,3 +598,44 @@ class ImageModificationTechniqueSerializerV3(serializers.ModelSerializer):
         instance.image=im
         instance.save()
         return instance
+
+
+class SDImageResolutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SDImageResolution
+        fields='__all__'
+
+class AspectRatioSerializer(serializers.ModelSerializer):
+    sd_image_res=SDImageResolutionSerializer(many=True)
+    class Meta:
+        model=AspectRatio
+        fields=('id','sd_image_res','resolution')
+
+
+        # if target_update_id and mask_json:
+        #     img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
+        #     img_tar.mask_json=mask_json
+        #     thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+        #     mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+        #     img_tar.mask=mask
+        #     img_tar.save()
+        #     inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
+        #     content=image_content(inpaint_out_image)
+        #     inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+        #     img_tar.inpaint_image=inpaint_image_file
+        #     img_tar.save()
+        #     text_box_list_new=[]
+        #     for text_box in text_box_list:
+        #         txt_box=copy.deepcopy(text_box)
+        #         if 'text' in txt_box:
+        #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+        #                                              target_lang_code=img_tar.target_language.locale_code)
+        #             txt_box['text']=translate_bbox
+        #         text_box_list_new.append(txt_box)
+        #     can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
+        #     obj_list=can_tar_json['objects']
+        #     obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
+        #     can_tar_json['objects']=obj_list+text_box_list_new
+        #     img_tar.target_canvas_json=can_tar_json
+        #     img_tar.save()
+        #     return instance
