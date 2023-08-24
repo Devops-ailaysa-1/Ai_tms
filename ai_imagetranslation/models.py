@@ -146,6 +146,7 @@ class BackgroundRemovePreviewimg(models.Model):
 
 class StableDiffusionAPI(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    generated_image=models.FileField(upload_to='stable-diffusion-image-gen',blank=True,null=True)
     image=models.FileField(upload_to='stable-diffusion-image',blank=True,null=True)
     used_api=models.CharField(max_length=200,blank=True,null=True)
     model_name=models.CharField(max_length=200,blank=True,null=True)
@@ -256,8 +257,7 @@ class SDImageResolution(models.Model):
     resolution=models.CharField(max_length=200,blank=True,null=True)
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
-
-
+    
     def __str__(self) -> str:
         return str(self.width)+"--"+str(self.height)
 
