@@ -170,7 +170,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             print("ID------------------->",serializer.data.get('id'))
             shortlisted_vendor_list_send_email_new.apply_async((
             serializer.data.get('id'),
-            ))
+            ),queue='low-priority')
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 

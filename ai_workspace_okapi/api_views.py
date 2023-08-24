@@ -241,7 +241,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                write_segments_to_db.apply_async((task_write_data, document.id), )
+                write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
@@ -282,11 +282,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
                     except TaskResult.DoesNotExist:
-                        cel_task = pre_translate_update.apply_async((task.id,),)
+                        cel_task = pre_translate_update.apply_async((task.id,),queue='high-priority')
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
-                elif (not ins) or state == 'FAILURE':
+                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
                     print("Inside Pre celery")
-                    cel_task = pre_translate_update.apply_async((task.id,),)
+                    cel_task = pre_translate_update.apply_async((task.id,),queue='high-priority')
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
                     #empty = task.document.get_segments().filter(target='').first()
@@ -295,7 +295,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         seg = task.document.get_segments().filter(target='').first().source
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
                         if initial_credit > consumable_credits:
-                            cel_task = pre_translate_update.apply_async((task.id,),)
+                            cel_task = pre_translate_update.apply_async((task.id,),queue='high-priority')
                             return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
@@ -307,7 +307,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         elif Document.objects.filter(file_id=task.file_id).exists():
             print("-----------Already Processed--------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
-
+            
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
 
@@ -369,6 +369,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         from ai_workspace.models import MTonlytaskCeleryStatus
 
         task = self.get_object(task_id=task_id)
+        # doc = Document.objects.filter(file_id=task.file.id,job_id=task.job.id).last()
+        # if task.document == None and doc:
+        #     print("Inside TRTRT")
+        #     doc.delete()
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
@@ -381,11 +385,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     self.authorize_doc(request,document,action="read") 
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
-            elif (not ins) or state == 'FAILURE':
+            elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
                 # cel_task = pre_translate_update.apply_async((task.id,),)
                 # return Response({'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':cel_task.id},status=401)
                 ##need to authorize
-                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth),task.id),queue='high-priority')
                 return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
@@ -1501,7 +1505,7 @@ class DocumentToFile(views.APIView):
         final_segments = list(chain(segments, split_segments))
         print("Fs---------->",final_segments)
         if final_segments:
-            cel = mt_raw_update.apply_async((task.id,))
+            cel = mt_raw_update.apply_async((task.id,), queue='high-priority')
             if cel:
                 return {'status':False,'celery_id':cel.id}
         else:
@@ -2765,7 +2769,7 @@ def download_audio_output_file(request):
     state = google_long_text_file_process_cel.AsyncResult(cel_task.celery_task_id).state
     if state == 'SUCCESS':
         return download_file(task.task_transcript_details.last().translated_audio_file.path)
-    elif state == 'FAILURE':
+    elif state == 'FAILURE' or state == 'REVOKED':
         source_file_path = File.objects.get(file_document_set=doc).get_source_file_path
         filename, ext = os.path.splitext(source_file_path.split('source/')[1])
         temp_name = filename + '.txt'
@@ -2808,7 +2812,7 @@ def download_mt_file(request):
             logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
-    elif state == 'FAILURE':
+    elif state == 'FAILURE' or state == 'REVOKED':
         return Response({'msg':'Failure','task':task.id},status=400)
     else:
         return Response({'msg':'Pending','task':task.id},status=400)
@@ -2846,7 +2850,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
         if len(data.encode("utf8"))>4500:
-            celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
+            celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name),queue='high-priority' )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
