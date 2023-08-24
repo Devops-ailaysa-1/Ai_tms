@@ -486,15 +486,15 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         fields = ("id",'prompt','image','negative_prompt','style','style_cat','technique_name','enhance_prompt','sdstylecategoty')
         model=StableDiffusionAPI
 
-    def to_representation(self, instance):
-        representation=super().to_representation(instance)
-        if not representation.get('thumbnail' , None):
-            if instance.image:
-                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-                instance.save()
-                representation['thumbnail']=instance.thumbnail.url
-                print("thumbnail _created")
-        return representation
+    # def to_representation(self, instance):
+    #     representation=super().to_representation(instance)
+    #     if not representation.get('thumbnail' , None):
+    #         if instance.image:
+    #             instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+    #             instance.save()
+    #             representation['thumbnail']=instance.thumbnail.url
+    #             print("thumbnail _created")
+    #     return representation
 
 
     def create(self, validated_data):

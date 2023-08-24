@@ -334,7 +334,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
     def get(self, request):
         queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
         queryset = self.filter_queryset(queryset)
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        pagin_tc = self.paginate_queryset(queryset,request,view=self)
         serializer = StableDiffusionAPISerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
         return response
@@ -345,7 +345,6 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.data)
     
     def create(self,request):
-
         serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         if serializer.is_valid():
             serializer.save()
