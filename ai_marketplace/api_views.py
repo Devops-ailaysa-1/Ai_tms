@@ -339,7 +339,9 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.errors)
 
     def delete(self,request,pk):
-        Bid_info = BidPropasalDetails.objects.get(Q(id=pk) & Q(vendor=request.user))
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        Bid_info = BidPropasalDetails.objects.get(Q(id=pk) & Q(vendor=user))
         Bid_info.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
