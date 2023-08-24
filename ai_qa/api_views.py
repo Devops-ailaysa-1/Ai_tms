@@ -338,7 +338,7 @@ class ForbiddenFileView(viewsets.ViewSet):
         ser = ForbiddenSerializer(file_obj,data={'job':job_id},partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            update_forbidden_words.apply_async((file_obj.id,))
+            update_forbidden_words.apply_async((file_obj.id,),queue='low-priority')
             return Response(ser.data)
 
     def delete(self, request, pk):
@@ -400,7 +400,7 @@ class UntranslatableFileView(viewsets.ViewSet):
         ser = UntranslatableSerializer(file_obj,data={'job':job_id},partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            update_untranslatable_words.apply_async((file_obj.id,))
+            update_untranslatable_words.apply_async((file_obj.id,),queue='low-priority')
             return Response(ser.data)
 
 

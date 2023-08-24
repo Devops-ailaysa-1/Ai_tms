@@ -677,7 +677,7 @@ class Project(models.Model):
                 elif state == 'SUCCESS' and self.is_proj_analysed == True:
                     return analysed_true(self,tasks)
                 else:
-                    celery_task = project_analysis_property.apply_async((self.id,), )
+                    celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(self.id)
             except:
