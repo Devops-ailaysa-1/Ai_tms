@@ -479,7 +479,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
     technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
     sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
-    negative_prompt=serializers.CharField(allow_null=True,required=False)
+    negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
     enhance_prompt=serializers.BooleanField(required=False,write_only=True)
 
     class Meta:
