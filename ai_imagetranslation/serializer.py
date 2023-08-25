@@ -410,12 +410,12 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     preview_json=serializers.JSONField(required=False)
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
     canvas_json=serializers.JSONField(required=True)
-    erase_mask_json=serializers.JSONField(required=False)
+    eraser_transparent_mask=serializers.JSONField(required=False)
     # back_ground_mask=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
-                'erase_mask_json','mask','eraser_transparent_mask') #back_ground_mask
+                'eraser_transparent_mask','mask','eraser_transparent_mask') #back_ground_mask
         
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
@@ -458,9 +458,10 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
         
-        if erase_mask_json:
+        if eraser_transparent_mask:
             eraser_transparent_mask=thumbnail_create(back_ground_mask,formats='backgroundMask') 
             instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
+            instance.save()
 
 
         # if erase_mask_json:  ##
