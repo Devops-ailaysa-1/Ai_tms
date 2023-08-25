@@ -292,6 +292,9 @@ def project_pdf_conversion(id):
     file_format,page_length = file_pdf_check(task_details.file.file.path,id)
 
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+    
+    # print("consumable_credits",consumable_credits)
+    # consumable_credits=1000
     if initial_credit > consumable_credits:
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)

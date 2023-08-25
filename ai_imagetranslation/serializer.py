@@ -415,11 +415,12 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
-                'eraser_transparent_json','mask') #back_ground_mask
+                'eraser_transparent_json','mask','eraser_transparent_mask') #back_ground_mask
         
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
-                      'image':{'write_only':True},}
+                      'image':{'write_only':True},
+                      }
 
     def create(self, validated_data):
         user=self.context['request'].user
@@ -441,6 +442,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             tar_json['src']=HOST_NAME+instance.image.url
             tar_json['bgMask'] = HOST_NAME+instance.mask.url
             tar_json['brs']=2
+            tar_json['bgId']=instance.id
             # preview_json['brs']=2
             # preview_json['src']=HOST_NAME+instance.image.url
             instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
