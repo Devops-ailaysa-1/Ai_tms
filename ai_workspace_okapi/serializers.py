@@ -426,8 +426,11 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     count += 1
                     mt_params.extend([self.remove_tags(i.target),mt_engine,mt_engine,i.id])
 
-            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
-            VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))
+            mt_raw_sql = '''INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
+                            VALUES {}  ON CONFLICT (segment_id) DO UPDATE
+                            SET mt_raw = EXCLUDED.mt_raw,
+                                mt_engine_id = EXCLUDED.mt_engine_id,
+                                task_mt_engine_id = EXCLUDED.task_mt_engine_id;'''.format(','.join(['(%s, %s, %s, %s)'] * count))
             if mt_params:
                 with closing(connection.cursor()) as cursor:
                     cursor.execute(mt_raw_sql, mt_params)

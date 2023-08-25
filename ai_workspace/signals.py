@@ -97,10 +97,10 @@ from django.core.cache import cache
 from cacheops import invalidate_obj
 
 def invalidate_cache_on_save(sender, instance, **kwargs):
-    print("instance----------->",instance)
+    #print("instance----------->",instance)
     invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
-    print("Keys on save----------->",cache_keys)
+    #print("Keys on save----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
@@ -114,10 +114,10 @@ def invalidate_cache_on_save(sender, instance, **kwargs):
                 
 
 def invalidate_cache_on_delete(sender, instance, **kwargs):
-    print("instance----------->",instance)
+    #print("instance----------->",instance)
     invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
-    print("Keys on delete----------->",cache_keys)
+    #print("Keys on delete----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
