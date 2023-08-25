@@ -154,13 +154,16 @@ def ai_export_pdf(self, id): # , file_language , file_name , file_path
     # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
     start = time.time()
+    print(start)
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
     pdf_len = pdf.getNumPages()
+    print("pdf_len")
     try:
         no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page=int(pdf_len)
         doc=docx.Document()
         progress_recorder=ProgressRecorder(self)
+        print("inst try")
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
@@ -178,6 +181,7 @@ def ai_export_pdf(self, id): # , file_language , file_name , file_path
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
+        print("outside try")
         progress_recorder.set_progress(pdf_len+1, pdf_len+1, "pdf_convert_completed")
  
         logger.info('finished ocr and saved as docx ,file_name:')
