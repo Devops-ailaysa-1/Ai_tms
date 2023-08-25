@@ -421,6 +421,13 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
                       'image_json_id':{'write_only':True},
                       'image':{'write_only':True},
                       }
+        
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if instance.mask:
+            representation['mask'] = instance.mask.url
+        if instance.eraser_transparent_mask:
+            representation['']
 
     def create(self, validated_data):
         user=self.context['request'].user
@@ -462,28 +469,20 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         
         if eraser_transparent_json:
             eraser_transparent_mask=thumbnail_create(eraser_transparent_json,formats='backgroundMask') 
-            instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
+            instance.mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
             instance.save()
-
-
-        # if erase_mask_json:  ##
-        #     mask_image=thumbnail_create(erase_mask_json,formats='mask') 
-        #     image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
-        #     instance.mask=image_data
-        #     mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
-        #     original_img=cv2.imread(instance.image.path)
-        #     back_ground_create=background_merge(mask_img,original_img)
-        #     instance.image=back_ground_create
-        #     instance.save()
-        #     tar_json=copy.deepcopy(instance.canvas_json)
-        #     preview_json=copy.deepcopy(instance.preview_json)
-        #     tar_json['src']=HOST_NAME+instance.image.url
-        #     tar_json['brs']=2
-        #     preview_json['brs']=2
-        #     preview_json['src']=HOST_NAME+instance.image.url
-        #     instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
-        #     instance.canvas_json =tar_json
-        #     instance.save()
+            mask_img = numpy.asarray(Image.open(instance.mask.path).convert("RGB"))
+            original_img=cv2.imread(instance.original_image.path)
+            back_ground_create=background_merge(mask_img,original_img)
+            instance.image=back_ground_create
+            instance.save()
+            tar_json=copy.deepcopy(instance.canvas_json)
+            # preview_json=copy.deepcopy(instance.preview_json)
+            tar_json['src']=HOST_NAME+instance.image.url
+            # preview_json['src']=HOST_NAME+instance.image.url
+            instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
+            instance.canvas_json =tar_json
+            instance.save()
         return instance
 
 
@@ -654,3 +653,24 @@ class AspectRatioSerializer(serializers.ModelSerializer):
         #     img_tar.target_canvas_json=can_tar_json
         #     img_tar.save()
         #     return instance
+
+
+
+        # if erase_mask_json:  ##
+        #     mask_image=thumbnail_create(erase_mask_json,formats='mask') 
+        #     image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
+        #     instance.mask=image_data
+        #     mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
+        #     original_img=cv2.imread(instance.image.path)
+        #     back_ground_create=background_merge(mask_img,original_img)
+        #     instance.image=back_ground_create
+        #     instance.save()
+        #     tar_json=copy.deepcopy(instance.canvas_json)
+        #     preview_json=copy.deepcopy(instance.preview_json)
+        #     tar_json['src']=HOST_NAME+instance.image.url
+        #     tar_json['brs']=2
+        #     preview_json['brs']=2
+        #     preview_json['src']=HOST_NAME+instance.image.url
+        #     instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
+        #     instance.canvas_json =tar_json
+        #     instance.save()
