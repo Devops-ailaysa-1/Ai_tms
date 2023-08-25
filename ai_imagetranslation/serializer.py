@@ -452,14 +452,14 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         image_url=validated_data.get('image_url',None)
-        erase_mask_json=validated_data.get('erase_mask_json',None)
-        back_ground_mask=validated_data.get('back_ground_mask',None)
-
+        # erase_mask_json=validated_data.get('erase_mask_json',None)
+        # back_ground_mask=validated_data.get('back_ground_mask',None)
+        eraser_transparent_mask=validated_data.get('eraser_transparent_mask',None)
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
         
         if eraser_transparent_mask:
-            eraser_transparent_mask=thumbnail_create(back_ground_mask,formats='backgroundMask') 
+            eraser_transparent_mask=thumbnail_create(eraser_transparent_mask,formats='backgroundMask') 
             instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
             instance.save()
 
