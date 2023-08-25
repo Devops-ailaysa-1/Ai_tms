@@ -360,7 +360,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
             "key":STABLE_DIFFUSION_PUBLIC_API ,
             "model_id": "sdxl",
             "prompt": prompt,
-            "width": "1024","height": "1024",
+            "width": str(width),"height": str(height),
             "samples": "1","num_inference_steps": 41,   
             "seed": random.randint(0,99999999999),
             "guidance_scale": 5,

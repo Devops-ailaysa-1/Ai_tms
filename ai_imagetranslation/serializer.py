@@ -508,26 +508,32 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         # if enhance_prompt:
         #     text = prompt+" form a prompt sentence using this keyword."
         #     prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
-
-        image=stable_diffusion_public(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",negative_prompt=negative_prompt)
+        if not image_resolution:
+            raise serializers.ValidationError({'no image resolution'}) 
+         
+        height=image_resolution.height
+        width=image_resolution.width
+        image=stable_diffusion_public(prompt,weight="",steps="",height=height,width=width,style_preset="",sampler="",
+                                      negative_prompt=negative_prompt)
 
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
-                                                   style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
+                                                   style="",height=height,width=width,sampler="",negative_prompt=negative_prompt)
         instance.generated_image=image
         instance.save()
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
-        if image_resolution:
-            height=image_resolution.height
-            width=image_resolution.width
-            if height == width:
-                instance.image = instance.generated_image
-            else:
-                im=im.resize((int(width),int(height)))
-                instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
-            instance.save()
-        return instance
+
+        # if image_resolution:
+        #     height=image_resolution.height
+        #     width=image_resolution.width
+        #     if height == width:
+        #         instance.image = instance.generated_image
+        #     else:
+        #         im=im.resize((int(width),int(height)))
+        #         instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
+        #     instance.save()
+        # return instance
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 
