@@ -308,30 +308,23 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
-        if isinstance(source_string,list):
-            for src_text in source_string:
-                record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(src_text)))
-            source_string_list= client.translate(source_string,target_language=target_lang_code,format_="text")
-            translate =  [translated_text['translatedText'] for translated_text in source_string_list]
-        else:
-            record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
-            translate = client.translate(source_string,
-                                    target_language=target_lang_code,
-                                    format_="text").get("translatedText")
-        
+        record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
+        translate = client.translate(source_string,
+                                target_language=target_lang_code,
+                                format_="text").get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
-        record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)))
+        record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = ms_translation(source_string, source_lang_code, target_lang_code)
 
     # AMAZON TRANSLATE
     elif mt_engine_id == 3:
-        record_api_usage.apply_async(("AWS","Machine Translation",uid,email,len(source_string)))
+        record_api_usage.apply_async(("AWS","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = aws_translate(source_string, source_lang_code, target_lang_code)
 
     # LINGVANEX TRANSLATE
     elif mt_engine_id == 4:
-        record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)))
+        record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = lingvanex(source_string, source_lang_code, target_lang_code)
     
     print("Mt called------->",mt_called)
