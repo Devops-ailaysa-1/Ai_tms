@@ -556,7 +556,7 @@ class Project(models.Model):
         if cached_value is None:
             if self.is_all_doc_opened:
                 cached_value = True
-            if self.get_tasks.count() == self.task_project.count() and self.get_tasks.count() != 0:
+            elif self.get_analysis_tasks.count() == self.task_project.count() and self.get_analysis_tasks.count() != 0:
                 cached_value = True
             else:
                 cached_value = False
