@@ -319,7 +319,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
-                print(instance.s_im.all())
                 instance.mask_json=mask_json
                 instance.save()
             else:
@@ -556,7 +555,6 @@ class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
         representation=super().to_representation(instance)
         if representation.get('image' , None):
             representation['image']=HOST_NAME+instance.image.url
-            print(representation['image'])
         return representation
         
 
