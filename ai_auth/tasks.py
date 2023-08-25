@@ -102,7 +102,7 @@ def sync_invoices_and_charges(days):
             ).filter(diff__gt=timedelta(days))
     resync_instances(queryset)
     
-@task
+@task(queue='default')
 def renewal_list():
     today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
@@ -116,7 +116,7 @@ def renewal_list():
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
 
-@task
+@task(queue='default')
 def renew_user_credits(sub_id):
     sub =Subscription.objects.get(djstripe_id=sub_id)
     renew_user_credits_yearly(subscription=sub)
@@ -177,7 +177,7 @@ def send_notification_email_for_unread_messages():
 
 
 
-@task
+@task(queue='default')
 def email_send_subscription_extension():
     from .user_email_list import extend_list_1
     try:
@@ -241,7 +241,7 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
     print("mailsent")
 
 
-@task
+@task(queue='default')
 def check_dict(dict):
     print("dct------->",dict)
     dict1 = json.loads(dict)
@@ -905,7 +905,7 @@ def backup_media():
         call_command('mediabackup','--clean')
     logger.info("backeup of mediafiles successfull.")
     
-#@task(queue='low-priority')
+@task(queue='default')
 def mail_report():
     from ai_auth.reports import AilaysaReport
     report = AilaysaReport()
