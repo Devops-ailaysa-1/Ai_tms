@@ -493,7 +493,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     # image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution') #'style','style_cat','technique_name','enhance_prompt'
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail') #'style','style_cat','technique_name','enhance_prompt' ,'image_resolution
         model=StableDiffusionAPI
 
 
