@@ -243,11 +243,13 @@ def install_font(font_path):
     return family_name
 
 def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",transparent=True):
-    img_io = io.BytesIO()
+    
     if no_pil_object:
         im=Image.open(requests.get(image_url, stream=True).raw)
+        print(im)
         im=im.convert("RGB")
         name=image_url.split('/')[-1]
+        print("name",name)
         # im.save(img_io, format='PNG')
         # img_byte_arr = img_io.getvalue()
         # return core.files.File(core.files.base.ContentFile(img_byte_arr),)
@@ -255,8 +257,10 @@ def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",
         im=image_url
         if transparent:
             im=im.convert("RGB")
+    img_io = io.BytesIO()
     im.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
+    print("im_by_crted")
     return core.files.File(core.files.base.ContentFile(img_byte_arr),name)
 
 
