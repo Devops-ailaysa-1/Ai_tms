@@ -268,8 +268,7 @@ def json_sr_url_change(json,instance):
     for i in json['objects']:
         if ('type' in i.keys()) and (i['type'] =='image') and ('src' in i.keys()) and ("ailaysa" not in  i['src']):
             third_party_url=i['src']
-            if not third_party_url:
-                raise ValueError("url is empty")
+            print(third_party_url)
             image=convert_image_url_to_file(third_party_url)
             src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance,img=image)
             i['src']=HOST_NAME+src_img_assets_can.img.url

@@ -531,12 +531,12 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
-        #     if height == width:
-        #         instance.image = instance.generated_image
-        #     else:
-        #         im=im.resize((int(width),int(height)))
-        #         instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
-        #     instance.save()
+        if height == width:
+            instance.image = instance.generated_image
+        else:
+            im=im.resize((int(width),int(height)))
+            instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
+        instance.save()
         return instance
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
