@@ -431,12 +431,13 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance=BackgroundRemovel.objects.create(**data)
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.original_image=image_path_create
-            tar_json['sourceImage']=HOST_NAME+instance.original_image.url
+            
             instance.save()
             back_ground_create=background_remove(instance)
             instance.image=back_ground_create
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
+            tar_json['sourceImage']=HOST_NAME+instance.original_image.url
             # preview_json=copy.deepcopy(preview_json)
 
             tar_json['src']=HOST_NAME+instance.image.url
