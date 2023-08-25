@@ -334,16 +334,16 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
             "model_id": "sdxl",
             "prompt": prompt,
             "width": "1024","height": "1024",
-            "samples": "1","num_inference_steps": 41,   
+            "samples": "1","num_inference_steps": 31,   
             "seed": random.randint(0,99999999999),
             "guidance_scale": 5,
             "safety_checker": "yes","multi_lingual": "no",
             "panorama": "no",
-            "self_attention": "yes","upscale": "no",
+            "self_attention": "no","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
             "enhance_prompt":'no',
-            'scheduler':'DDIMScheduler', "self_attention":'yes','use_karras_sigmas':"yes"
-         } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler
+            'scheduler':'DDIMScheduler', "self_attention":'yes'
+         } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,'use_karras_sigmas':"yes"
    
     if negative_prompt:
         data['negative_prompt']=negative_prompt

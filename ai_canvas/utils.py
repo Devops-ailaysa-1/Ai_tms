@@ -200,7 +200,6 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
 
     elif format == 'pdf-print':
-        
         dpi=(300,300)
         data = {'json':json_ , 'format':'png','multiplierValue':3,'dpi':dpi[0]}
          

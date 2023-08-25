@@ -490,7 +490,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
     # enhance_prompt=serializers.BooleanField(required=False,write_only=True)
-    image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
+    # image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     
     class Meta:
         fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution') #'style','style_cat','technique_name','enhance_prompt'
@@ -506,7 +506,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         # enhance_prompt=validated_data.pop('enhance_prompt',None)
-        image_resolution=validated_data.pop('image_resolution',None)
+        # image_resolution=validated_data.pop('image_resolution',None)
 
         if sdstylecategoty.id not in [1]:
             default_prompt = sdstylecategoty.default_prompt
@@ -514,28 +514,28 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
                 negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
             prompt = default_prompt.format(prompt)
         print(prompt)
-        if not image_resolution:
-            raise serializers.ValidationError({'no image resolution'}) 
+        # if not image_resolution:
+        #     raise serializers.ValidationError({'no image resolution'}) 
          
-        height=image_resolution.height
-        width=image_resolution.width
-        image=stable_diffusion_public(prompt,weight="",steps="",height=height,width=width,style_preset="",sampler="",
+        # height=image_resolution.height
+        # width=image_resolution.width
+        image=stable_diffusion_public(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",
                                       negative_prompt=negative_prompt)
         print("image----------------------->>>",image)
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
-                                                   style="",height=height,width=width,sampler="",negative_prompt=negative_prompt)
+                                                   style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
         print(instance)
         instance.generated_image=image
         instance.image=image
         instance.save()
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-        instance.save()
-        if height == width:
-            instance.image = instance.generated_image
-        else:
-            im=im.resize((int(width),int(height)))
-            instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
+        # instance.save()
+        # if height == width:
+        #     instance.image = instance.generated_image
+        # else:
+        #     im=im.resize((int(width),int(height)))
+        #     instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
         instance.save()
         return instance
 

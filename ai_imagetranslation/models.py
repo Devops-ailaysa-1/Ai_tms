@@ -184,7 +184,6 @@ class GeneralPromptList(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 
-
 class CustomImageGenerationStyle(models.Model):
     style_name=models.CharField(max_length=200,blank=True,null=True)
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
