@@ -256,7 +256,7 @@ def convert_transparent_for_image(image,value):
         if pixel[0] == value and pixel[1] == value and pixel[2] == value:
             new_data.append(pixel[:-1]+(0,))# (231, 232, 234, 0)
         else:
-            new_data.append((231, 232, 234, 0))
+            new_data.append((231, 232, 234, 255))
     img.putdata(new_data)
     img=convert_image_url_to_file(img,no_pil_object=False,name="erase_mask.png",transparent=False)
     return img
