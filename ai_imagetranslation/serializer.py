@@ -514,9 +514,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
                 negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
             prompt = default_prompt.format(prompt)
         print(prompt)
-        # if enhance_prompt:
-        #     text = prompt+" form a prompt sentence using this keyword."
-        #     prompt=get_prompt_chatgpt_turbo(text,1)["choices"][0]["message"]["content"]
         if not image_resolution:
             raise serializers.ValidationError({'no image resolution'}) 
          
@@ -524,10 +521,12 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         width=image_resolution.width
         image=stable_diffusion_public(prompt,weight="",steps="",height=height,width=width,style_preset="",sampler="",
                                       negative_prompt=negative_prompt)
-
+        print("image----------------------->>>",image)
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
                                                    style="",height=height,width=width,sampler="",negative_prompt=negative_prompt)
+        print(instance)
         instance.generated_image=image
+        instance.image=image
         instance.save()
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
