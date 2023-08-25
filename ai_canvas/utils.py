@@ -242,21 +242,21 @@ def install_font(font_path):
     # print(f"Font '{family_name}' installed successfully!")
     return family_name
 
-def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",transparent=True):
+def convert_image_url_to_file(im,no_pil_object=True,name="thumbnail.png",transparent=True):
     img_io = io.BytesIO()
     if no_pil_object:
-        im=Image.open(requests.get(image_url, stream=True).raw)
+        im=Image.open(requests.get(im, stream=True).raw)
         im=im.convert("RGB")
-        im.save(img_io, format='PNG')
-        img_byte_arr = img_io.getvalue()
-        return core.files.File(core.files.base.ContentFile(img_byte_arr),image_url.split('/')[-1])
+        name=im.split('/')[-1]
+        # im.save(img_io, format='PNG')
+        # img_byte_arr = img_io.getvalue()
+        # return core.files.File(core.files.base.ContentFile(img_byte_arr),)
     else:
-        im=image_url
         if transparent:
             im=im.convert("RGB")
-        im.save(img_io, format='PNG')
-        img_byte_arr = img_io.getvalue()
-        return core.files.File(core.files.base.ContentFile(img_byte_arr),name)
+    im.save(img_io, format='PNG')
+    img_byte_arr = img_io.getvalue()
+    return core.files.File(core.files.base.ContentFile(img_byte_arr),name)
 
 
 def json_sr_url_change(json,instance):

@@ -254,9 +254,9 @@ def convert_transparent_for_image(image,value):
     new_data = []
     for pixel in data:
         if pixel[0] == value and pixel[1] == value and pixel[2] == value:
-            new_data.append((231, 232, 234, 0))
+            new_data.append(pixel[:-1]+(0,))# (231, 232, 234, 0)
         else:
-            new_data.append(pixel)
+            new_data.append((231, 232, 234, 0))
     img.putdata(new_data)
     img=convert_image_url_to_file(img,no_pil_object=False,name="erase_mask.png",transparent=False)
     return img
@@ -281,9 +281,6 @@ def background_merge(u2net_result,original_img):
     u2net_result.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
-
-
-
 
 
 kernel = getStructuringElement(MORPH_ELLIPSE, (3, 3))
@@ -315,32 +312,7 @@ def background_remove(instance):
     bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
 
-#########stabilityai
- 
 
-
-def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    # token = "Bearer {}".format(STABILITY)
-    # header={
-    #     "Content-Type": "application/json",
-    #     "Accept": "application/json",
-    #     "Authorization":token ,
-    # }
-    # json = {"samples":1,"height": height,"width": width,
-    # "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
-    # "style_preset": style_preset,
-    # "text_prompts": [
-    #     {"text": prompt,"weight": weight},
-    #     {"text":negative_prompt,"weight":-1}
-    #     ]
-    # }
-    # url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
-    # response = requests.post(url=url,headers=header,json=json)
-    # if response.status_code != 200:
-    #     raise Exception("Non-200 response: " + str(response.text))
-    # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
-    # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
-    pass
 def sd_status_check(id):
     url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
     # url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
@@ -389,6 +361,35 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     else:
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
+
+
+
+#########stabilityai
+ 
+
+
+def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
+    # token = "Bearer {}".format(STABILITY)
+    # header={
+    #     "Content-Type": "application/json",
+    #     "Accept": "application/json",
+    #     "Authorization":token ,
+    # }
+    # json = {"samples":1,"height": height,"width": width,
+    # "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
+    # "style_preset": style_preset,
+    # "text_prompts": [
+    #     {"text": prompt,"weight": weight},
+    #     {"text":negative_prompt,"weight":-1}
+    #     ]
+    # }
+    # url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
+    # response = requests.post(url=url,headers=header,json=json)
+    # if response.status_code != 200:
+    #     raise Exception("Non-200 response: " + str(response.text))
+    # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
+    # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
+    pass
 
     # headers = {'Content-Type': 'application/json'}
     # response = requests.request("POST", url, headers=headers, data=payload)
