@@ -410,12 +410,12 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     preview_json=serializers.JSONField(required=False)
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
     canvas_json=serializers.JSONField(required=True)
-    eraser_transparent_mask=serializers.JSONField(required=False)
+    eraser_transparent_json=serializers.JSONField(required=False)
     # back_ground_mask=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
-                'eraser_transparent_mask','mask','eraser_transparent_mask') #back_ground_mask
+                'eraser_transparent_json','mask') #back_ground_mask
         
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
@@ -454,12 +454,12 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         image_url=validated_data.get('image_url',None)
         # erase_mask_json=validated_data.get('erase_mask_json',None)
         # back_ground_mask=validated_data.get('back_ground_mask',None)
-        eraser_transparent_mask=validated_data.get('eraser_transparent_mask',None)
+        eraser_transparent_json=validated_data.get('eraser_transparent_json',None)
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
         
-        if eraser_transparent_mask:
-            eraser_transparent_mask=thumbnail_create(eraser_transparent_mask,formats='backgroundMask') 
+        if eraser_transparent_json:
+            eraser_transparent_mask=thumbnail_create(eraser_transparent_json,formats='backgroundMask') 
             instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
             instance.save()
 
