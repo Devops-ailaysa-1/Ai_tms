@@ -425,7 +425,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if instance.mask:
-            representation['mask'] = instance.mask.url
+            representation['mask'] = HOST_NAME+instance.mask.url
         return representation
 
     def create(self, validated_data):
@@ -478,6 +478,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             tar_json=copy.deepcopy(instance.canvas_json)
             # preview_json=copy.deepcopy(instance.preview_json)
             tar_json['src']=HOST_NAME+instance.image.url
+            tar_json['bgMask'] = HOST_NAME+instance.mask.url
             # preview_json['src']=HOST_NAME+instance.image.url
             instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
             instance.canvas_json =tar_json
