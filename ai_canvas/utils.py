@@ -144,7 +144,7 @@ def thumbnail_create(json_str,formats):
     width=json_str['backgroundImage']['width']
     height=json_str['backgroundImage']['height']
 
-    if formats=='mask':
+    if formats=='mask' or formats=='backgroundMask':
         multiplierValue=1
     elif formats in all_format:
         multiplierValue=min([300 /width, 300 / height])

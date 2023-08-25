@@ -292,7 +292,7 @@ def post_process(mask: np.ndarray) -> np.ndarray:
 
 
 def background_remove(instance):
-    image_path=instance.image.path
+    image_path=instance.original_image.path
     headers={}
     data={}
     files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
@@ -305,8 +305,8 @@ def background_remove(instance):
     y0=cv2.resize(res, (image_w, image_h))
     im_mask=Image.fromarray(y0).convert('RGBA')
     mask_store = convert_image_url_to_file(im_mask,no_pil_object=False,name="mask.png")
-    eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
-    instance.eraser_transparent_mask=eraser_transparent_mask
+    # eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
+    # instance.eraser_transparent_mask=eraser_transparent_mask
     instance.mask=mask_store
     instance.save()
     bck_gur_res=background_merge(y0,user_image)

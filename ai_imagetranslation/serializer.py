@@ -411,10 +411,11 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
     canvas_json=serializers.JSONField(required=True)
     erase_mask_json=serializers.JSONField(required=False)
+    back_ground_mask=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
-                'erase_mask_json','mask','eraser_transparent_mask')
+                'erase_mask_json','mask','eraser_transparent_mask','back_ground_mask')
         
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
@@ -424,21 +425,28 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         canvas_json=validated_data.get('canvas_json',None)
         preview_json=validated_data.get('preview_json',None)
+        
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
             instance=BackgroundRemovel.objects.create(**data)
             image_path_create=convert_image_url_to_file(instance.image_url)
-            instance.image=image_path_create
+            instance.original_image=image_path_create
+            tar_json['sourceImage']=HOST_NAME+instance.original_image.url
             instance.save()
             back_ground_create=background_remove(instance)
             instance.image=back_ground_create
             instance.save()
             tar_json=copy.deepcopy(canvas_json)
-            preview_json=copy.deepcopy(preview_json)
+            # preview_json=copy.deepcopy(preview_json)
+
             tar_json['src']=HOST_NAME+instance.image.url
-            tar_json['brs']=3
-            preview_json['brs']=3
-            preview_json['src']=HOST_NAME+instance.image.url
+            tar_json['bgMask'] = HOST_NAME+instance.mask.url
+            
+
+
+            tar_json['brs']=2
+            # preview_json['brs']=2
+            # preview_json['src']=HOST_NAME+instance.image.url
             instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
             instance.canvas_json =tar_json
             instance.save()
@@ -449,8 +457,15 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         image_url=validated_data.get('image_url',None)
         erase_mask_json=validated_data.get('erase_mask_json',None)
+        back_ground_mask=validated_data.get('back_ground_mask',None)
+
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
+        
+        if back_ground_mask:
+            eraser_transparent_mask=thumbnail_create(back_ground_mask,formats='backgroundMask') 
+            instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
+
 
         if erase_mask_json:  ##
             mask_image=thumbnail_create(erase_mask_json,formats='mask') 
@@ -464,8 +479,8 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             tar_json=copy.deepcopy(instance.canvas_json)
             preview_json=copy.deepcopy(instance.preview_json)
             tar_json['src']=HOST_NAME+instance.image.url
-            tar_json['brs']=3
-            preview_json['brs']=3
+            tar_json['brs']=2
+            preview_json['brs']=2
             preview_json['src']=HOST_NAME+instance.image.url
             instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
             instance.canvas_json =tar_json
