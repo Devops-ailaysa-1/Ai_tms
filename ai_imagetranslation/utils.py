@@ -320,9 +320,10 @@ def sd_status_check(id):
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
+    print(response.json())
     return response.json()
 
-STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
+# STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
     # url="https://stablediffusionapi.com/api/v3/text2img"

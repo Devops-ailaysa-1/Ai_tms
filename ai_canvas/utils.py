@@ -263,11 +263,12 @@ def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",
 def json_sr_url_change(json,instance):
     for i in json['objects']:
         if ('type' in i.keys()) and (i['type'] =='image') and ('src' in i.keys()) and ("ailaysa" not in  i['src']):
-                third_party_url=i['src']
-                print("third_party_url",third_party_url)
-                image=convert_image_url_to_file(third_party_url)
-                src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance,img=image)
-                i['src']=HOST_NAME+src_img_assets_can.img.url
+            third_party_url=i['src']
+            if not third_party_url:
+                raise ValueError("url is empty")
+            image=convert_image_url_to_file(third_party_url)
+            src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance,img=image)
+            i['src']=HOST_NAME+src_img_assets_can.img.url
         if 'objects' in i.keys():
             json_sr_url_change(i,instance)
     return json

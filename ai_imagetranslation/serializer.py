@@ -110,9 +110,6 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         return representation
 
 
-
-
-
 class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
     inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
@@ -535,8 +532,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
-
-
         #     if height == width:
         #         instance.image = instance.generated_image
         #     else:
