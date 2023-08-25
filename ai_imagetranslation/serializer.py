@@ -426,8 +426,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         representation=super().to_representation(instance)
         if instance.mask:
             representation['mask'] = instance.mask.url
-        if instance.eraser_transparent_mask:
-            representation['']
+        return representation
 
     def create(self, validated_data):
         user=self.context['request'].user
