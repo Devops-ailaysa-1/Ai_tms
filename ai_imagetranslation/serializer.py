@@ -411,11 +411,11 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
     back_ground_rm_preview_im=BackgroundRemovePreviewimgSerializer(many=True,required=False)
     canvas_json=serializers.JSONField(required=True)
     erase_mask_json=serializers.JSONField(required=False)
-    back_ground_mask=serializers.JSONField(required=False)
+    # back_ground_mask=serializers.JSONField(required=False)
     class Meta:
         model=BackgroundRemovel
         fields=('id','image_json_id','image_url','image','canvas_json','preview_json','back_ground_rm_preview_im',
-                'erase_mask_json','mask','eraser_transparent_mask','back_ground_mask')
+                'erase_mask_json','mask','eraser_transparent_mask') #back_ground_mask
         
         extra_kwargs={'image_url':{'write_only':True},
                       'image_json_id':{'write_only':True},
@@ -431,7 +431,6 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             instance=BackgroundRemovel.objects.create(**data)
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.original_image=image_path_create
-            
             instance.save()
             back_ground_create=background_remove(instance)
             instance.image=back_ground_create
@@ -439,12 +438,8 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
             tar_json=copy.deepcopy(canvas_json)
             tar_json['sourceImage']=HOST_NAME+instance.original_image.url
             # preview_json=copy.deepcopy(preview_json)
-
             tar_json['src']=HOST_NAME+instance.image.url
             tar_json['bgMask'] = HOST_NAME+instance.mask.url
-            
-
-
             tar_json['brs']=2
             # preview_json['brs']=2
             # preview_json['src']=HOST_NAME+instance.image.url
@@ -463,29 +458,29 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if image_url:
             instance.back_ground_rm_preview_im.create(image_url=image_url)
         
-        if back_ground_mask:
+        if erase_mask_json:
             eraser_transparent_mask=thumbnail_create(back_ground_mask,formats='backgroundMask') 
             instance.eraser_transparent_mask=core.files.File(core.files.base.ContentFile(eraser_transparent_mask),'background_mask_image.jpg')
 
 
-        if erase_mask_json:  ##
-            mask_image=thumbnail_create(erase_mask_json,formats='mask') 
-            image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
-            instance.mask=image_data
-            mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
-            original_img=cv2.imread(instance.image.path)
-            back_ground_create=background_merge(mask_img,original_img)
-            instance.image=back_ground_create
-            instance.save()
-            tar_json=copy.deepcopy(instance.canvas_json)
-            preview_json=copy.deepcopy(instance.preview_json)
-            tar_json['src']=HOST_NAME+instance.image.url
-            tar_json['brs']=2
-            preview_json['brs']=2
-            preview_json['src']=HOST_NAME+instance.image.url
-            instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
-            instance.canvas_json =tar_json
-            instance.save()
+        # if erase_mask_json:  ##
+        #     mask_image=thumbnail_create(erase_mask_json,formats='mask') 
+        #     image_data=core.files.File(core.files.base.ContentFile(mask_image),'mask_image.jpg')
+        #     instance.mask=image_data
+        #     mask_img = numpy.asarray(Image.open(image_data).convert("RGB"))
+        #     original_img=cv2.imread(instance.image.path)
+        #     back_ground_create=background_merge(mask_img,original_img)
+        #     instance.image=back_ground_create
+        #     instance.save()
+        #     tar_json=copy.deepcopy(instance.canvas_json)
+        #     preview_json=copy.deepcopy(instance.preview_json)
+        #     tar_json['src']=HOST_NAME+instance.image.url
+        #     tar_json['brs']=2
+        #     preview_json['brs']=2
+        #     preview_json['src']=HOST_NAME+instance.image.url
+        #     instance.back_ground_rm_preview_im.create(image_url=instance.image.url)
+        #     instance.canvas_json =tar_json
+        #     instance.save()
         return instance
 
 
