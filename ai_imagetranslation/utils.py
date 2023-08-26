@@ -367,31 +367,51 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 
 
 #########stabilityai
- 
+from io import BytesIO
+from PIL import Image
 
 
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    # token = "Bearer {}".format(STABILITY)
-    # header={
-    #     "Content-Type": "application/json",
-    #     "Accept": "application/json",
-    #     "Authorization":token ,
-    # }
-    # json = {"samples":1,"height": height,"width": width,
-    # "steps": steps,"cfg_scale": 7 ,"sampler":sampler,
-    # "style_preset": style_preset,
-    # "text_prompts": [
-    #     {"text": prompt,"weight": weight},
-    #     {"text":negative_prompt,"weight":-1}
-    #     ]
-    # }
-    # url="https://api.stability.ai/v1/generation/{}/text-to-image".format(MODEL_VERSION)
-    # response = requests.post(url=url,headers=header,json=json)
-    # if response.status_code != 200:
-    #     raise Exception("Non-200 response: " + str(response.text))
-    # data =base64.b64decode(response.json()['artifacts'][0]['base64'])
-    # image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
-    pass
+    url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+
+    body = {
+    "steps": 20,
+    "width": 1024,
+    "height": 1024,
+    "seed": 0,
+    "cfg_scale": 5,
+    "samples": 1,
+    "text_prompts": [
+        {
+        "text":prompt,
+        "weight": 1
+        },
+        {
+        "text": negative_prompt,
+        "weight": -1
+        }
+    ],
+    }
+
+    headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",
+    }
+
+    response = requests.post(
+    url,
+    headers=headers,
+    json=body,
+    )
+
+    if response.status_code != 200:
+        raise Exception("Non-200 response: " + str(response.text))
+
+    data = response.json()
+    data =base64.b64decode(response.json()['artifacts'][0]['base64'])
+    image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
+    return image
 
     # headers = {'Content-Type': 'application/json'}
     # response = requests.request("POST", url, headers=headers, data=payload)

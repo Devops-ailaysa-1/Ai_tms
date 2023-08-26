@@ -517,9 +517,9 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         # if not image_resolution:
         #     raise serializers.ValidationError({'no image resolution'}) 
          
-        # height=image_resolution.height
-        # width=image_resolution.width
-        image=stable_diffusion_public(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",
+
+        #  stable_diffusion_api stable_diffusion_public
+        image=stable_diffusion_api(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",
                                       negative_prompt=negative_prompt)
         print("image----------------------->>>",image)
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
