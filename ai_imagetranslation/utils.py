@@ -324,7 +324,7 @@ def sd_status_check(id):
     return response.json()
 
 # STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
-def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
+def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
     url = "https://stablediffusionapi.com/api/v4/dreambooth"
     # url="https://stablediffusionapi.com/api/v3/text2img"
                                           #midjourney  sdxl realistic-vision-v13
@@ -371,16 +371,16 @@ from io import BytesIO
 from PIL import Image
 
 
-def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt):
-    url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
+    url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
 
     body = {
-    "steps": 30,
-    "width": 1024,
-    "height": 1024,
+    "steps": steps,
+    "width": width,
+    "height": height,
     "seed": 0,
-    "cfg_scale": 6,
-    "samples": 1,
+    "cfg_scale": weight,
+    "samples": sampler,
     "text_prompts": [
         {
         "text":prompt,

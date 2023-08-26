@@ -484,58 +484,50 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
 
 class StableDiffusionAPISerializer(serializers.ModelSerializer):
     prompt=serializers.CharField(allow_null=True,required=True)
-    # style=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CustomImageGenerationStyle.objects.all()),required=False,write_only=True)
-    # style_cat=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageStyleCategories.objects.all()),required=False,write_only=True)
-    # technique_name=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageModificationTechnique.objects.all()),required=False,write_only=True)
     sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
-    # enhance_prompt=serializers.BooleanField(required=False,write_only=True)
-    # image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
-    
+    image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
+    step = serializers.IntegerField(required=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail') #'style','style_cat','technique_name','enhance_prompt' ,'image_resolution
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','step')  
         model=StableDiffusionAPI
 
 
     def create(self, validated_data):
         user=self.context['request'].user
         prompt=validated_data.get('prompt',None)
-        # style=validated_data.pop('style',None)
-        # style_cat=validated_data.pop('style_cat',None)
-        # technique_name=validated_data.pop('technique_name',None)
+        step=validated_data.pop('step',None)
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
-        # enhance_prompt=validated_data.pop('enhance_prompt',None)
-        # image_resolution=validated_data.pop('image_resolution',None)
+        image_resolution=validated_data.pop('image_resolution',None)
 
-        if sdstylecategoty.id not in [1]:
+        if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
             if sdstylecategoty.negative_prompt:
-                negative_prompt=negative_prompt+" "+sdstylecategoty.negative_prompt
+                negative_prompt=str(negative_prompt)+" "+sdstylecategoty.negative_prompt
+                print("negative_prompt",negative_prompt)
+            
             prompt = default_prompt.format(prompt)
-        print(prompt)
-        # if not image_resolution:
-        #     raise serializers.ValidationError({'no image resolution'}) 
+        if not image_resolution:
+            raise serializers.ValidationError({'no image resolution'}) 
          
+        version_name=image_resolution.sd_image_version.version_name
+        cfg_weight=image_resolution.sd_image_version.cfg
+         #stable_diffusion_api stable_diffusion_public  stable_diffusion_api
+        
+        image=stable_diffusion_public(prompt,weight=cfg_weight,steps=step,height= image_resolution.height,width=image_resolution.width,style_preset="",sampler=1,
+                                      negative_prompt=negative_prompt,version_name=version_name)
+        
+        instance=StableDiffusionAPI.objects.create(user=user,used_api="stability",prompt=prompt,model_name=version_name,
+                                                   style=sdstylecategoty.style_name,
+                                                   height=image_resolution.height,
+                                                   width=image_resolution.width,sampler="",negative_prompt=negative_prompt)
 
-        #  stable_diffusion_api stable_diffusion_public
-        image=stable_diffusion_api(prompt,weight="",steps="",height="",width="",style_preset="",sampler="",
-                                      negative_prompt=negative_prompt)
-        print("image----------------------->>>",image)
-        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable_diffusion_api",prompt=prompt,model_name='SDXL',
-                                                   style="",height=1024,width=1024,sampler="",negative_prompt=negative_prompt)
-        print(instance)
         instance.generated_image=image
         instance.image=image
         instance.save()
         im=Image.open(instance.generated_image.path)
         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-        # instance.save()
-        # if height == width:
-        #     instance.image = instance.generated_image
-        # else:
-        #     im=im.resize((int(width),int(height)))
-        #     instance.image=convert_image_url_to_file(image_url=im,no_pil_object=False,name="image_gen.png")
         instance.save()
         return instance
 
