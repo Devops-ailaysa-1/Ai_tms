@@ -375,11 +375,11 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
 
     body = {
-    "steps": 20,
+    "steps": 30,
     "width": 1024,
     "height": 1024,
     "seed": 0,
-    "cfg_scale": 5,
+    "cfg_scale": 6,
     "samples": 1,
     "text_prompts": [
         {
