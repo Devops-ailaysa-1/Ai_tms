@@ -326,14 +326,13 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     if width==height==512:
         print("512")
         model="sdv1"
-
+    print(model)
     models={"sdxl" :{'model_name':"sdxl" ,"url":"https://stablediffusionapi.com/api/v4/dreambooth",
                      "fetch_url":"https://stablediffusionapi.com/api/v4/dreambooth/fetch" },
             "sdv1": {'model_name': "stable-diffusion-v1-5","url":"https://stablediffusionapi.com/api/v3/text2img",
-                     "fetch_url":"https://stablediffusionapi.com/api/v3/fetch/{}"}
-
-}
-
+                     "fetch_url":"https://stablediffusionapi.com/api/v3/fetch/{}"}}
+    
+    print( models[model]['model_name'])
     data = {
             "key":STABLE_DIFFUSION_PUBLIC_API ,
             "model_id": models[model]['model_name'],
@@ -347,7 +346,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
             "self_attention": "yes","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
             "enhance_prompt":'no','tomesd':'yes',
-            'scheduler':'DDIMScheduler', "self_attention":'yes','use_karras_sigmas':"yes"
+            'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
    
     if negative_prompt:
