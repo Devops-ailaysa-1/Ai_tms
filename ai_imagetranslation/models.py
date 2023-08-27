@@ -262,15 +262,14 @@ class StableDiffusionVersion(models.Model):
 
 
 class SDImageResolution(models.Model):
-    sd_image_version=models.ForeignKey(StableDiffusionVersion,on_delete=models.CASCADE,related_name="sd_image_ver")
+    # sd_image_version=models.ForeignKey(StableDiffusionVersion,on_delete=models.CASCADE,related_name="sd_image_ver")
     sd_image_resolution=models.ForeignKey(AspectRatio,on_delete=models.CASCADE,related_name="sd_image_res")
     resolution=models.CharField(max_length=200,blank=True,null=True)
-    height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
+    height=models.IntegerField(blank=True,null=True)
     steps=models.IntegerField(blank=True,null=True)
     def __str__(self) -> str:
-        return str(self.width)+"--"+str(self.height) +"===="+self.sd_image_version.version_name +"--"+ str(self.sd_image_version.cfg) +"--"+str(self.id) \
-        +" ---"+str(self.steps)
+        return str(self.width)+"--"+str(self.height) +"--"+str(self.id) 
 
 
 

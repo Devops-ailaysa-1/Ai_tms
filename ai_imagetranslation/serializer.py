@@ -486,10 +486,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     prompt=serializers.CharField(allow_null=True,required=True)
     sdstylecategoty=serializers.PrimaryKeyRelatedField(queryset=ImageStyleSD.objects.all(),required=False,write_only=True)
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
-    # image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
+    image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail')   #image_resolution step
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution')   #image_resolution step
         model=StableDiffusionAPI
 
 
@@ -499,7 +499,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         step=validated_data.pop('step',None)
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
-        # image_resolution=validated_data.pop('image_resolution',None)
+        image_resolution=validated_data.pop('image_resolution',None)
 
         if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
@@ -508,14 +508,16 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
                 print("negative_prompt",negative_prompt)
             
             prompt = default_prompt.format(prompt)
-        # if not image_resolution:
-        #     raise serializers.ValidationError({'no image resolution'}) 
+        if not image_resolution:
+            raise serializers.ValidationError({'no image resolution'}) 
          
         # version_name=image_resolution.sd_image_version.version_name
         # cfg_weight=image_resolution.sd_image_version.cfg
          #stable_diffusion_api stable_diffusion_public  stable_diffusion_api
-        
-        image=stable_diffusion_public(prompt,weight="cfg_weight",steps=step,height= "image_resolution.height",width="image_resolution.width",style_preset="",sampler=1,
+        width=image_resolution.width
+        height=image_resolution.height
+
+        image=stable_diffusion_public(prompt,weight="cfg_weight",steps=step,height=height,width=width,style_preset="",sampler=1,
                                       negative_prompt=negative_prompt,version_name="version_name")
         
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stability",prompt=prompt,model_name="SDXL",

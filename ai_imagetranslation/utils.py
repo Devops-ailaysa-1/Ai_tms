@@ -313,35 +313,40 @@ def background_remove(instance):
     return bck_gur_res
 
 
-def sd_status_check(id):
-    url = "https://stablediffusionapi.com/api/v4/dreambooth/fetch"
-    # url = "https://stablediffusionapi.com/api/v1/enterprise/fetch"  ###for enterprice 
-    #url=https://stablediffusionapi.com/api/v3/fetch/"
-    payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": id})
+def sd_status_check(ids,url):
+
+    payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": ids})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
-    print(response.json())
     return response.json()
 
-# STABLE_DIFFUSION_EP_API='45405da04e97b0c596e7'
+
 def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
-    url = "https://stablediffusionapi.com/api/v4/dreambooth"
-    # url="https://stablediffusionapi.com/api/v3/text2img"
-                                          #midjourney  sdxl realistic-vision-v13
-    # url = "https://stablediffusionapi.com/api/v1/enterprise/text2img"      #######for enterprice acc
+    model="sdxl"
+    if width==height==512:
+        print("512")
+        model="sdv1"
+
+    models={"sdxl" :{'model_name':"sdxl" ,"url":"https://stablediffusionapi.com/api/v4/dreambooth",
+                     "fetch_url":"https://stablediffusionapi.com/api/v4/dreambooth/fetch" },
+            "sdv1": {'model_name': "stable-diffusion-v1-5","url":"https://stablediffusionapi.com/api/v3/text2img",
+                     "fetch_url":"https://stablediffusionapi.com/api/v3/fetch/{}"}
+
+}
+
     data = {
             "key":STABLE_DIFFUSION_PUBLIC_API ,
-            "model_id": "sdxl",
+            "model_id": models[model]['model_name'],
             "prompt": prompt,
-            "width": "1024","height": "1024",
+            "width": str(width),"height":str(height),
             "samples": "1","num_inference_steps":41,   
             "seed": random.randint(0,99999999999),
-            "guidance_scale": 5,
+            "guidance_scale": 6,
             "safety_checker": "yes","multi_lingual": "no",
             "panorama": "no",
             "self_attention": "yes","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
-            "enhance_prompt":'no',
+            "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'yes','use_karras_sigmas':"yes"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
    
@@ -349,11 +354,15 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
         data['negative_prompt']=negative_prompt
     payload = json.dumps(data) 
     headers = {'Content-Type': 'application/json'}
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", models[model]['url'], headers=headers, data=payload)
     x=response.json()
     process=False
     while True:
-        x=sd_status_check(response.json()['id']) 
+        res_id=response.json()['id']
+        fetch_url=models[model]['fetch_url']
+        if model=='sdv1':
+            fetch_url=fetch_url.format(res_id)
+        x=sd_status_check(ids=res_id,url=fetch_url) 
         if not x['status']=='processing' or x['status']=='success':
             print("processed")
             process=True
@@ -412,6 +421,13 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     data =base64.b64decode(response.json()['artifacts'][0]['base64'])
     image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     return image
+
+
+
+
+
+########################################################################################################
+
 
     # headers = {'Content-Type': 'application/json'}
     # response = requests.request("POST", url, headers=headers, data=payload)
