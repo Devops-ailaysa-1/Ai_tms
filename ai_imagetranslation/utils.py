@@ -341,7 +341,7 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
             "width": str(width),"height":str(height),
             "samples": "1","num_inference_steps":41,   
             "seed": random.randint(0,99999999999),
-            "guidance_scale": 6,
+            "guidance_scale": 7,
             "safety_checker": "yes","multi_lingual": "no",
             "panorama": "no",
             "self_attention": "yes","upscale": "no",

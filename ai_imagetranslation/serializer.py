@@ -522,8 +522,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stability",prompt=prompt,model_name="SDXL",
                                                    style=sdstylecategoty.style_name,
-                                                   height=1024,
-                                                   width=1024,sampler="",negative_prompt=negative_prompt)
+                                                   height=image_resolution.height,
+                                                   width=image_resolution.width,sampler="",negative_prompt=negative_prompt)
 
         instance.generated_image=image
         instance.image=image
