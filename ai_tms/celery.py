@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from celery import Celery
-from kombu import Queue
+from kombu import Queue, Exchange
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_tms.settings')
@@ -18,16 +18,26 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.task_queues = (
-    Queue('high-priority', routing_key='high.priority'),
-    Queue('medium-priority', routing_key='medium.priority'),
-    Queue('low-priority', routing_key='low.priority'),
+    Queue('high-priority', Exchange('high-priority'), routing_key='high-priority.priority'),
+    Queue('medium-priority', Exchange('medium-priority'), routing_key='medium-priority.priority'),
+    Queue('low-priority', Exchange('low-priority'), routing_key='low-priority.priority'),
+    Queue('default', Exchange('default'), routing_key='default.priority'),
 )
 
-app.conf.task_routes = {
-    'high_priority_task': {'queue': 'high-priority'},
-    'medium_priority_task': {'queue': 'medium-priority'},
-    'low_priority_task': {'queue': 'low-priority'},
-}
+# app.conf.task_queues = (
+#     Queue('high-priority', routing_key='high.priority'),
+#     Queue('medium-priority', routing_key='medium.priority'),
+#     Queue('low-priority', routing_key='low.priority'),
+#     Queue('default', routing_key='default'),
+# )
+
+# app.conf.task_routes = {
+#     'high_priority_task': {'queue': 'high-priority'},
+#     'medium_priority_task': {'queue': 'medium-priority'},
+#     'low_priority_task': {'queue': 'low-priority'},
+#     'default_priority_task': {'queue': 'default'},
+
+# }
 
 
 from celery.schedules import crontab

@@ -3,6 +3,7 @@ import docx ,json,logging,mimetypes,os ,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
+from celery.decorators import task
 from celery import shared_task
 from django.contrib.auth import settings
 from django.http import HttpResponse
@@ -65,7 +66,7 @@ def image_ocr_google_cloud_vision(image , inpaint):
         else:
             return ""
 
-@shared_task(serializer='json')
+@task(queue='default')
 def convertiopdf2docx(id ,language,ocr = None ):
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     fp  = txt_field_obj.pdf_file.path
@@ -146,10 +147,10 @@ def convertiopdf2docx(id ,language,ocr = None ):
 
 
 import tempfile
-#########ocr ######
 from celery_progress.backend import ProgressRecorder
-@shared_task(serializer='json',bind=True)
-def ai_export_pdf(self, id): # , file_language , file_name , file_path
+#########ocr ######
+@task(queue='default')
+def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
@@ -261,16 +262,16 @@ def file_pdf_check(file_path,pdf_id):
 from ai_workspace.models import Task
 def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
-    #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
-    #pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
-    # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
-    #if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
     response_result = ai_export_pdf.apply_async((id, ),)
-
     file_details.pdf_task_id = response_result.id
     file_details.save()
     logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
     return response_result.id
+
+     #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+    #pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
+    # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
+    #if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
 
     # elif pdf_text_ocr_check == 'text':
     #     response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)

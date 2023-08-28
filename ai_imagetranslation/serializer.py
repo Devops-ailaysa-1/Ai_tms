@@ -12,24 +12,14 @@ from django.db.models import Case, When
 from ai_canvas.utils import thumbnail_create
 import copy,os,cv2,numpy
 from ai_canvas.utils import convert_image_url_to_file 
-from ai_imagetranslation.utils import background_remove,background_merge
+from ai_imagetranslation.utils import background_remove,background_merge ,create_thumbnail_img_load
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 import io
-from ai_openai.utils import get_prompt_chatgpt_turbo
+ 
 HOST_NAME=os.getenv('HOST_NAME')
 
-def create_thumbnail_img_load(base_dimension,image):
-    wpercent = (base_dimension/float(image.size[0]))
-    hsize = int((float(image.size[1])*float(wpercent)))
-    img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
-    # img=convert_image_url_to_file(image_url=img,no_pil_object=False)
-    img_io = io.BytesIO()
-    img.save(img_io, format='PNG')
-    img_byte_arr = img_io.getvalue()
-    # instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
-    im=core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
-    return im
+
 
 
 class ImageloadSerializer(serializers.ModelSerializer):
@@ -38,13 +28,7 @@ class ImageloadSerializer(serializers.ModelSerializer):
         model = Imageload
         fields = ('id','image','file_name','types','height','width','thumbnail','image_asset_id')
     
-    # def to_representation(self, instance):
-    #     data=super().to_representation(instance)
-    #     if not data.get('thumbnail',None):
-    #         im = Image.open(instance.image.path)
-    #         instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-    #         instance.save()
-    #     return super().to_representation(instance)
+ 
 
     def create(self, validated_data):
         image_asset_id=validated_data.pop('image_asset_id',None)
@@ -154,7 +138,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def image_shape(image):
         im = Image.open(image)
         width, height = im.size
-        #thumb_nail=create_thumbnail_img_load(base_dimension=300,image=im)
         return width,height #thumb_nail
     
     def create(self, validated_data):
@@ -489,7 +472,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution')   #image_resolution step
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','celery_id')   #image_resolution step
         model=StableDiffusionAPI
 
 
@@ -510,27 +493,24 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             prompt = default_prompt.format(prompt)
         if not image_resolution:
             raise serializers.ValidationError({'no image resolution'}) 
-         
-        # version_name=image_resolution.sd_image_version.version_name
-        # cfg_weight=image_resolution.sd_image_version.cfg
-         #stable_diffusion_api stable_diffusion_public  stable_diffusion_api
-        width=image_resolution.width
-        height=image_resolution.height
-
-        image=stable_diffusion_public(prompt,weight="cfg_weight",steps=step,height=height,width=width,style_preset="",sampler=1,
-                                      negative_prompt=negative_prompt,version_name="version_name")
         
+        #prompt,steps,height,width,negative_prompt
+
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stability",prompt=prompt,model_name="SDXL",
                                                    style=sdstylecategoty.style_name,
                                                    height=image_resolution.height,
-                                                   width=image_resolution.width,sampler="",negative_prompt=negative_prompt)
+                                                   width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
 
-        instance.generated_image=image
-        instance.image=image
-        instance.save()
-        im=Image.open(instance.generated_image.path)
-        instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-        instance.save()
+        image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
+        
+
+        instance.celery_id=image
+         
+        # instance.generated_image=image
+        # instance.image=image
+        # instance.save()
+        # im=Image.open(instance.generated_image.path)
+        # instance.save()
         return instance
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):

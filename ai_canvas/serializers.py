@@ -14,7 +14,7 @@ from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
 import cv2
-from ai_imagetranslation.serializer import create_thumbnail_img_load
+from ai_imagetranslation.utils import create_thumbnail_img_load
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = LanguagesLocale

@@ -1,5 +1,4 @@
 from .models import *
-from PIL import Image
 from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
 import extcolors 
@@ -50,6 +49,18 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
         response = client.text_detection(image = image)
         texts = response.full_text_annotation   #full_text_annotation
         return texts
+
+def create_thumbnail_img_load(base_dimension,image):
+    wpercent = (base_dimension/float(image.size[0]))
+    hsize = int((float(image.size[1])*float(wpercent)))
+    img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
+    img_io = io.BytesIO()
+    img.save(img_io, format='PNG')
+    img_byte_arr = img_io.getvalue()
+    im=core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
+    return im
+
+
 
 def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
     if w<x:x,w=w,x
@@ -314,16 +325,18 @@ def background_remove(instance):
 
 
 def sd_status_check(ids,url):
-
     payload = json.dumps({"key":STABLE_DIFFUSION_PUBLIC_API,"request_id": ids})
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json()
 
-
-def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
+from celery import shared_task
+ 
+@shared_task
+def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
+    sd_instance=StableDiffusionAPI.objects.get(id=id)
     model="sdxl"
-    if width==height==512:
+    if sd_instance.width==sd_instance.height==512:
         print("512")
         model="sdv1"
     print(model)
@@ -336,38 +349,48 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
     data = {
             "key":STABLE_DIFFUSION_PUBLIC_API ,
             "model_id": models[model]['model_name'],
-            "prompt": prompt,
-            "width": str(width),"height":str(height),
-            "samples": "1","num_inference_steps":41,   
+            "prompt": sd_instance.prompt,
+            "width": str(sd_instance.width),"height":str(sd_instance.height),
+            "samples": "1","num_inference_steps":sd_instance.steps,   
             "seed": random.randint(0,99999999999),
             "guidance_scale": 7,
             "safety_checker": "yes","multi_lingual": "no",
-            "panorama": "no",
-            "self_attention": "yes","upscale": "no",
+            "panorama": "no","self_attention": "yes","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
    
-    if negative_prompt:
-        data['negative_prompt']=negative_prompt
+    if sd_instance.negative_prompt:
+        data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 
     headers = {'Content-Type': 'application/json'}
     response = requests.request("POST", models[model]['url'], headers=headers, data=payload)
     x=response.json()
     process=False
     while True:
+        print("processing")
+        sd_instance.status="PENDING"
+        sd_instance.save()
         res_id=response.json()['id']
         fetch_url=models[model]['fetch_url']
         if model=='sdv1':
             fetch_url=fetch_url.format(res_id)
         x=sd_status_check(ids=res_id,url=fetch_url) 
         if not x['status']=='processing' or x['status']=='success':
-            print("processed")
             process=True
             break
     if process:
-        return convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
+        image=convert_image_url_to_file(image_url=x['output'][0],no_pil_object=True)
+        sd_instance.generated_image=image
+        sd_instance.image=image
+        sd_instance.save()
+        im=Image.open(sd_instance.generated_image.path)
+        sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+        sd_instance.status="DONE"
+        sd_instance.save()
+        print("finished_generate")
+        # return 
     else:
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
@@ -375,10 +398,6 @@ def stable_diffusion_public(prompt,weight,steps,height,width,style_preset,sample
 
 
 #########stabilityai
-from io import BytesIO
-from PIL import Image
-
-
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
 
