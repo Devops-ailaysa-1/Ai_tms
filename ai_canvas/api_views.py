@@ -1225,6 +1225,10 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     serializer_class = TemplateGlobalDesignRetrieveSerializer
 #     lookup_field = 'id'
 
+from ai_imagetranslation.models import StableDiffusionAPI
+from ai_imagetranslation.utils import stable_diffusion_public
+from ai_imagetranslation.serializer import StableDiffusionAPISerializer
+from .template import *
 
 class TemplateEngineGenerate(viewsets.ModelViewSet):
     
@@ -1232,11 +1236,50 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
         prompt=request.POST.get("prompt",None)
         template=request.POST.get("template",None)
         temp=get_object_or_404(SocialMediaSize,id=template)
+        print(temp.width,temp.height)
+        sdstylecategoty=1
+        image_resolution=request.POST.get("image_resolution",None)
+        negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
         print(temp)
         print(prompt)
 
-        return JsonResponse({"msg":"inprogress"})
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        print(serializer)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors)
+        id=serializer.data.get("id")
+        text=["we are hiring","join us","walkin"]
+        img=get_object_or_404(StableDiffusionAPI,id=id)
+        # x=img.image
+        y=img.generated_image
+        print(id)
+        print(y," <,,,,,,,<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<") 
 
-        
+        data=jsonStructure
+
+        data["backgroundImage"]=img.generated_image
+
+        print(data,"77777777777777777777777777777")
+
+
+
+
+        return Response({},status=200)
+
+# jsonStructure ={
+#     "objects": [
+#        textbox,
+#        image,
+#        backgroundImage,
+#        path
+#     ],
+#     "version": "5.3.0",
+#     "projectid": null,
+#     "background": hardBoardColor,
+#     "backgroundImage": backgroundHardboard,
+#     "perPixelTargetFind": false
+# }     
        
 
