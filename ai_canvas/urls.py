@@ -23,6 +23,7 @@ router.register(r'social-media',api_views.SocialMediaSizeViewset ,basename='soci
 router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV2,basename='template__global')
 router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
 router.register(r'emoji-noto',api_views.EmojiCategoryViewset,basename='emoji-list')
+router.register(r'template-engine',api_views.TemplateEngineGenerate,basename='template-generation')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
@@ -42,6 +43,7 @@ urlpatterns += [
     # path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list',}),name='global-temp-desi-lst'),
     path('design-download',api_views.DesignerDownload,name='designerdownload'),
     path('canvas-user-images-list',api_views.CanvasUserImageAssetsViewsetList.as_view({'get':'list'}),name='image-translate-list')
+
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
