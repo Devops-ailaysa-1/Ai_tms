@@ -476,6 +476,14 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         model=StableDiffusionAPI
 
 
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if instance.image:
+            representation['image'] = HOST_NAME+instance.image.url
+        if instance.thumbnail:
+            representation['thumbnail'] = HOST_NAME+instance.thumbnail.url
+        return representation
+
     def create(self, validated_data):
         user=self.context['request'].user
         prompt=validated_data.get('prompt',None)

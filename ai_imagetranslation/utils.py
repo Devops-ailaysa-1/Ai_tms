@@ -396,8 +396,6 @@ def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
-
-
 #########stabilityai
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
