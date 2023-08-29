@@ -85,6 +85,8 @@ littlecms = "^0.1b3"
 pillow-avif-plugin = "^1.3.1"
 fonttools = "^4.42.1"
 opencv-python = "^4.8.0.76"
+img2pdf = "^0.4.4"
+
 pandas = "1.5.2"
 [tool.poetry.dev-dependencies]
 

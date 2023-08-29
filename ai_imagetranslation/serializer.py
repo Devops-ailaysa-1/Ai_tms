@@ -476,6 +476,14 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         model=StableDiffusionAPI
 
 
+    # def to_representation(self, instance):
+    #     representation=super().to_representation(instance)
+    #     if instance.image:
+    #         representation['image'] = HOST_NAME+"/"+ os.path.join("media",instance.image.name)
+    #     if instance.thumbnail :
+    #         representation['thumbnail'] = HOST_NAME+"/"+ os.path.join("media",instance.thumbnail.name)
+    #     return representation
+
     def create(self, validated_data):
         user=self.context['request'].user
         prompt=validated_data.get('prompt',None)
@@ -495,10 +503,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         
         #prompt,steps,height,width,negative_prompt
 
-        instance=StableDiffusionAPI.objects.create(user=user,used_api="stability",prompt=prompt,model_name="SDXL",
-                                                   style=sdstylecategoty.style_name,
-                                                   height=image_resolution.height,
-                                                   width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
+        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
+                                                   height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
 
         image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
         

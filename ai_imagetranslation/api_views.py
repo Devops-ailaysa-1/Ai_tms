@@ -388,9 +388,6 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
             return Response(serializer.errors)
 
 
- 
-
-
 class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
     queryset = ImageStyleSD.objects.all().order_by('id')
     serializer_class = ImageModificationTechniqueSerializerV3
