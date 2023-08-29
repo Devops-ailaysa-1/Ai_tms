@@ -39,6 +39,7 @@ from rest_framework import filters
 from rest_framework import serializers
 from django_filters.rest_framework import DjangoFilterBackend
 HOST_NAME=os.getenv("HOST_NAME")
+from django.shortcuts import get_object_or_404
  
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -1223,3 +1224,19 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     queryset = TemplateGlobalDesign.objects.all()
 #     serializer_class = TemplateGlobalDesignRetrieveSerializer
 #     lookup_field = 'id'
+
+
+class TemplateEngineGenerate(viewsets.ModelViewSet):
+    
+    def create(self,request):
+        prompt=request.POST.get("prompt",None)
+        template=request.POST.get("template",None)
+        temp=get_object_or_404(SocialMediaSize,id=template)
+        print(temp)
+        print(prompt)
+
+        return JsonResponse({"msg":"inprogress"})
+
+        
+       
+
