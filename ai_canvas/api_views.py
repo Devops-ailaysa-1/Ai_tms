@@ -40,6 +40,15 @@ from rest_framework import serializers
 from django_filters.rest_framework import DjangoFilterBackend
 HOST_NAME=os.getenv("HOST_NAME")
 from django.shortcuts import get_object_or_404
+import json
+from django.core.exceptions import ValidationError
+IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
+from ai_imagetranslation.models import StableDiffusionAPI
+from ai_imagetranslation.utils import stable_diffusion_public
+from ai_imagetranslation.serializer import StableDiffusionAPISerializer
+from .template import *
+import random
+from .meta import *
  
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -1225,61 +1234,103 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     serializer_class = TemplateGlobalDesignRetrieveSerializer
 #     lookup_field = 'id'
 
-from ai_imagetranslation.models import StableDiffusionAPI
-from ai_imagetranslation.utils import stable_diffusion_public
-from ai_imagetranslation.serializer import StableDiffusionAPISerializer
-from .template import *
 
 class TemplateEngineGenerate(viewsets.ModelViewSet):
     
     def create(self,request):
         prompt=request.POST.get("prompt",None)
-        template=request.POST.get("template",None)
-        temp=get_object_or_404(SocialMediaSize,id=template)
-        print(temp.width,temp.height)
+        template_id=request.POST.get("template",None)
+        temp=get_object_or_404(SocialMediaSize,id=template_id)
+        temp_height =temp.height
+        temp_width = temp.width
         sdstylecategoty=1
         image_resolution=request.POST.get("image_resolution",None)
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
-        print(temp)
-        print(prompt)
 
-        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
-        print(serializer)
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(serializer.errors)
-        id=serializer.data.get("id")
+        # ** get image
+        # serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        # print(serializer)
+        # if serializer.is_valid():
+        #     serializer.save()
+        # else:
+        #     return Response(serializer.errors)
+        # status=serializer.data.get("status")
+        # id=serializer.data.get("id")
+        
+        # text
         text=["we are hiring","join us","walkin"]
+        # image
+        # background
+        id=15
         img=get_object_or_404(StableDiffusionAPI,id=id)
         # x=img.image
-        y=img.generated_image
-        print(id)
-        print(y," <,,,,,,,<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<") 
+        # img=img.generated_image
+        img="https://aicanvas.ailaysa.com/media/aidesign/thirdpartyimage/e1172a4a-462f-11ee-aa5a-0242ac14000a.jpg"
 
-        data=jsonStructure
+        # meta
+        # for background color
+        bg_clr=bg_color
+        # for styles
+        style=default_style
 
-        data["backgroundImage"]=img.generated_image
+        instance=5
+        template=[]
+        for i in range(0,instance):
+            json_data={
+                    "objects": [
+                    textbox,
+                    image,
+                    # backgroundImage,
+                    # path
+                    ],
+                    "version": "5.3.0",
+                    "projectid": null,
+                    "background": hardBoardColor,
+                    "backgroundImage": backgroundHardboard,
+                    "perPixelTargetFind": false
+                }    
+            data=copy.deepcopy(json_data) 
+            #change random background color
+            random_color= random.randint(0, 19)
+            data["backgroundImage"]["fill"]=bg_clr[random_color]["background"]
+            # data["background"]=hardBoardColor[random_color]["background"]
 
-        print(data,"77777777777777777777777777777")
+            # image
+            for key, value in style[i]["textbox"][0].items():
+                        data["objects"][0][key] = value
+
+            data["objects"][1]["src"]=img
+            # data["objects"][1]["left"]=style[0]["image"][0]["left"]
+            # data["objects"][1]["top"]=style[0]["image"][0]["top"]
+
+            # for text
+            data["objects"][0]["textLines"]=prompt
+            data["objects"][0]["text"]=prompt
+            # data["objects"][0]["left"]=style[random.randint(1,20)]["textbox"][0]["left"]
+            # data["objects"][0]["top"]=style[random.randint(1,20)]["textbox"][0]["top"]
+            # data["backgroundImage"]=img.generated_image
+            data['thumb']=create_thumbnail(data,formats='png')
+
+            template.append(data)
+
+        return JsonResponse({"data":template})
 
 
+def create_thumbnail(json_str,formats):
+    all_format=['png','jpeg','jpg','svg']
+    width=json_str['backgroundImage']['width']
+    height=json_str['backgroundImage']['height']
 
+    if formats=='mask' or formats=='backgroundMask':
+        multiplierValue=1
+    elif formats in all_format:
+        multiplierValue=min([300 /width, 300 / height])
 
-        return Response({},status=200)
+    json_=json.dumps(json_str)
+    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
 
-# jsonStructure ={
-#     "objects": [
-#        textbox,
-#        image,
-#        backgroundImage,
-#        path
-#     ],
-#     "version": "5.3.0",
-#     "projectid": null,
-#     "background": hardBoardColor,
-#     "backgroundImage": backgroundHardboard,
-#     "perPixelTargetFind": false
-# }     
-       
-
+    if thumb_image.status_code ==200:
+        return thumb_image.text
+    else:
+        return ValidationError("error in node server")
