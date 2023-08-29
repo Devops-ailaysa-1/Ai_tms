@@ -330,9 +330,9 @@ def sd_status_check(ids,url):
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json()
 
-from celery import shared_task
  
-@shared_task
+from celery.decorators import task
+@task(queue='default')
 def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
     sd_instance=StableDiffusionAPI.objects.get(id=id)
     model="sdxl"
@@ -392,6 +392,7 @@ def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
         print("finished_generate")
         # return 
     else:
+        sd_instance.status="ERROR"
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
