@@ -478,11 +478,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation=super().to_representation(instance)
-        if instance.image and 'https://' not in instance.image.url:
-            print(instance.image.url)
-            representation['image'] = HOST_NAME+instance.image.url
-        if instance.thumbnail and 'https://' not in instance.thumbnail.url:
-            representation['thumbnail'] = HOST_NAME+instance.thumbnail.url
+        if instance.image:
+            representation['image'] = HOST_NAME+ os.path.join("media",instance.image.name)
+        if instance.thumbnail :
+            representation['thumbnail'] = HOST_NAME+ os.path.join("media",instance.thumbnail.name)
         return representation
 
     def create(self, validated_data):
