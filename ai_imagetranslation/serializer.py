@@ -472,7 +472,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','celery_id')   #image_resolution step
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','celery_id','status')   #image_resolution step
         model=StableDiffusionAPI
 
 
@@ -489,7 +489,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             if sdstylecategoty.negative_prompt:
                 negative_prompt=str(negative_prompt)+" "+sdstylecategoty.negative_prompt
                 print("negative_prompt",negative_prompt)
-            
             prompt = default_prompt.format(prompt)
         if not image_resolution:
             raise serializers.ValidationError({'no image resolution'}) 
@@ -505,6 +504,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         
 
         instance.celery_id=image
+        instance.status="PENDING"
+        instance.save()
          
         # instance.generated_image=image
         # instance.image=image
