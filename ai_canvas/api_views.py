@@ -931,12 +931,13 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 else:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                     path='{}/{}'.format(lang,file_name)
-                    file_format = 'png' if format_ext == 'pdf-standard' else file_format
+                    print(format_ext , file_format) 
+                    file_format = 'png' if file_format == 'pdf' else file_format
                     values=export_download(src_json.json,file_format,export_size)
                 if format_ext == 'pdf':
                     print("-------------------->",type(values))
                     print(len(values))
-                    print(values)
+ 
                     paths_img_obj.append(Image.open(io.BytesIO(values)).convert('RGB'))
                 else:
                     archive.writestr(path,values)
