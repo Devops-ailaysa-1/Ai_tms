@@ -931,8 +931,9 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 else:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                     path='{}/{}'.format(lang,file_name)
-                    print(format_ext , file_format) 
-                    file_format = 'png' if file_format == 'pdf' else file_format
+                    print("-------",format_ext,"--------",file_format) 
+                    file_format = 'png' if file_format == 'pdf-standard' else file_format
+                    print("file_format",file_format)
                     values=export_download(src_json.json,file_format,export_size)
                 if format_ext == 'pdf':
                     print("-------------------->",type(values))
