@@ -222,7 +222,7 @@ def export_download(json_str,format,multipliervalue):
                 format='pdf'
             img.save(output_buffer, format=format.upper(),dpi=dpi)
             compressed_data=output_buffer.getvalue()
-        return compressed_data
+        return compressed_data 
     else:
         return ValidationError("error in node server")
 
