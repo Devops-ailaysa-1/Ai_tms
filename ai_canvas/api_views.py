@@ -1301,12 +1301,12 @@ def genarate_template(instance,temp,bg_clr,style,prompt,grid):
             }    
         data=copy.deepcopy(json_data) 
 
-        """  Image  """
+        """  Image 0 """
         # change image attributes
         # for key, value in style[0]["image"][0].items():
         #             data["objects"][0][key] = value
-        data["objects"][1]["src"]=HOST_NAME+instance.image.url
-        data["objects"][1]["name"]="Image"+str(instance.celery_id)
+        data["objects"][0]["src"]=HOST_NAME+instance.image.url
+        data["objects"][0]["name"]="Image"+str(instance.celery_id)
 
         # random postition
         # data["objects"][1]["left"]=grid[random.randint(0,8)]["left"]
@@ -1314,20 +1314,20 @@ def genarate_template(instance,temp,bg_clr,style,prompt,grid):
 
         left=temp_width-int(instance.width)
         top=temp_height-int(instance.height)
-        data["objects"][1]["left"]= left/2
-        data["objects"][1]["top"]= top/2
+        data["objects"][0]["left"]= left/2
+        data["objects"][0]["top"]= top/2
 
-        """  Text  """
+        """  Text 1  """
         # change text attributes
         # for key, value in style[i]["text"][0].items():
         #             data["objects"][0][key] = value
 
-        data["objects"][0]["textLines"]=prompt
-        data["objects"][0]["text"]=prompt
-        data["objects"][0]["width"]=500
-        data["objects"][0]["height"]=90
-        data["objects"][0]["left"]= grid[random.randint(0,8)]["left"]
-        data["objects"][0]["top"]= grid[random.randint(0,8)]["top"]
+        data["objects"][1]["textLines"]=prompt
+        data["objects"][1]["text"]=prompt
+        data["objects"][1]["width"]=500
+        data["objects"][1]["height"]=90
+        data["objects"][1]["left"]= grid[random.randint(0,8)]["left"]
+        data["objects"][1]["top"]= grid[random.randint(0,8)]["top"]
         
         # data["objects"][0]["left"]=style[random.randint(1,20)]["textbox"][0]["left"]
         # data["objects"][0]["top"]=style[random.randint(1,20)]["textbox"][0]["top"]
