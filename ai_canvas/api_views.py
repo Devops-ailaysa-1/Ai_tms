@@ -924,7 +924,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         paths_img_obj=[]
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
-                
+
                 if file_format=="text":
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,"txt")
                     path='{}/{}'.format(lang,file_name)
@@ -941,7 +941,6 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                     archive.writestr(path,values)
         if format_ext == 'pdf':
             output_buffer=io.BytesIO()
-            print(paths_img_obj)
             paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[1:])
             export_src=core.files.File(core.files.base.ContentFile(output_buffer.getvalue()),file_name+'.pdf')
             response=download_file_canvas(file_path=export_src,mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
@@ -966,6 +965,7 @@ def DesignerDownload(request):
     file_format = file_format.replace(" ","-") if file_format else ""
     # format_ext = 'png' if file_format == 'png-transparent' else file_format
     format_ext = format_extension_change(file_format=file_format)
+    print(file_format)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
@@ -975,17 +975,27 @@ def DesignerDownload(request):
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
             buffer=io.BytesIO()
             with zipfile.ZipFile(buffer, mode="a") as archive:
+                paths_img_obj=[]
                 for src_json in src_jsons:
                     if file_format=="text":
                         values=text_download(src_json.json)
                         file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,"txt")
-                        path='{}/{}'.format(src_lang,file_name)
-                        
+                        path='{}/{}'.format(src_lang,file_name)      
                     else:
                         file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
                         path='{}/{}'.format(src_lang,file_name)
                         values=export_download(src_json.json,file_format,export_size)
-                    archive.writestr(path,values)
+                        if file_format == 'pdf-standard':
+                            paths_img_obj.append(Image.open(io.BytesIO(values)).convert('RGB'))
+                    if file_format != 'pdf-standard':
+                        archive.writestr(path,values)
+                if file_format == 'pdf-standard':
+                    print(file_format)
+                    output_buffer=io.BytesIO()
+                    paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[1:])
+                    print(path)
+                    archive.writestr(path,output_buffer)
+
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
                     for tar_json in tar_jsons:
