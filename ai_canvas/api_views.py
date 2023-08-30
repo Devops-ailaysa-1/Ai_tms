@@ -1234,86 +1234,121 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     serializer_class = TemplateGlobalDesignRetrieveSerializer
 #     lookup_field = 'id'
 
-
+import time
 class TemplateEngineGenerate(viewsets.ModelViewSet):
+
+    def get_queryset(self):
+        return SocialMediaSize.objects.all()
     
     def create(self,request):
         prompt=request.POST.get("prompt",None)
         template_id=request.POST.get("template",None)
-        temp=get_object_or_404(SocialMediaSize,id=template_id)
-        temp_height =temp.height
-        temp_width = temp.width
+        template=get_object_or_404(SocialMediaSize,id=template_id)
         sdstylecategoty=1
         image_resolution=request.POST.get("image_resolution",None)
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
 
         # ** get image
-        # serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
-        # print(serializer)
-        # if serializer.is_valid():
-        #     serializer.save()
-        # else:
-        #     return Response(serializer.errors)
-        # status=serializer.data.get("status")
-        # id=serializer.data.get("id")
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         
-        # text
-        text=["we are hiring","join us","walkin"]
-        # image
-        # background
-        id=15
-        img=get_object_or_404(StableDiffusionAPI,id=id)
-        # x=img.image
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors)
+        
+        id=serializer.data.get("id") 
+        wait= 10  # Adjust this value as needed
+        time.sleep(wait)
+        while True:
+            ins=get_object_or_404(StableDiffusionAPI,id=id)
+            if ins.status=="DONE":
+                break
+            else:
+               wait+=1
+        print("exiting............")
+        instance=get_object_or_404(StableDiffusionAPI,id=id)
         # img=img.generated_image
-        img="https://aicanvas.ailaysa.com/media/aidesign/thirdpartyimage/e1172a4a-462f-11ee-aa5a-0242ac14000a.jpg"
+        # img="https://aicanvas.ailaysa.com/media/aidesign/thirdpartyimage/e1172a4a-462f-11ee-aa5a-0242ac14000a.jpg"
 
-        # meta
-        # for background color
+        # meta data
         bg_clr=bg_color
-        # for styles
         style=default_style
+        temp_height =int(template.height)
+        temp_width = int(template.width)
+        grid=grid_position(temp_width,temp_height)
 
-        instance=5
-        template=[]
-        for i in range(0,instance):
-            json_data={
-                    "objects": [
-                    textbox,
-                    image,
-                    # backgroundImage,
-                    # path
-                    ],
-                    "version": "5.3.0",
-                    "projectid": null,
-                    "background": hardBoardColor,
-                    "backgroundImage": backgroundHardboard,
-                    "perPixelTargetFind": false
-                }    
-            data=copy.deepcopy(json_data) 
-            #change random background color
-            random_color= random.randint(0, 19)
-            data["backgroundImage"]["fill"]=bg_clr[random_color]["background"]
-            # data["background"]=hardBoardColor[random_color]["background"]
-
-            # image
-            for key, value in style[i]["textbox"][0].items():
-                        data["objects"][0][key] = value
-
-            data["objects"][1]["src"]=img
-            # data["objects"][1]["left"]=style[0]["image"][0]["left"]
-            # data["objects"][1]["top"]=style[0]["image"][0]["top"]
-
-            # for text
-            data["objects"][0]["textLines"]=prompt
-            data["objects"][0]["text"]=prompt
-            # data["objects"][0]["left"]=style[random.randint(1,20)]["textbox"][0]["left"]
-            # data["objects"][0]["top"]=style[random.randint(1,20)]["textbox"][0]["top"]
-            # data["backgroundImage"]=img.generated_image
-            data['thumb']=create_thumbnail(data,formats='png')
-
-            template.append(data)
-
+        template=genarate_template(instance,template,bg_clr,style,prompt,grid)        
         return JsonResponse({"data":template})
+    
+def genarate_template(instance,temp,bg_clr,style,prompt,grid):
+    temp_height =int(temp.height)
+    temp_width = int(temp.width)
+    template=[]
+    for i in range(0,10):
+        temp={}
+        json_data={
+                "objects": [
+                image,
+                textbox,
+                # backgroundImage,
+                # path
+                ],
+                "version": "5.3.0",
+                "projectid": null,
+                "background": hardBoardColor,
+                "backgroundImage": backgroundHardboard,
+                "perPixelTargetFind": false
+            }    
+        data=copy.deepcopy(json_data) 
+
+        """  Image  """
+        # change image attributes
+        # for key, value in style[0]["image"][0].items():
+        #             data["objects"][0][key] = value
+        data["objects"][1]["src"]=HOST_NAME+instance.image.url
+        data["objects"][1]["name"]="Image"+str(instance.celery_id)
+
+        # random postition
+        # data["objects"][1]["left"]=grid[random.randint(0,8)]["left"]
+        # data["objects"][1]["top"]=grid[random.randint(0,8)]["top"]
+
+        left=temp_width-int(instance.width)
+        top=temp_height-int(instance.height)
+        data["objects"][1]["left"]= left/2
+        data["objects"][1]["top"]= top/2
+
+        """  Text  """
+        # change text attributes
+        # for key, value in style[i]["text"][0].items():
+        #             data["objects"][0][key] = value
+
+        data["objects"][0]["textLines"]=prompt
+        data["objects"][0]["text"]=prompt
+        data["objects"][0]["width"]=500
+        data["objects"][0]["height"]=90
+        data["objects"][0]["left"]= grid[random.randint(0,8)]["left"]
+        data["objects"][0]["top"]= grid[random.randint(0,8)]["top"]
+        
+        # data["objects"][0]["left"]=style[random.randint(1,20)]["textbox"][0]["left"]
+        # data["objects"][0]["top"]=style[random.randint(1,20)]["textbox"][0]["top"]
+        # data["backgroundImage"]=img.generated_image
+
+        """ backgroundImage  """
+        random_color= random.randint(0, 19)
+        data["backgroundImage"]["fill"]=bg_clr[random_color]["background"]
+        data["backgroundImage"]["width"]=int(temp_width)
+        data["backgroundImage"]["height"]=int(temp_height)
+
+
+        """  backgroundboard   """
+
+        # thumnail creation
+        thumbnail={}
+        thumbnail['thumb']=create_thumbnail(data,formats='png')
+
+        temp={"json":data,"thumb":thumbnail}
+        template.append(temp)
+    return template
 
 
 def create_thumbnail(json_str,formats):
@@ -1334,3 +1369,24 @@ def create_thumbnail(json_str,formats):
         return thumb_image.text
     else:
         return ValidationError("error in node server")
+    
+
+def grid_position(width, height):
+    rows=3
+    cols=3
+    cell_width = width // rows
+    cell_height = height // cols
+
+    coordinate = []
+
+    for row in range(rows):
+        for col in range(cols):
+            grid={}
+            grid["left"]= col * cell_width
+            grid["top"] = row * cell_height
+            if row==0:
+                grid["top"] =200
+            if col==0:
+                grid["left"] =200
+            coordinate.append(grid)
+    return coordinate
