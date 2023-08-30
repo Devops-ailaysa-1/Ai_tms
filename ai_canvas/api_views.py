@@ -906,7 +906,7 @@ def format_extension_change(file_format):
     files = {'png-transparent':'png' ,  'pdf-print':'pdf',  'pdf-standard' :'pdf' , 'pdf-print':'pdf','jpeg-print':'jpeg'}
     return files.get(file_format,file_format)
 
-
+from PIL import Image
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = format_extension_change(file_format)
     if len(pages_list)==1:
@@ -920,6 +920,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:
         buffer=io.BytesIO()
+        paths_img_obj=[]
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
                 if file_format=="text":
@@ -930,8 +931,17 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                     path='{}/{}'.format(lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
-                archive.writestr(path,values)
-        response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+                if format_ext == 'pdf':
+                    paths_img_obj.append(Image.open(io.BytesIO(values)))
+                else:
+                    archive.writestr(path,values)
+        if format_ext == 'pdf':
+            output_buffer=io.BytesIO()
+            paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[0:])
+            compressed_data=output_buffer.getvalue()
+            response=download_file_canvas(file_path=compressed_data,mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
+        else:
+            response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
 
 
@@ -956,7 +966,6 @@ def DesignerDownload(request):
         canvas_trans_inst=canvas.canvas_translate.all()
         src_lang=canvas_trans_inst[0].source_language.language.language
         src_code=canvas_trans_inst[0].source_language.language_id
-        
         if language==0: #all languages with number of pages
             src_jsons=canvas.canvas_json_src.filter(page_no__in=page_number_list)
             buffer=io.BytesIO()
