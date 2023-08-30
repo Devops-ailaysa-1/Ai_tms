@@ -1257,34 +1257,29 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
 
         # ** get image
-        # serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         
-        # if serializer.is_valid():
-        #     serializer.save()
-        # else:
-        #     return Response(serializer.errors)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors)
         
-        # id=serializer.data.get("id") 
-        # wait= 10  # Adjust this value as needed
-        # time.sleep(wait)
-        # while True:
-        #     ins=get_object_or_404(StableDiffusionAPI,id=id)
-        #     if ins.status=="DONE":
-        #         break
-        #     else:
-        #        wait+=1
-        # print("exiting............")
+        id=serializer.data.get("id")
+        wait=0 
+        print("enter...........")
+        while True:
+            ins=get_object_or_404(StableDiffusionAPI,id=id)
+            if ins.status=="DONE":
+                break
+            else:
+               wait+=1
+        print("exiting............")
 
-        id=89
         instance=get_object_or_404(StableDiffusionAPI,id=id)
 
         # meta data
         bg_clr=bg_color
         style=default_style
-        temp_height =int(template.height)
-        temp_width = int(template.width)
-        
-
         template=genarate_template(instance,template,bg_clr,style,prompt)        
         return JsonResponse({"data":template})
     
