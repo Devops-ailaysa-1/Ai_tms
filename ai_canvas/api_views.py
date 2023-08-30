@@ -1235,6 +1235,7 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     lookup_field = 'id'
 
 import time
+from .utils import generate_random_rgba,create_thumbnail,grid_position
 class TemplateEngineGenerate(viewsets.ModelViewSet):
 
     def get_queryset(self):
@@ -1249,38 +1250,38 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
 
         # ** get image
-        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        # serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
         
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(serializer.errors)
+        # if serializer.is_valid():
+        #     serializer.save()
+        # else:
+        #     return Response(serializer.errors)
         
-        id=serializer.data.get("id") 
-        wait= 10  # Adjust this value as needed
-        time.sleep(wait)
-        while True:
-            ins=get_object_or_404(StableDiffusionAPI,id=id)
-            if ins.status=="DONE":
-                break
-            else:
-               wait+=1
-        print("exiting............")
+        # id=serializer.data.get("id") 
+        # wait= 10  # Adjust this value as needed
+        # time.sleep(wait)
+        # while True:
+        #     ins=get_object_or_404(StableDiffusionAPI,id=id)
+        #     if ins.status=="DONE":
+        #         break
+        #     else:
+        #        wait+=1
+        # print("exiting............")
+
+        id=89
         instance=get_object_or_404(StableDiffusionAPI,id=id)
-        # img=img.generated_image
-        # img="https://aicanvas.ailaysa.com/media/aidesign/thirdpartyimage/e1172a4a-462f-11ee-aa5a-0242ac14000a.jpg"
 
         # meta data
         bg_clr=bg_color
         style=default_style
         temp_height =int(template.height)
         temp_width = int(template.width)
-        grid=grid_position(temp_width,temp_height)
+        text_grid,image_grid=grid_position(temp_width,temp_height)
 
-        template=genarate_template(instance,template,bg_clr,style,prompt,grid)        
+        template=genarate_template(instance,template,bg_clr,style,prompt,text_grid,image_grid)        
         return JsonResponse({"data":template})
     
-def genarate_template(instance,temp,bg_clr,style,prompt,grid):
+def genarate_template(instance,temp,bg_clr,style,prompt,text_grid,image_grid):
     temp_height =int(temp.height)
     temp_width = int(temp.width)
     template=[]
@@ -1311,37 +1312,51 @@ def genarate_template(instance,temp,bg_clr,style,prompt,grid):
         # random postition
         # data["objects"][1]["left"]=grid[random.randint(0,8)]["left"]
         # data["objects"][1]["top"]=grid[random.randint(0,8)]["top"]
-
+        pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
         left=temp_width-int(instance.width)
         top=temp_height-int(instance.height)
-        data["objects"][0]["left"]= left/2
-        data["objects"][0]["top"]= top/2
+
+        x=(temp_width/5)*3
+        scale="square"
+        if int(instance.width) > int(instance.height):
+            data["objects"][0]["scaleX"]=(x/int(instance.width)*int(instance.width))
+        elif int(instance.width) < int(instance.height):
+            data["objects"][0]["scaley"]= int(instance.height)
+        else:
+            data["objects"][0]["scaley"]= 1
+        
+        data["objects"][0]["top"]= pos[0]
+        data["objects"][0]["left"]= pos[1]
+        
 
         """  Text 1  """
         # change text attributes
         # for key, value in style[i]["text"][0].items():
         #             data["objects"][0][key] = value
+        data["objects"][1]["fill"] =generate_random_rgba
 
+        # data["objects"][1]["fontStyle"] =
+        # data["objects"][1]["fontFamily"] =
+        # data["objects"][1]["fontWeight"] =
         data["objects"][1]["textLines"]=prompt
         data["objects"][1]["text"]=prompt
         data["objects"][1]["width"]=500
         data["objects"][1]["height"]=90
-        data["objects"][1]["left"]= grid[random.randint(0,8)]["left"]
-        data["objects"][1]["top"]= grid[random.randint(0,8)]["top"]
+
+        pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
+        data["objects"][1]["top"]= pos[0]
+        data["objects"][1]["left"]= pos[1]
         
-        # data["objects"][0]["left"]=style[random.randint(1,20)]["textbox"][0]["left"]
-        # data["objects"][0]["top"]=style[random.randint(1,20)]["textbox"][0]["top"]
-        # data["backgroundImage"]=img.generated_image
+        
 
         """ backgroundImage  """
         random_color= random.randint(0, 19)
-        data["backgroundImage"]["fill"]=bg_clr[random_color]["background"]
+        data["backgroundImage"]["fill"]=generate_random_rgba
         data["backgroundImage"]["width"]=int(temp_width)
         data["backgroundImage"]["height"]=int(temp_height)
 
 
         """  backgroundboard   """
-
         # thumnail creation
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
@@ -1349,44 +1364,3 @@ def genarate_template(instance,temp,bg_clr,style,prompt,grid):
         temp={"json":data,"thumb":thumbnail}
         template.append(temp)
     return template
-
-
-def create_thumbnail(json_str,formats):
-    all_format=['png','jpeg','jpg','svg']
-    width=json_str['backgroundImage']['width']
-    height=json_str['backgroundImage']['height']
-
-    if formats=='mask' or formats=='backgroundMask':
-        multiplierValue=1
-    elif formats in all_format:
-        multiplierValue=min([300 /width, 300 / height])
-
-    json_=json.dumps(json_str)
-    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
-    thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
-
-    if thumb_image.status_code ==200:
-        return thumb_image.text
-    else:
-        return ValidationError("error in node server")
-    
-
-def grid_position(width, height):
-    rows=3
-    cols=3
-    cell_width = width // rows
-    cell_height = height // cols
-
-    coordinate = []
-
-    for row in range(rows):
-        for col in range(cols):
-            grid={}
-            grid["left"]= col * cell_width
-            grid["top"] = row * cell_height
-            if row==0:
-                grid["top"] =200
-            if col==0:
-                grid["left"] =200
-            coordinate.append(grid)
-    return coordinate
