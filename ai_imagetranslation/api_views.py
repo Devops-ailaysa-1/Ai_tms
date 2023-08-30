@@ -165,7 +165,7 @@ def create_image(json_page,file_format,export_size,page_number,language):
     base64_img=export_download(json_page,file_format,export_size)
     file_name="page_{}_{}.{}".format(str(page_number),language,file_format_ext)
     return base64_img,file_name
-
+from ai_canvas.api_views import format_extension_change 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -176,19 +176,13 @@ def image_translation_project_view(request):
     file_format=request.query_params.get('file_format')
     language = int(language) if language else None
     file_format = file_format.replace(" ","-") if file_format else ""
+    file_format = format_extension_change(file_format)
     image_download={}
     image_instance=ImageTranslate.objects.get(id=image_id)
     if language==0:
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
         with ZipFile(buffer, mode="a") as archive:  
-            # if file_format == 'text':
-            #     file_name = '{}.{}'.format(image_instance.source_language.language.language,".txt")
-            #     src_image_json=text_download(image_instance.source_canvas_json)
-            # else:
-            #     file_name = '{}.{}'.format(image_instance.source_language.language.language,format_exe)
-            #     src_image_json=export_download(json_str=image_instance.source_canvas_json,format=file_format, multipliervalue=export_size)
-            # archive.writestr(file_name,src_image_json)
             for tar_json in image_instance.s_im.all():
                 tar_lang=tar_json.target_language.language.language
                 if file_format == 'text':
