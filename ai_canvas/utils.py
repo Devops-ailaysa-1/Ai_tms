@@ -313,3 +313,55 @@ def replace_url_with_base64(input_string):
             input_string = input_string.replace(url, f"data:application/font-ttf;base64,{base64_data}")
     return input_string
 
+import random
+
+def generate_random_rgba():
+    r = random.randint(0, 255)
+    g = random.randint(0, 255)
+    b = random.randint(0, 255)
+    a=1
+    return f"rgba({r}, {g}, {b}, {a})"
+
+def create_thumbnail(json_str,formats):
+    all_format=['png','jpeg','jpg','svg']
+    width=json_str['backgroundImage']['width']
+    height=json_str['backgroundImage']['height']
+
+    if formats=='mask' or formats=='backgroundMask':
+        multiplierValue=1
+    elif formats in all_format:
+        multiplierValue=min([300 /width, 300 / height])
+
+    json_=json.dumps(json_str)
+    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+
+    if thumb_image.status_code ==200:
+        return thumb_image.text
+    else:
+        return ValidationError("error in node server")
+    
+
+def grid_position(width, height):
+    rows=5
+    cols=5
+    cell_width = width // rows
+    cell_height = height // cols
+    text= []
+    image=[]
+    for row in range(rows):
+        for col in range(cols):
+            if (row !=0 and row != rows-1) and (col !=0 and col != cols-1):
+                grid=[]
+                grid.append(row * cell_height)
+                grid.append(col * cell_width)
+                image.append(grid)
+            elif (row ==0 or row == rows-1)  and (col !=0 and col != cols-1):
+                grid1 = []
+                if row ==0:
+                    grid1.append(row * cell_height+(height/10))
+                else:
+                    grid1.append(row * cell_height-(height/10))
+                grid1.append(col * cell_width)
+                text.append(grid1)
+    return text,image

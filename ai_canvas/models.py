@@ -282,3 +282,20 @@ class ImageListCategory(models.Model):
     # class Meta:
     #     constraints = [
     #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+    
+class PromptCategory(models.Model):
+    name=models.CharField(max_length=256)
+
+    def __str__(self):
+        return self.name
+
+class PromptEngine(models.Model):
+    prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_category', on_delete=models.CASCADE)
+    prompt=models.CharField(max_length=256)
+    key_words=models.JSONField(null=True,default=dict)
+
+
+    def __str__(self):
+        return self.prompt
+
+
