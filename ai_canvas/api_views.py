@@ -947,7 +947,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
             print(paths_img_obj)
             paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[0:])
             export_src=core.files.File(core.files.base.ContentFile(output_buffer.getvalue()),file_name+'.pdf')
-            response=download_file_canvas(file_path=export_src.getvalue(),mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
+            response=download_file_canvas(file_path=export_src,mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
         else:
             response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
