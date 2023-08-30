@@ -924,6 +924,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
         paths_img_obj=[]
         with zipfile.ZipFile(buffer, mode="a") as archive:
             for src_json in pages_list:
+                
                 if file_format=="text":
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,"txt")
                     path='{}/{}'.format(lang,file_name)
@@ -931,21 +932,17 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                 else:
                     file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,format_ext)
                     path='{}/{}'.format(lang,file_name)
-                    print("-------",format_ext,"--------",file_format) 
                     file_format = 'png' if file_format == 'pdf-standard' else file_format
-                    print("file_format",file_format)
                     values=export_download(src_json.json,file_format,export_size)
+
                 if format_ext == 'pdf':
-                    print("-------------------->",type(values))
-                    print(len(values))
- 
                     paths_img_obj.append(Image.open(io.BytesIO(values)).convert('RGB'))
                 else:
                     archive.writestr(path,values)
         if format_ext == 'pdf':
             output_buffer=io.BytesIO()
             print(paths_img_obj)
-            paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[0:])
+            paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[1:])
             export_src=core.files.File(core.files.base.ContentFile(output_buffer.getvalue()),file_name+'.pdf')
             response=download_file_canvas(file_path=export_src,mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
         else:
