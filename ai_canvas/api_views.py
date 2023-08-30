@@ -909,6 +909,7 @@ def format_extension_change(file_format):
 from PIL import Image
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = format_extension_change(file_format)
+    print(format_ext)
     if len(pages_list)==1:
         if file_format=="text":
             export_src=text_download(pages_list[0].json)
@@ -932,14 +933,16 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                     path='{}/{}'.format(lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
                 if format_ext == 'pdf':
-                    paths_img_obj.append(Image.open(io.BytesIO(values)))
+                    print(type(io.BytesIO(values)))
+                    print(type(Image.open(io.BytesIO(values))))
+                    paths_img_obj.append(Image.open(io.BytesIO(values)).convert('RGB'))
                 else:
                     archive.writestr(path,values)
         if format_ext == 'pdf':
             output_buffer=io.BytesIO()
             paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[0:])
-            compressed_data=output_buffer.getvalue()
-            response=download_file_canvas(file_path=compressed_data,mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
+            export_src=core.files.File(core.files.base.ContentFile(output_buffer.getvalue()),file_name+'.pdf')
+            response=download_file_canvas(file_path=export_src.getvalue(),mime_type=mime_type["pdf"],name=projecct_file_name+'.pdf')
         else:
             response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
     return response
