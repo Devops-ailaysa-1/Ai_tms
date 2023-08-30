@@ -933,7 +933,8 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
                     path='{}/{}'.format(lang,file_name)
                     values=export_download(src_json.json,file_format,export_size)
                 if format_ext == 'pdf':
-                    print(type(io.BytesIO(values)))
+                    print("-------------------->",type(values))
+                    print(type(Image.open(values)))
                     print(type(Image.open(io.BytesIO(values))))
                     paths_img_obj.append(Image.open(io.BytesIO(values)).convert('RGB'))
                 else:
