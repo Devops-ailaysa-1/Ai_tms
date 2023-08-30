@@ -951,7 +951,6 @@ def DesignerDownload(request):
     file_format = file_format.replace(" ","-") if file_format else ""
     # format_ext = 'png' if file_format == 'png-transparent' else file_format
     format_ext = format_extension_change(file_format=file_format)
-    print("format_ext",format_ext)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
@@ -967,6 +966,7 @@ def DesignerDownload(request):
                         values=text_download(src_json.json)
                         file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,"txt")
                         path='{}/{}'.format(src_lang,file_name)
+                        
                     else:
                         file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
                         path='{}/{}'.format(src_lang,file_name)

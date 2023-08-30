@@ -501,6 +501,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if not image_resolution:
             raise serializers.ValidationError({'no image resolution'}) 
         
+        
         #prompt,steps,height,width,negative_prompt
 
         instance=StableDiffusionAPI.objects.create(user=user,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
@@ -512,12 +513,6 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         instance.celery_id=image
         instance.status="PENDING"
         instance.save()
-         
-        # instance.generated_image=image
-        # instance.image=image
-        # instance.save()
-        # im=Image.open(instance.generated_image.path)
-        # instance.save()
         return instance
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
