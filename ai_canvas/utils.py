@@ -364,6 +364,4 @@ def grid_position(width, height):
                     grid1.append(row * cell_height-(height/10))
                 grid1.append(col * cell_width)
                 text.append(grid1)
-    print(len(text),len(image))
-    print(text,image)
     return text,image

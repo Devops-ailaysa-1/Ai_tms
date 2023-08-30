@@ -5,13 +5,15 @@ from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFami
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
-                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData) #TemplatePage
+                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,
+                              PromptCategory,PromptEngine) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
+                                   PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -1239,7 +1241,12 @@ from .utils import generate_random_rgba,create_thumbnail,grid_position
 class TemplateEngineGenerate(viewsets.ModelViewSet):
 
     def get_queryset(self):
-        return SocialMediaSize.objects.all()
+        return PromptCategory.objects.all()
+
+    def list(self,request):
+        queryset= self.get_queryset()
+        serializers=PromptCategoryserializer(queryset,many=True)
+        return Response (serializers.data)
     
     def create(self,request):
         prompt=request.POST.get("prompt",None)
@@ -1276,16 +1283,19 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
         style=default_style
         temp_height =int(template.height)
         temp_width = int(template.width)
-        text_grid,image_grid=grid_position(temp_width,temp_height)
+        
 
-        template=genarate_template(instance,template,bg_clr,style,prompt,text_grid,image_grid)        
+        template=genarate_template(instance,template,bg_clr,style,prompt)        
         return JsonResponse({"data":template})
     
-def genarate_template(instance,temp,bg_clr,style,prompt,text_grid,image_grid):
+def genarate_template(instance,temp,bg_clr,style,prompt):
     temp_height =int(temp.height)
     temp_width = int(temp.width)
     template=[]
-    for i in range(0,10):
+    text_grid,image_grid=grid_position(temp_width,temp_height)
+    print(len(text_grid),len(image_grid))
+    print(text_grid,image_grid)
+    for i in range(0,4):
         temp={}
         json_data={
                 "objects": [
@@ -1308,38 +1318,34 @@ def genarate_template(instance,temp,bg_clr,style,prompt,text_grid,image_grid):
         #             data["objects"][0][key] = value
         data["objects"][0]["src"]=HOST_NAME+instance.image.url
         data["objects"][0]["name"]="Image"+str(instance.celery_id)
-
-        # random postition
-        # data["objects"][1]["left"]=grid[random.randint(0,8)]["left"]
-        # data["objects"][1]["top"]=grid[random.randint(0,8)]["top"]
         pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
-        left=temp_width-int(instance.width)
-        top=temp_height-int(instance.height)
-
         x=(temp_width/5)*3
-        scale="square"
+        y=(temp_height/5)*3
         if int(instance.width) > int(instance.height):
-            data["objects"][0]["scaleX"]=(x/int(instance.width)*int(instance.width))
+            data["objects"][0]["scaleX"]=(x/int(instance.width))
         elif int(instance.width) < int(instance.height):
-            data["objects"][0]["scaley"]= int(instance.height)
+            data["objects"][0]["scaleY"]= (y/int(instance.height))
         else:
-            data["objects"][0]["scaley"]= 1
-        
-        data["objects"][0]["top"]= pos[0]
-        data["objects"][0]["left"]= pos[1]
+            data["objects"][0]["scaleX"]= (x/int(instance.width))
+            data["objects"][0]["scaleY"]= (y/int(instance.height))
+
+        print(data["objects"][0]["scaleX"])
+ 
+        data["objects"][0]["top"]= image_grid[0][0]
+        data["objects"][0]["left"]= image_grid[0][0]
         
 
         """  Text 1  """
         # change text attributes
         # for key, value in style[i]["text"][0].items():
         #             data["objects"][0][key] = value
-        data["objects"][1]["fill"] =generate_random_rgba
+        data["objects"][1]["fill"] =generate_random_rgba()
 
         # data["objects"][1]["fontStyle"] =
         # data["objects"][1]["fontFamily"] =
         # data["objects"][1]["fontWeight"] =
-        data["objects"][1]["textLines"]=prompt
-        data["objects"][1]["text"]=prompt
+        data["objects"][1]["textLines"]=prompt.capitalize()
+        data["objects"][1]["text"]=prompt.capitalize()
         data["objects"][1]["width"]=500
         data["objects"][1]["height"]=90
 
@@ -1351,11 +1357,12 @@ def genarate_template(instance,temp,bg_clr,style,prompt,text_grid,image_grid):
 
         """ backgroundImage  """
         random_color= random.randint(0, 19)
-        data["backgroundImage"]["fill"]=generate_random_rgba
+        data["backgroundImage"]["fill"]=generate_random_rgba()
         data["backgroundImage"]["width"]=int(temp_width)
         data["backgroundImage"]["height"]=int(temp_height)
 
 
+        print(type(data))
         """  backgroundboard   """
         # thumnail creation
         thumbnail={}
