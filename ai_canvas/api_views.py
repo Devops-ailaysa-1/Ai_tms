@@ -1298,11 +1298,11 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         bg_images=list(background)
         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
         font_family = list(font)
-        template=genarate_template(instance,template,prompt,font_family,bg_images)        
+        template=genarate_template(instance,template,font_family,bg_images)        
         return JsonResponse({"data":template})
     
 from ai_canvas.template import jsonStructure
-def genarate_template(instance,template,prompt,font_family,bg_images):
+def genarate_template(instance,template,font_family,bg_images):
     temp_height =int(template.height)
     temp_width = int(template.width)
     template_data=[]
