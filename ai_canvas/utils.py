@@ -381,16 +381,13 @@ def genarate_image(instance,image_grid,template):
     x=temp_width*3/4
     y=temp_height*3/4
    
-    # image=copy.deepcopy(image)
-    # text_grid,image_grid=grid_position(temp_width,temp_height)
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
     img["src"]=HOST_NAME+instance.image.url
     print("img---->", img["src"])
     # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
-    # bg_remove=backgroundremo
     img["name"]="Image"+str(pos[0])+str(pos[1])
-    if instance.width<instance.height:
+    if instance.width <= instance.height:
         scale=(x/int(instance.width))
     else:
         scale=(y/int(instance.height))
@@ -403,22 +400,21 @@ def genarate_image(instance,image_grid,template):
     img["left"]=image_grid[0][1]
     return img
 
-def genarate_text(font_family,prompt,text_grid,template):
+def genarate_text(font_family,instance,text_grid,template):
         temp_height =int(template.height)
         temp_width = int(template.width)
         text=copy.deepcopy(textbox)
-        # text_grid,image_grid=grid_position(temp_width,temp_height)
         text["fill"] =generate_random_rgba()
         # text["fontStyle"] =
         text["fontFamily"] =font_family[random.randint(0,(len(font_family)-1))]
         text["fontWeight"] =font["fontWeight"][random.randint(0,2)]
         # textline=prompt.capitalize().split(" ")
         # text=prompt.split(" ")
-        text["textLines"]=prompt
-        text["text"]=prompt.capitalize()
+        text["textLines"]=instance.prompt
+        text["text"]=instance.prompt.capitalize()
         text["width"]=500
         text["height"]=90
-        text["fontSize"]=random.randint(100,300)
+        text["fontSize"]=random.randint(100,200)
 
         pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
         text["top"]= pos[0]
@@ -433,21 +429,16 @@ def random_background_image(template,instance):
     print(bg_image["src"])
     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
-
-    if instance.width<instance.height:
-        scale=(temp_width/int(instance.width))
-    else:
-        scale=(temp_height/int(instance.height))
-
-    img_width=instance.width*scale
-    img_height=instance.height*scale
+    img_width=instance.width
+    img_height=instance.height
     # bg_image["src"]=instance.image.url
     bg_image["width"]=img_width
     bg_image["height"]=img_height
 
     # bg_image["scaleX"]=bg_image=scaleX
     # bg_image["oldScaleX"]=bg_image["oldScaleY"]=scaleY
-
+    bg_image["originalwidth"]=bg_image["oldWidth"]=img_width
+    bg_image["oldWidth"]=bg_image["oldHeight"]=img_height
     bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
     bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
 
@@ -491,5 +482,4 @@ def background_scaling(canvas_width, canvas_height, image_width, image_height):
         
     return scaleX, scaleY, left, top
 
-# Example usage
 
