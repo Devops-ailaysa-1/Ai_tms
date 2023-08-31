@@ -1250,7 +1250,7 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 
 import time
 from .utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
-class TemplateEngineGenerate(viewsets.ModelViewSet):
+class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return PromptCategory.objects.all()
@@ -1290,14 +1290,14 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
             id=89
             instance=get_object_or_404(StableDiffusionAPI,id=id)
         else:
-            instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
-        background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
-        # bg_images=list(background)
+            instance=PromptEngine.objects.filter(prompt_category__id=prompt_id)
 
+        instance=list(instance)
+        background=TemplateBackground.objects.filter(prompt_category__id=prompt_id)
+        bg_images=list(background)
         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
         font_family = list(font)
-        print("template_genarating.........................")
-        template=genarate_template(instance,template,prompt,font_family,background)        
+        template=genarate_template(instance,template,prompt,font_family,bg_images)        
         return JsonResponse({"data":template})
     
 from .template import jsonStructure
@@ -1306,39 +1306,31 @@ def genarate_template(instance,template,prompt,font_family,bg_images):
     temp_width = int(template.width)
     template_data=[]
     for i in range(0,5):
-        print(i)
         text_grid,image_grid=grid_position(temp_width,temp_height)
         temp={}   
         data=copy.deepcopy(jsonStructure) 
 
         """ backgroundImage  """
         # bg_images=bg_images.first()
-        # bg_images=bg_images.pop(random.randint(0,(len(bg_images)-1)))
-        backgroundImage =random_background_image(template,bg_images)
+        ins=bg_images.pop(random.randint(0,(len(bg_images)-1)))
+        backgroundImage =random_background_image(template,ins)
         data.get("objects").append(backgroundImage)
 
-        print("j")
         """  Image 0 """
-        image=genarate_image(instance,image_grid,template)
+        inst=instance.pop(random.randint(0,(len(instance)-1)))
+        image=genarate_image(inst,image_grid,template)
         data.get("objects").append(image)
 
-        # change image attributes
-        # for key, value in style[0]["image"][0].items():
-        #             data["objects"][0][key] = value
-
         """  Text 1  """
-        textbox=genarate_text(font_family,prompt,text_grid,template)
+        textbox=genarate_text(font_family,inst,text_grid,template)
         data.get("objects").append(textbox)
-        # change text attributes
-        # for key, value in style[i]["text"][0].items():
-        #             data["objects"][0][key] = value
-        
+
         """  backgroundboard   """
         random_color= random.randint(0, 19)
         # data["backgroundImage"]["fill"]=generate_random_rgba()
         data["backgroundImage"]["width"]=int(temp_width)
         data["backgroundImage"]["height"]=int(temp_height)
-        print(data)
+        # print(data)
         # thumnail creation
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
