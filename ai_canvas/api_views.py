@@ -1261,7 +1261,7 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         return Response (serializers.data)
     
     def create(self,request):
-        prompt=request.POST.get("prompt",None)
+        # prompt=request.POST.get("prompt",None)
         template_id=request.POST.get("template",None)
         template=get_object_or_404(SocialMediaSize,id=template_id)
         prompt_id=request.POST.get("prompt_id",None)
@@ -1271,6 +1271,7 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
         # ** get image
         if prompt_id==None:
+            print("SD creatin")
             serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
             if serializer.is_valid():
                 serializer.save()
@@ -1287,7 +1288,7 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
                 else:
                     wait+=1
             print("exiting............")
-            id=89
+            # id=89
             instance=get_object_or_404(StableDiffusionAPI,id=id)
         else:
             instance=PromptEngine.objects.filter(prompt_category__id=prompt_id)
@@ -1300,7 +1301,7 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         template=genarate_template(instance,template,prompt,font_family,bg_images)        
         return JsonResponse({"data":template})
     
-from .template import jsonStructure
+from ai_canvas.template import jsonStructure
 def genarate_template(instance,template,prompt,font_family,bg_images):
     temp_height =int(template.height)
     temp_width = int(template.width)
@@ -1334,7 +1335,6 @@ def genarate_template(instance,template,prompt,font_family,bg_images):
         # thumnail creation
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
-
         temp={"json":data,"thumb":thumbnail}
         template_data.append(temp)
     return template_data

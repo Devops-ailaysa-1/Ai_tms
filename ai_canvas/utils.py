@@ -384,6 +384,7 @@ def genarate_image(instance,image_grid,template):
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
     img["src"]=HOST_NAME+instance.image.url
+    print("img---->", img["src"])
     # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
     img["name"]="Image"+str(pos[0])+str(pos[1])
     if instance.width <= instance.height:
@@ -397,7 +398,6 @@ def genarate_image(instance,image_grid,template):
     img["height"]=img["oldHeight"]=instance.width*scale
     img["top"]=image_grid[0][0]
     img["left"]=image_grid[0][1]
-    
     return img
 
 def genarate_text(font_family,instance,text_grid,template):
@@ -419,7 +419,6 @@ def genarate_text(font_family,instance,text_grid,template):
         pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
         text["top"]= pos[0]
         text["left"]= pos[1]
-        
         return text
 
 def random_background_image(template,instance):
@@ -427,7 +426,6 @@ def random_background_image(template,instance):
     temp_height =int(template.height)
     temp_width = int(template.width)
     bg_image["src"]=HOST_NAME+instance.bg_image.url
-
     print(bg_image["src"])
     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
