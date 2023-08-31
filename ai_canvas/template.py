@@ -107,7 +107,7 @@ textbox = {
     "styles": [
         {
             "start": 0,
-            "end": 10,
+            "end": 0,
             "style": {
                 "fill": "rgba(0,0,0,1)"
             }
@@ -620,10 +620,10 @@ bg_color =[
 
 jsonStructure ={
     "objects": [
-       textbox,
-       image,
-       backgroundImage,
-       path
+    #    textbox,
+    #    image,
+    #    backgroundImage,
+    #    path
     ],
     "version": "5.3.0",
     "projectid": null,

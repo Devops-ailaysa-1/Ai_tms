@@ -6,7 +6,7 @@ from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesig
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
                               ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,
-                              PromptCategory,PromptEngine) #TemplatePage
+                              PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
@@ -48,10 +48,8 @@ IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 from ai_imagetranslation.models import StableDiffusionAPI
 from ai_imagetranslation.utils import stable_diffusion_public
 from ai_imagetranslation.serializer import StableDiffusionAPISerializer
-from .template import *
 import random
-from .meta import *
- 
+from ai_staff.models import FontFamily,FontData
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
@@ -1263,7 +1261,7 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     lookup_field = 'id'
 
 import time
-from .utils import generate_random_rgba,create_thumbnail,grid_position
+from .utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
 class TemplateEngineGenerate(viewsets.ModelViewSet):
 
     def get_queryset(self):
@@ -1278,117 +1276,85 @@ class TemplateEngineGenerate(viewsets.ModelViewSet):
         prompt=request.POST.get("prompt",None)
         template_id=request.POST.get("template",None)
         template=get_object_or_404(SocialMediaSize,id=template_id)
+        prompt_id=request.POST.get("prompt_id",None)
         sdstylecategoty=1
         image_resolution=request.POST.get("image_resolution",None)
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
 
         # ** get image
-        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
-        
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(serializer.errors)
-        
-        id=serializer.data.get("id")
-        wait=0 
-        print("enter...........")
-        while True:
-            ins=get_object_or_404(StableDiffusionAPI,id=id)
-            if ins.status=="DONE":
-                break
+        if prompt_id==None:
+            serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+            if serializer.is_valid():
+                serializer.save()
             else:
-               wait+=1
-        print("exiting............")
+                return Response(serializer.errors)
+            
+            id=serializer.data.get("id")
+            wait=0 
+            print("enter...........")
+            while True:
+                ins=get_object_or_404(StableDiffusionAPI,id=id)
+                if ins.status=="DONE":
+                    break
+                else:
+                    wait+=1
+            print("exiting............")
+            id=89
+            instance=get_object_or_404(StableDiffusionAPI,id=id)
+        else:
+            instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
+        background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
+        # bg_images=list(background)
 
-        instance=get_object_or_404(StableDiffusionAPI,id=id)
-
-        # meta data
-        bg_clr=bg_color
-        style=default_style
-        template=genarate_template(instance,template,bg_clr,style,prompt)        
+        font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
+        font_family = list(font)
+        print("template_genarating.........................")
+        template=genarate_template(instance,template,prompt,font_family,background)        
         return JsonResponse({"data":template})
     
-def genarate_template(instance,temp,bg_clr,style,prompt):
-    temp_height =int(temp.height)
-    temp_width = int(temp.width)
-    template=[]
-    text_grid,image_grid=grid_position(temp_width,temp_height)
-    print(len(text_grid),len(image_grid))
-    print(text_grid,image_grid)
-    for i in range(0,4):
-        temp={}
-        json_data={
-                "objects": [
-                image,
-                textbox,
-                # backgroundImage,
-                # path
-                ],
-                "version": "5.3.0",
-                "projectid": null,
-                "background": hardBoardColor,
-                "backgroundImage": backgroundHardboard,
-                "perPixelTargetFind": false
-            }    
-        data=copy.deepcopy(json_data) 
+from .template import jsonStructure
+def genarate_template(instance,template,prompt,font_family,bg_images):
+    temp_height =int(template.height)
+    temp_width = int(template.width)
+    template_data=[]
+    for i in range(0,5):
+        print(i)
+        text_grid,image_grid=grid_position(temp_width,temp_height)
+        temp={}   
+        data=copy.deepcopy(jsonStructure) 
 
+        """ backgroundImage  """
+        # bg_images=bg_images.first()
+        # bg_images=bg_images.pop(random.randint(0,(len(bg_images)-1)))
+        backgroundImage =random_background_image(template,bg_images)
+        data.get("objects").append(backgroundImage)
+
+        print("j")
         """  Image 0 """
+        image=genarate_image(instance,image_grid,template)
+        data.get("objects").append(image)
+
         # change image attributes
         # for key, value in style[0]["image"][0].items():
         #             data["objects"][0][key] = value
-        data["objects"][0]["src"]=HOST_NAME+instance.image.url
-        data["objects"][0]["name"]="Image"+str(instance.celery_id)
-        pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
-        x=(temp_width/5)*3
-        y=(temp_height/5)*3
-        if int(instance.width) > int(instance.height):
-            data["objects"][0]["scaleX"]=(x/int(instance.width))
-        elif int(instance.width) < int(instance.height):
-            data["objects"][0]["scaleY"]= (y/int(instance.height))
-        else:
-            data["objects"][0]["scaleX"]= (x/int(instance.width))
-            data["objects"][0]["scaleY"]= (y/int(instance.height))
-
-        print(data["objects"][0]["scaleX"])
- 
-        data["objects"][0]["top"]= image_grid[0][0]
-        data["objects"][0]["left"]= image_grid[0][0]
-        
 
         """  Text 1  """
+        textbox=genarate_text(font_family,prompt,text_grid,template)
+        data.get("objects").append(textbox)
         # change text attributes
         # for key, value in style[i]["text"][0].items():
         #             data["objects"][0][key] = value
-        data["objects"][1]["fill"] =generate_random_rgba()
-
-        # data["objects"][1]["fontStyle"] =
-        # data["objects"][1]["fontFamily"] =
-        # data["objects"][1]["fontWeight"] =
-        data["objects"][1]["textLines"]=prompt.capitalize()
-        data["objects"][1]["text"]=prompt.capitalize()
-        data["objects"][1]["width"]=500
-        data["objects"][1]["height"]=90
-
-        pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
-        data["objects"][1]["top"]= pos[0]
-        data["objects"][1]["left"]= pos[1]
         
-        
-
-        """ backgroundImage  """
+        """  backgroundboard   """
         random_color= random.randint(0, 19)
-        data["backgroundImage"]["fill"]=generate_random_rgba()
+        # data["backgroundImage"]["fill"]=generate_random_rgba()
         data["backgroundImage"]["width"]=int(temp_width)
         data["backgroundImage"]["height"]=int(temp_height)
-
-
-        print(type(data))
-        """  backgroundboard   """
+        print(data)
         # thumnail creation
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
 
         temp={"json":data,"thumb":thumbnail}
-        template.append(temp)
-    return template
+        template_data.append(temp)
+    return template_data
