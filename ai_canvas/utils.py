@@ -14,6 +14,8 @@ import shutil
 import io,re
 from PIL import Image ,ImageFont
 
+# HOST_NAME="http://localhost:8091/"
+
 
  
 
