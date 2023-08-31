@@ -967,7 +967,7 @@ def DesignerDownload(request):
     file_format = file_format.replace(" ","-") if file_format else ""
     # format_ext = 'png' if file_format == 'png-transparent' else file_format
     format_ext = format_extension_change(file_format=file_format)
-    print(file_format)
+    print("-------------",file_format)
     canvas_src_json=canvas.canvas_json_src.all()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
@@ -992,11 +992,13 @@ def DesignerDownload(request):
                     if file_format != 'pdf-standard':
                         archive.writestr(path,values)
                 if file_format == 'pdf-standard':
-                    print(file_format)
+                    print("---------------",file_format)
                     output_buffer=io.BytesIO()
                     paths_img_obj[0].save(output_buffer,'PDF',save_all=True, append_images=paths_img_obj[1:])
-                    print(path)
-                    archive.writestr(path,output_buffer)
+
+                #     archive.writestr(path,paths_img_obj)
+                # else:
+                archive.writestr(path,output_buffer)
 
                 for tar_lang in canvas_trans_inst:
                     tar_jsons=canvas_trans_inst.get(target_language=tar_lang.target_language).canvas_json_tar.filter(page_no__in=page_number_list)
