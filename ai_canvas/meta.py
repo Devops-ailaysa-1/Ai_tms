@@ -2313,3 +2313,9 @@ default_style =[
 }
 
 ]
+
+font={
+    "fontfamily":[],
+    "fontStyle":[],
+    "fontWeight":["bold","italic","normal"]
+}
