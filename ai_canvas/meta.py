@@ -2320,6 +2320,7 @@ font={
     "fontWeight":["bold","italic","normal"]
 }
 
+# custom styles 
 style=[
     {
         "template_type_id": 12,
@@ -2928,6 +2929,592 @@ style=[
                 "scaleY": 18.71,
                 "angle": 0,
                 "path": "M27.4618 0.580688C12.5488 0.580688 0.461761 12.6677 0.461761 27.5807C0.461761 42.4936 12.5488 54.5807 27.4618 54.5807C42.3747 54.5807 54.4618 42.4936 54.4618 27.5807C54.4618 12.6677 42.3747 0.580688 27.4618 0.580688Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 785.5,
+                "left": 160.43,
+                "textLines": 1,
+                "height": 114.13,
+                "width": 796.98,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "101",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 9.08,
+                "left": 29.21,
+                "height": 1400,
+                "width": 1326.33,
+                "scaleX": 0.44,
+                "scaleY": 0.44,
+                "angle": 0,
+                "cropX": 531.4156368949684,
+                "cropY": 1.2984757737762966e-13,
+                "clipPath": "M0 0H34C42.8366 0 50 7.16344 50 16V50H16C7.16344 50 0 42.8366 0 34V0Z",
+                "clipPathLeft": -0.5,
+                "clipPathTop": -0.5,
+                "clipPathScaleX": 26.44,
+                "clipPathScaleY": 26.44
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.05,
+                "scaleY": 1.05,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": -70.04423508299686,
+                "left": -51.17480359453555,
+                "height": 54.000012,
+                "width": 54.000038999999994,
+                "scaleX": 4.586418733882256,
+                "scaleY": 4.586418733882256,
+                "angle": 0,
+                "path": "M27.4618 0.580688C12.5488 0.580688 0.461761 12.6677 0.461761 27.5807C0.461761 42.4936 12.5488 54.5807 27.4618 54.5807C42.3747 54.5807 54.4618 42.4936 54.4618 27.5807C54.4618 12.6677 42.3747 0.580688 27.4618 0.580688Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 291.95,
+                "left": 118.61,
+                "textLines": 1,
+                "height": 49.72,
+                "width": 397,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "44",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 64.49,
+                "left": 64.79,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 0.49,
+                "scaleY": 0.49,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": "M14.2169 39.5827C13.284 39.5106 12.4987 39.5034 11.8611 39.5575C9.81155 39.734 10.4239 36.9307 10.4167 35.6911C10.4167 35.5722 10.3735 35.4677 10.287 35.3848C8.48599 33.6661 6.17705 31.6662 5.13244 29.652C3.24134 26.0018 3.72402 21.3175 6.54086 18.2799C7.14241 17.6314 8.38873 16.381 10.2834 14.5253C10.3699 14.4388 10.4131 14.3343 10.4167 14.2154C10.4239 13.4695 10.2366 11.4193 10.5968 10.8463C10.9786 10.2338 13.5109 10.432 14.1953 10.3995C14.3142 10.3959 14.415 10.3527 14.4979 10.2698C17.6749 7.14214 19.9406 4.01807 24.9187 4.00006C29.7671 3.98564 31.9644 6.7782 35.3684 10.2482C35.4548 10.3347 35.5593 10.3815 35.6854 10.3851L38.7543 10.4824C39.1722 10.4932 39.5036 10.8355 39.5036 11.2535V14.1686C39.5072 14.2947 39.5504 14.4028 39.6405 14.4929C41.971 16.8855 44.8923 19.1087 45.6884 22.5499C47.1184 28.7259 43.3722 31.6482 39.6369 35.529C39.5504 35.619 39.5072 35.7235 39.5072 35.8497V38.8152C39.5072 39.2188 39.1794 39.5466 38.776 39.5466H35.7934C35.6602 39.5503 35.5485 39.5971 35.4548 39.6908C33.8267 41.3015 32.0833 43.3265 30.311 44.4147C25.9309 47.0992 21.277 46.256 17.6317 42.7788C16.5799 41.7771 15.5461 40.761 14.5303 39.7268C14.4438 39.6403 14.3394 39.5935 14.2169 39.5827Z",
+                "clipPathLeft": 3.5,
+                "clipPathTop": 3.5,
+                "clipPathScaleX": 24.33,
+                "clipPathScaleY": 24.33
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": -270,
+                "left": 0,
+                "height": 1920,
+                "width": 1280,
+                "scaleX": 0.85,
+                "scaleY": 0.85,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": []
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 280.94,
+                "left": 567.15,
+                "textLines": 1,
+                "height": 59.88999999999999,
+                "width": 367.01,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "53",
+                "angle": 0
+            }
+        ],
+        "image": [],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.05,
+                "scaleY": 1.05,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 540,
+                "left": 701.18,
+                "height": 89.00004254759841,
+                "width": 84.999995888283,
+                "scaleX": 4.52,
+                "scaleY": 4.52,
+                "angle": 237.17,
+                "path": "M65.3656 7.59382C70.1775 13.2586 68.7606 20.7146 71.7217 27.1183C74.6829 33.3989 82.536 42.4678 84.14 50.1029C85.7439 57.8613 85.2301 63.2568 81.5287 72.1234C77.9506 80.8669 70.9178 89.241 62.898 88.9947C54.8782 88.8715 45.9947 80.128 35.5072 77.0493C25.0197 73.9706 13.0517 76.3104 6.63581 72.1234C0.219946 67.8132 -0.643726 56.9762 0.343329 47.3706C1.33039 37.7651 3.68147 33.0294 8.61674 27.1183C13.552 21.2072 22.7357 18.787 29.3983 13.9842C36.0609 9.18148 41.1063 0.708236 47.6455 0.0924969C54.1848 -0.523242 60.5537 1.92902 65.3656 7.59382Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 133.8,
+                "left": 94.39,
+                "textLines": 1,
+                "height": 96.05,
+                "width": 668.27,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "85",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 390.71,
+                "left": 290.7,
+                "height": 1274,
+                "width": 1920,
+                "scaleX": 0.29,
+                "scaleY": 0.29,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.05,
+                "scaleY": 1.05,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 849,
+                "left": 368.7,
+                "height": 54.99996,
+                "width": 55.000045,
+                "scaleX": 7.16,
+                "scaleY": 1.55,
+                "angle": 0,
+                "path": "M55.1165 0.70874L0.116455 0.70874L0.116455 55.7087L55.1165 55.7087L55.1165 0.70874Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 926.39,
+                "left": 125.72,
+                "textLines": 1,
+                "height": 73.44999999999999,
+                "width": 447,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "65",
+                "angle": 0
+            }
+        ],
+        "image": [],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 2048,
+                "width": 2048,
+                "scaleX": 0.53,
+                "scaleY": 0.53,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 0,
+                "left": 540,
+                "height": 170,
+                "width": 108,
+                "scaleX": 6.44,
+                "scaleY": 6.44,
+                "angle": 0,
+                "path": "M108 0L37.7143 0C58.0541 4.73204 70.9322 24.7941 66.7655 45.2572L58.3012 86.8262C51.253 121.441 30.1348 151.568 0 170L108 170L108 0Z"
+            },
+            {
+                "type": "path",
+                "top": 876.24,
+                "left": -56.74,
+                "height": 54.99996,
+                "width": 55.000045,
+                "scaleX": 17.4,
+                "scaleY": 4.12,
+                "angle": 0,
+                "path": "M55.1165 0.70874L0.116455 0.70874L0.116455 55.7087L55.1165 55.7087L55.1165 0.70874Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 286.83,
+                "left": 598.43,
+                "textLines": 1,
+                "height": 62.14999999999999,
+                "width": 376.48,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "55",
+                "angle": 0
+            }
+        ],
+        "image": [],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.05,
+                "scaleY": 1.05,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 115.87,
+                "left": 591.91,
+                "height": 54.000012,
+                "width": 54.000038999999994,
+                "scaleX": 7.21,
+                "scaleY": 7.21,
+                "angle": 0,
+                "path": "M27.4618 0.580688C12.5488 0.580688 0.461761 12.6677 0.461761 27.5807C0.461761 42.4936 12.5488 54.5807 27.4618 54.5807C42.3747 54.5807 54.4618 42.4936 54.4618 27.5807C54.4618 12.6677 42.3747 0.580688 27.4618 0.580688Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 728.8074680958016,
+                "left": 316.915191025,
+                "textLines": 1,
+                "height": 55.37,
+                "width": 445,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "49",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 244.22,
+                "left": 327.45,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 0.42,
+                "scaleY": 0.42,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.0596557452893673,
+                "scaleY": 1.0596557452893673,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 224.82,
+                "left": 305.94,
+                "height": 54.99996,
+                "width": 55.000045,
+                "scaleX": 8.49,
+                "scaleY": 10.73,
+                "angle": 0,
+                "path": "M55.1165 0.70874L0.116455 0.70874L0.116455 55.7087L55.1165 55.7087L55.1165 0.70874Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 728.8074680958016,
+                "left": 316.915191025,
+                "textLines": 1,
+                "height": 55.37,
+                "width": 445,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "49",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 244.22,
+                "left": 327.45,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 0.42,
+                "scaleY": 0.42,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.0596557452893673,
+                "scaleY": 1.0596557452893673,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": 224.82,
+                "left": 305.94,
+                "height": 54.99996,
+                "width": 55.000045,
+                "scaleX": 8.49,
+                "scaleY": 10.73,
+                "angle": 0,
+                "path": "M55.1165 0.70874L0.116455 0.70874L0.116455 55.7087L55.1165 55.7087L55.1165 0.70874Z"
+            }
+        ]
+    },
+    {
+        "height": 1080,
+        "width": 1080,
+        "textbox": [
+            {
+                "type": "textbox",
+                "top": 197.7,
+                "left": 248.04,
+                "textLines": 1,
+                "height": 111.86999999999999,
+                "width": 678.6,
+                "scaleX": 1,
+                "scaleY": 1,
+                "fontSize": "99",
+                "angle": 0
+            }
+        ],
+        "image": [
+            {
+                "type": "image",
+                "top": 501.27,
+                "left": 496.2,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 0.57,
+                "scaleY": 0.57,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 7.674138978018373e-14,
+                "clipPath": "M0 0H34C42.8366 0 50 7.16344 50 16V50H16C7.16344 50 0 42.8366 0 34V0Z",
+                "clipPathLeft": -0.5,
+                "clipPathTop": -0.5,
+                "clipPathScaleX": 20.43,
+                "clipPathScaleY": 20.43
+            }
+        ],
+        "backgroundImage": [
+            {
+                "type": "image",
+                "top": 0,
+                "left": 0,
+                "height": 1024,
+                "width": 1024,
+                "scaleX": 1.06320449192463,
+                "scaleY": 1.06320449192463,
+                "angle": 0,
+                "cropX": 0,
+                "cropY": 0,
+                "clipPath": null,
+                "clipPathLeft": null,
+                "clipPathTop": null,
+                "clipPathScaleX": null,
+                "clipPathScaleY": null
+            }
+        ],
+        "others": [],
+        "path": [
+            {
+                "type": "path",
+                "top": -27.67,
+                "left": -7.43,
+                "height": 134,
+                "width": 118,
+                "scaleX": 4.32,
+                "scaleY": 4.32,
+                "angle": 0,
+                "path": "M0 0L0 134C0 134 7.0651 91.7421 29.5 74.8824C53.1 57.1471 25.1064 29.7778 52.7234 27.2963C110.718 22.0853 118 0 118 0L0 0Z"
+            },
+            {
+                "type": "path",
+                "top": -4.05,
+                "left": 839.18,
+                "height": 134,
+                "width": 118,
+                "scaleX": 2.1,
+                "scaleY": 2.1,
+                "angle": 0,
+                "path": "M118 0L118 134C118 134 110.935 91.7421 88.5 74.8824C64.9 57.1471 92.8936 29.7778 65.2766 27.2963C7.28193 22.0853 0 0 0 0L118 0Z"
             }
         ]
     }
