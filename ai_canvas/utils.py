@@ -409,8 +409,8 @@ def genarate_image(instance,image_grid,template,attr):
     instance.backround_removal_image=rem_img
     instance.save()
     img["brs"]=2
-    img["bgMask"]=HOST_NAME+instance.mask.url
-    img["src"]=HOST_NAME+instance.backround_removal_image.url
+    # img["bgMask"]=HOST_NAME+instance.mask.url
+    # img["src"]=HOST_NAME+instance.backround_removal_image.url
     # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
@@ -496,13 +496,6 @@ def genarate_clip(grid,attr):
     # custom
     custom_style=attr["path"]
     clip=custom_attr(clip,custom_style)
-    # clip["fill"]==color[random.randint(0,len(color)-1)]["path"]
-
-    # rand=random.randint(0,len(style)-1)
-    # obj=style[rand]
-    # for key, value in obj.items():
-    #     clip[key]=obj[key]
-
     return clip
 
 def custom_attr(instance,attr): #list attr
