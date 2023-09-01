@@ -385,7 +385,7 @@ from ai_canvas.meta import *
 from ai_staff.models import FontFamily,FontData
 from ai_canvas.models import PromptEngine
 
-def genarate_image(instance,image_grid,template):
+def genarate_image(instance,image_grid,template,attr):
     from ai_imagetranslation.utils import background_remove
     # print(instance)
     temp_height =int(template.height)
@@ -396,19 +396,21 @@ def genarate_image(instance,image_grid,template):
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
     img["sourceImage"]=HOST_NAME+instance.image.url
-    # img["sourceImage"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
-    # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"  #removed image
-
+   
     """mask"""
+    if instance.mask==None or instance.backround_removal_image ==None:
+        rem_img=background_remove(instance)
+        instance.backround_removal_image=rem_img
+        instance.save()
+    
     rem_img=background_remove(instance)
-    img["src"]=HOST_NAME+instance.mask.url
     instance.backround_removal_image=rem_img
     instance.save()
     print("------------------->0",rem_img)
     print(type(rem_img))
     img["brs"]=2
-    img["bgMask"]=HOST_NAME+instance.backround_removal_image.url
-    # img["bgMask"]="https://aicanvas.ailaysa.com/media/prompt-mask-image/mask_789yEnM.png"  #blackand white
+    img["bgMask"]=HOST_NAME+instance.mask.url
+    img["src"]=HOST_NAME+instance.backround_removal_image.url
     # img["src"]=HOST_NAME+instance.mask.url
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
@@ -416,39 +418,39 @@ def genarate_image(instance,image_grid,template):
         scale=(x/int(instance.width))
     else:
         scale=(y/int(instance.height))
+
+    custom_style=attr["image"]
+    img=custom_attr(img,custom_style)
+
+
     img["scaleX"]=img["scaleY"]=scale/2
     img["oldScaleX"]=img["oldScaleY"]=scale/2
-
     img["width"]=img["oldWidth"]=instance.width
     img["height"]=img["oldHeight"]=instance.height
     # img["top"]=image_grid[0][0]
     # img["left"]=image_grid[0][1]
 
-    # random
-    img["top"]=pos[0]
-    img["left"]=pos[1]
 
     return img
 
-def genarate_text(font_family,instance,text_grid,template):
+def genarate_text(font_family,instance,text_grid,template,attr):
         temp_height =int(template.height)
         temp_width = int(template.width)
         text=copy.deepcopy(textbox)
         text["fill"] =generate_random_rgba()
-        # text["fontStyle"] =
         text["fontFamily"] =font_family[random.randint(0,(len(font_family)-1))]
         text["fontWeight"] =font["fontWeight"][random.randint(0,2)]
-        # textline=prompt.capitalize().split(" ")
-        # text=prompt.split(" ")
-        text["textLines"]=instance.prompt
-        text["text"]=instance.prompt.capitalize()
         text["width"]=500
         text["height"]=90
         text["fontSize"]=int(temp_width/20)                  #random.randint(70,100)
-
         pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
         text["top"]= pos[0]
         text["left"]= pos[1]
+
+        custom_style=attr["textbox"]
+        text=custom_attr(text,custom_style)
+        text["textLines"]=instance.prompt
+        text["text"]=instance.prompt.capitalize()
         return text
 
 def random_background_image(template,instance):
@@ -486,16 +488,32 @@ def random_background_image(template,instance):
 
     return bg_image
 
-def genarate_clip(grid):
+def genarate_clip(grid,attr):
     pos= grid.pop(random.randint(0,(len(grid)-1)))
+    # standard
     clip=copy.deepcopy(path)
-    clip["fill"] =generate_random_rgba()
-    clip["left"]=pos[1]
-    clip["top"]=pos[0]
-    clip["width"]= random.randint(300,700)
-    clip["height"]= random.randint(50,700)
+    # clip["fill"] =generate_random_rgba()
+    # clip["left"]=pos[1]
+    # clip["top"]=pos[0]
+    # clip["width"]= random.randint(300,700)
+    # clip["height"]= random.randint(50,700)
+    # custom
+    custom_style=attr["path"]
+    clip=custom_attr(clip,custom_style)
+    # rand=random.randint(0,len(style)-1)
+    # obj=style[rand]
+    # for key, value in obj.items():
+    #     clip[key]=obj[key]
 
     return clip
+
+def custom_attr(instance,attr):
+    rand=random.randint(0,len(attr)-1)
+    obj=attr[rand]
+    for key, value in obj.items():
+        instance[key]=obj[key]
+    return instance
+
 
 def background_scaling(canvas_width, canvas_height, img_width, img_height):
     scaleX, scaleY, left, top = 0, 0, 0, 0
