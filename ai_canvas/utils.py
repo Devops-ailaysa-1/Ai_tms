@@ -397,7 +397,7 @@ def genarate_image(instance,image_grid,template,attr):
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
     img["sourceImage"]=HOST_NAME+instance.image.url
-   
+    
     """mask"""
     if instance.mask==None or instance.backround_removal_image ==None:
         print("masking...........................")
@@ -408,9 +408,11 @@ def genarate_image(instance,image_grid,template,attr):
     rem_img=background_remove(instance)
     instance.backround_removal_image=rem_img
     instance.save()
-    img["brs"]=2
+    img["brs"]=1
     # img["bgMask"]=HOST_NAME+instance.mask.url
     # img["src"]=HOST_NAME+instance.backround_removal_image.url
+
+    img["src"]=HOST_NAME+instance.image.url
     # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
