@@ -410,8 +410,8 @@ def genarate_image(instance,image_grid,template,attr):
     instance.save()
     img["brs"]=2
     img["bgMask"]=HOST_NAME+instance.mask.url
-    # img["src"]=HOST_NAME+instance.backround_removal_image.url
-    img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+    img["src"]=HOST_NAME+instance.backround_removal_image.url
+    # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
     if instance.width <= instance.height:
