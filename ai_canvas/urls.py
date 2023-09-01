@@ -24,6 +24,7 @@ router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV
 router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
 router.register(r'emoji-noto',api_views.EmojiCategoryViewset,basename='emoji-list')
 router.register(r'template-engine',api_views.TemplateEngineGenerateViewset,basename='template-generation')
+router.register(r'custom-template',api_views.CutomTemplateViewset,basename='custom-template')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
