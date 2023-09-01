@@ -1028,7 +1028,8 @@ def get_proz_lang_pair(source,target):
 def get_native_langs(langs):
     native_langs=[]
     for i in langs:
-        lan = ProzLanguagesCode.objects.get(language_code = i).language.language
+        obj = ProzLanguagesCode.objects.filter(language_code = i)
+        lan = obj.first().language.language if obj else None
         native_langs.append(lan)
     return native_langs
 
@@ -1146,6 +1147,10 @@ class ProzVendorListView(generics.ListAPIView):
 
 
 
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def proz_send_message(request):
+#     message = "testing"
 
 # def get_proz_lang_pair(source,target):
 #     source_lang = Languages.objects.get(id=source).lang.first().language_code
