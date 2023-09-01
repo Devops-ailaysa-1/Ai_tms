@@ -1109,12 +1109,11 @@ class MT_RawAndTM_View(views.APIView):
 
         proj = doc.job.project
         tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
-
+        #print("TmX Files--------------->",tmx_files)
         tm_lists = []
 
         if tmx_files:
             tm_lists = tmx_read_with_target(tmx_files,doc.job)
-            #print("TmLists--------------->",tm_lists)
         match_results = tm_fetch_extract(seg_source,
                                         tm_lists,
                                         scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
@@ -1263,6 +1262,7 @@ class MT_RawAndTM_View(views.APIView):
             if split_check(segment_id):
 
                 tm_data = self.get_tm_data(request, segment_id)
+                print("Tm data-------->",tm_data)
             
                 if tm_data and (mt_uc == 'false'):
                     return Response({**tm_only, "tm":tm_data}, status = 200 )

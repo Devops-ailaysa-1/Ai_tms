@@ -65,7 +65,7 @@ urlpatterns += [
      path('ai_customize/',api_views.AiCustomizeViewset.as_view({'get':'list'}),name='ai-customize'),
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-     #path('insert',views.Bulk_insert)
+     path('insert',views.Bulk_insert)
      
 
 
