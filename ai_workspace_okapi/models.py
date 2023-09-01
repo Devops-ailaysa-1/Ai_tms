@@ -733,12 +733,9 @@ class ChoiceListSelected(models.Model):
 
 
 class SegmentDiff(models.Model):
-    # segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
     seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
-    sentense_diff_result=models.CharField(max_length=3000,null=True,blank=True)
+    sentense_diff_result=models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
-    # edited_at=models.DateTimeField(auto_now=True)
-    # status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,related_name="segmentdiff_status")
     save_type=models.CharField(max_length=100,blank=True,null=True)
 
     def __str__(self) -> str:

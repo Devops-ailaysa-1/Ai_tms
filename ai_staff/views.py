@@ -11,8 +11,8 @@ from django.shortcuts import render
 from tablib import Dataset
 
 from .forms import UploadFileForm
-from .models import (AiUserType, Billingunits, ContentTypes, Countries,
-                     Currencies, Languages, LanguagesLocale, MtpeEngines,
+from .models import (AiUserType, Billingunits, ContentTypes, Countries,ProzExpertize,
+                     Currencies, Languages, LanguagesLocale, MtpeEngines,ProzLanguagesCode,
                      ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
                      LanguageMetaDetails, OldVendorPasswords, CurrencyBasedOnCountry,MTLanguageSupport,TranscribeSupportedPunctuation)
 from ai_auth.models import AiUser
@@ -31,9 +31,9 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                value = TranscribeSupportedPunctuation(
-                            language_locale_id = data[1],
-                            mtpe_engines_id =data[2],
+                value = ProzLanguagesCode(
+                            language_id = data[1],
+                            language_code =data[2],
                             #speech_to_text = data[2],
                             #text_to_speech = data[3],
                             #translate = data[4],

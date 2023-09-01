@@ -810,7 +810,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             #project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
-                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)),queue='high-priority' )
             return Response(serlzr.data, status=201)
         return Response(serlzr.errors, status=409)
 
@@ -1420,7 +1420,7 @@ class ProjectAnalysisProperty(APIView):
                         #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
-                        write_doc_json_file.apply_async((task_write_data, task.id))
+                        write_doc_json_file.apply_async((task_write_data, task.id),queue='high-priority')
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),
@@ -1515,7 +1515,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         req_copy.method = "DELETE"
 
         inst = Task.objects.get(id=task)
-        authorize(request, resource=inst, actor=self.request.user, action="update")
+        #authorize(request, resource=inst, actor=self.request.user, action="update")
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -1539,7 +1539,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             serializer.save()
             if request.POST.get('account_raw_count'):
                 print("##################RAw")
-                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),)
+                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),queue='medium-priority')
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # except:
@@ -1661,7 +1661,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             
         task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
         if task_assgn_objs.count() >0 :
-            weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
+            weighted_count_update.apply_async((receiver,sender.id,assignment_id),queue='medium-priority')
             # task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
             # print("task_assgn_objs assignment_id workspace --->>",assignment_id)
             # print("task_assgn_objs workspace --->>",task_assgn_objs)
@@ -2438,8 +2438,8 @@ def transcribe_file(request):
                 print("State----------------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
-                elif (not ins) or state == 'FAILURE':#need to revert credits
-                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
+                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':#need to revert credits
+                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),queue='high-priority')
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)
                 elif state == 'SUCCESS':
@@ -2618,12 +2618,12 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             print("State--------------->",state)
             if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
-            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
                 if state == "FAILURE":
                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
                     user_credit.credits_left = user_credit.credits_left + consumable_credits
                     user_credit.save()
-                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
+                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
         else:
@@ -4217,8 +4217,8 @@ def project_word_char_count(request):
         print("State-------->",state)
         if state == 'STARTED' or state == 'PENDING':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-        elif state =='None' or state == 'FAILURE':
-            celery_task = project_analysis_property.apply_async((pr_obj.id,), )
+        elif state =='None' or state == 'FAILURE' or state == 'REVOKED':
+            celery_task = project_analysis_property.apply_async((pr_obj.id,), queue='high-priority')
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
@@ -4243,7 +4243,7 @@ def project_word_char_count(request):
         else:
             #from .api_views import ProjectAnalysisProperty
             try:
-                celery_task = project_analysis_property.apply_async((pr_obj_id,), )
+                celery_task = project_analysis_property.apply_async((pr_obj_id,), queue='high-priority')
                 res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(pr_obj_id)
 
@@ -4270,10 +4270,13 @@ def stop_task(request):
     task = AsyncResult(task_id)
     print("TT---------->",task.state)
     if task.state == 'STARTED':
-        app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+        app.control.revoke(task_id, terminate=True, signal='SIGKILL')
+        #task.set(status="FAILURE")
+        print("TT After---------->",task.state)
         return HttpResponse('Task has been stopped.') 
     elif task.state == 'PENDING':
         app.control.revoke(task_id)
+        #task.set(status="FAILURE")
         return HttpResponse('Task has been revoked.')
     else:
         return HttpResponse('Task is already running or has completed.')
