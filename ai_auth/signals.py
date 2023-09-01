@@ -191,7 +191,7 @@ def password_changed_handler(request, user,instance, **kwargs):
     try:
         customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
-        cust = Customer.get_or_create(subscriber=user,djstripe_owner_account=default_djstripe_owner)
+        cust = Customer.get_or_create(subscriber=user)
         customer = cust[0]
     stripe.api_key = api_key
     # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
