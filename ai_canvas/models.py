@@ -282,7 +282,7 @@ class ImageListCategory(models.Model):
     # class Meta:
     #     constraints = [
     #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
-    
+
 class PromptCategory(models.Model):
     name=models.CharField(max_length=256)
 
@@ -298,7 +298,7 @@ class TemplateBackground(models.Model):
 class PromptEngine(models.Model):
     prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_category', on_delete=models.CASCADE)
     prompt=models.CharField(max_length=256)
-    key_words=models.CharField(max_length=200,null=True,blank=True)
+    key_words=models.TextField(blank=True, null=True)
     image=models.FileField(upload_to="prompt-image",blank=True,null=True)
     mask=models.FileField(upload_to="prompt-mask-image",blank=True,null=True)
     height=models.IntegerField(blank=True,null=True)
