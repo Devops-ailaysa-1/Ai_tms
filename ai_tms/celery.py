@@ -24,21 +24,6 @@ app.conf.task_queues = (
     Queue('default', Exchange('default'), routing_key='default.priority'),
 )
 
-# app.conf.task_queues = (
-#     Queue('high-priority', routing_key='high.priority'),
-#     Queue('medium-priority', routing_key='medium.priority'),
-#     Queue('low-priority', routing_key='low.priority'),
-#     Queue('default', routing_key='default'),
-# )
-
-# app.conf.task_routes = {
-#     'high_priority_task': {'queue': 'high-priority'},
-#     'medium_priority_task': {'queue': 'medium-priority'},
-#     'low_priority_task': {'queue': 'low-priority'},
-#     'default_priority_task': {'queue': 'default'},
-
-# }
-
 
 from celery.schedules import crontab
 
@@ -59,6 +44,7 @@ app.conf.beat_schedule = {
         'task': 'ai_auth.tasks.renewal_list',
         'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
         'args': (),
+        'options': {'queue': 'default'},
     },
     'run-every': {
         'task': 'ai_auth.tasks.delete_hired_editors',

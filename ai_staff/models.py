@@ -690,3 +690,10 @@ class DesignShape(models.Model):
         return self.shape_name
 
  
+class ProzLanguagesCode(models.Model):
+    language = models.ForeignKey(Languages, related_name='lang', on_delete=models.CASCADE)    
+    language_code = models.CharField(max_length=191, blank=True, null=True)
+
+class ProzExpertize(models.Model):
+    subject_field = models.ForeignKey(SubjectFields, related_name='sub_field', on_delete=models.CASCADE)    
+    expertize_ids = models.TextField(blank=True, null=True)
