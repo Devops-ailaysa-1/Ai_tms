@@ -620,10 +620,11 @@ bg_color =[
 
 jsonStructure ={
     "objects": [
-    #    textbox,
-    #    image,
-    #    backgroundImage,
-    #    path
+    #  backgroundImage,
+    #  path
+    #  image,
+    #  textbox, 
+    
     ],
     "version": "5.3.0",
     "projectid": null,

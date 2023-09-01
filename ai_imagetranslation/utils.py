@@ -303,7 +303,10 @@ def post_process(mask: np.ndarray) -> np.ndarray:
 
 
 def background_remove(instance):
-    image_path=instance.original_image.path
+    try:
+        image_path=instance.original_image.path
+    except:
+        image_path=instance.image.path
     headers={}
     data={}
     files=[('image',('',open(image_path,'rb'),'image/jpeg'))]

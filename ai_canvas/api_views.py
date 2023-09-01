@@ -29,7 +29,7 @@ from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
-from ai_canvas.utils import convert_image_url_to_file,paginate_items,genarate_image
+from ai_canvas.utils import convert_image_url_to_file,paginate_items,genarate_image,genarate_clip,clip_position
 from ai_canvas.utils import export_download
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
@@ -1261,10 +1261,12 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         return Response (serializers.data)
     
     def create(self,request):
+        limit=int(request.POST.get("limit",10))
         # prompt=request.POST.get("prompt",None)
         template_id=request.POST.get("template",None)
         template=get_object_or_404(SocialMediaSize,id=template_id)
         prompt_id=request.POST.get("prompt_id",None)
+        
         sdstylecategoty=1
         image_resolution=request.POST.get("image_resolution",None)
         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
@@ -1295,29 +1297,43 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
         instance=list(instance)
         background=TemplateBackground.objects.filter(prompt_category__id=prompt_id)
-        bg_images=list(background)
+        back_ground=list(background)
         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
         font_family = list(font)
-        template=genarate_template(instance,template,font_family,bg_images)        
+        template=genarate_template(limit,prompt_id,instance,template,font_family,back_ground)        
         return JsonResponse({"data":template})
     
 from ai_canvas.template import jsonStructure
-def genarate_template(instance,template,font_family,bg_images):
+def genarate_template(limit,prompt_id,img_instance,template,font_family,back_ground):
     temp_height =int(template.height)
     temp_width = int(template.width)
+    rows=5
+    cols=5
     template_data=[]
-    for i in range(0,5):
-        text_grid,image_grid=grid_position(temp_width,temp_height)
+    bg_images=back_ground
+    instance=img_instance
+    
+    for i in range(0,limit):
+        text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
         temp={}   
         data=copy.deepcopy(jsonStructure) 
 
         """ backgroundImage  """
+        if len(bg_images)<1:
+            bg_images=list(TemplateBackground.objects.filter(prompt_category__id=prompt_id))
         # bg_images=bg_images.first()
         ins=bg_images.pop(random.randint(0,(len(bg_images)-1)))
         backgroundImage =random_background_image(template,ins)
         data.get("objects").append(backgroundImage)
 
+        """clip path"""
+        grid=clip_position(temp_width,temp_height,rows,cols)
+        clip=genarate_clip(grid)
+        data.get("objects").append(clip)
+
         """  Image 0 """
+        if len(instance)<1:
+            instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
         inst=instance.pop(random.randint(0,(len(instance)-1)))
         image=genarate_image(inst,image_grid,template)
         data.get("objects").append(image)
@@ -1331,10 +1347,40 @@ def genarate_template(instance,template,font_family,bg_images):
         # data["backgroundImage"]["fill"]=generate_random_rgba()
         data["backgroundImage"]["width"]=int(temp_width)
         data["backgroundImage"]["height"]=int(temp_height)
-        # print(data)
+
         # thumnail creation
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
         temp={"json":data,"thumb":thumbnail}
         template_data.append(temp)
     return template_data
+
+from ai_canvas.serializers import TemplateBackgroundserializer,PromptEngineserializer,PromptCategoryserializer
+
+class CutomTemplateViewset(viewsets.ModelViewSet):
+    # serializer_class = TemplateBackgroundserializer
+
+    # def get_serializer_class(self,type=True):
+    #     if type:
+    #         return TemplateBackgroundserializer
+    #     return PromptEngineserializer
+
+    def create(self,request):
+        prompt_id=request.POST.get("prompt_category",None)
+        bg_img=request.POST.get("bg_image",None)
+        prompt=request.POST.get("prompt",None)
+        key_words=request.POST.get("key_words",None)
+        image=request.POST.get("image")
+        if bg_img :
+            serializer =TemplateBackgroundserializer(data={"prompt_category": prompt_id,"bg_image":bg_img}, context={'request':request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=400)
+        else:
+            print("inside img>>>>>>>>>>>>>>")
+            serializer =PromptEngineserializer(data={"prompt_category": prompt_id,"prompt":prompt,"key_words":key_words,"image":image}, context={'request':request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=400)

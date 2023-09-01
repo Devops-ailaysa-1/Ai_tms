@@ -14,7 +14,7 @@ import shutil
 import io,re
 from PIL import Image ,ImageFont
 
-# HOST_NAME="http://localhost:8091/"
+# HOST_NAME="http://localhost:8091"
 
 
  
@@ -344,9 +344,7 @@ def create_thumbnail(json_str,formats):
         return ValidationError("error in node server")
     
 
-def grid_position(width, height):
-    rows=5
-    cols=5
+def grid_position(width, height,rows,cols):
     cell_width = width // rows
     cell_height = height // cols
     text= []
@@ -368,36 +366,68 @@ def grid_position(width, height):
                 text.append(grid1)
     return text,image
 
+def clip_position(width, height,rows,cols):
+    cell_width = width // rows
+    cell_height = height // cols
+    co_oridination = []
+    for row in range(rows):
+        for col in range(cols):
+            grid = []
+            grid.append(row * cell_height)
+            grid.append(col * cell_width)
+            co_oridination.append(grid)
+    return co_oridination
 
-from .template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
+
+from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
 import random
-from .meta import *
+from ai_canvas.meta import *
 from ai_staff.models import FontFamily,FontData
+from ai_canvas.models import PromptEngine
 
 def genarate_image(instance,image_grid,template):
-    print(instance)
+    from ai_imagetranslation.utils import background_remove
+    # print(instance)
     temp_height =int(template.height)
     temp_width = int(template.width)
     x=temp_width*3/4
     y=temp_height*3/4
-   
+    # instance=PromptEngine.objects.filter(id=19).first()
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
-    img["src"]=HOST_NAME+instance.image.url
+    img["sourceImage"]=HOST_NAME+instance.image.url
+    # img["sourceImage"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
+    # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"  #removed image
+
+    """mask"""
+    rem_img=background_remove(instance)
+    img["src"]=HOST_NAME+instance.mask.url
+    instance.backround_removal_image=rem_img
+    instance.save()
+    print("------------------->0",rem_img)
+    print(type(rem_img))
+    img["brs"]=2
+    img["bgMask"]=HOST_NAME+instance.backround_removal_image.url
+    # img["bgMask"]="https://aicanvas.ailaysa.com/media/prompt-mask-image/mask_789yEnM.png"  #blackand white
+    # img["src"]=HOST_NAME+instance.mask.url
     print("img---->", img["src"])
-    # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
     img["name"]="Image"+str(pos[0])+str(pos[1])
     if instance.width <= instance.height:
         scale=(x/int(instance.width))
     else:
         scale=(y/int(instance.height))
-    img["scaleX"]=img["scaleY"]=scale
-    img["oldScaleX"]=img["oldScaleY"]=scale
+    img["scaleX"]=img["scaleY"]=scale/2
+    img["oldScaleX"]=img["oldScaleY"]=scale/2
 
-    img["width"]=img["oldWidth"]=instance.height*scale
-    img["height"]=img["oldHeight"]=instance.width*scale
-    img["top"]=image_grid[0][0]
-    img["left"]=image_grid[0][1]
+    img["width"]=img["oldWidth"]=instance.width
+    img["height"]=img["oldHeight"]=instance.height
+    # img["top"]=image_grid[0][0]
+    # img["left"]=image_grid[0][1]
+
+    # random
+    img["top"]=pos[0]
+    img["left"]=pos[1]
+
     return img
 
 def genarate_text(font_family,instance,text_grid,template):
@@ -414,7 +444,7 @@ def genarate_text(font_family,instance,text_grid,template):
         text["text"]=instance.prompt.capitalize()
         text["width"]=500
         text["height"]=90
-        text["fontSize"]=random.randint(100,200)
+        text["fontSize"]=int(temp_width/20)                  #random.randint(70,100)
 
         pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
         text["top"]= pos[0]
@@ -426,6 +456,8 @@ def random_background_image(template,instance):
     temp_height =int(template.height)
     temp_width = int(template.width)
     bg_image["src"]=HOST_NAME+instance.bg_image.url
+    # for testing
+    # bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
     print(bg_image["src"])
     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
@@ -454,10 +486,21 @@ def random_background_image(template,instance):
 
     return bg_image
 
+def genarate_clip(grid):
+    pos= grid.pop(random.randint(0,(len(grid)-1)))
+    clip=copy.deepcopy(path)
+    clip["fill"] =generate_random_rgba()
+    clip["left"]=pos[1]
+    clip["top"]=pos[0]
+    clip["width"]= random.randint(300,700)
+    clip["height"]= random.randint(50,700)
 
-def background_scaling(canvas_width, canvas_height, image_width, image_height):
+    return clip
+
+def background_scaling(canvas_width, canvas_height, img_width, img_height):
     scaleX, scaleY, left, top = 0, 0, 0, 0
-    
+    image_width=int(img_width)
+    image_height=int(img_height)
     if canvas_width > canvas_height:  # Landscape image
         scaleX = canvas_width / image_width
         scaleY = canvas_width / image_width
