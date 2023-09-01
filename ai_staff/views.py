@@ -31,9 +31,9 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                value = ProzExpertize(
-                            subject_field_id = data[1],
-                            expertize_ids =data[2],
+                value = ProzLanguagesCode(
+                            language_id = data[1],
+                            language_code =data[2],
                             #speech_to_text = data[2],
                             #text_to_speech = data[3],
                             #translate = data[4],

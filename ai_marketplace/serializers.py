@@ -200,7 +200,7 @@ class CommonSPSerializer(serializers.Serializer):
     cv_file = serializers.URLField(allow_blank=True)
     country = serializers.CharField(required=False)
     year_of_experience = serializers.IntegerField(required=False)
-    legal_category = serializers.CharField(required=False)
+    legal_category = serializers.IntegerField(required=False)
     bio = serializers.CharField(required=False)
     vendor_subject = serializers.ListField(required=False)
     #vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
