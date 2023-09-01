@@ -1249,8 +1249,9 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     lookup_field = 'id'
 
 import time
-from .utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
+from ai_canvas.utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
 from ai_canvas.meta import style
+from ai_canvas.template import bg_color
 
 class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
@@ -1314,27 +1315,30 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
     template_data=[]
     bg_images=back_ground
     instance=img_instance
-    
+    color=copy.deepcopy(bg_color)
     for i in range(0,limit):
         text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
         temp={}   
         data=copy.deepcopy(jsonStructure) 
 
         obj_style=copy.deepcopy(style)
-        print(len(obj_style),"length of style>>>>>>>>>>>>")
         attr=obj_style[random.randint(0,(len(obj_style)-1))]
+
+        """color"""
+        rand_color=random.randint(0,len(color)-1)
 
         """ backgroundImage  """
         if len(bg_images)<1:
             bg_images=list(TemplateBackground.objects.filter(prompt_category__id=prompt_id))
         # bg_images=bg_images.first()
         ins=bg_images.pop(random.randint(0,(len(bg_images)-1)))
-        backgroundImage =random_background_image(template,ins)
+        backgroundImage =random_background_image(template,ins,attr)
         data.get("objects").append(backgroundImage)
 
         """clip path"""
         grid=clip_position(temp_width,temp_height,rows,cols)
         clip=genarate_clip(grid,attr)
+        clip["fill"]=color[rand_color]["path"]
         data.get("objects").append(clip)
 
         """  Image 0 """
@@ -1346,6 +1350,7 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
 
         """  Text 1  """
         textbox=genarate_text(font_family,inst,text_grid,template,attr)
+        textbox["fill"]=color[rand_color]["textbox"]
         data.get("objects").append(textbox)
 
         """  backgroundboard   """
@@ -1363,8 +1368,7 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
 
 from ai_canvas.serializers import TemplateBackgroundserializer,PromptEngineserializer,PromptCategoryserializer
 
-class CutomTemplateViewset(viewsets.ModelViewSet):
-    # serializer_class = TemplateBackgroundserializer
+class CustomTemplateViewset(viewsets.ModelViewSet):
 
     # def get_serializer_class(self,type=True):
     #     if type:
@@ -1373,21 +1377,21 @@ class CutomTemplateViewset(viewsets.ModelViewSet):
 
     def create(self,request):
         prompt_id=request.POST.get("prompt_category",None)
-        bg_img=request.POST.get("bg_image",None)
+
         prompt=request.POST.get("prompt",None)
         key_words=request.POST.get("key_words",None)
-        image=request.POST.get("image")
-        print(bg_img,">>>>>>>>>>>>>>>>>>>>>")
-        if bg_img :
-            serializer =TemplateBackgroundserializer(data={"prompt_category": prompt_id,"bg_image":bg_img}, context={'request':request})
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
+        image=request.FILES.get('image',None)
+        print(image,">>>>>>>>>>>>>>>>>>>>>")
+        img = Image.open(image)
+        width = img.width
+        height = img.height
+        if not prompt:
+            print(1)
+            serializer =TemplateBackgroundserializer(data={"prompt_category": prompt_id,"bg_image":image,"width":width,"height":height}, context={'request':request})
         else:
-            print("inside img>>>>>>>>>>>>>>")
-            serializer =PromptEngineserializer(data={"prompt_category": prompt_id,"prompt":prompt,"key_words":key_words,"image":image}, context={'request':request})
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
+            print(2)
+            serializer =PromptEngineserializer(data={"prompt_category": prompt_id,"prompt":prompt,"key_words":key_words,"image":image,"width":width,"height":height}, context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)

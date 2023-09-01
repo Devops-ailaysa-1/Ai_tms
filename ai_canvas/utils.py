@@ -379,19 +379,20 @@ def clip_position(width, height,rows,cols):
     return co_oridination
 
 
-from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
+from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard,bg_color
 import random
 from ai_canvas.meta import *
 from ai_staff.models import FontFamily,FontData
 from ai_canvas.models import PromptEngine
+color=copy.deepcopy(bg_color)
 
 def genarate_image(instance,image_grid,template,attr):
     from ai_imagetranslation.utils import background_remove
     # print(instance)
     temp_height =int(template.height)
     temp_width = int(template.width)
-    x=temp_width*3/4
-    y=temp_height*3/4
+    x=temp_width/2
+    y=temp_height/2
     # instance=PromptEngine.objects.filter(id=19).first()
     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img=copy.deepcopy(image)
@@ -399,6 +400,7 @@ def genarate_image(instance,image_grid,template,attr):
    
     """mask"""
     if instance.mask==None or instance.backround_removal_image ==None:
+        print("masking...........................")
         rem_img=background_remove(instance)
         instance.backround_removal_image=rem_img
         instance.save()
@@ -406,12 +408,10 @@ def genarate_image(instance,image_grid,template,attr):
     rem_img=background_remove(instance)
     instance.backround_removal_image=rem_img
     instance.save()
-    print("------------------->0",rem_img)
-    print(type(rem_img))
     img["brs"]=2
     img["bgMask"]=HOST_NAME+instance.mask.url
     img["src"]=HOST_NAME+instance.backround_removal_image.url
-    # img["src"]=HOST_NAME+instance.mask.url
+    # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
     if instance.width <= instance.height:
@@ -423,14 +423,14 @@ def genarate_image(instance,image_grid,template,attr):
     img=custom_attr(img,custom_style)
 
 
-    img["scaleX"]=img["scaleY"]=scale/2
-    img["oldScaleX"]=img["oldScaleY"]=scale/2
+    # img["scaleX"]=img["scaleY"]=scale
+    # img["oldScaleX"]=img["oldScaleY"]=scale
+    print(instance.width,">>>>>>>>>>>>>>>>>>>>>>>>>")
+    print(instance.height,">>>>>>>>>>>>>>>>>>>>>>>>>")
     img["width"]=img["oldWidth"]=instance.width
     img["height"]=img["oldHeight"]=instance.height
     # img["top"]=image_grid[0][0]
     # img["left"]=image_grid[0][1]
-
-
     return img
 
 def genarate_text(font_family,instance,text_grid,template,attr):
@@ -453,7 +453,7 @@ def genarate_text(font_family,instance,text_grid,template,attr):
         text["text"]=instance.prompt.capitalize()
         return text
 
-def random_background_image(template,instance):
+def random_background_image(template,instance,attr):
     bg_image=copy.deepcopy(backgroundImage)
     temp_height =int(template.height)
     temp_width = int(template.width)
@@ -479,12 +479,8 @@ def random_background_image(template,instance):
     bg_image["top"]=top
     bg_image["left"]=left
 
-    """backgroud as colr"""
-    # bg=copy.deepcopy(backgroundHardboard)
-    # random_color= random.randint(0, 19)
-    # bg["fill"]=generate_random_rgba()
-    # bg["width"]=int(temp_width)
-    # bg["height"]=int(temp_height)
+    # custom_style=attr["backgroundImage"]
+    # bg_image=custom_attr(bg_image,custom_style)
 
     return bg_image
 
@@ -500,6 +496,8 @@ def genarate_clip(grid,attr):
     # custom
     custom_style=attr["path"]
     clip=custom_attr(clip,custom_style)
+    # clip["fill"]==color[random.randint(0,len(color)-1)]["path"]
+
     # rand=random.randint(0,len(style)-1)
     # obj=style[rand]
     # for key, value in obj.items():
@@ -507,11 +505,16 @@ def genarate_clip(grid,attr):
 
     return clip
 
-def custom_attr(instance,attr):
+def custom_attr(instance,attr): #list attr
+    if not attr:
+        return instance
     rand=random.randint(0,len(attr)-1)
     obj=attr[rand]
     for key, value in obj.items():
         instance[key]=obj[key]
+        # if obj[value] in ["textbox","path","background"]:
+        #     instance["fill"]==color[random.randint(0,len(color)-1)][obj[key]]   #return fill
+        #     print(instance["type"],"===========",instance["fill"])
     return instance
 
 
