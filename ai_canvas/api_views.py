@@ -1434,14 +1434,11 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
         # model instance
         if len(img_instance)<len(style_attr["image"]) or len(img_instance)<len(style_attr["textbox"]):
                 img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
-            
+        
+        background=copy.deepcopy(backgroundHardboard)
         # check if backhround attributes present are not
         if  not style_attr["backgroundImage"]:
-            background=copy.deepcopy(backgroundHardboard)
             background ["fill"]=color_attr["background"]
-            background["width"]=int(temp_width)
-            background["height"]=int(temp_height)
-            data["backgroundImage"]=background
         else:
             bg_image=copy.deepcopy(backgroundImage)
             # total_image=len(style_attr["backgroundImage"])
@@ -1451,7 +1448,9 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
             # if bg_generated:
             #     for bg_img in bg_generated:
             #         data.get("objects").append(bg_img)
-
+            background["width"]=int(temp_width)
+            background["height"]=int(temp_height)
+            data["backgroundImage"]=background
             bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
             data.get("objects").append(bg_generated)
 
