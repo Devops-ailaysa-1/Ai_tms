@@ -1309,7 +1309,8 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         template=genarate_template(limit,prompt_id,instance,template,font_family,back_ground)        
         return JsonResponse({"data":template})
     
-from ai_canvas.template import jsonStructure
+# from ai_canvas.template import jsonStructure
+from ai_canvas.standard_template import std_json
 
 # def genarate_template(limit,prompt_id,img_instance,template,font_family,back_ground):
 #     temp_height =int(template.height)
@@ -1397,6 +1398,100 @@ from ai_canvas.template import jsonStructure
 #     return template_data
 # """--------------------------------------------------------------------"""
 
+# def genarate_template(limit,prompt_id,img_instance,template,font_family,back_ground):
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     rows=5
+#     cols=5
+#     template_data=[]
+#     x_path=copy.deepcopy(path)
+#     # img=copy.deepcopy(image)
+#     clip_path=copy.deepcopy(clipPath)
+#     text=copy.deepcopy(textbox)
+
+#     obj_style=copy.deepcopy(style)
+#     custom_color=copy.deepcopy(bg_color)
+
+#     for i in range(0,limit):
+#         print(len(custom_color))
+#         if len(custom_color)<1:
+#             custom_color=copy.deepcopy(bg_color)
+
+#         if len(obj_style)<1:
+#             obj_style=copy.deepcopy(style)
+
+#         color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))    
+#         style_attr=obj_style.pop(random.randint(0,(len(obj_style)-1)))
+#         print("----------------------------",i,"--------------------------------------")
+#         text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
+#         temp={}  
+#         # result data 
+#         data=copy.deepcopy(jsonStructure)
+
+#         #template background insatance
+#         if len(back_ground)<len(style_attr["backgroundImage"]):
+#             back_ground=list(TemplateBackground.objects.filter(prompt_category__id=prompt_id))
+        
+#         # model instance
+#         if len(img_instance)<len(style_attr["image"]) or len(img_instance)<len(style_attr["textbox"]):
+#                 img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
+        
+#         background=copy.deepcopy(backgroundHardboard)
+#         # check if backhround attributes present are not
+#         if  not style_attr["backgroundImage"]:
+#             background ["fill"]=color_attr["background"]
+
+#         else:
+#             bg_image=copy.deepcopy(backgroundImage)
+#             # total_image=len(style_attr["backgroundImage"])
+#             # template_instance=[back_ground.pop(random.randint(0,(len(back_ground)-1))) for _ in range(total_image)]
+#             template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
+#             # bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
+#             # if bg_generated:
+#             #     for bg_img in bg_generated:
+#             #         data.get("objects").append(bg_img)
+#             bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
+#             data.get("objects").append(bg_generated)
+
+#         background["width"]=int(temp_width)
+#         background["height"]=int(temp_height)
+#         data["backgroundImage"]=background
+        
+#         """      -------------path  -------------------     """
+#         if style_attr["path"]:
+#             path_nos=len(style_attr["path"])
+#         # grid=clip_position(temp_width,temp_height,rows,cols)
+#             x_path=genarate_path(color_attr,grid=False,attr=style_attr,)
+#             for x_path in x_path:           
+#                 data.get("objects").append(x_path)
+
+#         """ ----------------------Image---------------------   """
+           
+#         if style_attr["image"]:
+#             image_nos=len(style_attr["image"])
+#             prompt_inst=[img_instance.pop(random.randint(0,(len(img_instance)-1))) for _ in range(image_nos)]
+#             gen_image=genarate_image(prompt_inst,image_grid,template,style_attr)
+#             for img in gen_image:
+#                 data.get("objects").append(img)
+#         else:
+#             text_nos=len(style_attr["textbox"])
+#             prompt_inst=[img_instance.pop(random.randint(0,(len(img_instance)-1))) for _ in range(text_nos)]
+
+#         text_box=genarate_text(font_family,prompt_inst,text_grid,template,style_attr,color_attr)
+#         for text in text_box:
+#             data.get("objects").append(text)
+
+#         # # ----------------data manipulate-------------------
+#         print(type(data))
+#         # thumnail creation
+
+#         thumbnail={}
+#         thumbnail['thumb']=create_thumbnail(data,formats='png')
+#         temp={"json":data,"thumb":thumbnail}
+#         template_data.append(temp)
+#     return template_data
+
+
 def genarate_template(limit,prompt_id,img_instance,template,font_family,back_ground):
     temp_height =int(template.height)
     temp_width = int(template.width)
@@ -1412,76 +1507,9 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
     custom_color=copy.deepcopy(bg_color)
 
     for i in range(0,limit):
-        print(len(custom_color))
-        if len(custom_color)<1:
-            custom_color=copy.deepcopy(bg_color)
-
-        if len(obj_style)<1:
-            obj_style=copy.deepcopy(style)
-
-        color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))    
-        style_attr=obj_style.pop(random.randint(0,(len(obj_style)-1)))
-        print("----------------------------",i,"--------------------------------------")
-        text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
         temp={}  
         # result data 
-        data=copy.deepcopy(jsonStructure)
-
-        #template background insatance
-        if len(back_ground)<len(style_attr["backgroundImage"]):
-            back_ground=list(TemplateBackground.objects.filter(prompt_category__id=prompt_id))
-        
-        # model instance
-        if len(img_instance)<len(style_attr["image"]) or len(img_instance)<len(style_attr["textbox"]):
-                img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
-        
-        background=copy.deepcopy(backgroundHardboard)
-        # check if backhround attributes present are not
-        if  not style_attr["backgroundImage"]:
-            background ["fill"]=color_attr["background"]
-        else:
-            bg_image=copy.deepcopy(backgroundImage)
-            # total_image=len(style_attr["backgroundImage"])
-            # template_instance=[back_ground.pop(random.randint(0,(len(back_ground)-1))) for _ in range(total_image)]
-            template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
-            # bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
-            # if bg_generated:
-            #     for bg_img in bg_generated:
-            #         data.get("objects").append(bg_img)
-            background["width"]=int(temp_width)
-            background["height"]=int(temp_height)
-            data["backgroundImage"]=background
-            bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
-            data.get("objects").append(bg_generated)
-
-        
-        """      -------------path  -------------------     """
-        if style_attr["path"]:
-            path_nos=len(style_attr["path"])
-        # grid=clip_position(temp_width,temp_height,rows,cols)
-            x_path=genarate_path(color_attr,grid=False,attr=style_attr,)
-            for x_path in x_path:           
-                data.get("objects").append(x_path)
-
-        """ ----------------------Image---------------------   """
-           
-        if style_attr["image"]:
-            image_nos=len(style_attr["image"])
-            prompt_inst=[img_instance.pop(random.randint(0,(len(img_instance)-1))) for _ in range(image_nos)]
-            gen_image=genarate_image(prompt_inst,image_grid,template,style_attr)
-            for img in gen_image:
-                data.get("objects").append(img)
-        else:
-            text_nos=len(style_attr["textbox"])
-            prompt_inst=[img_instance.pop(random.randint(0,(len(img_instance)-1))) for _ in range(text_nos)]
-
-        text_box=genarate_text(font_family,prompt_inst,text_grid,template,style_attr,color_attr)
-        for text in text_box:
-            data.get("objects").append(text)
-
-        # # ----------------data manipulate-------------------
-        print(type(data))
-        # thumnail creation
+        data=copy.deepcopy(std_json)
 
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')

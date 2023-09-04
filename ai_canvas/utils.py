@@ -599,20 +599,12 @@ def genarate_image(instance,image_grid,template,style_attr):
     for instance in instance:
         img=copy.deepcopy(image)
         """mask"""
-        # img["src"]=HOST_NAME+instance.image.url
         if instance.mask==None or instance.backround_removal_image ==None:
             print("masking...........................")
             rem_img=background_remove(instance)
             instance.backround_removal_image=rem_img
-            instance.save()     
+            instance.save()   
 
-        img["sourceImage"]=HOST_NAME+instance.image.url
-        img["bgMask"]=HOST_NAME+instance.mask.url
-        img["src"]=HOST_NAME+instance.backround_removal_image.url
-        img["brs"]=2
-
-        # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
-        # print("img---->", img["src"])
         img["name"]="Image"+str(pos[0])+str(pos[1])
         if instance.width <= instance.height:
             scale=(x/int(instance.width))
@@ -637,6 +629,15 @@ def genarate_image(instance,image_grid,template,style_attr):
             path_string=img["clipPath"]
             img["clipPath"]=get_clip_path(path_string)
             img["id"]="background"
+            img["src"]=HOST_NAME+instance.image.url
+            
+            # img["src"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
+        else:
+            # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+            img["sourceImage"]=HOST_NAME+instance.image.url
+            img["bgMask"]=HOST_NAME+instance.mask.url
+            img["src"]=HOST_NAME+instance.backround_removal_image.url
+            img["brs"]=2
 
         picture.append(img)
 
