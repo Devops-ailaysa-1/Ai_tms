@@ -263,6 +263,9 @@ def populate_user_details(user, sociallogin=None,**kwargs):
         if sociallogin.account.provider == 'google':
             user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
             full_name = user_data['name']
+        if sociallogin.account.provider == 'proz':
+            user_data = user.socialaccount_set.filter(provider='proz')[0].extra_data
+            full_name = user_data['first_name'] + user_data['last_name']
         user.fullname = full_name
         user.save()
         user_attr = auth_model.UserAttribute.objects.create(user=user,user_type_id=1)
