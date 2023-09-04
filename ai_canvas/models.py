@@ -294,7 +294,7 @@ class TemplateBackground(models.Model):
     bg_image=models.FileField(upload_to="backround-template",blank=True,null=True)
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
-    
+
 class PromptEngine(models.Model):
     prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_category', on_delete=models.CASCADE)
     prompt=models.CharField(max_length=256)
@@ -311,7 +311,7 @@ class PromptEngine(models.Model):
     @property
     def background_img(self):
         return self.prompt_category.prompt_background.all()
-    
+
 class PromptMaskImage(models.Model):
     mask_image=models.ForeignKey(PromptEngine,on_delete=models.CASCADE,related_name="prompt_image")
     image_url=models.URLField(blank=True,null=True)

@@ -1013,11 +1013,19 @@ class PromptCategoryserializer(serializers.ModelSerializer):
         model=PromptCategory
         fields="__all__"
 
+from ai_imagetranslation.utils import background_remove 
+
 class PromptEngineserializer(serializers.ModelSerializer):
 
     class Meta:
         model=PromptEngine
         fields="__all__"
+
+    def create(self, data):
+        instance=PromptEngine.objects.create(**data)
+        instance.backround_removal_image=background_remove(instance)
+        instance.save()
+        return instance
 
 class TemplateBackgroundserializer(serializers.ModelSerializer):
 

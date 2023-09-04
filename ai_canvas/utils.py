@@ -383,135 +383,143 @@ from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backg
 import random
 from ai_canvas.meta import *
 from ai_staff.models import FontFamily,FontData
-from ai_canvas.models import PromptEngine
+
 color=copy.deepcopy(bg_color)
 
-def genarate_image(instance,image_grid,template,attr):
-    from ai_imagetranslation.utils import background_remove
-    # print(instance)
-    temp_height =int(template.height)
-    temp_width = int(template.width)
-    x=temp_width/2
-    y=temp_height/2
-    # instance=PromptEngine.objects.filter(id=19).first()
-    pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
-    img=copy.deepcopy(image)
-    img["sourceImage"]=HOST_NAME+instance.image.url
+# def genarate_image(instance,image_grid,template,attr):
+#     from ai_imagetranslation.utils import background_remove
+#     # print(instance)
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     x=temp_width/2
+#     y=temp_height/2
+#     # instance=PromptEngine.objects.filter(id=19).first()
+#     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
+#     img=copy.deepcopy(image)
+#     # img["src"]=HOST_NAME+instance.image.url
+#     img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     
-    """mask"""
-    if instance.mask==None or instance.backround_removal_image ==None:
-        print("masking...........................")
-        rem_img=background_remove(instance)
-        instance.backround_removal_image=rem_img
-        instance.save()
+#     """mask""" 
+#     if instance.mask==None or instance.backround_removal_image ==None:
+#         print("masking...........................")
+#         rem_img=background_remove(instance)
+#         instance.backround_removal_image=rem_img
+#         instance.save()
+
+#         img["bgMask"]=HOST_NAME+instance.mask.url
+#         img["src"]=HOST_NAME+instance.backround_removal_image.url
+#         img["sourceImage"]=HOST_NAME+instance.image.url
+#         img["brs"]=2
     
-    rem_img=background_remove(instance)
-    instance.backround_removal_image=rem_img
-    instance.save()
-    img["brs"]=1
-    # img["bgMask"]=HOST_NAME+instance.mask.url
-    # img["src"]=HOST_NAME+instance.backround_removal_image.url
+#     print("img---->", img["src"])
+#     img["name"]="Image"+str(pos[0])+str(pos[1])
+#     if instance.width <= instance.height:
+#         scale=(x/int(instance.width))
+#     else:
+#         scale=(y/int(instance.height))
 
-    img["src"]=HOST_NAME+instance.image.url
-    # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
-    print("img---->", img["src"])
-    img["name"]="Image"+str(pos[0])+str(pos[1])
-    if instance.width <= instance.height:
-        scale=(x/int(instance.width))
-    else:
-        scale=(y/int(instance.height))
+#     img=custom_attr(img,attr["image"])
+#     if img["clipPath"]:
+#         print("clip_path...............")
+        
+#         path_string=img["clipPath"]
+#         img["clipPath"]=get_clip_path(path_string)
+#         img["id"]="background"
 
-    custom_style=attr["image"]
-    img=custom_attr(img,custom_style)
+#     img["scaleX"]=img["scaleY"]=scale
+#     img["oldScaleX"]=img["oldScaleY"]=scale
+#     img["width"]=img["oldWidth"]=instance.width
+#     img["height"]=img["oldHeight"]=instance.height
+
+#     return img
+
+# def random_background_image(bg_image,template,instance,style_attr):
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+    
+#     # bg_image["src"]=HOST_NAME+instance.bg_image.url
+#     # for testing
+#     bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
+#     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
+
+#     img_width=instance.width
+#     img_height=instance.height
+#     bg_image["width"]=img_width
+#     bg_image["height"]=img_height
+    
+#     custom_style=style_attr["backgroundImage"]
+#     bg_image=custom_attr(bg_image,custom_style)
+#     if bg_image:
+#         bg_image["originalwidth"]=bg_image["oldWidth"]=img_width
+#         bg_image["oldWidth"]=bg_image["oldHeight"]=img_height
+#         bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
+#         bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
+
+#         bg_image["top"]=top
+#         bg_image["left"]=left
+
+#     return bg_image
+
+# def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
+#         temp_height =int(template.height)
+#         temp_width = int(template.width)
+#         text=copy.deepcopy(textbox)
+#         custom_style=attr["textbox"]
+#         text=custom_attr(text,custom_style)
+#         text["textLines"]=instance.prompt
+#         text["text"]=instance.prompt.capitalize()
+#         text["fill"]=color_attr["textbox"]
+#         return text
 
 
-    # img["scaleX"]=img["scaleY"]=scale
-    # img["oldScaleX"]=img["oldScaleY"]=scale
-    print(instance.width,">>>>>>>>>>>>>>>>>>>>>>>>>")
-    print(instance.height,">>>>>>>>>>>>>>>>>>>>>>>>>")
-    img["width"]=img["oldWidth"]=instance.width
-    img["height"]=img["oldHeight"]=instance.height
-    # img["top"]=image_grid[0][0]
-    # img["left"]=image_grid[0][1]
-    return img
 
-def genarate_text(font_family,instance,text_grid,template,attr):
-        temp_height =int(template.height)
-        temp_width = int(template.width)
-        text=copy.deepcopy(textbox)
-        text["fill"] =generate_random_rgba()
-        text["fontFamily"] =font_family[random.randint(0,(len(font_family)-1))]
-        text["fontWeight"] =font["fontWeight"][random.randint(0,2)]
-        text["width"]=500
-        text["height"]=90
-        text["fontSize"]=int(temp_width/20)                  #random.randint(70,100)
-        pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
-        text["top"]= pos[0]
-        text["left"]= pos[1]
+"------------------------------------------------"
+def get_clip_path(path_string):
+    segments = re.split(r"(M|C|Z|H|V|L|S|Q|T|A)", path_string)[1:]  
+    clip_path = []
+    for i in range(0, len(segments), 2):
+        arr = segments[i]
+        values = list(map(float, segments[i + 1].split()))
+        clip_path.append([arr] + values)
+    clip=copy.deepcopy(clipPath)
+    clip["id"]=path_string
+    clip["path"]=clip_path
+    return clip
 
-        custom_style=attr["textbox"]
-        text=custom_attr(text,custom_style)
-        text["textLines"]=instance.prompt
-        text["text"]=instance.prompt.capitalize()
-        return text
-
-def random_background_image(template,instance,attr):
-    bg_image=copy.deepcopy(backgroundImage)
-    temp_height =int(template.height)
-    temp_width = int(template.width)
-    bg_image["src"]=HOST_NAME+instance.bg_image.url
-    # for testing
-    # bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
-    print(bg_image["src"])
-    scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
-
-    img_width=instance.width
-    img_height=instance.height
-    # bg_image["src"]=instance.image.url
-    bg_image["width"]=img_width
-    bg_image["height"]=img_height
-
-    # bg_image["scaleX"]=bg_image=scaleX
-    # bg_image["oldScaleX"]=bg_image["oldScaleY"]=scaleY
-    bg_image["originalwidth"]=bg_image["oldWidth"]=img_width
-    bg_image["oldWidth"]=bg_image["oldHeight"]=img_height
-    bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
-    bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
-
-    bg_image["top"]=top
-    bg_image["left"]=left
-
-    # custom_style=attr["backgroundImage"]
-    # bg_image=custom_attr(bg_image,custom_style)
-
-    return bg_image
-
-def genarate_clip(grid,attr):
-    pos= grid.pop(random.randint(0,(len(grid)-1)))
+def genarate_path(rand_color,grid=False,attr=False):
+    if grid:
+        pos= grid.pop(random.randint(0,(len(grid)-1)))
     # standard
-    clip=copy.deepcopy(path)
-    # clip["fill"] =generate_random_rgba()
-    # clip["left"]=pos[1]
-    # clip["top"]=pos[0]
-    # clip["width"]= random.randint(300,700)
-    # clip["height"]= random.randint(50,700)
+    x_path=copy.deepcopy(path)
     # custom
     custom_style=attr["path"]
-    clip=custom_attr(clip,custom_style)
-    return clip
+    # clip=custom_attr(clip,custom_style)
+    res_path=[]
+    for obj in custom_style:
+        for key, value in obj.items():
+            x_path[key]=obj[key]
+        x_path["fill"]=rand_color["path"]
+        res_path.append(x_path)
+    return res_path
 
 def custom_attr(instance,attr): #list attr
     if not attr:
-        return instance
+        return None
     rand=random.randint(0,len(attr)-1)
     obj=attr[rand]
     for key, value in obj.items():
         instance[key]=obj[key]
-        # if obj[value] in ["textbox","path","background"]:
-        #     instance["fill"]==color[random.randint(0,len(color)-1)][obj[key]]   #return fill
-        #     print(instance["type"],"===========",instance["fill"])
     return instance
 
+# def custom_attr(instance,attr):
+#     random.shuffle(instance)
+#     random.shuffle(attr)
+#     combined = []
+#     for parent, child in zip(instance,attr):
+#         parent.update(child)
+#         combined.append(parent)
+#     print(combined)
+#     return combined
 
 def background_scaling(canvas_width, canvas_height, img_width, img_height):
     scaleX, scaleY, left, top = 0, 0, 0, 0
@@ -541,4 +549,113 @@ def background_scaling(canvas_width, canvas_height, img_width, img_height):
         
     return scaleX, scaleY, left, top
 
+"""-------------------------------------------------------------------------------"""
 
+def random_background_image(bg_image,template,instance,style_attr):
+    temp_height =int(template.height)
+    temp_width = int(template.width)
+    background_image=[]
+    custom_style=style_attr["backgroundImage"]
+    # bg_image=custom_attr(bg_image,custom_style)
+    print(len(instance),len(style_attr["backgroundImage"]))
+    for instance in instance:
+        # bg_image["src"]=HOST_NAME+instance.bg_image.url
+        # for testing
+        bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/green-background-with-marbled-vintage-grunge.png"
+        print(bg_image["src"],"errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
+        scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
+
+        img_width=instance.width
+        img_height=instance.height
+        # bg_image["src"]=instance.image.url
+        rand=random.randint(0,len(style_attr["backgroundImage"])-1)
+        obj=style_attr["backgroundImage"].pop(rand)
+        for key, value in obj.items():
+            bg_image[key]=obj[key]
+
+        bg_image["width"]=img_width
+        bg_image["height"]=img_height
+        
+        bg_image["originalwidth"]=bg_image["originalWidth"]=img_width
+        bg_image["oldWidth"]=bg_image["oldHeight"]=img_height
+        bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
+        bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
+
+        bg_image["top"]=top
+        bg_image["left"]=left
+
+        background_image.append(bg_image)
+
+    return background_image
+
+def genarate_image(instance,image_grid,template,style_attr):
+    from ai_imagetranslation.utils import background_remove
+    # print(instance)
+    temp_height =int(template.height)
+    temp_width = int(template.width)
+    x=temp_width/2
+    y=temp_height/2
+    # instance=PromptEngine.objects.filter(id=19).first()
+    pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
+    picture=[]
+    for instance in instance:
+        img=copy.deepcopy(image)
+        """mask"""
+        img["src"]=HOST_NAME+instance.image.url
+        if instance.mask==None or instance.backround_removal_image ==None:
+            print("masking...........................")
+            rem_img=background_remove(instance)
+            instance.backround_removal_image=rem_img
+            instance.save()     
+
+            img["sourceImage"]=HOST_NAME+instance.image.url
+            # img["bgMask"]=HOST_NAME+instance.mask.url
+            img["src"]=HOST_NAME+instance.backround_removal_image.url
+            img["brs"]=2
+        img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+        # print("img---->", img["src"])
+        img["name"]="Image"+str(pos[0])+str(pos[1])
+        if instance.width <= instance.height:
+            scale=(x/int(instance.width))
+        else:
+            scale=(y/int(instance.height))
+
+
+        rand=random.randint(0,len(style_attr["image"])-1)
+        obj=style_attr["image"].pop(rand)
+        for key, value in obj.items():
+           img[key]=obj[key]
+
+        img["scaleX"]=img["scaleY"]=scale
+        img["oldScaleX"]=img["oldScaleY"]=scale
+        img["width"]=img["oldWidth"]=instance.width
+        img["height"]=img["oldHeight"]=instance.height
+
+        # imge=custom_attr(img,attr["image"])
+        if img["clipPath"]:
+            print("clip_path...............")
+            
+            path_string=img["clipPath"]
+            img["clipPath"]=get_clip_path(path_string)
+            img["id"]="background"
+
+        picture.append(img)
+
+    return picture
+
+
+def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
+        temp_height =int(template.height)
+        temp_width = int(template.width)
+        text_box=[]
+        for instance in instance:
+            text=copy.deepcopy(textbox)
+            custom_style=attr["textbox"]
+            text=custom_attr(text,custom_style)
+            text["textLines"]=instance.prompt
+            text["text"]=instance.prompt.capitalize()
+            text["fill"]=color_attr["textbox"]
+            text_box.append(text)
+        return text_box
+
+"""--------------------------------------------------------------------------------------------"""
