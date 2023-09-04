@@ -56,7 +56,7 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
        auth_forms.vendor_request_admin_mail(instance)
 
 def proz_connect(sender, instance, *args, **kwargs):
-    if instance.from_proz == True:
+    if instance.socialaccount_set.filter(provider='Proz'):
         uuid = instance.socialaccount_set.filter(provider='Proz')[0].extra_data.get('uuid')
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
         headers = {
