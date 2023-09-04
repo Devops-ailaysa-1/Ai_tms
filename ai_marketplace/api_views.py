@@ -1103,7 +1103,8 @@ class ProzVendorListView(generics.ListAPIView):
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         integration_users = integration_users_response.json()
         common_users = []
-        if integration_users:
+        total = 0
+        if integration_users and integration_users.get('success') == 1:
             total = integration_users.get('meta').get('num_results')
             for vendor in integration_users.get('data'):
                 ven = vendor.get('freelancer')
@@ -1147,10 +1148,25 @@ class ProzVendorListView(generics.ListAPIView):
 
 
 
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def proz_send_message(request):
-#     message = "testing"
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def proz_send_message(request):
+    user = request.user.team.owner if request.user.team else request.user
+    message = request.POST.get('message')
+    uuid = request.POST.get('uuid')
+    subject = request.POST.get('subject', 'Message from Ailaysa Test' )
+    headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+    url = "https://api.proz.com/v2/messages"
+    payload = {'recipient_uuids': uuid,
+                'sender_email': user.email ,
+                'body': message,
+                'subject': subject,
+                'sender_name': user.fullname}
+    print("Payload------------->",payload)
+    response = requests.request("POST", url, headers=headers, data=payload)
+    return Response(response.json())
+
+
 
 # def get_proz_lang_pair(source,target):
 #     source_lang = Languages.objects.get(id=source).lang.first().language_code
