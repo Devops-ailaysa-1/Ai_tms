@@ -626,7 +626,6 @@ jsonStructure = {
     "version": "5.3.0",
     "projectid": null,
     "background": hardBoardColor,
-    # "backgroundImage": backgroundHardboard,
-    "backgroundImage":backgroundImage ,
+    "backgroundImage": backgroundHardboard,
     "perPixelTargetFind": false
 }

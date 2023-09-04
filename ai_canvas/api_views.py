@@ -1444,13 +1444,16 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
             data["backgroundImage"]=background
         else:
             bg_image=copy.deepcopy(backgroundImage)
-            total_image=len(style_attr["backgroundImage"])
-            template_instance=[back_ground.pop(random.randint(0,(len(back_ground)-1))) for _ in range(total_image)]
-            # template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
+            # total_image=len(style_attr["backgroundImage"])
+            # template_instance=[back_ground.pop(random.randint(0,(len(back_ground)-1))) for _ in range(total_image)]
+            template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
+            # bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
+            # if bg_generated:
+            #     for bg_img in bg_generated:
+            #         data.get("objects").append(bg_img)
+
             bg_generated=random_background_image(bg_image,template,template_instance,style_attr)
-            if bg_generated:
-                for bg_img in bg_generated:
-                    data.get("objects").append(bg_img)
+            data.get("objects").append(bg_generated)
 
         
         """      -------------path  -------------------     """
