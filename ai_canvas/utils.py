@@ -559,10 +559,9 @@ def random_background_image(bg_image,template,instance,style_attr):
     # bg_image=custom_attr(bg_image,custom_style)
     print(len(instance),len(style_attr["backgroundImage"]))
     for instance in instance:
-        # bg_image["src"]=HOST_NAME+instance.bg_image.url
+        bg_image["src"]=HOST_NAME+instance.bg_image.url
         # for testing
-        bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/green-background-with-marbled-vintage-grunge.png"
-        print(bg_image["src"],"errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
+        # bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/green-background-with-marbled-vintage-grunge.png"
         scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
         img_width=instance.width
@@ -608,11 +607,12 @@ def genarate_image(instance,image_grid,template,style_attr):
             instance.backround_removal_image=rem_img
             instance.save()     
 
-            img["sourceImage"]=HOST_NAME+instance.image.url
-            # img["bgMask"]=HOST_NAME+instance.mask.url
-            img["src"]=HOST_NAME+instance.backround_removal_image.url
-            img["brs"]=2
-        img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+        img["sourceImage"]=HOST_NAME+instance.image.url
+        img["bgMask"]=HOST_NAME+instance.mask.url
+        img["src"]=HOST_NAME+instance.backround_removal_image.url
+        img["brs"]=2
+
+        # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
         # print("img---->", img["src"])
         img["name"]="Image"+str(pos[0])+str(pos[1])
         if instance.width <= instance.height:
