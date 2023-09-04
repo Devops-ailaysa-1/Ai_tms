@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.github',
     'allauth.socialaccount.providers.google',
     "allauth.socialaccount.providers.twitter",
+    "ai_auth.providers.proz",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
@@ -353,7 +354,17 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'offline',
         }
-}
+    },
+    'Proz':{
+              'SCOPE': [
+            'public',
+            'user.email',
+            'user.name'
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }  
+    }
 }
 
 
@@ -513,6 +524,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+PROZ_CALLBACK_URL = os.getenv('PROZ_CALLBACK_URL')
 
 
 # DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')

@@ -4,7 +4,7 @@ import logging
 import re , requests, os
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
-from ai_auth.soc_auth import GoogleLogin
+from ai_auth.soc_auth import GoogleLogin,ProzLogin
 from allauth.account.models import EmailAddress
 from dj_rest_auth.registration.serializers import SocialLoginSerializer
 from djstripe.models.billing import Plan, TaxId
@@ -77,6 +77,7 @@ from allauth.socialaccount.providers.oauth2.views import (
     OAuth2CallbackView,
     OAuth2LoginView,
 )
+from ai_auth.providers.proz.views import ProzAdapter
 from django.contrib.sessions.models import Session
 from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
@@ -2128,18 +2129,26 @@ def get_user(request):
     # except:
     #     return Response({'user_exist':False})
 
+def get_soc_adapter(provider_id):
+    match provider_id:
+        case "google":
+            return GoogleOAuth2Adapter
+        case "proz":
+            return ProzAdapter
+        case default:
+            return GoogleOAuth2Adapter
+  
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def ai_social_login(request):
-    provider = request.POST.get('provider')
+    provider_id = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
     product_id =request.POST.get('product_id',None)
     price_id =request.POST.get('price_id',None)
     process = request.POST.get('process',None)
-    print('provider>>',provider)
-    print('requests>>',request)
-    base_url="http://127.0.0.1:8089"
-    provider_id="google"
+
+    # base_url="http://127.0.0.1:8089"
     # print(reverse(provider_id +'_login'))
     # url=base_url+reverse(provider_id +'_login')
 
@@ -2150,20 +2159,28 @@ def ai_social_login(request):
     state_data["socialaccount_user_product"]=product_id
     state_data["socialaccount_user_price"]=price_id
     state_data["socialaccount_process"]=process
-    if is_vendor=='True':
+    state_data["socialaccount_provider"]=provider_id.upper()
+
+    if is_vendor=='True' or  provider_id.upper() == "PROZ":
         #request.session['socialaccount_user_state']='vendor'
         state_data["socialaccount_user_state"]="vendor"
 
     else:
         #request.session['socialaccount_user_state']='customer'
         state_data["socialaccount_user_state"]="customer"
+    adapter= get_soc_adapter(provider_id)
 
-    adapter = GoogleOAuth2Adapter(request)
+    # adapter = GoogleOAuth2Adapter(request)
 
     print("adapter",adapter)
     print("request",request)
-    provider=adapter.get_provider()
-    oauth2_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
+    # adapter(request)
+    provider=adapter(request).get_provider()
+
+    print('provider>>',provider)
+    print('requests>>',request)
+
+    oauth2_login = OAuth2LoginView.adapter_view(adapter)
 
     # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
     rs=oauth2_login(request)
@@ -2172,7 +2189,7 @@ def ai_social_login(request):
     url =rs.url
     parsed = urlsplit(url)
     query_dict = parse_qs(parsed.query)
-    query_dict['redirect_uri'][0] = settings.GOOGLE_CALLBACK_URL
+    query_dict['redirect_uri'][0] = getattr(settings,f"{provider_id.upper()}_CALLBACK_URL")
     state = query_dict['state'][0]
     query_new = urlencode(query_dict, doseq=True)
     parsed=parsed._replace(query=query_new)
@@ -2228,6 +2245,7 @@ def ai_social_callback(request):
     # print(session.get_decoded().get('socialaccount_user_state',None))
     user_state=load_state(state)
     if user_state == None:
+        logger.error(f"on social login state none {state}")
         return JsonResponse({"error": "invalid_state"},status=440)
 
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
@@ -2281,8 +2299,15 @@ def ai_social_callback(request):
     # #res= requests.post(url,data)
     # #print(res)
     # try:
+    print(user_state)
     try:
-        response = GoogleLogin.as_view()(request=request._request).data
+        provider = user_state.get("socialaccount_provider")
+        if provider=="GOOGLE":
+            response = GoogleLogin.as_view()(request=request._request).data
+        elif provider=="PROZ":
+            response = ProzLogin.as_view()(request=request._request).data
+        else:
+            raise ValueError("no login view found")
     except BaseException as e:
         logger.error("on social login",str(e))
         return JsonResponse({"error":str(e)},status=400)
