@@ -9,7 +9,7 @@ from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFi
                             TaskRoleLevel,Timezones,SupportType,JobPositions,\
                             SupportTopics,Role,Currencies,ApiServiceList,SuggestionType,Suggestion
 from django.db.models.signals import post_save, pre_save, pre_delete
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
+from ai_auth.signals import proz_connect, create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -215,6 +215,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
 post_save.connect(update_internal_member_status, sender=AiUser)
 post_save.connect(get_currency_based_on_country, sender=AiUser)
+post_save.connect(proz_connect, sender=AiUser)
 
 
 
