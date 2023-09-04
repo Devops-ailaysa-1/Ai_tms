@@ -55,6 +55,39 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
 
+def proz_connect(sender, instance, *args, **kwargs):
+    if instance.from_proz == True:
+        uuid = instance.socialaccount_set.filter(provider='Proz')[0].extra_data.get('uuid')
+        url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
+        headers = {
+        'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+        }
+        response = requests.request("GET", url, headers=headers)
+        res = response.json()
+        if res and res.get('success') == 1:
+            ven = res.get('data')
+            cv_file = ven.get('qualifications').get('cv_url',None)
+            native_lang = ven.get('skills').get('qualifications').get('native_language')[0]
+            year_of_experience = ven.get('professional_history').get('years_of_experience')
+            location = ven.get('contact_info').get('address',{}).get('region',None)
+            if ven.get('about_me_localizations') != []:
+                bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
+            else:bio = None
+            obj = VendorInfo.objects.get_or_create(user=instance)
+            obj.cv_file = cv_file
+            obj.native_lang_id = ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
+            obj.year_of_experience = year_of_experience
+            obj.location = location
+            obj.bio = bio
+            obj.save()
+            profile,created = AiUserProfile.objects.get_or_create(user=instance)
+            profile.organisation_name = ven.get('contact_info').get('company_name',None)
+            profile.save()
+            subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
+            [VendorSubjectFields.objects.create(user=instance,subject_id = i.get('subject')) for i in subs]
+
+
+
 
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
