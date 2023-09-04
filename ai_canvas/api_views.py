@@ -1507,9 +1507,36 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
     custom_color=copy.deepcopy(bg_color)
 
     for i in range(0,limit):
+        text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
+        print("---------------------",i,"----------------------")
+#         temp={}  
         temp={}  
         # result data 
         data=copy.deepcopy(std_json)
+        if len(custom_color)<1:
+            custom_color=copy.deepcopy(bg_color)
+        
+        # model instance
+        
+        color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
+        print(color_attr,"colorrrrrrrrrrrrrrrrrr")
+        type=["path","textbox"]
+        for obj in data["objects"]:
+            if obj["type"] =="path" or obj["type"]=="textbox":
+                obj["fill"]=color_attr[obj["type"]]
+                if  obj["type"] =="textbox":
+                    obj["styles"]=[]
+                print(obj["type"],obj["fill"],"llllllllllllllllllllllllllllllllllllll")
+
+            elif obj["type"] =="image":
+                if len(img_instance)<1 :
+                    img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
+                prompt_inst=img_instance.pop(random.randint(0,(len(img_instance)-1)))
+                gen_image=genarate_image(prompt_inst,image_grid,template,obj)
+                obj=gen_image
+           
+        data["backgroundImage"]["fill"]=color_attr[ "background"]
+        print(data["backgroundImage"]["fill"],"backgroundcolorrrrrrrrrrrrrrrrrrrr")
 
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
@@ -1517,7 +1544,20 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
         template_data.append(temp)
     return template_data
 
-
+# def standard_image_genarate(instance,image_grid,template,obj):
+#     img={}
+#     if img["clipPath"]:
+#         print("clip_path...............") 
+#         img["id"]="background"
+#         img["src"]=HOST_NAME+instance.image.url
+#         img["src"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
+#     else:
+#         img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+#         img["bgMask"]=HOST_NAME+instance.mask.url
+#         # img["src"]=HOST_NAME+instance.backround_removal_image.url
+#         img["sourceImage"]=HOST_NAME+instance.image.url
+#         img["brs"]=2
+#     return img
 # "------------------------------------------------------------------------------------"
 from ai_canvas.serializers import TemplateBackgroundserializer,PromptEngineserializer,PromptCategoryserializer
 

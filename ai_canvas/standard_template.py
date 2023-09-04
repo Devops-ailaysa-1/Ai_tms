@@ -1,6 +1,7 @@
-null=0
+null=None
 true=True
 false=False
+
 std_json={
     "version": "5.3.0",
     "objects": [
@@ -22,7 +23,7 @@ std_json={
             "strokeLineJoin": "miter",
             "strokeUniform": true,
             "strokeMiterLimit": 4,
-            "scaleX": 1.51,
+            "scaleX": 1.68,
             "scaleY": 0.85,
             "angle": 0,
             "flipX": false,
@@ -94,8 +95,8 @@ std_json={
             "originY": "top",
             "left": 1.63,
             "top": 270.72,
-            "width": 592.06,
-            "height": 329.96,
+            "width": 602.06,
+            "height": 247.47,
             "fill": "rgba(254, 253, 253, 1)",
             "stroke": null,
             "strokeWidth": 1,
@@ -164,184 +165,9 @@ std_json={
             "textLines": [
                 "Remote",
                 "Employee",
-                "Appreciation",
-                "Day"
+                "Appreciation Day"
             ],
             "isTranslate": false
-        },
-        {
-            "type": "image",
-            "version": "5.3.0",
-            "originX": "left",
-            "originY": "top",
-            "left": 551.19,
-            "top": 186.83,
-            "width": 1024,
-            "height": 1024,
-            "fill": "rgb(0,0,0)",
-            "stroke": null,
-            "strokeWidth": 0,
-            "strokeDashArray": null,
-            "strokeLineCap": "butt",
-            "strokeDashOffset": 0,
-            "strokeLineJoin": "miter",
-            "strokeUniform": false,
-            "strokeMiterLimit": 4,
-            "scaleX": 0.68,
-            "scaleY": 0.68,
-            "angle": 0,
-            "flipX": false,
-            "flipY": false,
-            "opacity": 1,
-            "shadow": null,
-            "visible": true,
-            "backgroundColor": "",
-            "fillRule": "nonzero",
-            "paintFirst": "fill",
-            "globalCompositeOperation": "source-atop",
-            "skewX": 0,
-            "skewY": 0,
-            "clipPath": {
-                "type": "path",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": -0.5,
-                "top": -0.5,
-                "width": 50,
-                "height": 50,
-                "fill": "rgb(0,0,0)",
-                "stroke": null,
-                "strokeWidth": 1,
-                "strokeDashArray": null,
-                "strokeLineCap": "butt",
-                "strokeDashOffset": 0,
-                "strokeLineJoin": "miter",
-                "strokeUniform": false,
-                "strokeMiterLimit": 4,
-                "scaleX": 20.42,
-                "scaleY": 20.42,
-                "angle": 0,
-                "flipX": false,
-                "flipY": false,
-                "opacity": 1,
-                "shadow": null,
-                "visible": true,
-                "backgroundColor": "",
-                "fillRule": "nonzero",
-                "paintFirst": "fill",
-                "globalCompositeOperation": "source-over",
-                "skewX": 0,
-                "skewY": 0,
-                "id": "M0 19C0 8.50659 8.50659 0 19 0H50V31C50 41.4934 41.4934 50 31 50H0V19Z",
-                "hasBorders": true,
-                "evented": true,
-                "selectable": true,
-                "lockMovementX": false,
-                "lockMovementY": false,
-                "perPixelTargetFind": false,
-                "objectCaching": false,
-                "dirty": false,
-                "path": [
-                    [
-                        "M",
-                        0,
-                        19
-                    ],
-                    [
-                        "C",
-                        0,
-                        8.50659,
-                        8.50659,
-                        0,
-                        19,
-                        0
-                    ],
-                    [
-                        "L",
-                        50,
-                        0
-                    ],
-                    [
-                        "L",
-                        50,
-                        31
-                    ],
-                    [
-                        "C",
-                        50,
-                        41.4934,
-                        41.4934,
-                        50,
-                        31,
-                        50
-                    ],
-                    [
-                        "L",
-                        0,
-                        50
-                    ],
-                    [
-                        "L",
-                        0,
-                        19
-                    ],
-                    [
-                        "Z"
-                    ]
-                ],
-                "inverted": false,
-                "absolutePositioned": false
-            },
-            "cropX": 0,
-            "cropY": 0,
-            "id": "Image-32",
-            "hasBorders": true,
-            "evented": true,
-            "selectable": true,
-            "lockMovementX": false,
-            "lockMovementY": false,
-            "name": "Image_Zf8o8nmDgBw",
-            "perPixelTargetFind": false,
-            "objectCaching": false,
-            "oldWidth": 1024,
-            "oldHeight": 1024,
-            "oldScaleX": 0.6796944149689677,
-            "oldScaleY": 0.6796944149689677,
-            "dirty": false,
-            "brs": 1,
-            "src": "https://aicanvas.ailaysa.com/media/u584344/aidesign/assets/aidesign_assets/images/abstract-luxury-yellow-plain-wall-use-as-_So61IFK.png",
-            "crossOrigin": "anonymous",
-            "filters": [
-                {
-                    "type": "Brightness",
-                    "brightness": 0
-                },
-                {
-                    "type": "Contrast",
-                    "contrast": 0
-                },
-                {
-                    "type": "Saturation",
-                    "saturation": 0
-                },
-                {
-                    "type": "Blur",
-                    "blur": 0
-                },
-                {
-                    "type": "Vibrance",
-                    "vibrance": 0
-                },
-                {
-                    "type": "Noise",
-                    "noise": 0
-                },
-                {
-                    "type": "HueRotation",
-                    "rotation": 0
-                }
-            ]
         },
         {
             "type": "textbox",
@@ -350,7 +176,7 @@ std_json={
             "originY": "top",
             "left": 147.78,
             "top": 633.92,
-            "width": 299.76,
+            "width": 309.76,
             "height": 65.54,
             "fill": "rgba(41, 41, 41, 1)",
             "stroke": null,
@@ -428,7 +254,7 @@ std_json={
             "originY": "top",
             "left": 32.61,
             "top": 743.77,
-            "width": 530.09,
+            "width": 540.09,
             "height": 88.14,
             "fill": "rgba(254, 253, 253, 1)",
             "stroke": null,
@@ -8532,12 +8358,103 @@ std_json={
             ]
         },
         {
+            "type": "path",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 624.18,
+            "top": 197.07,
+            "width": 50,
+            "height": 50,
+            "fill": "rgba(250, 210, 9, 1)",
+            "stroke": null,
+            "strokeWidth": 1,
+            "strokeDashArray": null,
+            "strokeLineCap": "butt",
+            "strokeDashOffset": 0,
+            "strokeLineJoin": "miter",
+            "strokeUniform": true,
+            "strokeMiterLimit": 4,
+            "scaleX": 12.52,
+            "scaleY": 12.44,
+            "angle": 0,
+            "flipX": false,
+            "flipY": false,
+            "opacity": 1,
+            "shadow": null,
+            "visible": true,
+            "backgroundColor": "",
+            "fillRule": "nonzero",
+            "paintFirst": "fill",
+            "globalCompositeOperation": "source-atop",
+            "skewX": 0,
+            "skewY": 0,
+            "hasBorders": true,
+            "evented": true,
+            "selectable": true,
+            "subTargetCheck": true,
+            "lockMovementX": false,
+            "lockMovementY": false,
+            "name": "Element_GDqY4LSx3VLJb",
+            "perPixelTargetFind": false,
+            "objectCaching": false,
+            "dirty": false,
+            "path": [
+                [
+                    "M",
+                    0,
+                    16
+                ],
+                [
+                    "C",
+                    0,
+                    7.16344,
+                    7.16344,
+                    0,
+                    16,
+                    0
+                ],
+                [
+                    "L",
+                    50,
+                    0
+                ],
+                [
+                    "L",
+                    50,
+                    34
+                ],
+                [
+                    "C",
+                    50,
+                    42.8366,
+                    42.8366,
+                    50,
+                    34,
+                    50
+                ],
+                [
+                    "L",
+                    0,
+                    50
+                ],
+                [
+                    "L",
+                    0,
+                    16
+                ],
+                [
+                    "Z"
+                ]
+            ]
+        },
+        {
             "type": "image",
             "version": "5.3.0",
             "originX": "left",
             "originY": "top",
-            "left": 578.35,
-            "top": 219.75,
+            "left": 643.58,
+            "top": 212.9,
             "width": 1024,
             "height": 1024,
             "fill": "rgb(0,0,0)",
@@ -8549,8 +8466,8 @@ std_json={
             "strokeLineJoin": "miter",
             "strokeUniform": false,
             "strokeMiterLimit": 4,
-            "scaleX": 0.62,
-            "scaleY": 0.62,
+            "scaleX": 0.57,
+            "scaleY": 0.57,
             "angle": 0,
             "flipX": false,
             "flipY": false,
@@ -8592,7 +8509,7 @@ std_json={
                 "backgroundColor": "",
                 "fillRule": "nonzero",
                 "paintFirst": "fill",
-                "globalCompositeOperation": "source-over",
+                "globalCompositeOperation": "overlay",
                 "skewX": 0,
                 "skewY": 0,
                 "id": "M0 19C0 8.50659 8.50659 0 19 0H50V31C50 41.4934 41.4934 50 31 50H0V19Z",
@@ -8668,8 +8585,388 @@ std_json={
             "objectCaching": false,
             "oldWidth": 1024,
             "oldHeight": 1024,
-            "oldScaleX": 0.6157015853794194,
-            "oldScaleY": 0.6157015853794194,
+            "oldScaleX": 0.5729395668646244,
+            "oldScaleY": 0.5729395668646244,
+            "oldlineCoords": {
+                "tl": {
+                    "x": 776.4680000000001,
+                    "y": 205.73853333333335
+                },
+                "tr": {
+                    "x": 1168.6827555555558,
+                    "y": 205.73853333333335
+                },
+                "bl": {
+                    "x": 776.4680000000001,
+                    "y": 597.953288888889
+                },
+                "br": {
+                    "x": 1168.6827555555558,
+                    "y": 597.953288888889
+                }
+            },
+            "oldoCoords": {
+                "ml": {
+                    "x": 775.4680000000001,
+                    "y": 401.84591111111115,
+                    "corner": {
+                        "tl": {
+                            "x": 768.9679999998764,
+                            "y": 395.3459111109875
+                        },
+                        "tr": {
+                            "x": 781.9680000001238,
+                            "y": 395.3459111109875
+                        },
+                        "bl": {
+                            "x": 768.9679999998764,
+                            "y": 408.3459111112348
+                        },
+                        "br": {
+                            "x": 781.9680000001238,
+                            "y": 408.3459111112348
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 763.4679999997718,
+                            "y": 389.84591111088287
+                        },
+                        "tr": {
+                            "x": 787.4680000002284,
+                            "y": 389.84591111088287
+                        },
+                        "bl": {
+                            "x": 763.4679999997718,
+                            "y": 413.84591111133943
+                        },
+                        "br": {
+                            "x": 787.4680000002284,
+                            "y": 413.84591111133943
+                        }
+                    }
+                },
+                "mr": {
+                    "x": 1169.6827555555558,
+                    "y": 401.84591111111115,
+                    "corner": {
+                        "tl": {
+                            "x": 1163.182755555432,
+                            "y": 395.3459111109875
+                        },
+                        "tr": {
+                            "x": 1176.1827555556795,
+                            "y": 395.3459111109875
+                        },
+                        "bl": {
+                            "x": 1163.182755555432,
+                            "y": 408.3459111112348
+                        },
+                        "br": {
+                            "x": 1176.1827555556795,
+                            "y": 408.3459111112348
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 1157.6827555553275,
+                            "y": 389.84591111088287
+                        },
+                        "tr": {
+                            "x": 1181.682755555784,
+                            "y": 389.84591111088287
+                        },
+                        "bl": {
+                            "x": 1157.6827555553275,
+                            "y": 413.84591111133943
+                        },
+                        "br": {
+                            "x": 1181.682755555784,
+                            "y": 413.84591111133943
+                        }
+                    }
+                },
+                "mb": {
+                    "x": 972.5753777777779,
+                    "y": 598.9532888888889,
+                    "corner": {
+                        "tl": {
+                            "x": 966.0753777776542,
+                            "y": 592.4532888887652
+                        },
+                        "tr": {
+                            "x": 979.0753777779016,
+                            "y": 592.4532888887652
+                        },
+                        "bl": {
+                            "x": 966.0753777776542,
+                            "y": 605.4532888890126
+                        },
+                        "br": {
+                            "x": 979.0753777779016,
+                            "y": 605.4532888890126
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 960.5753777775496,
+                            "y": 586.9532888886606
+                        },
+                        "tr": {
+                            "x": 984.5753777780062,
+                            "y": 586.9532888886606
+                        },
+                        "bl": {
+                            "x": 960.5753777775496,
+                            "y": 610.9532888891172
+                        },
+                        "br": {
+                            "x": 984.5753777780062,
+                            "y": 610.9532888891172
+                        }
+                    }
+                },
+                "mt": {
+                    "x": 972.5753777777779,
+                    "y": 204.73853333333335,
+                    "corner": {
+                        "tl": {
+                            "x": 966.0753777776542,
+                            "y": 198.2385333332097
+                        },
+                        "tr": {
+                            "x": 979.0753777779016,
+                            "y": 198.2385333332097
+                        },
+                        "bl": {
+                            "x": 966.0753777776542,
+                            "y": 211.238533333457
+                        },
+                        "br": {
+                            "x": 979.0753777779016,
+                            "y": 211.238533333457
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 960.5753777775496,
+                            "y": 192.73853333310507
+                        },
+                        "tr": {
+                            "x": 984.5753777780062,
+                            "y": 192.73853333310507
+                        },
+                        "bl": {
+                            "x": 960.5753777775496,
+                            "y": 216.73853333356163
+                        },
+                        "br": {
+                            "x": 984.5753777780062,
+                            "y": 216.73853333356163
+                        }
+                    }
+                },
+                "tl": {
+                    "x": 776.4680000000001,
+                    "y": 205.73853333333335,
+                    "corner": {
+                        "tl": {
+                            "x": 769.9679999998764,
+                            "y": 199.2385333332097
+                        },
+                        "tr": {
+                            "x": 782.9680000001238,
+                            "y": 199.2385333332097
+                        },
+                        "bl": {
+                            "x": 769.9679999998764,
+                            "y": 212.238533333457
+                        },
+                        "br": {
+                            "x": 782.9680000001238,
+                            "y": 212.238533333457
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 764.4679999997718,
+                            "y": 193.73853333310507
+                        },
+                        "tr": {
+                            "x": 788.4680000002284,
+                            "y": 193.73853333310507
+                        },
+                        "bl": {
+                            "x": 764.4679999997718,
+                            "y": 217.73853333356163
+                        },
+                        "br": {
+                            "x": 788.4680000002284,
+                            "y": 217.73853333356163
+                        }
+                    }
+                },
+                "tr": {
+                    "x": 1168.6827555555558,
+                    "y": 205.73853333333335,
+                    "corner": {
+                        "tl": {
+                            "x": 1162.182755555432,
+                            "y": 199.2385333332097
+                        },
+                        "tr": {
+                            "x": 1175.1827555556795,
+                            "y": 199.2385333332097
+                        },
+                        "bl": {
+                            "x": 1162.182755555432,
+                            "y": 212.238533333457
+                        },
+                        "br": {
+                            "x": 1175.1827555556795,
+                            "y": 212.238533333457
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 1156.6827555553275,
+                            "y": 193.73853333310507
+                        },
+                        "tr": {
+                            "x": 1180.682755555784,
+                            "y": 193.73853333310507
+                        },
+                        "bl": {
+                            "x": 1156.6827555553275,
+                            "y": 217.73853333356163
+                        },
+                        "br": {
+                            "x": 1180.682755555784,
+                            "y": 217.73853333356163
+                        }
+                    }
+                },
+                "bl": {
+                    "x": 776.4680000000001,
+                    "y": 597.9532888888889,
+                    "corner": {
+                        "tl": {
+                            "x": 769.9679999998764,
+                            "y": 591.4532888887652
+                        },
+                        "tr": {
+                            "x": 782.9680000001238,
+                            "y": 591.4532888887652
+                        },
+                        "bl": {
+                            "x": 769.9679999998764,
+                            "y": 604.4532888890126
+                        },
+                        "br": {
+                            "x": 782.9680000001238,
+                            "y": 604.4532888890126
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 764.4679999997718,
+                            "y": 585.9532888886606
+                        },
+                        "tr": {
+                            "x": 788.4680000002284,
+                            "y": 585.9532888886606
+                        },
+                        "bl": {
+                            "x": 764.4679999997718,
+                            "y": 609.9532888891172
+                        },
+                        "br": {
+                            "x": 788.4680000002284,
+                            "y": 609.9532888891172
+                        }
+                    }
+                },
+                "br": {
+                    "x": 1168.6827555555558,
+                    "y": 597.9532888888889,
+                    "corner": {
+                        "tl": {
+                            "x": 1162.182755555432,
+                            "y": 591.4532888887652
+                        },
+                        "tr": {
+                            "x": 1175.1827555556795,
+                            "y": 591.4532888887652
+                        },
+                        "bl": {
+                            "x": 1162.182755555432,
+                            "y": 604.4532888890126
+                        },
+                        "br": {
+                            "x": 1175.1827555556795,
+                            "y": 604.4532888890126
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 1156.6827555553275,
+                            "y": 585.9532888886606
+                        },
+                        "tr": {
+                            "x": 1180.682755555784,
+                            "y": 585.9532888886606
+                        },
+                        "bl": {
+                            "x": 1156.6827555553275,
+                            "y": 609.9532888891172
+                        },
+                        "br": {
+                            "x": 1180.682755555784,
+                            "y": 609.9532888891172
+                        }
+                    }
+                },
+                "mtr": {
+                    "x": 972.5753777777779,
+                    "y": 165.73853333333335,
+                    "corner": {
+                        "tl": {
+                            "x": 966.0753777776542,
+                            "y": 159.2385333332097
+                        },
+                        "tr": {
+                            "x": 979.0753777779016,
+                            "y": 159.2385333332097
+                        },
+                        "bl": {
+                            "x": 966.0753777776542,
+                            "y": 172.238533333457
+                        },
+                        "br": {
+                            "x": 979.0753777779016,
+                            "y": 172.238533333457
+                        }
+                    },
+                    "touchCorner": {
+                        "tl": {
+                            "x": 960.5753777775496,
+                            "y": 153.73853333310507
+                        },
+                        "tr": {
+                            "x": 984.5753777780062,
+                            "y": 153.73853333310507
+                        },
+                        "bl": {
+                            "x": 960.5753777775496,
+                            "y": 177.73853333356163
+                        },
+                        "br": {
+                            "x": 984.5753777780062,
+                            "y": 177.73853333356163
+                        }
+                    }
+                }
+            },
             "dirty": false,
             "brs": 1,
             "src": "https://aicanvas.ailaysa.com/media/u584344/aidesign/assets/aidesign_assets/images/old-wood-table-with-blurred-concrete-bloc_QdjsQ9m.png",
