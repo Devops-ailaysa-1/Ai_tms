@@ -1,15 +1,15 @@
-hardBoardColor  = "rgba(231,232,234,0)"
+hardBoardColor = "rgba(231,232,234,0)"
 
-null=None
-false=False
-true=True
-top=0
-left=0
-text_height=20
-text_width=20
+null = None
+false = False
+true = True
+top = 0
+left = 0
+text_height = 20
+text_width = 20
 
-text_left=486.88
-text_left=605
+text_left = 486.88
+text_left = 605
 
 backgroundHardboard = {
     "rx": 0,
@@ -139,7 +139,7 @@ textbox = {
     "isTranslate": false
 }
 
-image ={
+image = {
     "type": "image",
     "version": "5.3.0",
     "originX": "left",
@@ -219,58 +219,59 @@ image ={
             "type": "HueRotation",
             "rotation": 0
         }
-    ]
+    ],
+    "clipPath": null
 }
 
 #  if  clip path append to image
 clipPath = {
-        "type": "path",
-        "version": "5.3.0",
-        "originX": "center",
-        "originY": "center",
-        "left": left,
-        "top": top,
-        "width": 45,
-        "height": 45,
-        "fill": "rgb(0,0,0)",
-        "stroke": null,
-        "strokeWidth": 1,
-        "strokeDashArray": null,
-        "strokeLineCap": "butt",
-        "strokeDashOffset": 0,
-        "strokeLineJoin": "miter",
-        "strokeUniform": false,
-        "strokeMiterLimit": 4,
-        "scaleX": 28.18,
-        "scaleY": 28.18,
-        "angle": 0,
-        "flipX": false,
-        "flipY": false,
-        "opacity": 1,
-        "shadow": null,
-        "visible": true,
-        "backgroundColor": "",
-        "fillRule": "nonzero",
-        "paintFirst": "fill",
-        "globalCompositeOperation": "source-over",
-        "skewX": 0,
-        "skewY": 0,
-        "id": "M25.5 3C13.0725 3 3 13.0725 3 25.5C3 37.9275 13.0725 48 25.5 48C37.9275 48 48 37.9275 48 25.5C48 13.0725 37.9275 3 25.5 3Z",
-        "hasBorders": true,
-        "evented": true,
-        "selectable": true,
-        "lockMovementX": false,
-        "lockMovementY": false,
-        "perPixelTargetFind": false,
-        "objectCaching": false,
-        "dirty": false,
-        "path": [
+    "type": "path",
+    "version": "5.3.0",
+    "originX": "center",
+    "originY": "center",
+    "left": left,
+    "top": top,
+    "width": 45,
+    "height": 45,
+    "fill": "rgb(0,0,0)",
+    "stroke": null,
+    "strokeWidth": 1,
+    "strokeDashArray": null,
+    "strokeLineCap": "butt",
+    "strokeDashOffset": 0,
+    "strokeLineJoin": "miter",
+    "strokeUniform": false,
+    "strokeMiterLimit": 4,
+    "scaleX": 28.18,
+    "scaleY": 28.18,
+    "angle": 0,
+    "flipX": false,
+    "flipY": false,
+    "opacity": 1,
+    "shadow": null,
+    "visible": true,
+    "backgroundColor": "",
+    "fillRule": "nonzero",
+    "paintFirst": "fill",
+    "globalCompositeOperation": "source-over",
+    "skewX": 0,
+    "skewY": 0,
+    "id": "M25.5 3C13.0725 3 3 13.0725 3 25.5C3 37.9275 13.0725 48 25.5 48C37.9275 48 48 37.9275 48 25.5C48 13.0725 37.9275 3 25.5 3Z",
+    "hasBorders": true,
+    "evented": true,
+    "selectable": true,
+    "lockMovementX": false,
+    "lockMovementY": false,
+    "perPixelTargetFind": false,
+    "objectCaching": false,
+    "dirty": false,
+    "path": [
             [
                 "M",
                 25.5,
                 3
             ],
-            [
+        [
                 "C",
                 13.0725,
                 3,
@@ -279,7 +280,7 @@ clipPath = {
                 3,
                 25.5
             ],
-            [
+        [
                 "C",
                 3,
                 37.9275,
@@ -288,7 +289,7 @@ clipPath = {
                 25.5,
                 48
             ],
-            [
+        [
                 "C",
                 37.9275,
                 48,
@@ -297,7 +298,7 @@ clipPath = {
                 48,
                 25.5
             ],
-            [
+        [
                 "C",
                 48,
                 13.0725,
@@ -306,22 +307,22 @@ clipPath = {
                 25.5,
                 3
             ],
-            [
+        [
                 "Z"
             ]
-        ],
-        "inverted": false,
-        "absolutePositioned": false
-    }
+    ],
+    "inverted": false,
+    "absolutePositioned": false
+}
 
 
-path  = {
+path = {
     "type": "path",
     "version": "5.3.0",
     "originX": "left",
     "originY": "top",
     "left": left,
-    "top":top,
+    "top": top,
     "width": 54,
     "height": 54,
     "fill": "#5C6C7D",
@@ -411,7 +412,7 @@ backgroundImage = {
     "version": "5.3.0",
     "originX": "left",
     "originY": "top",
-    "left":left,
+    "left": left,
     "top": top,
     "width": 1920,
     "height": 1280,
@@ -460,7 +461,7 @@ backgroundImage = {
     "oldScaleY": 0.1875,
     "dirty": false,
     "brs": 1,
-    "src": "https://aicanvas.ailaysa.com/media/aidesign/thirdpartyimage/fc0e8162-4630-11ee-aa5a-0242ac14000a.jpg",
+    "src": "https://aicanvas.ailaysa.com/media/backround-template/green-background-with-marbled-vintage-grunge.png",
     "crossOrigin": "anonymous",
     "filters": [
         {
@@ -495,8 +496,7 @@ backgroundImage = {
 }
 
 
-
-bg_color =[
+bg_color = [
     {
         "background": 'rgba(17, 42, 70, 1)',
         "textbox": 'rgba(255, 255, 255, 1)',
@@ -615,20 +615,18 @@ bg_color =[
 ]
 
 
-
-
-
-jsonStructure ={
+jsonStructure = {
     "objects": [
-    #  backgroundImage,
-    #  path
-    #  image,
-    #  textbox, 
-    
+        #  backgroundImage,
+        #  path
+        #  image,
+        #  textbox,
+
     ],
     "version": "5.3.0",
     "projectid": null,
     "background": hardBoardColor,
-    "backgroundImage": backgroundHardboard,
+    # "backgroundImage": backgroundHardboard,
+    "backgroundImage":backgroundImage ,
     "perPixelTargetFind": false
 }
