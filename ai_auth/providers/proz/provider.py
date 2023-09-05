@@ -10,7 +10,7 @@ class ProzAccount(ProviderAccount):
 
 class ProzProvider(OAuth2Provider):
 
-    id = 'Proz'
+    id = 'proz'
     name = 'Proz'
     account_class = ProzAccount
 

@@ -61,8 +61,8 @@ def proz_connect(sender, instance, *args, **kwargs):
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
     
-    if instance.socialaccount_set.filter(provider='Proz'):
-        uuid = instance.socialaccount_set.filter(provider='Proz')[0].extra_data.get('uuid')
+    if instance.socialaccount_set.filter(provider='proz'):
+        uuid = instance.socialaccount_set.filter(provider='proz')[0].extra_data.get('uuid')
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
         headers = {
         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
@@ -302,7 +302,7 @@ def populate_user_details(user, sociallogin=None,**kwargs):
         if sociallogin.account.provider == 'google':
             user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
             full_name = user_data['name']
-        if sociallogin.account.provider == 'Proz':
+        if sociallogin.account.provider == 'proz':
             user_data = user.socialaccount_set.filter(provider='proz')[0].extra_data
             user.is_vendor = True
             if user_data.get('account_type') in ["2",]:
