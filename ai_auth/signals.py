@@ -296,9 +296,15 @@ def populate_user_details(user, sociallogin=None,**kwargs):
         if sociallogin.account.provider == 'google':
             user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
             full_name = user_data['name']
-        if sociallogin.account.provider == 'proz':
+        if sociallogin.account.provider == 'Proz':
             user_data = user.socialaccount_set.filter(provider='proz')[0].extra_data
-            full_name = user_data['first_name'] + user_data['last_name']
+            user.is_vendor = True
+            if user_data.get('account_type') in ["2",]:
+                user.is_agency = True
+            if user_data['first_name'] == None:
+                full_name = user_data['site_name']
+            else:
+                full_name = user_data['contact_info']['first_name'] + user_data['contact_info']['last_name']
         user.fullname = full_name
         user.save()
         user_attr = auth_model.UserAttribute.objects.create(user=user,user_type_id=1)
