@@ -351,7 +351,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'offline',
         }
     },
-    'Proz':{
+    'proz':{
               'SCOPE': [
             'public',
             'user.email',
