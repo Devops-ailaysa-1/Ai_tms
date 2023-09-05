@@ -293,6 +293,7 @@ def create_postjob_id(sender, instance, *args, **kwargs):
 def populate_user_details(user, sociallogin=None,**kwargs):
 
     if sociallogin:
+        full_name = None
         if sociallogin.account.provider == 'google':
             user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
             full_name = user_data['name']
@@ -301,7 +302,7 @@ def populate_user_details(user, sociallogin=None,**kwargs):
             user.is_vendor = True
             if user_data.get('account_type') in ["2",]:
                 user.is_agency = True
-            if user_data['first_name'] == None:
+            if user_data['contact_info']['first_name'] == None:
                 full_name = user_data['site_name']
             else:
                 full_name = user_data['contact_info']['first_name'] + user_data['contact_info']['last_name']
