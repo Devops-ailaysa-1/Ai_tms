@@ -398,7 +398,6 @@ def genarate_image(instance,image_grid,template,attr):
     # for standard_json template
     img=attr
     # img["src"]=HOST_NAME+instance.image.url
-    img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
     
     """mask""" 
     if instance.mask==None or instance.backround_removal_image ==None:
@@ -409,20 +408,24 @@ def genarate_image(instance,image_grid,template,attr):
  
     print("img---->", img["src"])
     img["name"]="Image"+str(pos[0])+str(pos[1])
-    if instance.width <= instance.height:
-        scale=(x/int(instance.width))
-    else:
-        scale=(y/int(instance.height))
+    # if instance.width <= instance.height:
+    #     scale=(x/int(instance.width))
+    # else:
+    #     scale=(y/int(instance.height))
+    width_scale=(x/int(instance.width))
+    height_scale=(y/int(instance.height))
+    scale=min(width_scale,height_scale)
 
     # img=custom_attr(img,attr["image"])
-    if img["clipPath"]:
+    if "clipPath" in img:
         print("clip_path...............") 
         # path_string=img["clipPath"]
         # img["clipPath"]=get_clip_path(path_string)
         img["id"]="background"
-
         img["src"]=HOST_NAME+instance.image.url
         # img["src"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
+        img["brs"]=1
+                
     else:
         # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
         img["bgMask"]=HOST_NAME+instance.mask.url
@@ -430,10 +433,11 @@ def genarate_image(instance,image_grid,template,attr):
         img["sourceImage"]=HOST_NAME+instance.image.url
         img["brs"]=2
 
-    img["scaleX"]=img["scaleY"]=scale
-    img["oldScaleX"]=img["oldScaleY"]=scale
     img["width"]=img["oldWidth"]=instance.width
     img["height"]=img["oldHeight"]=instance.height
+
+    img["scaleX"]=img["scaleY"]=scale
+    img["oldScaleX"]=img["oldScaleY"]=scale
 
     return img
 

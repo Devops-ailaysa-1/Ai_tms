@@ -1512,21 +1512,21 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
 #         temp={}  
         temp={}  
         # result data 
-        data=copy.deepcopy(std_json)
+        json_data=copy.deepcopy(std_json)
         if len(custom_color)<1:
             custom_color=copy.deepcopy(bg_color)
         
         # model instance
-        
+        import random
+        data=json_data[random.randint(0,len(json_data)-1)]
+
         color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
-        print(color_attr,"colorrrrrrrrrrrrrrrrrr")
         type=["path","textbox"]
         for obj in data["objects"]:
             if obj["type"] =="path" or obj["type"]=="textbox":
                 obj["fill"]=color_attr[obj["type"]]
                 if  obj["type"] =="textbox":
                     obj["styles"]=[]
-                print(obj["type"],obj["fill"],"llllllllllllllllllllllllllllllllllllll")
 
             elif obj["type"] =="image":
                 if len(img_instance)<1 :
@@ -1534,9 +1534,10 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
                 prompt_inst=img_instance.pop(random.randint(0,(len(img_instance)-1)))
                 gen_image=genarate_image(prompt_inst,image_grid,template,obj)
                 obj=gen_image
-           
+        
         data["backgroundImage"]["fill"]=color_attr[ "background"]
-        print(data["backgroundImage"]["fill"],"backgroundcolorrrrrrrrrrrrrrrrrrrr")
+        data["backgroundImage"]["width"]=temp_width
+        data["backgroundImage"]["height"]=temp_height
 
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
