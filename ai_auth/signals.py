@@ -71,9 +71,13 @@ def proz_connect(sender, instance, *args, **kwargs):
         res = response.json()
         if res and res.get('success') == 1:
             ven = res.get('data')
-            cv_file = ven.get('qualifications').get('cv_url',None)
-            native_lang = ven.get('skills').get('qualifications').get('native_language')[0]
-            year_of_experience = ven.get('professional_history').get('years_of_experience')
+            if ven.get('qualifications',False):
+                cv_file = ven.get('qualifications').get('cv_url',None)
+            if ven.get('skills',False):
+                if ven.get('skills').get('qualifications',False):
+                    native_lang = ven.get('skills').get('qualifications').get('native_language')[0]
+            if ven.get('professional_history',False):
+                year_of_experience = ven.get('professional_history').get('years_of_experience')
             location = ven.get('contact_info').get('address',{}).get('region',None)
             if ven.get('about_me_localizations') != []:
                 bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
