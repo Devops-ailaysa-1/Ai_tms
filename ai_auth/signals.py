@@ -80,7 +80,7 @@ def proz_connect(sender, instance, *args, **kwargs):
             if ven.get('about_me_localizations') != []:
                 bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
             else:bio = None
-            obj = VendorsInfo.objects.get_or_create(user=instance)
+            obj,created = VendorsInfo.objects.get_or_create(user=instance)
             obj.cv_file = cv_file
             if native_lang:
                 obj.native_lang_id = staff_model.ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
