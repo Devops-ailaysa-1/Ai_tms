@@ -56,6 +56,22 @@ def vendor_status_send_email(sender, instance, *args, **kwargs):
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
 
+
+def create_lang_details(lang_pairs,instance):
+    from ai_vendor.models import VendorLanguagePair
+    for i in lang_pairs:
+        if i.get('services')[0].get('service_id') == 1:
+            pairs = i.get('pair_code')
+            src,tar = pairs.split('_')
+            print(src,tar)
+            source = staff_model.ProzLanguagesCode.objects.filter(language_code = src).first().language.id
+            target = staff_model.ProzLanguagesCode.objects.filter(language_code = tar).first().language.id
+            try:
+                lang,created = VendorLanguagePair.objects.get_or_create(source_lang_id=source,target_lang_id=target,user=instance)
+                print(lang, created)
+            except:pass
+    
+
 def proz_connect(sender, instance, *args, **kwargs):
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
@@ -93,7 +109,9 @@ def proz_connect(sender, instance, *args, **kwargs):
             profile.save()
             subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
             [VendorSubjectFields.objects.create(user=instance,subject_id = i.get('subject')) for i in subs]
-
+            lang_pairs = ven.get('skills').get('language_pairs',None)
+            if lang_pairs:
+                create_lang_details(lang_pairs,instance)
 
 
 
