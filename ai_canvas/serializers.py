@@ -1090,14 +1090,37 @@ class DesignerListSerializer(serializers.ModelSerializer):
         if instance.canvas_translate.all():
             data['translate_available'] = True
         tar=instance.canvas_translate.all()
-        ser=CanvasTranslatedJsonSerializer(tar,many=True)
+        ser=CanvasTranslatedSerializer(tar,many=True)
         obj.append(data)
         for i in ser.data:
             obj.append(i)
         return obj
     
-class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
+class CanvasTargetJsonSerializer(serializers.ModelSerializer):
 
+    class Meta:
+        model=CanvasTargetJsonFiles
+        fields="__all__"
+
+
+class CanvasTranslatedSerializer(serializers.ModelSerializer):
     class Meta:
         model=CanvasTranslatedJson
         fields="__all__"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

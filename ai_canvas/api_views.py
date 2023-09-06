@@ -1290,7 +1290,8 @@ import time
 from ai_canvas.utils import (generate_random_rgba,create_thumbnail,grid_position,genarate_text,
             random_background_image,custom_attr,get_clip_path,genarate_image,genarate_path,clip_position)
 from ai_canvas.meta import style
-from ai_canvas.template import bg_color,backgroundImage,clipPath,path,image,textbox,backgroundHardboard
+from ai_canvas.template import backgroundImage,clipPath,path,image,textbox,backgroundHardboard
+from ai_canvas.color import bg_color
 
 class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
@@ -1610,6 +1611,8 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                  for k in obj["objects"]:
                       if k["type"]=="textbox":
                         data["objects"].append(k)
+                      else:
+                          k["fill"]=color_attr["grouppathcolor"]
        
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
@@ -1705,12 +1708,12 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignerListSerializer(pagin_tc,many=True)
-        print(type(serializer.data))
         data=[]
         for obj in serializer.data:
             data.append(obj)
         response = self.get_paginated_response(data)
         return response
+        
     
     def filter_queryset(self, queryset):
         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
