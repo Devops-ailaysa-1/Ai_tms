@@ -1049,14 +1049,14 @@ class AiAssertsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=AiAsserts
-        fields=('preview_img',"id","tags","type","user","category",'imageurl')
+        fields=('preview_img',"id","tags","type","user","category",'imageurl',"status")
 
     def create(self, data):
-        print(data)
         instance=AiAsserts.objects.create(**data)
         # instance.save()
         im = Image.open(instance.imageurl.path)
         instance.preview_img=create_thumbnail_img_load(base_dimension=300,image=im)
+        instance.status=True
         instance.save()
         return instance
     
@@ -1071,4 +1071,33 @@ class TemplateJsonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=TemplateJson
+        fields="__all__"
+
+
+class DesignerListSerializer(serializers.ModelSerializer):
+    thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
+    translate_available = serializers.BooleanField(required=False,default=False)
+    translate_src=serializers.FileField(allow_empty_file=False,required=False,write_only=True)
+    class Meta:
+        model = CanvasDesign
+        fields = ('id','file_name','width','height','thumbnail_src','translate_available','updated_at',"translate_src")
+        
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        obj=[]
+        if hasattr(instance.canvas_json_src.first(),'thumbnail'):
+            # if 'thumbnail_src' in data.keys():
+            data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
+        if instance.canvas_translate.all():
+            data['translate_available'] = True
+        tar=instance.canvas_translate.all()
+        ser=CanvasTranslatedJsonSerializer(tar,many=True)
+        # obj.append(data)
+        # obj.append(ser.data)
+        return data
+    
+class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=CanvasTranslatedJson
         fields="__all__"

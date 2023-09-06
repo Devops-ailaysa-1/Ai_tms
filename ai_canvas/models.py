@@ -335,6 +335,7 @@ class AiAsserts(models.Model):
     category=models.ForeignKey(ImageCategories, on_delete=models.CASCADE)
     type=models.ForeignKey(AiAssertscategory, on_delete=models.CASCADE)
     user=models.CharField(max_length=2000,null=True,blank=True)
+    status=models.BooleanField(default=False)
 
     # def __str__(self):
     #     return str(self.type)
