@@ -496,123 +496,123 @@ backgroundImage = {
 }
 
 
-bg_color = [
-    {
-        "background": 'rgba(17, 42, 70, 1)',
-        "textbox": 'rgba(255, 255, 255, 1)',
-        "path": 'rgba(223, 255, 251, 1)',
-    },
-    {
-        "background": 'rgba(131, 11, 39, 1)',
-        "textbox": 'rgba(255, 255, 255, 1)',
-        "path": 'rgba(255, 209, 102, 1)',
-    },
-    {
-        "background": 'rgba(81, 0, 128, 1)',
-        "textbox": 'rgba(255, 226, 158, 1)',
-        "path": 'rgba(114, 239, 221, 1)',
-    },
-    {
-        "background": 'rgba(255, 214, 10, 1)',
-        "textbox": 'rgba(255, 255, 255, 1)',
-        "path": 'rgba(0, 42, 82, 1)',
-    },
-    {
-        "background": 'rgba(253, 240, 213, 1)',
-        "textbox": 'rgba(0, 48, 73, 1)',
-        "path": 'rgba(193, 18, 31, 1)',
-    },
-    {
-        "background": 'rgba(88, 49, 1, 1)',
-        "textbox": 'rgba(255, 237, 216, 1)',
-        "path": 'rgba(255, 224, 102, 1)',
-    },
-    {
-        "background": 'rgba(26, 83, 92, 1)',
-        "textbox": 'rgba(247, 255, 247, 1)',
-        "path": 'rgba(78, 205, 196, 1)',
-    },
-    {
-        "background": 'rgba(34, 38, 42, 1)',
-        "textbox": 'rgba(144, 224, 218, 1)',
-        "path": 'rgba(6, 214, 160, 1)',
-    },
-    {
-        "background": 'rgba(202, 240, 248, 1)',
-        "textbox": 'rgba(3, 4, 94, 1)',
-        "path": 'rgba(216, 226, 220, 1)',
-    },
-    {
-        "background": 'rgba(202, 240, 248, 1)',
-        "textbox": 'rgba(3, 4, 94, 1)',
-        "path": 'rgba(216, 226, 220, 1)',
-    },
-    {
-        "background": 'rgba(40, 54, 24, 1)',
-        "textbox": 'rgba(254, 250, 224, 1)',
-        "path": 'rgba(96, 108, 56, 1)',
-    },
-    {
-        "background": 'rgba(245, 203, 92, 1)',
-        "textbox": 'rgba(36, 36, 35, 1)',
-        "path": 'rgba(232, 237, 223, 1)',
-    },
-    {
-        "background": 'rgba(111, 255, 233, 1)',
-        "textbox": 'rgba(11, 19, 43, 1)',
-        "path": 'rgba(91, 192, 190, 1)',
-    },
-    {
-        "background": 'rgba(111, 255, 233, 1)',
-        "textbox": 'rgba(11, 19, 43, 1)',
-        "path": 'rgba(91, 192, 190, 1)',
-    },
-    {
-        "background": 'rgba(111, 255, 233, 1)',
-        "textbox": 'rgba(11, 19, 43, 1)',
-        "path": 'rgba(91, 192, 190, 1)',
-    },
-    {
-        "background": 'rgba(2, 74, 74, 1)',
-        "textbox": 'rgba(255, 255, 255, 1)',
-        "path": 'rgba(70, 157, 137, 1)',
-    },
-    {
-        "background": 'rgba(0, 55, 138, 1)',
-        "textbox": 'rgba(245, 247, 250, 1)',
-        "path": 'rgba(78, 165, 255, 1)',
-    },
-    {
-        "background": 'rgba(190, 233, 232, 1)',
-        "textbox": 'rgba(27, 73, 101, 1)',
-        "path": 'rgba(98, 182, 203, 1)',
-    },
-    {
-        "background": 'rgba(247, 255, 247, 1)',
-        "textbox": 'rgba(26, 83, 92, 1)',
-        "path": 'rgba(78, 205, 196, 1)',
-    },
-    {
-        "background": 'rgba(58, 64, 90, 1)',
-        "textbox": 'rgba(255, 255, 255, 1)',
-        "path": 'rgba(153, 178, 221, 1)',
-    },
-    {
-        "background": 'rgba(253, 255, 252, 1)',
-        "textbox": 'rgba(1, 22, 39, 1)',
-        "path": 'rgba(46, 196, 182, 1)',
-    },
-    {
-        "background": 'rgba(3, 49, 46, 1)',
-        "textbox": 'rgba(172, 252, 217, 1)',
-        "path": 'rgba(140, 215, 144, 1)',
-    },
-    {
-        "background": 'rgba(249, 180, 237, 1)',
-        "textbox": 'rgba(5, 26, 77, 1)',
-        "path": 'rgba(234, 132, 201, 1)',
-    }
-]
+# bg_color = [
+#     {
+#         "background": 'rgba(17, 42, 70, 1)',
+#         "textbox": 'rgba(255, 255, 255, 1)',
+#         "path": 'rgba(223, 255, 251, 1)',
+#     },
+#     {
+#         "background": 'rgba(131, 11, 39, 1)',
+#         "textbox": 'rgba(255, 255, 255, 1)',
+#         "path": 'rgba(255, 209, 102, 1)',
+#     },
+#     {
+#         "background": 'rgba(81, 0, 128, 1)',
+#         "textbox": 'rgba(255, 226, 158, 1)',
+#         "path": 'rgba(114, 239, 221, 1)',
+#     },
+#     {
+#         "background": 'rgba(255, 214, 10, 1)',
+#         "textbox": 'rgba(255, 255, 255, 1)',
+#         "path": 'rgba(0, 42, 82, 1)',
+#     },
+#     {
+#         "background": 'rgba(253, 240, 213, 1)',
+#         "textbox": 'rgba(0, 48, 73, 1)',
+#         "path": 'rgba(193, 18, 31, 1)',
+#     },
+#     {
+#         "background": 'rgba(88, 49, 1, 1)',
+#         "textbox": 'rgba(255, 237, 216, 1)',
+#         "path": 'rgba(255, 224, 102, 1)',
+#     },
+#     {
+#         "background": 'rgba(26, 83, 92, 1)',
+#         "textbox": 'rgba(247, 255, 247, 1)',
+#         "path": 'rgba(78, 205, 196, 1)',
+#     },
+#     {
+#         "background": 'rgba(34, 38, 42, 1)',
+#         "textbox": 'rgba(144, 224, 218, 1)',
+#         "path": 'rgba(6, 214, 160, 1)',
+#     },
+#     {
+#         "background": 'rgba(202, 240, 248, 1)',
+#         "textbox": 'rgba(3, 4, 94, 1)',
+#         "path": 'rgba(216, 226, 220, 1)',
+#     },
+#     {
+#         "background": 'rgba(202, 240, 248, 1)',
+#         "textbox": 'rgba(3, 4, 94, 1)',
+#         "path": 'rgba(216, 226, 220, 1)',
+#     },
+#     {
+#         "background": 'rgba(40, 54, 24, 1)',
+#         "textbox": 'rgba(254, 250, 224, 1)',
+#         "path": 'rgba(96, 108, 56, 1)',
+#     },
+#     {
+#         "background": 'rgba(245, 203, 92, 1)',
+#         "textbox": 'rgba(36, 36, 35, 1)',
+#         "path": 'rgba(232, 237, 223, 1)',
+#     },
+#     {
+#         "background": 'rgba(111, 255, 233, 1)',
+#         "textbox": 'rgba(11, 19, 43, 1)',
+#         "path": 'rgba(91, 192, 190, 1)',
+#     },
+#     {
+#         "background": 'rgba(111, 255, 233, 1)',
+#         "textbox": 'rgba(11, 19, 43, 1)',
+#         "path": 'rgba(91, 192, 190, 1)',
+#     },
+#     {
+#         "background": 'rgba(111, 255, 233, 1)',
+#         "textbox": 'rgba(11, 19, 43, 1)',
+#         "path": 'rgba(91, 192, 190, 1)',
+#     },
+#     {
+#         "background": 'rgba(2, 74, 74, 1)',
+#         "textbox": 'rgba(255, 255, 255, 1)',
+#         "path": 'rgba(70, 157, 137, 1)',
+#     },
+#     {
+#         "background": 'rgba(0, 55, 138, 1)',
+#         "textbox": 'rgba(245, 247, 250, 1)',
+#         "path": 'rgba(78, 165, 255, 1)',
+#     },
+#     {
+#         "background": 'rgba(190, 233, 232, 1)',
+#         "textbox": 'rgba(27, 73, 101, 1)',
+#         "path": 'rgba(98, 182, 203, 1)',
+#     },
+#     {
+#         "background": 'rgba(247, 255, 247, 1)',
+#         "textbox": 'rgba(26, 83, 92, 1)',
+#         "path": 'rgba(78, 205, 196, 1)',
+#     },
+#     {
+#         "background": 'rgba(58, 64, 90, 1)',
+#         "textbox": 'rgba(255, 255, 255, 1)',
+#         "path": 'rgba(153, 178, 221, 1)',
+#     },
+#     {
+#         "background": 'rgba(253, 255, 252, 1)',
+#         "textbox": 'rgba(1, 22, 39, 1)',
+#         "path": 'rgba(46, 196, 182, 1)',
+#     },
+#     {
+#         "background": 'rgba(3, 49, 46, 1)',
+#         "textbox": 'rgba(172, 252, 217, 1)',
+#         "path": 'rgba(140, 215, 144, 1)',
+#     },
+#     {
+#         "background": 'rgba(249, 180, 237, 1)',
+#         "textbox": 'rgba(5, 26, 77, 1)',
+#         "path": 'rgba(234, 132, 201, 1)',
+#     }
+# ]
 
 
 jsonStructure = {

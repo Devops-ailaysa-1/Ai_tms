@@ -378,7 +378,8 @@ def clip_position(width, height,rows,cols):
     return co_oridination
 
 
-from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard,bg_color
+from ai_canvas.template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
+from ai_canvas.color import bg_color
 import random
 from ai_canvas.meta import *
 from ai_staff.models import FontFamily,FontData
