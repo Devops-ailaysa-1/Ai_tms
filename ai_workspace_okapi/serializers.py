@@ -585,6 +585,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
+                print("get trans")
                 validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
         else:
             print("In Translation")
