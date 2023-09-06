@@ -466,7 +466,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
-        fields = ("id","image_name","image",'thumbnail','height','width')
+        fields = ("id","image_name","image",'thumbnail','height','width',"status")
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
@@ -1086,15 +1086,15 @@ class DesignerListSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         obj=[]
         if hasattr(instance.canvas_json_src.first(),'thumbnail'):
-            # if 'thumbnail_src' in data.keys():
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
         if instance.canvas_translate.all():
             data['translate_available'] = True
         tar=instance.canvas_translate.all()
         ser=CanvasTranslatedJsonSerializer(tar,many=True)
-        # obj.append(data)
-        # obj.append(ser.data)
-        return data
+        obj.append(data)
+        for i in ser.data:
+            obj.append(i)
+        return obj
     
 class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
 
