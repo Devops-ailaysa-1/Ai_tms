@@ -1680,6 +1680,8 @@ def designer_asset_create(request):
         serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
         if serializer.is_valid():
             serializer.save()
+            instance.status=True
+            instance.save()
             return Response(serializer.data,status=201)
         return Response(serializer.errors)
 
@@ -1689,6 +1691,34 @@ def designer_asset_create(request):
     category_serializer=ImageCategoriesSerializer(category,many=True)
     
     return JsonResponse({"category":category_serializer.data,"asset_type":asset_serializer.data},status=200)
+
+
+from ai_canvas.serializers import DesignerListSerializer
+class DesignerListViewset(viewsets.ViewSet,CustomPagination):
+    pagination_class = CanvasDesignListViewsetPagination
+    permission_classes = [IsAuthenticated,]
+    search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
+    filter_backends = [DjangoFilterBackend]
+
+    def list(self,request):
+        queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = DesignerListSerializer(pagin_tc,many=True)
+        print(type(serializer.data))
+        data=[]
+        for obj in serializer.data:
+            data.append(obj)
+        response = self.get_paginated_response(data)
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+ 
+
 
 
 

@@ -48,6 +48,7 @@ class CanvasUserImageAssets(models.Model):
     height=models.IntegerField(null=True,blank=True)
     width=models.IntegerField(null=True,blank=True)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
+    status=models.BooleanField(default=False)
 
 class CanvasDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
