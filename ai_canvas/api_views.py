@@ -1611,6 +1611,7 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                  for k in obj["objects"]:
                       if k["type"]=="textbox":
                         data["objects"].append(k)
+                        obj["objects"].remove(k)
                       else:
                           k["fill"]=color_attr["grouppathcolor"]
        
