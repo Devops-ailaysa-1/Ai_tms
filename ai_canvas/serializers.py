@@ -1085,28 +1085,36 @@ class DesignerListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         obj=[]
+        obj.append(data)
         if hasattr(instance.canvas_json_src.first(),'thumbnail'):
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
         if instance.canvas_translate.all():
             data['translate_available'] = True
-        tar=instance.canvas_translate.all()
-        ser=CanvasTranslatedSerializer(tar,many=True)
-        obj.append(data)
-        for i in ser.data:
-            obj.append(i)
+            tar=instance.canvas_translate.all()
+            m=[]
+            for j in tar:
+                k=j.canvas_json_tar.all()
+                ser=CanvasTargetJsonSerializer(k,many=True)
+                for i in ser.data:
+                    obj.append(i)
+                
         return obj
     
 class CanvasTargetJsonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=CanvasTargetJsonFiles
-        fields="__all__"
+        fields=("id","canvas_trans_json","thumbnail","export_file")
 
 
 class CanvasTranslatedSerializer(serializers.ModelSerializer):
+    # thumbnail=serializers.SerializerMethodField()
     class Meta:
         model=CanvasTranslatedJson
-        fields="__all__"
+        fields=("canvas_design","source_language","target_language")
+
+    # def get_thumbnail(self,obj):
+    #     return obj.canvas_json_tar.all()
 
 
 
