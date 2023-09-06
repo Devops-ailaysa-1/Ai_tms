@@ -576,6 +576,10 @@ class MT_RawSerializer(serializers.ModelSerializer):
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
+        # seg_obj = Segment.objects.filter(text_unit__document=document).filter(source=segment.source)
+        # if seg_obj and seg_obj.target:
+        #     validated_data["mt_raw"] = seg_obj.target
+        # else:
         validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
 

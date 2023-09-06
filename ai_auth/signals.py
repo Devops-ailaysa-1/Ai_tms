@@ -5,7 +5,7 @@ from django.utils.text import slugify
 #from ai_auth.api_views import update_billing_address
 from ai_auth import models as auth_model
 from ai_staff import models as staff_model
-import os
+import os, requests
 import random
 from djstripe.models import Customer,Account
 import stripe
@@ -38,7 +38,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
-def  vendor_status_send_email(sender, instance, *args, **kwargs):
+def vendor_status_send_email(sender, instance, *args, **kwargs):
     from ai_auth.api_views import subscribe_vendor
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
@@ -67,7 +67,8 @@ def proz_connect(sender, instance, *args, **kwargs):
         if res and res.get('success') == 1:
             ven = res.get('data')
             cv_file = ven.get('qualifications').get('cv_url',None)
-            native_lang = ven.get('skills').get('qualifications').get('native_language')[0]
+            try:native_lang = ven.get('qualifications').get('native_language')[0]
+            except:native_lang = None
             year_of_experience = ven.get('professional_history').get('years_of_experience')
             location = ven.get('contact_info').get('address',{}).get('region',None)
             if ven.get('about_me_localizations') != []:
@@ -75,7 +76,8 @@ def proz_connect(sender, instance, *args, **kwargs):
             else:bio = None
             obj = VendorInfo.objects.get_or_create(user=instance)
             obj.cv_file = cv_file
-            obj.native_lang_id = ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
+            if native_lang:
+                obj.native_lang_id = ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
             obj.year_of_experience = year_of_experience
             obj.location = location
             obj.bio = bio
