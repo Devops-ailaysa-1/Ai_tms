@@ -50,6 +50,7 @@ from ai_imagetranslation.utils import stable_diffusion_public
 from ai_imagetranslation.serializer import StableDiffusionAPISerializer
 import random
 from ai_staff.models import FontFamily,FontData
+# HOST_NAME="http://0.0.0.0:8091"
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
@@ -1641,6 +1642,7 @@ class CustomTemplateViewset(viewsets.ModelViewSet):
         prompt=request.POST.get("prompt",None)
         key_words=request.POST.get("key_words",None)
         image=request.FILES.get('image',None)
+        
         print(image,">>>>>>>>>>>>>>>>>>>>>")
         img = Image.open(image)
         width = img.width
@@ -1663,17 +1665,22 @@ class CustomTemplateViewset(viewsets.ModelViewSet):
 
 from ai_staff.models import ImageCategories
 from ai_canvas.models import AiAsserts,AiAssertscategory
+from ai_canvas.utils import convert_image_url_to_file
 from ai_canvas.serializers import AiAssertsSerializer,AiAssertscategoryserializer
 from ai_staff.serializer import ImageCategoriesSerializer
+from PIL import Image
 @api_view(["GET",'POST'])
 def designer_asset_create(request):
     # pass
     if request.method=="POST":
-        image=request.FILES.get("imageurl",None)
+        image_id=request.POST.get("image_id",None)
+        instance=CanvasUserImageAssets.objects.get(id=image_id)
+        image_name=os.path.basename(instance.image.url)
+        image = convert_image_url_to_file(Image.open(instance.image.path),no_pil_object=False,name=image_name)
         serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data,status=201)
         return Response(serializer.errors)
 
     category=ImageCategories.objects.all()
