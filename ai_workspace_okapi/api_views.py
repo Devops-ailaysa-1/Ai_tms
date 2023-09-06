@@ -986,6 +986,8 @@ class MT_RawAndTM_View(views.APIView):
                 pass
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
+
+
     @staticmethod
     def get_data(request, segment_id, mt_params):
 
