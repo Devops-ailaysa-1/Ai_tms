@@ -2,7 +2,7 @@ from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
                             CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,
-                            PromptCategory,PromptEngine,TemplateBackground)#TemplatePage
+                            PromptCategory,PromptEngine,TemplateBackground,TemplateJson)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -16,6 +16,8 @@ from ai_staff.models import SocialMediaSize
 from PIL import Image
 import cv2
 from ai_imagetranslation.utils import create_thumbnail_img_load
+from ai_canvas.models import AiAssertscategory,AiAsserts
+
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = LanguagesLocale
@@ -1033,4 +1035,40 @@ class TemplateBackgroundserializer(serializers.ModelSerializer):
         model=TemplateBackground
         fields="__all__"
 
+class AiAssertscategoryserializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=AiAssertscategory
+        fields="__all__"
+
+
+import os
+HOST_NAME=os.getenv("HOST_NAME")
+
+class AiAssertsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=AiAsserts
+        fields=('preview_img',"id","tags","type","user","category",'imageurl')
+
+    def create(self, data):
+        print(data)
+        instance=AiAsserts.objects.create(**data)
+        # instance.save()
+        im = Image.open(instance.imageurl.path)
+        instance.preview_img=create_thumbnail_img_load(base_dimension=300,image=im)
+        instance.save()
+        return instance
     
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['imageurl']= HOST_NAME+instance.imageurl.url 
+        data['preview_img']= HOST_NAME+instance.preview_img.url
+        return data
+    
+
+class TemplateJsonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=TemplateJson
+        fields="__all__"

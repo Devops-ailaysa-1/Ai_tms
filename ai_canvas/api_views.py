@@ -6,14 +6,14 @@ from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesig
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
                               ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,
-                              PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
+                              PromptCategory,PromptEngine,TemplateBackground,TemplateJson) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
                                    TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
-                                   PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   PromptCategoryserializer,TemplateJsonSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -150,9 +150,7 @@ class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
-
-
- 
+     
 class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -768,6 +766,32 @@ def process_pixabay(**kwargs):
         for j in kwargs['image_cat_see_all']['hits']:
             data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'],'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
         return data,total_page
+    
+def asset_get(image_category_name=False,search_image=False):
+    data= []  
+    de_assert=None
+    if image_category_name and search_image:
+        de_assert = AiAsserts.objects.filter(Q(category__category__icontains=image_category_name)&Q(tags__icontains=search_image))
+    elif image_category_name:
+        de_assert = AiAsserts.objects.filter(category__category__icontains=image_category_name)
+    elif search_image:
+        de_assert = AiAsserts.objects.filter(tags__icontains=search_image)
+    if  de_assert:
+        img={}
+        serializers=AiAssertsSerializer(de_assert,many=True)
+        img["Ai_images"]=list(serializers.data)
+        data.append(img)
+        return data
+    obj = ImageCategories.objects.all()
+    for category in obj:
+        img={}
+        de_assert = AiAsserts.objects.filter(category=category)
+        if  de_assert:
+            serializers=AiAssertsSerializer(de_assert,many=True)
+            img["category"]=category.category
+            img["images"]=list(serializers.data)   
+            data.append(img)       
+    return data
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -782,6 +806,9 @@ def image_list(request):
         if not image_cat_see_all:
             return Response({'image_list':[],'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        ai_asset=asset_get(image_category_name=image_category_name,search_image=search_image)
+        for obj in ai_asset:
+            res.insert(0, obj)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
         return Response({ 'has_next':has_next,'page':page,'has_prev':has_prev ,'image_category_name':image_category_name ,
@@ -792,6 +819,9 @@ def image_list(request):
         if not res:
             return Response({'image_list':res,'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=res)
+        ai_asset=asset_get(image_category_name=False,search_image=search_image)
+        for obj in ai_asset:
+            res.insert(0, obj)
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
         return Response({'has_next':has_next,'page':page,'has_prev':has_prev , 
@@ -802,6 +832,9 @@ def image_list(request):
         if not image_cat_see_all:
             return Response({'image_list':[],'has_next':False},status=200)
         res,total_page=process_pixabay(image_cat_see_all=image_cat_see_all)
+        ai_asset=asset_get(image_category_name=image_category_name,search_image=False)
+        for obj in ai_asset:
+            res.insert(0, obj)
 
         has_next=False if int(total_page)==page else True
         has_prev=False if page==1 else True
@@ -817,9 +850,13 @@ def image_list(request):
     # image_cats=paginate_items(image_cats,page,itm_pr_pge)[0]
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(all_cat_req,image_cats))
-
+ 
+    ai_assert=asset_get(image_category_name=False,search_image=False)
     data=process_pixabay(results=results,image_cats=image_cats)
-    paginate=Paginator(data,6)  ###no of item in single page
+    for obj in ai_assert:
+         data.insert(0, obj)
+
+    paginate=Paginator(data,8)  ###no of item in single page
     fin_dat=paginate.get_page(page)
     return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': fin_dat.has_next(),
                     'has_prev': fin_dat.has_previous(),'page': fin_dat.number,'image_list':fin_dat.object_list })
@@ -1304,9 +1341,16 @@ class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
         background=TemplateBackground.objects.filter(prompt_category__id=prompt_id)
         back_ground=list(background)
 
+        temp_data=TemplateJson.objects.filter(prompt_category__id=prompt_id)
+
+        if temp_data:
+            template_data=list(temp_data)
+        else:
+            return JsonResponse({"msg":"something went wrong choose another"})
+        
         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
         font_family = list(font)
-        template=genarate_template(limit,prompt_id,instance,template,font_family,back_ground)        
+        template=genarate_template(limit,template_data,prompt_id,instance,template,font_family,back_ground)        
         return JsonResponse({"data":template})
     
 # from ai_canvas.template import jsonStructure
@@ -1492,12 +1536,12 @@ from ai_canvas.standard_template import std_json
 #     return template_data
 
 
-def genarate_template(limit,prompt_id,img_instance,template,font_family,back_ground):
+def genarate_template(limit,template_data,prompt_id,img_instance,template,font_family,back_ground):
     temp_height =int(template.height)
     temp_width = int(template.width)
     rows=5
     cols=5
-    template_data=[]
+    template_json=[]
     x_path=copy.deepcopy(path)
     # img=copy.deepcopy(image)
     clip_path=copy.deepcopy(clipPath)
@@ -1512,38 +1556,68 @@ def genarate_template(limit,prompt_id,img_instance,template,font_family,back_gro
 #         temp={}  
         temp={}  
         # result data 
-        json_data=copy.deepcopy(std_json)
+        # json_data=copy.deepcopy(std_json)
+        if len(template_data)<1:
+            template_data=list(TemplateJson.objects.filter(prompt_category__id=prompt_id))
+        # rand=random.randint(0,(len(template_data)-1))
+        json_data=template_data.pop(random.randint(0,(len(template_data)-1)))
+        # json_data=template_data.pop(rand)
+        with open(json_data.json_file.path, 'r') as file:
+             data = json.load(file)
+
         if len(custom_color)<1:
             custom_color=copy.deepcopy(bg_color)
-        
-        # model instance
-        import random
-        data=json_data[random.randint(0,len(json_data)-1)]
+
+        # data=json_data[random.randint(0,len(json_data)-1)]
 
         color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
-        type=["path","textbox"]
-        for obj in data["objects"]:
-            if obj["type"] =="path" or obj["type"]=="textbox":
-                obj["fill"]=color_attr[obj["type"]]
-                if  obj["type"] =="textbox":
-                    obj["styles"]=[]
-
-            elif obj["type"] =="image":
-                if len(img_instance)<1 :
-                    img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
-                prompt_inst=img_instance.pop(random.randint(0,(len(img_instance)-1)))
-                gen_image=genarate_image(prompt_inst,image_grid,template,obj)
-                obj=gen_image
         
         data["backgroundImage"]["fill"]=color_attr[ "background"]
         data["backgroundImage"]["width"]=temp_width
         data["backgroundImage"]["height"]=temp_height
+        # model instance
+        text=[]
+        type=["path","textbox"]
+        for obj in data["objects"]:
+            if obj["type"]=="textbox":
+                obj["fill"]=color_attr[obj["type"]]
+                if  obj["type"] =="textbox":
+                    obj["styles"]=[]
+            elif  obj["type"] =="path" :
+               if obj["stroke"]:\
+                    obj["stroke"]=color_attr[obj["type"]]
+               else:
+                    obj["fill"]=color_attr[obj["type"]]
+            
+                    print("***************************************************************")
 
+            elif obj["type"] =="image":
+                if len(img_instance)<1 :
+                    img_instance=list(PromptEngine.objects.filter(prompt_category__id=prompt_id))
+                if obj["id"] !="background":
+                    prompt_inst=img_instance.pop(random.randint(0,(len(img_instance)-1)))
+                    gen_image=genarate_image(prompt_inst,image_grid,template,obj)
+                    obj=gen_image
+                else:
+                    # bg_image=copy.deepcopy(backgroundImage)
+                    if len( back_ground)<1:
+                         back_ground=list(TemplateBackground.objects.filter(prompt_category__id=prompt_id))
+                    template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
+                    bg_generated=random_background_image(obj,template,template_instance,style_attr=False)
+                    obj=bg_generated
+                    data["backgroundImage"]["fill"]=""
+
+            elif  obj["type"] =="group":
+                 for k in obj["objects"]:
+                      if k["type"]=="textbox":
+                        data["objects"].append(k)
+       
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
         temp={"json":data,"thumb":thumbnail}
-        template_data.append(temp)
-    return template_data
+        template_json.append(temp)
+        print("--------------------------------------------------------")
+    return template_json
 
 # def standard_image_genarate(instance,image_grid,template,obj):
 #     img={}
@@ -1586,3 +1660,35 @@ class CustomTemplateViewset(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+    
+
+
+
+from ai_staff.models import ImageCategories
+from ai_canvas.models import AiAsserts,AiAssertscategory
+from ai_canvas.serializers import AiAssertsSerializer,AiAssertscategoryserializer
+from ai_staff.serializer import ImageCategoriesSerializer
+@api_view(["GET",'POST'])
+def designer_asset_create(request):
+    # pass
+    if request.method=="POST":
+        image=request.FILES.get("imageurl",None)
+        serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    category=ImageCategories.objects.all()
+    obj_type=AiAssertscategory.objects.all()
+    asset_serializer=AiAssertscategoryserializer(obj_type,many=True)
+    category_serializer=ImageCategoriesSerializer(category,many=True)
+    
+    return JsonResponse({"category":category_serializer.data,"asset_type":asset_serializer.data},status=200)
+
+
+
+ 
+
+
+

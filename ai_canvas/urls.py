@@ -43,6 +43,7 @@ urlpatterns += [
     path('file_format',api_views.CanvasDownloadFormatViewset.as_view({'get':'list'}),name='file_download_format'),
     # path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list',}),name='global-temp-desi-lst'),
     path('design-download',api_views.DesignerDownload,name='designerdownload'),
+    path('design-assert',api_views.designer_asset_create,name='designer-asset-create'),
     path('canvas-user-images-list',api_views.CanvasUserImageAssetsViewsetList.as_view({'get':'list'}),name='image-translate-list')
 
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
