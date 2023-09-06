@@ -1680,6 +1680,8 @@ def designer_asset_create(request):
         serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
         if serializer.is_valid():
             serializer.save()
+            instance.status=True
+            instance.save()
             return Response(serializer.data,status=201)
         return Response(serializer.errors)
 
