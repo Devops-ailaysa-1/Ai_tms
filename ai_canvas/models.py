@@ -318,3 +318,33 @@ class PromptMaskImage(models.Model):
 
     def __str__(self):
         return self.image_url
+    
+from ai_staff.models import ImageCategories   
+
+class AiAssertscategory(models.Model):
+    name=models.CharField(max_length=256)
+
+    def __str__(self):
+        return self.name
+    
+
+class AiAsserts(models.Model):
+    imageurl=models.FileField(upload_to="Ai-assert",blank=True,null=True)
+    preview_img=models.FileField(upload_to="Ai-assert",blank=True,null=True)
+    tags=models.CharField(max_length=2000,null=True,blank=True)
+    category=models.ForeignKey(ImageCategories, on_delete=models.CASCADE)
+    type=models.ForeignKey(AiAssertscategory, on_delete=models.CASCADE)
+    user=models.CharField(max_length=2000,null=True,blank=True)
+
+    # def __str__(self):
+    #     return str(self.type)
+
+
+class TemplateJson(models.Model):
+    prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_json', on_delete=models.CASCADE)
+    json_file=models.FileField(upload_to="template-json",blank=True,null=True)
+
+
+    
+
+  

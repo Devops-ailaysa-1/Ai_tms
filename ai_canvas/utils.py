@@ -397,8 +397,6 @@ def genarate_image(instance,image_grid,template,attr):
     # img=copy.deepcopy(image)
     # for standard_json template
     img=attr
-    # img["src"]=HOST_NAME+instance.image.url
-    
     """mask""" 
     if instance.mask==None or instance.backround_removal_image ==None:
         print("masking...........................")
@@ -416,15 +414,23 @@ def genarate_image(instance,image_grid,template,attr):
     height_scale=(y/int(instance.height))
     scale=min(width_scale,height_scale)
 
+    img["width"]=img["oldWidth"]=instance.width
+    img["height"]=img["oldHeight"]=instance.height
+    img["scaleX"]=img["scaleY"]=scale
+    img["oldScaleX"]=img["oldScaleY"]=scale
+
     # img=custom_attr(img,attr["image"])
     if "clipPath" in img:
         print("clip_path...............") 
         # path_string=img["clipPath"]
         # img["clipPath"]=get_clip_path(path_string)
-        img["id"]="background"
         img["src"]=HOST_NAME+instance.image.url
         # img["src"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
         img["brs"]=1
+        width_scale=(int(instance.width)/int(img["clipPath"]["width"]))
+        height_scale=(int(instance.height)/int(img["clipPath"]["height"]))
+        scale=min(width_scale,height_scale)
+        img["clipPath"]["scaleX"]=img["clipPath"]["scaleY"]=scale
                 
     else:
         # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
@@ -432,22 +438,16 @@ def genarate_image(instance,image_grid,template,attr):
         img["src"]=HOST_NAME+instance.backround_removal_image.url
         img["sourceImage"]=HOST_NAME+instance.image.url
         img["brs"]=2
-
-    img["width"]=img["oldWidth"]=instance.width
-    img["height"]=img["oldHeight"]=instance.height
-
-    img["scaleX"]=img["scaleY"]=scale
-    img["oldScaleX"]=img["oldScaleY"]=scale
-
+   
     return img
 
 def random_background_image(bg_image,template,instance,style_attr):
     temp_height =int(template.height)
     temp_width = int(template.width)
     
-    bg_image["src"]=HOST_NAME+instance.bg_image.url
+    # bg_image["src"]=HOST_NAME+instance.bg_image.url
     # for testing
-    # bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
+    bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
     img_width=instance.width
@@ -455,8 +455,9 @@ def random_background_image(bg_image,template,instance,style_attr):
     bg_image["width"]=img_width
     bg_image["height"]=img_height
     
-    custom_style=style_attr["backgroundImage"]
-    bg_image=custom_attr(bg_image,custom_style)
+    if style_attr:
+        custom_style=style_attr["backgroundImage"]
+        bg_image=custom_attr(bg_image,custom_style)
     if bg_image:
         bg_image["originalwidth"]=bg_image["oldWidth"]=img_width
         bg_image["oldWidth"]=bg_image["oldHeight"]=img_height
