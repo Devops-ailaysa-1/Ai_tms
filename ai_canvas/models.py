@@ -331,7 +331,7 @@ class AiAssertscategory(models.Model):
 class AiAsserts(models.Model):
     imageurl=models.FileField(upload_to="Ai-assert",blank=True,null=True)
     preview_img=models.FileField(upload_to="Ai-assert",blank=True,null=True)
-    tags=models.CharField(max_length=2000,null=True,blank=True)
+    tags=models.TextField(blank=True, null=True)
     category=models.ForeignKey(ImageCategories, on_delete=models.CASCADE)
     type=models.ForeignKey(AiAssertscategory, on_delete=models.CASCADE)
     user=models.CharField(max_length=2000,null=True,blank=True)

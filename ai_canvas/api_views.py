@@ -779,8 +779,8 @@ def asset_get(image_category_name=False,search_image=False):
     if  de_assert:
         img={}
         serializers=AiAssertsSerializer(de_assert,many=True)
-        img["Ai_images"]=list(serializers.data)
-        data.append(img)
+        data=list(serializers.data)
+        # data.append(img)
         return data
     obj = ImageCategories.objects.all()
     for category in obj:
@@ -1588,8 +1588,6 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                     obj["stroke"]=color_attr[obj["type"]]
                else:
                     obj["fill"]=color_attr[obj["type"]]
-            
-                    print("***************************************************************")
 
             elif obj["type"] =="image":
                 if len(img_instance)<1 :
@@ -1605,7 +1603,7 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                     template_instance=back_ground.pop(random.randint(0,(len(back_ground)-1)))
                     bg_generated=random_background_image(obj,template,template_instance,style_attr=False)
                     obj=bg_generated
-                    data["backgroundImage"]["fill"]=""
+                    # data["backgroundImage"]["fill"]=""
 
             elif  obj["type"] =="group":
                  for k in obj["objects"]:
@@ -1616,7 +1614,6 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
         thumbnail['thumb']=create_thumbnail(data,formats='png')
         temp={"json":data,"thumb":thumbnail}
         template_json.append(temp)
-        print("--------------------------------------------------------")
     return template_json
 
 # def standard_image_genarate(instance,image_grid,template,obj):
