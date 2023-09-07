@@ -1550,12 +1550,12 @@ def account_delete(request):
     if not query:
         match_check = check_password(password_entered,user.password)
         if match_check:
-            # present = datetime.now()
-            # three_mon_rel = relativedelta(months=3)
-            # user.is_active = False
-            # user.deactivation_date = present.date()+three_mon_rel
-            # user.save()
-            user_delete(user)
+            present = datetime.now()
+            three_mon_rel = relativedelta(months=3)
+            user.is_active = False
+            user.deactivation_date = present.date()+three_mon_rel
+            user.save()
+            #user_delete(user)
         else:
             return Response({"msg":"password didn't match"},status = 400)
     else:
