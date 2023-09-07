@@ -1741,7 +1741,5 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
             return Response(serializer.data,status=200)
         else:
             src_json=queryset.json
-            out=export_download(src_json,"png",multipliervalue=1)
-            base64_data = base64.b64encode(out).decode('utf-8')
-            json_data = json.dumps({'binary_data': base64_data})
-            return JsonResponse({"base_64":json_data})
+            out=export_download(src_json,"png",multipliervalue=1,base_image=True)
+            return JsonResponse({'base_64': out})
