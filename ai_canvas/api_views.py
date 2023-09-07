@@ -1730,34 +1730,18 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
     def retrieve(self,request,pk):
         # src_id=request.GET.get("source_id",None)
         tar_id=request.GET.get("target_id",None)
-
+        base_64=request.GET.get("base_64",None)
         if tar_id:
-            queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
-            serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
-            return Response(serializer.data,status=200)
-        
-        queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
-        serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
-        return Response(serializer.data,status=200)
-    
-    def update(elf,request,pk):
-        src_id=request.GET.get("source_id",None)
-        tar_id=request.GET.get("target_id",None)
-
-        if tar_id:
-            queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+             queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+             serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
         else:
-            queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=src_id)
-
-        src_json=queryset.json
-        out=export_download(src_json,"png",multipliervalue=1)
-        base64_data = base64.b64encode(out).decode('utf-8')
-        json_data = json.dumps({'binary_data': base64_data})
-        return JsonResponse({"msg":json_data})
-
-
-
- 
-
-
-
+            queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
+            serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
+        if not base_64:
+            return Response(serializer.data,status=200)
+        else:
+            src_json=queryset.json
+            out=export_download(src_json,"png",multipliervalue=1)
+            base64_data = base64.b64encode(out).decode('utf-8')
+            json_data = json.dumps({'binary_data': base64_data})
+            return JsonResponse({"base_64":json_data})
