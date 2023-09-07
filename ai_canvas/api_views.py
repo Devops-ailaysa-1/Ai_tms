@@ -1708,12 +1708,14 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
 
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
+        # if queryset.canvas_json_src.first():
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignerListSerializer(pagin_tc,many=True)
         data=[]
         for obj in serializer.data:
-            data.append(obj)
+            if obj:
+                data.append(obj)
         response = self.get_paginated_response(data)
         return response
         
@@ -1730,7 +1732,7 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
 
         if tar_id:
             queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
-            serializer=CanvasTargetJsonSerializer(queryset,many=False)
+            serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
             return Response(serializer.data,status=200)
         
         queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
