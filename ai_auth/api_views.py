@@ -1829,18 +1829,36 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+def invite_accept_notify_send(user,vendor):
+    from ai_marketplace.serializers import ThreadSerializer
+    receivers =  user.team.get_project_manager if user.team else []
+    receivers.append(user)
+    for i in receivers:
+        thread_ser = ThreadSerializer(data={'first_person':i.id,'second_person':vendor.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        print("Thread--->",thread_id)
+        if thread_id:
+            message = "Service Provider " + vendor.fullname + " has accepted your invitation in Ailaysa Marketplace."
+            msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
+            notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
     vendor_id = urlsafe_base64_decode(uid)
-    vendor = HiredEditors.objects.get(id=vendor_id)
-    # user = AiUser.objects.get(id=vendor.external_member_id)
-    # if user is not None and invite_accept_token.check_token(user, token):
-    if vendor is not None and invite_accept_token.check_token(vendor, token):
-        vendor.status = 2
-        vendor.save()
+    obj = HiredEditors.objects.get(id=vendor_id)
+    if obj is not None and invite_accept_token.check_token(obj, token):
+        obj.status = 2
+        obj.save()
+        try:invite_accept_notify_send(obj.user,obj.hired_editor)
+        except:pass
         print("success & updated")
         return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
