@@ -73,18 +73,18 @@ class ProjectManager(models.Manager):
             )
          return project, contents, subjects, steps
 
-    def add_default_choice_list_for_project(self,project):
-        if project.project_type_id not in [3,5]:
-            from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
-            jobs = project.project_jobs_set.all()
-            target_languages = [i.target_language_id for i in jobs if i.target_language]
-            print("TL----------->", target_languages)
-            for i in target_languages:
-                ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
-                exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
-                if not exists:
-                    ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
-            return None
+    # def add_default_choice_list_for_project(self,project):
+    #     if project.project_type_id not in [3,5]:
+    #         from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
+    #         jobs = project.project_jobs_set.all()
+    #         target_languages = [i.target_language_id for i in jobs if i.target_language]
+    #         print("TL----------->", target_languages)
+    #         for i in target_languages:
+    #             ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
+    #             exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
+    #             if not exists:
+    #                 ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
+    #         return None
 
 
 class FileManager(models.Manager):
