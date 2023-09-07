@@ -1101,17 +1101,17 @@ class DesignerListSerializer(serializers.ModelSerializer):
     
 class CanvasTargetJsonSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
-    json_src=serializers.FileField(allow_empty_file=False,required=False,write_only=True)
+    json=serializers.FileField(allow_empty_file=False,required=False,write_only=True)
 
     class Meta:
         model=CanvasTargetJsonFiles
-        fields=("id","canvas_trans_json","thumbnail_src","export_file","json_src")
+        fields=("id","canvas_trans_json","thumbnail_src","export_file","json")
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         json=self.context.get("json")
         if json:
-            data['json_src']=instance.json
+            data['json']=instance.json
         data['thumbnail_src']= instance.thumbnail.url
         return data
 
