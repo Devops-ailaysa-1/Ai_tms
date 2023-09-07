@@ -50,6 +50,7 @@ from ai_imagetranslation.utils import stable_diffusion_public
 from ai_imagetranslation.serializer import StableDiffusionAPISerializer
 import random
 from ai_staff.models import FontFamily,FontData
+import base64
 # HOST_NAME="http://0.0.0.0:8091"
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -1611,7 +1612,7 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
             elif  obj["type"] =="group":
                  for k in obj["objects"]:
                       if k["type"]=="textbox":
-                        k["fill"]=color_attr["textbox"]
+                        k["fill"]=color_attr["grouppathtext"]
                         # data["objects"].append(k)
                         # obj["objects"].remove(k)
                       else:
@@ -1729,22 +1730,18 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
     def retrieve(self,request,pk):
         # src_id=request.GET.get("source_id",None)
         tar_id=request.GET.get("target_id",None)
-
+        base_64=request.GET.get("base_64",None)
         if tar_id:
-            queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
-            serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
+             queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+             serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
+        else:
+            queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
+            serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
+        if not base_64:
             return Response(serializer.data,status=200)
-        
-        queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
-        serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
-        return Response(serializer.data,status=200)
-
- 
-
-
-
-
- 
-
-
-
+        else:
+            src_json=queryset.json
+            out=export_download(src_json,"png",multipliervalue=1)
+            base64_data = base64.b64encode(out).decode('utf-8')
+            json_data = json.dumps({'binary_data': base64_data})
+            return JsonResponse({"base_64":json_data})
