@@ -1577,16 +1577,16 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
         data["backgroundImage"]["fill"]=color_attr[ "background"]
         data["backgroundImage"]["width"]=temp_width
         data["backgroundImage"]["height"]=temp_height
-        # model instance
-        text=[]
-        type=["path","textbox"]
+        # # model instance
+        # text=[]
+        # type=["path","textbox"]
         for obj in data["objects"]:
             if obj["type"]=="textbox":
                 obj["fill"]=color_attr[obj["type"]]
                 if  obj["type"] =="textbox":
                     obj["styles"]=[]
             elif  obj["type"] =="path" :
-               if obj["stroke"]:\
+               if obj["stroke"]:
                     obj["stroke"]=color_attr[obj["type"]]
                else:
                     obj["fill"]=color_attr[obj["type"]]
@@ -1606,12 +1606,14 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                     bg_generated=random_background_image(obj,template,template_instance,style_attr=False)
                     obj=bg_generated
                     # data["backgroundImage"]["fill"]=""
-
+            
+            # for ungrouping
             elif  obj["type"] =="group":
                  for k in obj["objects"]:
                       if k["type"]=="textbox":
-                        data["objects"].append(k)
-                        obj["objects"].remove(k)
+                        k["fill"]=color_attr["textbox"]
+                        # data["objects"].append(k)
+                        # obj["objects"].remove(k)
                       else:
                           k["fill"]=color_attr["grouppathcolor"]
        

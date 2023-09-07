@@ -323,7 +323,7 @@ def download_ai_image_generated_file_stable(request,id):
 class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
-    search_fields =['prompt','sampler','style']
+    search_fields =['prompt','style']
 
     def get(self, request):
         queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
