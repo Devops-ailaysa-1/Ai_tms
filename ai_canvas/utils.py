@@ -176,7 +176,7 @@ def svg_convert_base64(response_text):
     
 import copy
 from ai_canvas.cmyk_conversion import convertImage
-def export_download(json_str,format,multipliervalue):
+def export_download(json_str,format,multipliervalue,base_image=False):
     dpi = (96,96)
     json_ = json.dumps(json_str)
     print("format__form_export_download",format)
@@ -206,27 +206,29 @@ def export_download(json_str,format,multipliervalue):
         data = {'json':json_ , 'format':'png','multiplierValue':3,'dpi':dpi[0]}
          
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
-    if thumb_image.status_code ==200:
-        if format=='svg':
-            compressed_data=svg_convert_base64(thumb_image.text)
+    if not base_image:
+        if thumb_image.status_code ==200:
+            if format=='svg':
+                compressed_data=svg_convert_base64(thumb_image.text)
+            else:
+                im_file = io.BytesIO(base64.b64decode(thumb_image.text.split(",")[-1]))
+                img = Image.open(im_file)
+                output_buffer=io.BytesIO()
+                if format=='jpeg':
+                    img = img.convert('RGB')
+                if format == 'jpeg-print':
+                    img=convertImage(im_file).image
+                    format='jpeg'
+                    dpi=(300,300)
+                if format == 'pdf-print':
+                    img=convertImage(im_file).image
+                    format='pdf'
+                img.save(output_buffer, format=format.upper(),dpi=dpi)
+                compressed_data=output_buffer.getvalue()
+            return compressed_data 
         else:
-            im_file = io.BytesIO(base64.b64decode(thumb_image.text.split(",")[-1]))
-            img = Image.open(im_file)
-            output_buffer=io.BytesIO()
-            if format=='jpeg':
-                img = img.convert('RGB')
-            if format == 'jpeg-print':
-                img=convertImage(im_file).image
-                format='jpeg'
-                dpi=(300,300)
-            if format == 'pdf-print':
-                img=convertImage(im_file).image
-                format='pdf'
-            img.save(output_buffer, format=format.upper(),dpi=dpi)
-            compressed_data=output_buffer.getvalue()
-        return compressed_data 
-    else:
-        return ValidationError("error in node server")
+            return ValidationError("error in node server")
+    return thumb_image.text
 
 ####font_creation
 
