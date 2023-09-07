@@ -50,6 +50,7 @@ from ai_imagetranslation.utils import stable_diffusion_public
 from ai_imagetranslation.serializer import StableDiffusionAPISerializer
 import random
 from ai_staff.models import FontFamily,FontData
+import base64
 # HOST_NAME="http://0.0.0.0:8091"
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -1738,9 +1739,21 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
         queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
         serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
         return Response(serializer.data,status=200)
+    
+    def update(elf,request,pk):
+        src_id=request.GET.get("source_id",None)
+        tar_id=request.GET.get("target_id",None)
 
- 
+        if tar_id:
+            queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+        else:
+            queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=src_id)
 
+        src_json=queryset.json
+        out=export_download(src_json,"png",multipliervalue=1)
+        base64_data = base64.b64encode(out).decode('utf-8')
+        json_data = json.dumps({'binary_data': base64_data})
+        return JsonResponse({"msg":json_data})
 
 
 
