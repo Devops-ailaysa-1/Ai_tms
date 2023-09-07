@@ -20,6 +20,7 @@ from .utils import split_check
 import collections
 import csv
 import io,time
+from django.db.models import Func, F, CharField
 
 client = translate.Client()
 
@@ -577,7 +578,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        seg_obj = Segment.objects.filter(text_unit__document=doc).filter(source=segment.source).exclude(id=segment.id)
+        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField())).filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
         print("SEG OBJ---------------------------------------------->",seg_obj)
         if seg_obj:
             print("No Translation")
