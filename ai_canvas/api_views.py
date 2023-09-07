@@ -1607,17 +1607,16 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                     bg_generated=random_background_image(obj,template,template_instance,style_attr=False)
                     obj=bg_generated
                     # data["backgroundImage"]["fill"]=""
-            
             # for ungrouping
             elif  obj["type"] =="group":
                  for k in obj["objects"]:
                       if k["type"]=="textbox":
                         k["fill"]=color_attr["grouppathtext"]
+                        k["styles"]=[]
                         # data["objects"].append(k)
                         # obj["objects"].remove(k)
                       else:
                           k["fill"]=color_attr["grouppathcolor"]
-       
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
         temp={"json":data,"thumb":thumbnail}
@@ -1735,7 +1734,7 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
              queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
              serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
         else:
-            queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
+            queryset=CanvasSourceJsonFiles.objects.filter(canvas_design__id=pk).first()
             serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
         if not base_64:
             return Response(serializer.data,status=200)

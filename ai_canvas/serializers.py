@@ -1078,14 +1078,17 @@ class DesignerListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     translate_available = serializers.BooleanField(required=False,default=False)
     translate_src=serializers.FileField(allow_empty_file=False,required=False,write_only=True)
+    # project_id=serializers.IntegerField(required=False,default=False)
+    project_id=serializers.SerializerMethodField()
     class Meta:
         model = CanvasDesign
-        fields = ('id','file_name','width','height','thumbnail_src','translate_available','updated_at',"translate_src")
+        fields = ('file_name','width','height','thumbnail_src','translate_available','updated_at',"translate_src","project_id")
         
     def to_representation(self, instance):
         data = super().to_representation(instance)
         obj=[]
         if instance.canvas_json_src.first():
+            # data["project_id"]=instance.id
             obj.append(data)
         # if hasattr(instance.canvas_json_src.first(),'thumbnail'):
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
@@ -1098,14 +1101,19 @@ class DesignerListSerializer(serializers.ModelSerializer):
                     for i in ser.data:
                         obj.append(i)    
             return obj  
+        
+    def get_project_id(self,instance):
+        return instance.id
     
 class CanvasTargetJsonSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     json=serializers.FileField(allow_empty_file=False,required=False,write_only=True)
+    project_id=serializers.SerializerMethodField()
+    # project_id=serializers.IntegerField(required=False,default=False)
 
     class Meta:
         model=CanvasTargetJsonFiles
-        fields=("id","canvas_trans_json","thumbnail_src","export_file","json")
+        fields=("id","canvas_trans_json","thumbnail_src","export_file","json","project_id")
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -1113,8 +1121,11 @@ class CanvasTargetJsonSerializer(serializers.ModelSerializer):
         if json:
             data['json']=instance.json
         data['thumbnail_src']= instance.thumbnail.url
+        # data["project_id"]=instance.canvas_trans_json.canvas_design.id
         return data
-
+    
+    def get_project_id(self,instance):
+        return instance.canvas_trans_json.canvas_design.id
 
 class CanvasTranslatedSerializer(serializers.ModelSerializer):
     # thumbnail=serializers.SerializerMethodField()
