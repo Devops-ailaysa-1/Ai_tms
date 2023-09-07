@@ -1103,7 +1103,7 @@ class CanvasTargetJsonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=CanvasTargetJsonFiles
-        fields=("id","canvas_trans_json","thumbnail_src","export_file")
+        fields=("id","canvas_trans_json","thumbnail_src","export_file","json")
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

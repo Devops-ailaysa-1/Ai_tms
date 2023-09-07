@@ -13,7 +13,7 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
                                    TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
-                                   PromptCategoryserializer,TemplateJsonSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   PromptCategoryserializer,TemplateJsonSerializer,CanvasSourceJsonFilesSerializer,CanvasTargetJsonSerializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -1723,6 +1723,20 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
+    
+    def retrieve(self,request,pk):
+        # src_id=request.GET.get("source_id",None)
+        tar_id=request.GET.get("target_id",None)
+
+        if tar_id:
+            queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+            serializer=CanvasTargetJsonSerializer(queryset,many=False)
+            return Response(serializer.data,status=200)
+        
+        queryset=get_object_or_404(CanvasSourceJsonFiles,canvas_design__id=pk)
+        serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
+        return Response(serializer.data,status=200)
+
  
 
 
