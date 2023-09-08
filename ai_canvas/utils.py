@@ -395,24 +395,10 @@ def genarate_image(instance,image_grid,template,attr):
     temp_width = int(template.width)
     x=temp_width/2
     y=temp_height/2
-    # instance=PromptEngine.objects.filter(id=19).first()
-    pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
-    # img=copy.deepcopy(image)
-    # for standard_json template
     img=attr
-    """mask""" 
-    if instance.mask==None or instance.backround_removal_image ==None:
-        print("masking...........................")
-        rem_img=background_remove(instance)
-        instance.backround_removal_image=rem_img
-        instance.save()
- 
-    print("img---->", img["src"])
+    pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
     img["name"]="Image"+str(pos[0])+str(pos[1])
-    # if instance.width <= instance.height:
-    #     scale=(x/int(instance.width))
-    # else:
-    #     scale=(y/int(instance.height))
+    # image scaling to tempalte size
     width_scale=(x/int(instance.width))
     height_scale=(y/int(instance.height))
     scale=min(width_scale,height_scale)
@@ -436,6 +422,12 @@ def genarate_image(instance,image_grid,template,attr):
         img["clipPath"]["scaleX"]=img["clipPath"]["scaleY"]=scale
                 
     else:
+        #  """mask""" 
+        if instance.mask==None or instance.backround_removal_image ==None:
+            print("masking...........................")
+            rem_img=background_remove(instance)
+            instance.backround_removal_image=rem_img
+            instance.save()
         # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
         img["bgMask"]=HOST_NAME+instance.mask.url
         img["src"]=HOST_NAME+instance.backround_removal_image.url
@@ -443,6 +435,7 @@ def genarate_image(instance,image_grid,template,attr):
         img["brs"]=2
    
     return img
+
 
 def random_background_image(bg_image,template,instance,style_attr):
     temp_height =int(template.height)
@@ -671,3 +664,82 @@ def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
         return text_box
 
 """--------------------------------------------------------------------------------------------"""
+
+
+def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
+    template_json=data
+    # if (temp_height!=temp_json_height):
+    #     scale_y=temp_height/temp_json_height
+    #     for element in template_json["objects"]:
+    #         element["scaleY"] *= scale_y
+    #         if "height" in element:
+    #             element["height"] *= scale_y
+    # if (temp_width!=temp_json_width):
+    #     scale_x=temp_width/temp_json_width
+    #     for element in template_json["objects"]:
+    #         element["scaleX"] *= scale_x
+    #         if "width" in element:
+    #             element["width"] *= scale_x
+
+    if (temp_width!=temp_json_width) or (temp_width!=temp_json_width):
+        scale_y=temp_height/temp_json_height
+        scale_x=temp_width/temp_json_width
+        scale=min(scale_y,scale_x)
+        for element in template_json["objects"]:
+            element["scaleX"] *= scale
+            element["scaleY"] *= scale
+            if temp_height>temp_width:
+                if "height" in element:
+                    element["height"] *= scale
+                else:
+                    element["width"] *= scale
+
+    # print(template_json)
+    return template_json
+
+
+
+def get_color_combinations(colors):
+    min_contrast_ratio = 7
+    color_combinations= []
+    for text_color in colors:
+        for background_color in colors:
+            if text_color != background_color:
+                contrast_ratio = calculate_contrast_ratio(text_color, background_color)
+                contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
+
+                if contrast_ratio >= min_contrast_ratio:
+                    color_combinations.append([text_color, background_color])
+                if contrast_ratio2 >= min_contrast_ratio:
+                    color_combinations.append([background_color,text_color])
+    return color_combinations
+
+def calculate_contrast_ratio(color1, color2):
+    def relative_luminance(rgba_color):
+        color=rgba_string_to_tuple(rgba_color)
+        r, g, b,a = color
+        r = r / 255.0 if r <= 255 else 1.0
+        g = g / 255.0 if g <= 255 else 1.0
+        b = b / 255.0 if b <= 255 else 1.0
+        r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
+        g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
+        b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    L1 = relative_luminance(color1)
+    L2 = relative_luminance(color2)
+
+    contrast_ratio = (L1 + 0.05) / (L2 + 0.05)
+    return contrast_ratio
+
+import re
+def rgba_string_to_tuple(rgba_str):
+  match = re.match(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)', rgba_str)
+  if match:
+    red = int(match.group(1))
+    green = int(match.group(2))
+    blue = int(match.group(3))
+    alpha = float(match.group(4))
+    alpha = int(alpha * 255)
+    return (red, green, blue, alpha)
+  else:
+    raise ValueError("Invalid color format")

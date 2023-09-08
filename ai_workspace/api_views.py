@@ -4527,7 +4527,8 @@ class AssertList(viewsets.ModelViewSet):
         queryset = view_instance_1.get_queryset()
 
         queryset1 = queryset.filter(glossary_project__isnull=False)
-        queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
+        queryset2 = ChoiceLists.objects.none()  #commenting for now
+        #queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
