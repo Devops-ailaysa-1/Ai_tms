@@ -1289,7 +1289,7 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 
 import time
 from ai_canvas.utils import (generate_random_rgba,create_thumbnail,grid_position,genarate_text,
-            random_background_image,custom_attr,get_clip_path,genarate_image,genarate_path,clip_position)
+            random_background_image,custom_attr,get_clip_path,genarate_image,genarate_path,clip_position,scaletemplate,get_color_combinations)
 from ai_canvas.meta import style
 from ai_canvas.template import backgroundImage,clipPath,path,image,textbox,backgroundHardboard
 from ai_canvas.color import bg_color
@@ -1551,36 +1551,64 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
     text=copy.deepcopy(textbox)
 
     obj_style=copy.deepcopy(style)
-    custom_color=copy.deepcopy(bg_color)
-
+    # custom_color=copy.deepcopy(bg_color)
+    
+    colors=["rgba(17, 42, 7,1)",
+        "rgba(13, 127, 255,1)",
+        "rgba(255, 255, 255,1)",
+        "rgba(223, 255, 251, 1)",
+        "rgba(255, 215, 60,1)",
+        "rgba(245, 191, 0,1)",]
+    custom_color=get_color_combinations(colors)
+    
     for i in range(0,limit):
         text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
         print("---------------------",i,"----------------------")
 #         temp={}  
         temp={}  
-        # result data 
-        # json_data=copy.deepcopy(std_json)
+        """load template json"""
+        # load json template data 
+        # data=json_data[random.randint(0,len(json_data)-1)]
         if len(template_data)<1:
             template_data=list(TemplateJson.objects.filter(prompt_category__id=prompt_id))
-        # rand=random.randint(0,(len(template_data)-1))
         json_data=template_data.pop(random.randint(0,(len(template_data)-1)))
-        # json_data=template_data.pop(rand)
+
         with open(json_data.json_file.path, 'r') as file:
              data = json.load(file)
-
+        """    for color """
         if len(custom_color)<1:
-            custom_color=copy.deepcopy(bg_color)
+            # custom_color=copy.deepcopy(bg_color)
+            custom_color=get_color_combinations(colors)
 
-        # data=json_data[random.randint(0,len(json_data)-1)]
+        # color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
+        color_attribute=custom_color.pop(random.randint(0,(len(custom_color)-1)))
+        print(color_attribute ,"cololrrrrrrrrrrr")
+        # for color combinations
+        color_attr= {
+                    "background": 'rgba(81, 0, 128, 1)',
+                    "textbox": 'rgba(255, 226, 158, 1)',
+                    "path": 'rgba(114, 239, 221, 1)',
+                    "grouppathcolor" : 'rgba(178, 247, 239, 1)',
+                    "grouppathtext" : 'rgba(81, 0,  128, 1)'
+                }
+        color_attr[ "background"]=color_attribute[1]
+        color_attr[ "textbox"]=color_attribute[0]
 
-        color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
+        color_attr[ "grouppathcolor"]=color_attribute[0]
+        color_attr[ "grouppathtext"]=color_attribute[1]
+
+
+        col=[]
+        colo=[[colors[i], colors[i + 1]] for i in range(0, len(colors), 2)]
+        for j in colo:
+            if color_attribute[0] not in j and color_attribute[1] not in j :
+                col=list(j)
         
         data["backgroundImage"]["fill"]=color_attr[ "background"]
-        data["backgroundImage"]["width"]=temp_width
-        data["backgroundImage"]["height"]=temp_height
-        # # model instance
-        # text=[]
-        # type=["path","textbox"]
+        temp_json_width=int(data["backgroundImage"]["width"])
+        temp_json_height=int(data["backgroundImage"]["height"])
+
+        # #
         for obj in data["objects"]:
             if obj["type"]=="textbox":
                 obj["fill"]=color_attr[obj["type"]]
@@ -1588,9 +1616,11 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                     obj["styles"]=[]
             elif  obj["type"] =="path" :
                if obj["stroke"]:
-                    obj["stroke"]=color_attr[obj["type"]]
+                    # obj["stroke"]=color_attr[obj["type"]]
+                    obj["stroke"]=col[1]
                else:
-                    obj["fill"]=color_attr[obj["type"]]
+                    # obj["fill"]=color_attr[obj["type"]]
+                    obj["fill"]=col[1]
 
             elif obj["type"] =="image":
                 if len(img_instance)<1 :
@@ -1617,6 +1647,10 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
                         # obj["objects"].remove(k)
                       else:
                           k["fill"]=color_attr["grouppathcolor"]
+      
+        data=scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width)
+        data["backgroundImage"]["width"]=temp_width
+        data["backgroundImage"]["height"]=temp_height
         thumbnail={}
         thumbnail['thumb']=create_thumbnail(data,formats='png')
         temp={"json":data,"thumb":thumbnail}
