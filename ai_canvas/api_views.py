@@ -51,6 +51,8 @@ from ai_imagetranslation.serializer import StableDiffusionAPISerializer
 import random
 from ai_staff.models import FontFamily,FontData
 import base64
+from ai_staff.serializer import DesignShapeSerializer
+from ai_staff.models import DesignShape
 # HOST_NAME="http://0.0.0.0:8091"
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
@@ -323,7 +325,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             return Response({'msg':'deleted successfully'},status=200)
  
 class CustomPagination(PageNumberPagination):
-    page_size = 20 
+    page_size = 5
     page_size_query_param = 'page_size'
 
 class CustomSocialMediaSizePagination(PageNumberPagination):
@@ -1701,21 +1703,27 @@ class CustomTemplateViewset(viewsets.ModelViewSet):
 
 
 
-from ai_staff.models import ImageCategories
+from ai_staff.models import ImageCategories,DesignShapeCategory
 from ai_canvas.models import AiAsserts,AiAssertscategory
 from ai_canvas.utils import convert_image_url_to_file
 from ai_canvas.serializers import AiAssertsSerializer,AiAssertscategoryserializer
-from ai_staff.serializer import ImageCategoriesSerializer
+from ai_staff.serializer import ImageCategoriesSerializer,DesignShapeCategoryserializer
 from PIL import Image
 @api_view(["GET",'POST'])
 def designer_asset_create(request):
+
     # pass
     if request.method=="POST":
         image_id=request.POST.get("image_id",None)
+        shape_type=request.POST.get("shape_type",None)
         instance=CanvasUserImageAssets.objects.get(id=image_id)
         image_name=os.path.basename(instance.image.url)
         image = convert_image_url_to_file(Image.open(instance.image.path),no_pil_object=False,name=image_name)
-        serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
+        if not shape_type:
+            serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
+        else:
+            print("enter")
+            serializer= DesignShapeSerializer(data={**request.POST.dict(),"shape":image,"type":shape_type},context={"request":request})
         if serializer.is_valid():
             serializer.save()
             instance.status=True
@@ -1725,10 +1733,14 @@ def designer_asset_create(request):
 
     category=ImageCategories.objects.all()
     obj_type=AiAssertscategory.objects.all()
+    shape_category=DesignShapeCategory.objects.all()
+    # shape=DesignShape.objects.all()
+    # shape_serializer=DesignShapeSerializer(shape,may=True)
     asset_serializer=AiAssertscategoryserializer(obj_type,many=True)
-    category_serializer=ImageCategoriesSerializer(category,many=True)
+    img_category_serializer=ImageCategoriesSerializer(category,many=True)
+    shape_cat_serializer=DesignShapeCategoryserializer(shape_category,many=True)
     
-    return JsonResponse({"category":category_serializer.data,"asset_type":asset_serializer.data},status=200)
+    return JsonResponse({"Image_category":img_category_serializer.data,"asset_type":asset_serializer.data,"shape_category":shape_cat_serializer.data},status=200)
 
 
 from ai_canvas.serializers import DesignerListSerializer
@@ -1774,3 +1786,26 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
             src_json=queryset.json
             out=export_download(src_json,"png",multipliervalue=1,base_image=True)
             return JsonResponse({'base_64': out})
+ 
+class GrapicsListViewset(viewsets.ViewSet):
+
+    permission_classes = [IsAuthenticated,]
+    search_fields =["shape_name","name"]
+    filter_backends = [DjangoFilterBackend]
+
+    def list(self,request):
+        name=request.query_params.get('name')
+        if name:
+            shapes_queryset = DesignShape.objects.filter(shape_name__icontains=name).order_by("created_at")
+            emoji_queryset=EmojiCategory.objects.filter(name__icontains=name)
+        else:
+            shapes_queryset = DesignShape.objects.all().order_by("created_at")
+            emoji_queryset=EmojiCategory.objects.all()
+
+        shapes_serializer = DesignShapeSerializer(shapes_queryset,many=True)
+        emoji_serializer = EmojiCategorySerializer(emoji_queryset,many=True)  
+
+        data={'Shapes': shapes_serializer.data,'emoji': emoji_serializer.data, }
+        return Response (data) 
+
+ 

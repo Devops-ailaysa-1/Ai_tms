@@ -26,6 +26,7 @@ router.register(r'emoji-noto',api_views.EmojiCategoryViewset,basename='emoji-lis
 router.register(r'template-engine',api_views.TemplateEngineGenerateViewset,basename='template-generation')
 router.register(r'custom-template',api_views.CustomTemplateViewset,basename='template-generation')
 router.register(r'designer-list',api_views.DesignerListViewset,basename='designer-lists')
+router.register(r"graphics-list",api_views.GrapicsListViewset,basename="graphics-list")
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
