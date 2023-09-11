@@ -1292,7 +1292,7 @@ from ai_canvas.utils import (generate_random_rgba,create_thumbnail,grid_position
             random_background_image,custom_attr,get_clip_path,genarate_image,genarate_path,clip_position,scaletemplate,get_color_combinations)
 from ai_canvas.meta import style
 from ai_canvas.template import backgroundImage,clipPath,path,image,textbox,backgroundHardboard
-from ai_canvas.color import bg_color
+from ai_canvas.color import bg_color,Color_Palettes
 
 class TemplateEngineGenerateViewset(viewsets.ModelViewSet):
 
@@ -1538,7 +1538,7 @@ from ai_canvas.standard_template import std_json
 #         template_data.append(temp)
 #     return template_data
 
-
+from ai_canvas.color import Color_Palettes
 def genarate_template(limit,template_data,prompt_id,img_instance,template,font_family,back_ground):
     temp_height =int(template.height)
     temp_width = int(template.width)
@@ -1553,18 +1553,12 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
     obj_style=copy.deepcopy(style)
     # custom_color=copy.deepcopy(bg_color)
     
-    colors=["rgba(17, 42, 7,1)",
-        "rgba(13, 127, 255,1)",
-        "rgba(255, 255, 255,1)",
-        "rgba(223, 255, 251, 1)",
-        "rgba(255, 215, 60,1)",
-        "rgba(245, 191, 0,1)",]
-    custom_color=get_color_combinations(colors)
+    custom_color_pallete=Color_Palettes
+    custom_color=get_color_combinations(custom_color_pallete)
     
     for i in range(0,limit):
         text_grid,image_grid=grid_position(temp_width,temp_height,rows,cols)
         print("---------------------",i,"----------------------")
-#         temp={}  
         temp={}  
         """load template json"""
         # load json template data 
@@ -1575,35 +1569,39 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
 
         with open(json_data.json_file.path, 'r') as file:
              data = json.load(file)
+
         """    for color """
+
+        # colors=custom_color.pop(random.randint(0,(len(custom_color)-1)))
+
         if len(custom_color)<1:
             # custom_color=copy.deepcopy(bg_color)
-            custom_color=get_color_combinations(colors)
+            custom_color=get_color_combinations(custom_color_pallete)
 
         # color_attr=custom_color.pop(random.randint(0,(len(custom_color)-1)))
         color_attribute=custom_color.pop(random.randint(0,(len(custom_color)-1)))
-        print(color_attribute ,"cololrrrrrrrrrrr")
+        color=[]
+        # for key in color_attribute:
+        #     col_x=color_attribute[key]
+        path_color=[]
+        # colo=[[colors[i], colors[i + 1]] for i in range(0, len(colors), 2)]
+        # for j in colo:
+        #     if color_attribute[0] not in j and color_attribute[1] not in j :
+        #         col=list(j)
+
+        for key in color_attribute:
+            for j in custom_color_pallete[key]:
+                color=color_attribute[key]
+                if color[0] not in j and color[1] not in j :
+                    path_color.append(j)
         # for color combinations
-        color_attr= {
-                    "background": 'rgba(81, 0, 128, 1)',
-                    "textbox": 'rgba(255, 226, 158, 1)',
-                    "path": 'rgba(114, 239, 221, 1)',
-                    "grouppathcolor" : 'rgba(178, 247, 239, 1)',
-                    "grouppathtext" : 'rgba(81, 0,  128, 1)'
-                }
-        color_attr[ "background"]=color_attribute[1]
-        color_attr[ "textbox"]=color_attribute[0]
+        color_attr= {}
+        color_attr[ "background"]=color[1]
+        color_attr[ "textbox"]=color[0]
 
-        color_attr[ "grouppathcolor"]=color_attribute[0]
-        color_attr[ "grouppathtext"]=color_attribute[1]
+        color_attr[ "grouppathcolor"]=color[0]
+        color_attr[ "grouppathtext"]=color[1]
 
-
-        col=[]
-        colo=[[colors[i], colors[i + 1]] for i in range(0, len(colors), 2)]
-        for j in colo:
-            if color_attribute[0] not in j and color_attribute[1] not in j :
-                col=list(j)
-        
         data["backgroundImage"]["fill"]=color_attr[ "background"]
         temp_json_width=int(data["backgroundImage"]["width"])
         temp_json_height=int(data["backgroundImage"]["height"])
@@ -1617,10 +1615,10 @@ def genarate_template(limit,template_data,prompt_id,img_instance,template,font_f
             elif  obj["type"] =="path" :
                if obj["stroke"]:
                     # obj["stroke"]=color_attr[obj["type"]]
-                    obj["stroke"]=col[1]
+                    obj["stroke"]=path_color[0]
                else:
                     # obj["fill"]=color_attr[obj["type"]]
-                    obj["fill"]=col[1]
+                    obj["fill"]=path_color[0]
 
             elif obj["type"] =="image":
                 if len(img_instance)<1 :
