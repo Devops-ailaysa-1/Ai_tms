@@ -1146,9 +1146,3 @@ class CanvasTranslatedSerializer(serializers.ModelSerializer):
 
 
 
-
-
-
-
-
-

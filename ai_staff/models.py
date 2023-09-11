@@ -673,6 +673,12 @@ class ImageCategories(models.Model):
 
     def __str__(self):
         return self.category
+    
+class DesignShapeCategory(models.Model):
+    name=models.CharField(max_length=200,blank=True ,null=True) 
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class DesignShape(models.Model):
@@ -683,12 +689,12 @@ class DesignShape(models.Model):
     shape_name=models.CharField(max_length=200,blank=True ,null=True)
     shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
     types=models.CharField(max_length=300,null=True,blank=True,choices=types)
+    category=models.ForeignKey(DesignShapeCategory,related_name="shape_category", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     def __str__(self) -> str:
         return self.shape_name
-
  
 class ProzLanguagesCode(models.Model):
     language = models.ForeignKey(Languages, related_name='lang', on_delete=models.CASCADE)    
