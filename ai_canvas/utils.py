@@ -441,9 +441,9 @@ def random_background_image(bg_image,template,instance,style_attr):
     temp_height =int(template.height)
     temp_width = int(template.width)
     
-    # bg_image["src"]=HOST_NAME+instance.bg_image.url
+    bg_image["src"]=HOST_NAME+instance.bg_image.url
     # for testing
-    bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
+    # bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/empty-plain-background-_6.png"
     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
     img_width=instance.width
@@ -694,24 +694,32 @@ def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
                 else:
                     element["width"] *= scale
 
-    # print(template_json)
+    # scale_multiplier_x=temp_width/temp_json_width
+    # scale_multiplier_y=temp_height/temp_json_height
+    # for i in template_json['objects']:
+    #     i['scaleX']=i['scaleX']*scale_multiplier_x
+    #     i['scaleY']=i['scaleY']*scale_multiplier_x
+    #     i['left']=i['left']*scale_multiplier_x
+    #     i['top']=i['top']*scale_multiplier_y
     return template_json
 
-
+from ai_canvas.color import Color_Palettes
 
 def get_color_combinations(colors):
+
     min_contrast_ratio = 7
     color_combinations= []
-    for text_color in colors:
-        for background_color in colors:
-            if text_color != background_color:
-                contrast_ratio = calculate_contrast_ratio(text_color, background_color)
-                contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
+    for i in range(0,len(colors)):
+        for text_color in colors[i]:
+            for background_color in colors[i]:
+                if text_color != background_color:
+                    contrast_ratio = calculate_contrast_ratio(text_color, background_color)
+                    contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
 
-                if contrast_ratio >= min_contrast_ratio:
-                    color_combinations.append([text_color, background_color])
-                if contrast_ratio2 >= min_contrast_ratio:
-                    color_combinations.append([background_color,text_color])
+                    if contrast_ratio >= min_contrast_ratio:
+                        color_combinations.append({i:[text_color, background_color]})
+                    if contrast_ratio2 >= min_contrast_ratio:
+                        color_combinations.append({i:[background_color,text_color]})
     return color_combinations
 
 def calculate_contrast_ratio(color1, color2):
