@@ -690,6 +690,7 @@ class DesignShape(models.Model):
     shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
     types=models.CharField(max_length=300,null=True,blank=True,choices=types)
     category=models.ForeignKey(DesignShapeCategory,related_name="shape_category", on_delete=models.CASCADE)
+    tags=models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
