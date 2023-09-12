@@ -1722,8 +1722,7 @@ def designer_asset_create(request):
         if not shape_type:
             serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
         else:
-            print("enter")
-            serializer= DesignShapeSerializer(data={**request.POST.dict(),"shape":image,"type":shape_type},context={"request":request})
+            serializer= DesignShapeSerializer(data={**request.POST.dict(),"shape":image,"types":shape_type},context={"request":request})
         if serializer.is_valid():
             serializer.save()
             instance.status=True
@@ -1734,13 +1733,13 @@ def designer_asset_create(request):
     category=ImageCategories.objects.all()
     obj_type=AiAssertscategory.objects.all()
     shape_category=DesignShapeCategory.objects.all()
-    # shape=DesignShape.objects.all()
-    # shape_serializer=DesignShapeSerializer(shape,may=True)
+    shape_type=DesignShape._meta.get_field('types').choices
+    shape_types = {key: value for key, value in shape_type}
     asset_serializer=AiAssertscategoryserializer(obj_type,many=True)
     img_category_serializer=ImageCategoriesSerializer(category,many=True)
     shape_cat_serializer=DesignShapeCategoryserializer(shape_category,many=True)
-    
-    return JsonResponse({"Image_category":img_category_serializer.data,"asset_type":asset_serializer.data,"shape_category":shape_cat_serializer.data},status=200)
+
+    return JsonResponse({"Image_category":img_category_serializer.data,"asset_type":asset_serializer.data,"shape_category":shape_cat_serializer.data,"shape_type":shape_types},status=200)
 
 
 from ai_canvas.serializers import DesignerListSerializer
@@ -1795,17 +1794,29 @@ class GrapicsListViewset(viewsets.ViewSet):
 
     def list(self,request):
         name=request.query_params.get('name')
+        page=request.query_params.get('page')
+
         if name:
-            shapes_queryset = DesignShape.objects.filter(shape_name__icontains=name).order_by("created_at")
             emoji_queryset=EmojiCategory.objects.filter(name__icontains=name)
         else:
-            shapes_queryset = DesignShape.objects.all().order_by("created_at")
             emoji_queryset=EmojiCategory.objects.all()
-
-        shapes_serializer = DesignShapeSerializer(shapes_queryset,many=True)
         emoji_serializer = EmojiCategorySerializer(emoji_queryset,many=True)  
 
-        data={'Shapes': shapes_serializer.data,'emoji': emoji_serializer.data, }
-        return Response (data) 
+        obj=DesignShapeCategory.objects.all()
+        data=[{"category":"emoji",'emoji': list(emoji_serializer.data)}]
+        for category in obj:
+            shape={}
+            if name:
+                shapes= DesignShape.objects.filter(Q(shape_name__icontains=name)|Q(category__name__icontains=name)|Q(tags__icontains=name))
+            else:
+                shapes =DesignShape.objects.filter(category=category)
+            if shapes:
+                serializers=DesignShapeSerializer(shapes,many=True)
+                shape["category"]=category.name
+                shape["images"]=list(serializers.data)   
+                data.append(shape)       
 
- 
+        paginate=Paginator(data,10)  
+        result=paginate.get_page(page)
+        return Response({'total_page':paginate.num_pages ,'count':paginate.count,'has_next': result.has_next(),
+                        'has_prev': result.has_previous(),'page': result.number,'image_list':result.object_list })
