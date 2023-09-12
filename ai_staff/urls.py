@@ -78,6 +78,10 @@ urlpatterns += [
       
      path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
 #    path('design-shape/',api_views.DesignShapeViewset.as_view({'get':'list'})),
+     path('insert',views.Bulk_insert)
+     
+
+
 ]
 
  
