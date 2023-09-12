@@ -8,7 +8,7 @@ from django.views.static import serve
 from django.urls import re_path
 from dj_rest_auth.registration.views import VerifyEmailView
 from dj_rest_auth.views import PasswordResetConfirmView
-from ai_auth.soc_auth import GoogleLogin
+from ai_auth.soc_auth import GoogleLogin,ProzLogin
 
 
 router = DefaultRouter()
@@ -83,5 +83,8 @@ urlpatterns+= [
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
     path('reports-dashboard/',api_views.reports_dashboard,name='reports-dashboard'),
     path('subs-cust-portal/',api_views.subscription_customer_portal,name='subs_cust_portal'),
-    path('campaign-register/',api_views.CampaignRegistrationView.as_view({'post':'create'}),name='campaign_register') 
+    path('campaign-register/',api_views.CampaignRegistrationView.as_view({'post':'create'}),name='campaign_register') ,
+    # path('ai-soc/proz/', ProzLogin.as_view(), name='proz_login'),
+    path('troubleshoot/',api_views.account_troubleshoot,name='account-troubleshoot'),
+     path('user-info/',api_views.user_info_update,name='user-info'),
 ]
