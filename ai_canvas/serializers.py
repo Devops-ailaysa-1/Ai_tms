@@ -14,7 +14,7 @@ import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-import cv2
+import cv2 ,os
 from ai_imagetranslation.utils import create_thumbnail_img_load
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
