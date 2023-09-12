@@ -823,7 +823,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         status = request_data.get("status",None)
         if status:
             status_obj = TranslationStatus.objects.filter(status_id=status).first()
-            segment.status = status_obj
+            segment.status = status_obj 
             if status not in [109,110]:step = 1
             else:step=2
         else: 
