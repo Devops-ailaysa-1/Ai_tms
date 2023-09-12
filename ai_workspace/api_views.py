@@ -4401,7 +4401,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
-        owner = request.user.team.owner if request.user.team  else request.user
+        owner = request.user.team.owner if (request.user.team and request.user in project_managers) else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                             .filter(task_id=None).order_by('-id')
          
