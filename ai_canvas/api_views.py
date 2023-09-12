@@ -1,19 +1,21 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets  ,generics
 from rest_framework.response import Response
-from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData)
+from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFamily,FontFamily,FontLanguage,FontData,ImageCategories,DesignShape,DesignShapeCategory)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
-                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,)
+                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,AiAssertscategory)
                             #   PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
+from ai_staff.serializer import ImageCategoriesSerializer,DesignShapeCategoryserializer
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
                                    TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,
-                                   EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,CanvasTargetJsonSerializer,CanvasSourceJsonFilesSerializer)
+                                   EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
+                                   CanvasTargetJsonSerializer,CanvasSourceJsonFilesSerializer,AiAssertsSerializer,AiAssertscategoryserializer)
                                 #    PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
@@ -1390,3 +1392,35 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
             src_json=queryset.json
             out=export_download(src_json,"png",multipliervalue=1,base_image=True)
             return JsonResponse({'base_64': out})
+        
+
+
+@api_view(["GET",'POST'])
+def designer_asset_create(request):
+    if request.method=="POST":
+        image_id=request.POST.get("image_id",None)
+        shape_type=request.POST.get("shape_type",None)
+        instance=CanvasUserImageAssets.objects.get(id=image_id)
+        image_name=os.path.basename(instance.image.url)
+        image = convert_image_url_to_file(Image.open(instance.image.path),no_pil_object=False,name=image_name)
+        if not shape_type:
+            serializer=AiAssertsSerializer(data={**request.POST.dict(),"user":"Ailaysa","imageurl":image},context={"request":request})
+        else:
+            serializer= DesignShapeSerializer(data={**request.POST.dict(),"shape":image,"types":shape_type},context={"request":request})
+        if serializer.is_valid():
+            serializer.save()
+            instance.status=True
+            instance.save()
+            return Response(serializer.data,status=201)
+        return Response(serializer.errors)
+
+    category=ImageCategories.objects.all()
+    obj_type=AiAssertscategory.objects.all()
+    shape_category=DesignShapeCategory.objects.all()
+    shape_type=DesignShape._meta.get_field('types').choices
+    shape_types = {key: value for key, value in shape_type}
+    asset_serializer=AiAssertscategoryserializer(obj_type,many=True)
+    img_category_serializer=ImageCategoriesSerializer(category,many=True)
+    shape_cat_serializer=DesignShapeCategoryserializer(shape_category,many=True)
+
+    return JsonResponse({"Image_category":img_category_serializer.data,"asset_type":asset_serializer.data,"shape_category":shape_cat_serializer.data,"shape_type":shape_types},status=200)

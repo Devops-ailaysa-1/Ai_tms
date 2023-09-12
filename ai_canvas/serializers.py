@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
-                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,)
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts)
                             # PromptCategory,PromptEngine)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
@@ -16,6 +16,7 @@ from ai_staff.models import SocialMediaSize
 from PIL import Image
 import cv2
 from ai_imagetranslation.utils import create_thumbnail_img_load
+HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = LanguagesLocale
@@ -1080,3 +1081,30 @@ class CanvasTranslatedSerializer(serializers.ModelSerializer):
         model=CanvasTranslatedJson
         fields=("canvas_design","source_language","target_language")
 
+
+class AiAssertscategoryserializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=AiAssertscategory
+        fields="__all__"
+
+class AiAssertsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=AiAsserts
+        fields=('preview_img',"id","tags","type","user","category",'imageurl',"status")
+
+    def create(self, data):
+        instance=AiAsserts.objects.create(**data)
+        # instance.save()
+        im = Image.open(instance.imageurl.path)
+        instance.preview_img=create_thumbnail_img_load(base_dimension=300,image=im)
+        instance.status=True
+        instance.save()
+        return instance
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['imageurl']= HOST_NAME+instance.imageurl.url 
+        data['preview_img']= HOST_NAME+instance.preview_img.url
+        return data

@@ -44,7 +44,7 @@ urlpatterns += [
     # path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list',}),name='global-temp-desi-lst'),
     path('design-download',api_views.DesignerDownload,name='designerdownload'),
     path('canvas-user-images-list',api_views.CanvasUserImageAssetsViewsetList.as_view({'get':'list'}),name='image-translate-list'),
-    # path('design-assert',api_views.designer_asset_create,name='designer-asset-create'),
+    path('design-assert',api_views.designer_asset_create,name='designer-asset-create'),
 
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

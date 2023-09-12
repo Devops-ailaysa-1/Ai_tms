@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
-from ai_workspace.models import Task
+from ai_staff.models import ImageCategories  
 class CanvasCatagories(models.Model):
     catagory_name = models.CharField(max_length=50,null=True,blank=True)
     def __str__(self) -> str:
@@ -317,3 +317,22 @@ class ImageListCategory(models.Model):
 
 #     def __str__(self):
 #         return self.image_url
+
+class AiAssertscategory(models.Model):
+    name=models.CharField(max_length=256)
+
+    def __str__(self):
+        return self.name
+    
+
+class AiAsserts(models.Model):
+    imageurl=models.FileField(upload_to="Ai-assert",blank=True,null=True)
+    preview_img=models.FileField(upload_to="Ai-assert",blank=True,null=True)
+    tags=models.TextField(blank=True, null=True)
+    category=models.ForeignKey(ImageCategories, on_delete=models.CASCADE)
+    type=models.ForeignKey(AiAssertscategory, on_delete=models.CASCADE)
+    user=models.CharField(max_length=2000,null=True,blank=True)
+    status=models.BooleanField(default=False)
+
+    # def __str__(self):
+    #     return str(self.type)
