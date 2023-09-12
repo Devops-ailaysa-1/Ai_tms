@@ -7,7 +7,7 @@ from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesig
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
                               ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,AiAssertscategory)
                             #   PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
-from ai_staff.serializer import ImageCategoriesSerializer,DesignShapeCategoryserializer
+from ai_staff.serializer import ImageCategoriesSerializer,DesignShapeCategoryserializer,DesignShapeSerializer
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
@@ -1355,6 +1355,7 @@ class DesignerListViewset(viewsets.ViewSet,CustomPagination):
     permission_classes = [IsAuthenticated,]
     search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
     filter_backends = [DjangoFilterBackend]
+    page_size = 20
 
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
