@@ -316,6 +316,7 @@ def populate_user_details(user, sociallogin=None,**kwargs):
             else:
                 full_name = user_data['contact_info']['first_name'] + user_data['contact_info']['last_name']
         user.fullname = full_name
+        user.first_login = True
         user.save()
         user_attr = auth_model.UserAttribute.objects.create(user=user,user_type_id=1)
         if user_attr == None:
