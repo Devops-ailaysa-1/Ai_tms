@@ -315,181 +315,181 @@ def replace_url_with_base64(input_string):
             input_string = input_string.replace(url, f"data:application/font-ttf;base64,{base64_data}")
     return input_string
 
-import random
+# import random
 
-def generate_random_rgba():
-    r = random.randint(0, 255)
-    g = random.randint(0, 255)
-    b = random.randint(0, 255)
-    a=1
-    return f"rgba({r}, {g}, {b}, {a})"
+# def generate_random_rgba():
+#     r = random.randint(0, 255)
+#     g = random.randint(0, 255)
+#     b = random.randint(0, 255)
+#     a=1
+#     return f"rgba({r}, {g}, {b}, {a})"
 
-def create_thumbnail(json_str,formats):
-    all_format=['png','jpeg','jpg','svg']
-    width=json_str['backgroundImage']['width']
-    height=json_str['backgroundImage']['height']
+# def create_thumbnail(json_str,formats):
+#     all_format=['png','jpeg','jpg','svg']
+#     width=json_str['backgroundImage']['width']
+#     height=json_str['backgroundImage']['height']
 
-    if formats=='mask' or formats=='backgroundMask':
-        multiplierValue=1
-    elif formats in all_format:
-        multiplierValue=min([300 /width, 300 / height])
+#     if formats=='mask' or formats=='backgroundMask':
+#         multiplierValue=1
+#     elif formats in all_format:
+#         multiplierValue=min([300 /width, 300 / height])
 
-    json_=json.dumps(json_str)
-    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
-    thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+#     json_=json.dumps(json_str)
+#     data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+#     thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
 
-    if thumb_image.status_code ==200:
-        return thumb_image.text
-    else:
-        return ValidationError("error in node server")
+#     if thumb_image.status_code ==200:
+#         return thumb_image.text
+#     else:
+#         return ValidationError("error in node server")
     
 
-def grid_position(width, height):
-    rows=5
-    cols=5
-    cell_width = width // rows
-    cell_height = height // cols
-    text= []
-    image=[]
-    for row in range(rows):
-        for col in range(cols):
-            if (row !=0 and row != rows-1) and (col !=0 and col != cols-1):
-                grid=[]
-                grid.append(row * cell_height)
-                grid.append(col * cell_width)
-                image.append(grid)
-            elif (row ==0 or row == rows-1)  and (col !=0 and col != cols-1):
-                grid1 = []
-                if row ==0:
-                    grid1.append(row * cell_height+(height/10))
-                else:
-                    grid1.append(row * cell_height-(height/10))
-                grid1.append(col * cell_width)
-                text.append(grid1)
-    return text,image
+# def grid_position(width, height):
+#     rows=5
+#     cols=5
+#     cell_width = width // rows
+#     cell_height = height // cols
+#     text= []
+#     image=[]
+#     for row in range(rows):
+#         for col in range(cols):
+#             if (row !=0 and row != rows-1) and (col !=0 and col != cols-1):
+#                 grid=[]
+#                 grid.append(row * cell_height)
+#                 grid.append(col * cell_width)
+#                 image.append(grid)
+#             elif (row ==0 or row == rows-1)  and (col !=0 and col != cols-1):
+#                 grid1 = []
+#                 if row ==0:
+#                     grid1.append(row * cell_height+(height/10))
+#                 else:
+#                     grid1.append(row * cell_height-(height/10))
+#                 grid1.append(col * cell_width)
+#                 text.append(grid1)
+#     return text,image
 
 
-from .template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
-import random
-from .meta import *
-from ai_staff.models import FontFamily,FontData
+# from .template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
+# import random
+# from .meta import *
+# from ai_staff.models import FontFamily,FontData
 
-def genarate_image(instance,image_grid,template):
-    print(instance)
-    temp_height =int(template.height)
-    temp_width = int(template.width)
-    x=temp_width*3/4
-    y=temp_height*3/4
+# def genarate_image(instance,image_grid,template):
+#     print(instance)
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     x=temp_width*3/4
+#     y=temp_height*3/4
    
-    # image=copy.deepcopy(image)
-    # text_grid,image_grid=grid_position(temp_width,temp_height)
-    pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
-    img=copy.deepcopy(image)
-    img["src"]=HOST_NAME+instance.image.url
-    print("img---->", img["src"])
-    # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
-    # bg_remove=backgroundremo
-    img["name"]="Image"+str(pos[0])+str(pos[1])
-    if instance.width<instance.height:
-        scale=(x/int(instance.width))
-    else:
-        scale=(y/int(instance.height))
-    img["scaleX"]=img["scaleY"]=scale
-    img["oldScaleX"]=img["oldScaleY"]=scale
+#     # image=copy.deepcopy(image)
+#     # text_grid,image_grid=grid_position(temp_width,temp_height)
+#     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
+#     img=copy.deepcopy(image)
+#     img["src"]=HOST_NAME+instance.image.url
+#     print("img---->", img["src"])
+#     # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
+#     # bg_remove=backgroundremo
+#     img["name"]="Image"+str(pos[0])+str(pos[1])
+#     if instance.width<instance.height:
+#         scale=(x/int(instance.width))
+#     else:
+#         scale=(y/int(instance.height))
+#     img["scaleX"]=img["scaleY"]=scale
+#     img["oldScaleX"]=img["oldScaleY"]=scale
 
-    img["width"]=img["oldWidth"]=instance.height*scale
-    img["height"]=img["oldHeight"]=instance.width*scale
-    img["top"]=image_grid[0][0]
-    img["left"]=image_grid[0][1]
-    return img
+#     img["width"]=img["oldWidth"]=instance.height*scale
+#     img["height"]=img["oldHeight"]=instance.width*scale
+#     img["top"]=image_grid[0][0]
+#     img["left"]=image_grid[0][1]
+#     return img
 
-def genarate_text(font_family,prompt,text_grid,template):
-        temp_height =int(template.height)
-        temp_width = int(template.width)
-        text=copy.deepcopy(textbox)
-        # text_grid,image_grid=grid_position(temp_width,temp_height)
-        text["fill"] =generate_random_rgba()
-        # text["fontStyle"] =
-        text["fontFamily"] =font_family[random.randint(0,(len(font_family)-1))]
-        text["fontWeight"] =font["fontWeight"][random.randint(0,2)]
-        # textline=prompt.capitalize().split(" ")
-        # text=prompt.split(" ")
-        text["textLines"]=prompt
-        text["text"]=prompt.capitalize()
-        text["width"]=500
-        text["height"]=90
-        text["fontSize"]=random.randint(100,300)
+# def genarate_text(font_family,prompt,text_grid,template):
+#         temp_height =int(template.height)
+#         temp_width = int(template.width)
+#         text=copy.deepcopy(textbox)
+#         # text_grid,image_grid=grid_position(temp_width,temp_height)
+#         text["fill"] =generate_random_rgba()
+#         # text["fontStyle"] =
+#         text["fontFamily"] =font_family[random.randint(0,(len(font_family)-1))]
+#         text["fontWeight"] =font["fontWeight"][random.randint(0,2)]
+#         # textline=prompt.capitalize().split(" ")
+#         # text=prompt.split(" ")
+#         text["textLines"]=prompt
+#         text["text"]=prompt.capitalize()
+#         text["width"]=500
+#         text["height"]=90
+#         text["fontSize"]=random.randint(100,300)
 
-        pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
-        text["top"]= pos[0]
-        text["left"]= pos[1]
-        return text
+#         pos= text_grid.pop(random.randint(0,(len(text_grid)-1)))
+#         text["top"]= pos[0]
+#         text["left"]= pos[1]
+#         return text
 
-def random_background_image(template,instance):
-    bg_image=copy.deepcopy(backgroundImage)
-    temp_height =int(template.height)
-    temp_width = int(template.width)
-    bg_image["src"]=HOST_NAME+instance.bg_image.url
-    print(bg_image["src"])
-    scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
-
-
-    if instance.width<instance.height:
-        scale=(temp_width/int(instance.width))
-    else:
-        scale=(temp_height/int(instance.height))
-
-    img_width=instance.width*scale
-    img_height=instance.height*scale
-    # bg_image["src"]=instance.image.url
-    bg_image["width"]=img_width
-    bg_image["height"]=img_height
-
-    # bg_image["scaleX"]=bg_image=scaleX
-    # bg_image["oldScaleX"]=bg_image["oldScaleY"]=scaleY
-
-    bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
-    bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
-
-    bg_image["top"]=top
-    bg_image["left"]=left
-
-    """backgroud as colr"""
-    # bg=copy.deepcopy(backgroundHardboard)
-    # random_color= random.randint(0, 19)
-    # bg["fill"]=generate_random_rgba()
-    # bg["width"]=int(temp_width)
-    # bg["height"]=int(temp_height)
-
-    return bg_image
+# def random_background_image(template,instance):
+#     bg_image=copy.deepcopy(backgroundImage)
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     bg_image["src"]=HOST_NAME+instance.bg_image.url
+#     print(bg_image["src"])
+#     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
 
 
-def background_scaling(canvas_width, canvas_height, image_width, image_height):
-    scaleX, scaleY, left, top = 0, 0, 0, 0
+#     if instance.width<instance.height:
+#         scale=(temp_width/int(instance.width))
+#     else:
+#         scale=(temp_height/int(instance.height))
+
+#     img_width=instance.width*scale
+#     img_height=instance.height*scale
+#     # bg_image["src"]=instance.image.url
+#     bg_image["width"]=img_width
+#     bg_image["height"]=img_height
+
+#     # bg_image["scaleX"]=bg_image=scaleX
+#     # bg_image["oldScaleX"]=bg_image["oldScaleY"]=scaleY
+
+#     bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
+#     bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
+
+#     bg_image["top"]=top
+#     bg_image["left"]=left
+
+#     """backgroud as colr"""
+#     # bg=copy.deepcopy(backgroundHardboard)
+#     # random_color= random.randint(0, 19)
+#     # bg["fill"]=generate_random_rgba()
+#     # bg["width"]=int(temp_width)
+#     # bg["height"]=int(temp_height)
+
+#     return bg_image
+
+
+# def background_scaling(canvas_width, canvas_height, image_width, image_height):
+#     scaleX, scaleY, left, top = 0, 0, 0, 0
     
-    if canvas_width > canvas_height:  # Landscape image
-        scaleX = canvas_width / image_width
-        scaleY = canvas_width / image_width
-        left = 0
-        top = (canvas_height - (image_height * scaleY)) / 2
-    elif canvas_width == canvas_height:
-        if image_width >= image_height:  # Landscape image
-            scaleX = canvas_height / image_height
-            scaleY = canvas_height / image_height
-            left = (canvas_width - (image_width * scaleX)) / 2
-            top = 0
-        else:  # Portrait image
-            scaleX = canvas_width / image_width
-            scaleY = canvas_width / image_width
-            left = 0
-            top = (canvas_height - (image_height * scaleY)) / 2
-    else:  # Portrait image
-        scaleX = canvas_height / image_height
-        scaleY = canvas_height / image_height
-        left = (canvas_width - (image_width * scaleX)) / 2
-        top = 0
+#     if canvas_width > canvas_height:  # Landscape image
+#         scaleX = canvas_width / image_width
+#         scaleY = canvas_width / image_width
+#         left = 0
+#         top = (canvas_height - (image_height * scaleY)) / 2
+#     elif canvas_width == canvas_height:
+#         if image_width >= image_height:  # Landscape image
+#             scaleX = canvas_height / image_height
+#             scaleY = canvas_height / image_height
+#             left = (canvas_width - (image_width * scaleX)) / 2
+#             top = 0
+#         else:  # Portrait image
+#             scaleX = canvas_width / image_width
+#             scaleY = canvas_width / image_width
+#             left = 0
+#             top = (canvas_height - (image_height * scaleY)) / 2
+#     else:  # Portrait image
+#         scaleX = canvas_height / image_height
+#         scaleY = canvas_height / image_height
+#         left = (canvas_width - (image_width * scaleX)) / 2
+#         top = 0
         
-    return scaleX, scaleY, left, top
+#     return scaleX, scaleY, left, top
 
 # Example usage
 

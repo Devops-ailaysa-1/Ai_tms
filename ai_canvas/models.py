@@ -283,37 +283,37 @@ class ImageListCategory(models.Model):
     #     constraints = [
     #     models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
     
-class PromptCategory(models.Model):
-    name=models.CharField(max_length=256)
+# class PromptCategory(models.Model):
+#     name=models.CharField(max_length=256)
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
 
-class TemplateBackground(models.Model):
-    prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_background', on_delete=models.CASCADE)
-    bg_image=models.FileField(upload_to="backround-template",blank=True,null=True)
-    height=models.IntegerField(blank=True,null=True)
-    width=models.IntegerField(blank=True,null=True)
+# class TemplateBackground(models.Model):
+#     prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_background', on_delete=models.CASCADE)
+#     bg_image=models.FileField(upload_to="backround-template",blank=True,null=True)
+#     height=models.IntegerField(blank=True,null=True)
+#     width=models.IntegerField(blank=True,null=True)
 
-class PromptEngine(models.Model):
-    prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_category', on_delete=models.CASCADE)
-    prompt=models.CharField(max_length=256)
-    key_words=models.JSONField(null=True,blank=True,default=dict)
-    image=models.FileField(upload_to="prompt-image",blank=True,null=True)
-    mask_image=models.FileField(upload_to="prompt-mask-image",blank=True,null=True)
-    height=models.IntegerField(blank=True,null=True)
-    width=models.IntegerField(blank=True,null=True)
+# class PromptEngine(models.Model):
+#     prompt_category=models.ForeignKey(PromptCategory,related_name='prompt_category', on_delete=models.CASCADE)
+#     prompt=models.CharField(max_length=256)
+#     key_words=models.JSONField(null=True,blank=True,default=dict)
+#     image=models.FileField(upload_to="prompt-image",blank=True,null=True)
+#     mask_image=models.FileField(upload_to="prompt-mask-image",blank=True,null=True)
+#     height=models.IntegerField(blank=True,null=True)
+#     width=models.IntegerField(blank=True,null=True)
 
-    def __str__(self):
-        return self.prompt
+#     def __str__(self):
+#         return self.prompt
     
-    @property
-    def background_img(self):
-        return self.prompt_category.prompt_background.all()
+#     @property
+#     def background_img(self):
+#         return self.prompt_category.prompt_background.all()
     
-class PromptMaskImage(models.Model):
-    mask_image=models.ForeignKey(PromptEngine,on_delete=models.CASCADE,related_name="prompt_image")
-    image_url=models.URLField(blank=True,null=True)
+# class PromptMaskImage(models.Model):
+#     mask_image=models.ForeignKey(PromptEngine,on_delete=models.CASCADE,related_name="prompt_image")
+#     image_url=models.URLField(blank=True,null=True)
 
-    def __str__(self):
-        return self.image_url
+#     def __str__(self):
+#         return self.image_url

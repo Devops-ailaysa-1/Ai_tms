@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
-                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,
-                            PromptCategory,PromptEngine)#TemplatePage
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,)
+                            # PromptCategory,PromptEngine)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -1008,14 +1008,14 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
 
 
 
-class PromptCategoryserializer(serializers.ModelSerializer):
+# class PromptCategoryserializer(serializers.ModelSerializer):
 
-    class Meta:
-        model=PromptCategory
-        fields="__all__"
+#     class Meta:
+#         model=PromptCategory
+#         fields="__all__"
 
-class PromptEngineserializer(serializers.ModelSerializer):
+# class PromptEngineserializer(serializers.ModelSerializer):
 
-    class Meta:
-        model=PromptEngine
-        fields="__all__"
+#     class Meta:
+#         model=PromptEngine
+#         fields="__all__"

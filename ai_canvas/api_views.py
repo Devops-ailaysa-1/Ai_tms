@@ -5,15 +5,15 @@ from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFami
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
-                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,
-                              PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
+                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,)
+                            #   PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
-                                   PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,)
+                                #    PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -29,16 +29,14 @@ from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
-from ai_canvas.utils import convert_image_url_to_file,paginate_items,genarate_image
-from ai_canvas.utils import export_download
+from ai_canvas.utils import convert_image_url_to_file,paginate_items,export_download#,genarate_image
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
 import uuid
 import urllib.request
 from django import core 
-from rest_framework import filters
-from rest_framework import serializers
+from rest_framework import filters ,serializers
 from django_filters.rest_framework import DjangoFilterBackend
 HOST_NAME=os.getenv("HOST_NAME")
 from django.shortcuts import get_object_or_404
@@ -1248,102 +1246,102 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #     serializer_class = TemplateGlobalDesignRetrieveSerializer
 #     lookup_field = 'id'
 
-import time
-from .utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
-class TemplateEngineGenerate(viewsets.ModelViewSet):
+# import time
+# from .utils import generate_random_rgba,create_thumbnail,grid_position,genarate_text,random_background_image
+# class TemplateEngineGenerate(viewsets.ModelViewSet):
 
-    def get_queryset(self):
-        return PromptCategory.objects.all()
+#     def get_queryset(self):
+#         return PromptCategory.objects.all()
 
-    def list(self,request):
-        queryset= self.get_queryset()
-        serializers=PromptCategoryserializer(queryset,many=True)
-        return Response (serializers.data)
+#     def list(self,request):
+#         queryset= self.get_queryset()
+#         serializers=PromptCategoryserializer(queryset,many=True)
+#         return Response (serializers.data)
     
-    def create(self,request):
-        # prompt=request.POST.get("prompt",None)
-        template_id=request.POST.get("template",None)
-        template=get_object_or_404(SocialMediaSize,id=template_id)
-        prompt_id=request.POST.get("prompt_id",None)
-        sdstylecategoty=1
-        image_resolution=request.POST.get("image_resolution",None)
-        negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
+#     def create(self,request):
+#         # prompt=request.POST.get("prompt",None)
+#         template_id=request.POST.get("template",None)
+#         template=get_object_or_404(SocialMediaSize,id=template_id)
+#         prompt_id=request.POST.get("prompt_id",None)
+#         sdstylecategoty=1
+#         image_resolution=request.POST.get("image_resolution",None)
+#         negative_prompt="bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
 
-        # ** get image
-        if prompt_id==None:
-            print("SD creatin")
-            serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response(serializer.errors)
+#         # ** get image
+#         if prompt_id==None:
+#             print("SD creatin")
+#             serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 return Response(serializer.errors)
             
-            id=serializer.data.get("id")
-            wait=0 
-            print("enter...........")
-            while True:
-                ins=get_object_or_404(StableDiffusionAPI,id=id)
-                if ins.status=="DONE":
-                    break
-                else:
-                    wait+=1
-            print("exiting............")
-            # id=89
-            instance=get_object_or_404(StableDiffusionAPI,id=id)
-        else:
-            print("no SD creatin")
-            instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
-        background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
-        # bg_images=list(background)
-        prompt = instance.prompt
-        font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
-        font_family = list(font)
-        print("template_genarating.........................")
-        template=genarate_template(instance,template,prompt,font_family,background)        
-        return JsonResponse({"data":template})
+#             id=serializer.data.get("id")
+#             wait=0 
+#             print("enter...........")
+#             while True:
+#                 ins=get_object_or_404(StableDiffusionAPI,id=id)
+#                 if ins.status=="DONE":
+#                     break
+#                 else:
+#                     wait+=1
+#             print("exiting............")
+#             # id=89
+#             instance=get_object_or_404(StableDiffusionAPI,id=id)
+#         else:
+#             print("no SD creatin")
+#             instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
+#         background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
+#         # bg_images=list(background)
+#         prompt = instance.prompt
+#         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
+#         font_family = list(font)
+#         print("template_genarating.........................")
+#         template=genarate_template(instance,template,prompt,font_family,background)        
+#         return JsonResponse({"data":template})
     
-from ai_canvas.template import jsonStructure
-def genarate_template(instance,template,prompt,font_family,bg_images):
-    temp_height =int(template.height)
-    temp_width = int(template.width)
-    template_data=[]
-    for i in range(0,5):
-        print(i)
-        text_grid,image_grid=grid_position(temp_width,temp_height)
-        temp={}   
-        data=copy.deepcopy(jsonStructure) 
+# from ai_canvas.template import jsonStructure
+# def genarate_template(instance,template,prompt,font_family,bg_images):
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     template_data=[]
+#     for i in range(0,5):
+#         print(i)
+#         text_grid,image_grid=grid_position(temp_width,temp_height)
+#         temp={}   
+#         data=copy.deepcopy(jsonStructure) 
 
-        """ backgroundImage  """
-        # bg_images=bg_images.first()
-        # bg_images=bg_images.pop(random.randint(0,(len(bg_images)-1)))
-        backgroundImage =random_background_image(template,bg_images)
-        data.get("objects").append(backgroundImage)
+#         """ backgroundImage  """
+#         # bg_images=bg_images.first()
+#         # bg_images=bg_images.pop(random.randint(0,(len(bg_images)-1)))
+#         backgroundImage =random_background_image(template,bg_images)
+#         data.get("objects").append(backgroundImage)
 
-        print("j")
-        """  Image 0 """
-        image=genarate_image(instance,image_grid,template)
-        data.get("objects").append(image)
+#         print("j")
+#         """  Image 0 """
+#         image=genarate_image(instance,image_grid,template)
+#         data.get("objects").append(image)
 
-        # change image attributes
-        # for key, value in style[0]["image"][0].items():
-        #             data["objects"][0][key] = value
+#         # change image attributes
+#         # for key, value in style[0]["image"][0].items():
+#         #             data["objects"][0][key] = value
 
-        """  Text 1  """
-        textbox=genarate_text(font_family,prompt,text_grid,template)
-        data.get("objects").append(textbox)
-        # change text attributes
-        # for key, value in style[i]["text"][0].items():
-        #             data["objects"][0][key] = value
+#         """  Text 1  """
+#         textbox=genarate_text(font_family,prompt,text_grid,template)
+#         data.get("objects").append(textbox)
+#         # change text attributes
+#         # for key, value in style[i]["text"][0].items():
+#         #             data["objects"][0][key] = value
         
-        """  backgroundboard   """
-        random_color= random.randint(0, 19)
-        # data["backgroundImage"]["fill"]=generate_random_rgba()
-        data["backgroundImage"]["width"]=int(temp_width)
-        data["backgroundImage"]["height"]=int(temp_height)
-        print(data)
-        # thumnail creation
-        thumbnail={}
-        thumbnail['thumb']=create_thumbnail(data,formats='png')
-        temp={"json":data,"thumb":thumbnail}
-        template_data.append(temp)
-    return template_data
+#         """  backgroundboard   """
+#         random_color= random.randint(0, 19)
+#         # data["backgroundImage"]["fill"]=generate_random_rgba()
+#         data["backgroundImage"]["width"]=int(temp_width)
+#         data["backgroundImage"]["height"]=int(temp_height)
+#         print(data)
+#         # thumnail creation
+#         thumbnail={}
+#         thumbnail['thumb']=create_thumbnail(data,formats='png')
+#         temp={"json":data,"thumb":thumbnail}
+#         template_data.append(temp)
+#     return template_data
