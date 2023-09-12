@@ -42,6 +42,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     is_agency = models.BooleanField(default=False)
     is_internal_member = models.BooleanField(default=False)
     first_login = models.BooleanField(default=False)
+    need_fix = models.BooleanField(default=False)
     currency_based_on_country = models.ForeignKey(Currencies,related_name='aiuser_country_based_currency',
         on_delete=models.CASCADE,blank=True, null=True)
 
@@ -701,3 +702,34 @@ class SubscriptionOrder(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()  # Run clean() before saving
         super().save(*args, **kwargs)
+
+
+class TroubleshootIssues(models.Model):
+
+    #     issues = (
+    #     (0,"country_empty"),
+    #     (1,"initial_credit_zero"),
+    #     (2,"multiple_stripe_customer"),
+    #     (3,"no_stripe_customer_found"),
+    #     (4,"multiple_active_subscription"),
+    #     (5,"no_subscription_created"),
+    #     (6,"no_credits_found"),
+    #     (7,"intial_credits_zero")
+    # )
+    issue = models.CharField(max_length=200)
+    issue_desc= models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+
+class AiTroubleshootData(models.Model):
+    user = models.ForeignKey(AiUser,related_name='troubleshoot_user',
+        on_delete=models.CASCADE)
+    issue = models.ForeignKey(TroubleshootIssues,related_name='troubleshoot_issues',
+        on_delete=models.CASCADE)
+    fixed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    
