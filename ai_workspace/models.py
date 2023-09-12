@@ -57,7 +57,6 @@ from django.core.cache import cache
 import functools
 
 
-
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -857,6 +856,7 @@ class Job(models.Model):
         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,\
         related_name="project_jobs_set",)
+    
     job_id =models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
 

@@ -12,7 +12,8 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    MyTemplateDesignRetrieveSerializer,
                                    MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
-                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,)
+                                   TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,
+                                   EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,CanvasTargetJsonSerializer,CanvasSourceJsonFilesSerializer)
                                 #    PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
@@ -1345,3 +1346,47 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 #         temp={"json":data,"thumb":thumbnail}
 #         template_data.append(temp)
 #     return template_data
+
+from ai_canvas.serializers import DesignerListSerializer
+class DesignerListViewset(viewsets.ViewSet,CustomPagination):
+    pagination_class = CanvasDesignListViewsetPagination
+    permission_classes = [IsAuthenticated,]
+    search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
+    filter_backends = [DjangoFilterBackend]
+
+    def list(self,request):
+        queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
+        # if queryset.canvas_json_src.first():
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = DesignerListSerializer(pagin_tc,many=True)
+        data=[]
+        for obj in serializer.data:
+            if obj:
+                data.append(obj)
+        response = self.get_paginated_response(data)
+        return response
+        
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def retrieve(self,request,pk):
+        # src_id=request.GET.get("source_id",None)
+        tar_id=request.GET.get("target_id",None)
+        base_64=request.GET.get("base_64",None)
+        if tar_id:
+             queryset=get_object_or_404(CanvasTargetJsonFiles,id=tar_id)
+             serializer=CanvasTargetJsonSerializer(queryset,context={"json":True},many=False)
+        else:
+            queryset=CanvasSourceJsonFiles.objects.filter(canvas_design__id=pk).first()
+            serializer=CanvasSourceJsonFilesSerializer(queryset,many=False)
+        if not base_64:
+            return Response(serializer.data,status=200)
+        else:
+            src_json=queryset.json
+            out=export_download(src_json,"png",multipliervalue=1,base_image=True)
+            return JsonResponse({'base_64': out})
