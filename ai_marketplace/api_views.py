@@ -1060,7 +1060,7 @@ def get_sub_data(expertise_data):
 
 
 from .serializers import CommonSPSerializer
-
+from ai_staff.models import Countries
 class ProzVendorListView(generics.ListAPIView):
     serializer_class = CommonSPSerializer
     pagination.PageNumberPagination.page_size = 20
@@ -1072,6 +1072,8 @@ class ProzVendorListView(generics.ListAPIView):
         source_lang=self.request.query_params.get('source_lang')
         target_lang=self.request.query_params.get('target_lang')
         year_of_experience = self.request.query_params.get('year_of_experience')
+        country = self.request.query_params.get('country',None)
+        fullname = self.request.query_params.get('fullname',None)
         #contenttype = self.request.query_params.get('content')
         subject=self.request.query_params.get('subject')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
@@ -1099,6 +1101,11 @@ class ProzVendorListView(generics.ListAPIView):
             proz_expertize_ids = get_proz_expertize(subjectlist)
             if proz_expertize_ids:
                 params.update({'disc_spec_id':proz_expertize_ids}) 
+        if country:
+            country_code = Countries.objects.get(id=country).sortname.lower()
+            params.update({'country_code':country_code})
+        if fullname:
+            params.update({'keyword':fullname})
         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         integration_users = integration_users_response.json()
