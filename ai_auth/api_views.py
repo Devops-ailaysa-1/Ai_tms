@@ -1,4 +1,5 @@
 from logging import INFO
+from ai_auth.checks import AilaysaTroubleShoot
 from langdetect import detect
 import logging
 import re , requests, os
@@ -1388,7 +1389,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 
-from .models import CarrierSupport
+from .models import AiTroubleshootData, CarrierSupport
 class CarrierSupportCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
@@ -2595,7 +2596,7 @@ def oso_test_querys(request):
 
 
 from .models import CoCreateForm
-from .serializers import CoCreateFormSerializer,CampaignRegisterSerializer
+from .serializers import AiUserDetailsSerializer, CoCreateFormSerializer,CampaignRegisterSerializer
 
 class CampaignRegistrationView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
@@ -2727,3 +2728,38 @@ def subscription_customer_portal(request):
 
     }
     return JsonResponse(data,status=200)
+
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated,])
+def account_troubleshoot(request):
+    user = request.user
+    check_obj = AilaysaTroubleShoot(user)
+    check_obj.account_signup_check()
+    issues = check_obj.issues_found
+    for issue in issues:
+        AiTroubleshootData.objects.create(user=user,issue=issue)
+    return Response({"msg":"troubleshoot_done","issues_found":[issue.issue for issue in issues]},status=200)
+
+
+@api_view(['PUT',])
+@permission_classes([IsAuthenticated,])
+def user_info_update(request):
+    user = request.user
+    country_id = request.POST.get('country')
+    if user.is_internal_member: # country should not be updated for internal member
+         return Response({"msg":"updation failed"},status=400)
+    cust = user.djstripe_customers.last()
+
+    if country_id not in ['',None]:
+        return Response({"msg":"updation failed"},status=400)
+    elif cust:
+        return Response({"msg":"updation failed"},status=400)
+    else:
+        ser = AiUserDetailsSerializer(user,data={'country':country_id},partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
