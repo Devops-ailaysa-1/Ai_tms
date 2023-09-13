@@ -824,7 +824,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         status = request_data.get("status",None)
         if status:
             status_obj = TranslationStatus.objects.filter(status_id=status).first()
-            segment.status = status_obj
+            segment.status = status_obj 
             if status not in [109,110]:step = 1
             else:step=2
         else: 
@@ -1279,7 +1279,7 @@ class MT_RawAndTM_View(views.APIView):
                 # replace asset auto
                 seg_obj = Segment.objects.get(id=segment_id)
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                rep = data.get('mt_raw',None)
+                #rep = data.get('mt_raw',None)
                 # if rep:
                 #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
                 #     data['mt_raw']=asset_rep
@@ -1303,7 +1303,7 @@ class MT_RawAndTM_View(views.APIView):
                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
                 seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                rep = data.get('mt_raw',None)
+                #rep = data.get('mt_raw',None)
                 # if rep:
                 #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
                 #     data['mt_raw']=asset_rep

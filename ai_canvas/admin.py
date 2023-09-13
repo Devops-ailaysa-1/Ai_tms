@@ -1,9 +1,9 @@
 from django.contrib import admin
 
 # Register your models here.
-# from ai_canvas.models import PromptCategory,PromptEngine,TemplateBackground
+from ai_canvas.models import AssetCategory,AssetImage
 
 
-# admin.site.register(PromptCategory)
-# admin.site.register(PromptEngine)
+admin.site.register(AssetCategory)
+admin.site.register(AssetImage)
 # admin.site.register(TemplateBackground)

@@ -1,6 +1,7 @@
 from django.db import models
 
 # Create your models here.
+from ai_workspace.models import Project
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
 from ai_staff.models import ImageCategories  
@@ -50,6 +51,7 @@ class CanvasUserImageAssets(models.Model):
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
 
 class CanvasDesign(models.Model):
+    
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     # task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_designer_details")
     file_name=models.CharField(max_length=50,null=True,blank=True) 
@@ -76,6 +78,7 @@ class CanvasSourceJsonFiles(models.Model):
 
 
 class CanvasTranslatedJson(models.Model):
+    # project = models.OneToOneField(Project, null=False, blank=False, on_delete=models.CASCADE, related_name="designer_project")
     # canvas_src_json=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_src',on_delete=models.CASCADE,null=True,blank=True)
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
@@ -329,6 +332,8 @@ class AiAsserts(models.Model):
     imageurl=models.FileField(upload_to="Ai-assert",blank=True,null=True)
     preview_img=models.FileField(upload_to="Ai-assert",blank=True,null=True)
     tags=models.TextField(blank=True, null=True)
+    positive_prompt=models.TextField(blank=True, null=True)
+    negative_prompt=models.TextField(blank=True, null=True)
     category=models.ForeignKey(ImageCategories, on_delete=models.CASCADE)
     type=models.ForeignKey(AiAssertscategory, on_delete=models.CASCADE)
     user=models.CharField(max_length=2000,null=True,blank=True)
@@ -336,3 +341,19 @@ class AiAsserts(models.Model):
 
     # def __str__(self):
     #     return str(self.type)
+
+
+class AssetCategory(models.Model):
+    cat_name=models.CharField(max_length=300,null=True,blank=True)
+
+class AssetImage(models.Model):
+    # category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
+    image=models.FileField(upload_to="asset",blank=True,null=True)
+    thumbnail=models.FileField(upload_to="asset_thumbnail",blank=True,null=True)
+    tags = models.TextField(blank=True, null=True)
+    positive_prompt=models.TextField(blank=True, null=True)
+    negative_prompt=models.TextField(blank=True, null=True)
+    type=models.CharField(max_length=300,blank=True, null=True)
+    country=models.CharField(max_length=300,blank=True, null=True)
+
+

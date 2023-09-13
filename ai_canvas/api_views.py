@@ -5,17 +5,18 @@ from ai_staff.models import ( Languages,LanguagesLocale,SocialMediaSize,FontFami
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,MyTemplateDesign,
                               TemplateKeyword,TextTemplate,FontFile,SourceImageAssetsCanvasTranslate,
-                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,AiAssertscategory)
+                              ThirdpartyImageMedium,CanvasDownloadFormat,EmojiCategory,EmojiData,AiAssertscategory,AssetImage,AssetCategory)
                             #   PromptCategory,PromptEngine,TemplateBackground) #TemplatePage
 from ai_staff.serializer import ImageCategoriesSerializer,DesignShapeCategoryserializer,DesignShapeSerializer
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    MyTemplateDesignRetrieveSerializer,
-                                   MyTemplateDesignSerializer ,
+                                   MyTemplateDesignSerializer ,AssetCategorySerializer,
                                    TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,SocialMediaSizeValueSerializer,CanvasDownloadFormatSerializer,
                                    TemplateGlobalDesignSerializerV2,CategoryWiseGlobaltemplateSerializer,
                                    EmojiCategorySerializer,EmojiDataSerializer,TemplateGlobalDesignSerializer,
-                                   CanvasTargetJsonSerializer,CanvasSourceJsonFilesSerializer,AiAssertsSerializer,AiAssertscategoryserializer)
+                                   CanvasTargetJsonSerializer,CanvasSourceJsonFilesSerializer,AiAssertsSerializer,
+                                   AiAssertscategoryserializer,AssetImageSerializer)
                                 #    PromptCategoryserializer) #TemplateGlobalDesignRetrieveSerializer,TemplateGlobalDesignSerializer
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
@@ -487,7 +488,6 @@ def instant_canvas_translation(request):
     return Response({'translated_text_list':text_translation})
 
 ##################################
-
 
 class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
@@ -1425,3 +1425,49 @@ def designer_asset_create(request):
     shape_cat_serializer=DesignShapeCategoryserializer(shape_category,many=True)
 
     return JsonResponse({"Image_category":img_category_serializer.data,"asset_type":asset_serializer.data,"shape_category":shape_cat_serializer.data,"shape_type":shape_types},status=200)
+
+
+ 
+
+
+
+
+class AssetImageViewset(viewsets.ViewSet,CustomPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size = 20
+
+    def list(self,request):
+        queryset = AssetImage.objects.all().order_by('-id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = AssetImageSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+        
+    def create(self,request):
+        image = request.FILES.get('image')
+        serializer = AssetImageSerializer(data=request.data,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+# AssetCategorySerializer
+class AssetCategoryViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset = AssetCategory.objects.all().order_by('-id')
+        serializer = AssetCategorySerializer(queryset,many=True)
+        return Response(serializer.data)
+    
+    def create(self,request):
+        serializer = AssetCategorySerializer(data=request.data,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def delete(self,request,pk):
+        query_set=AssetCategory.objects.get(id=pk)
+        query_set.delete()
+        return Response(status=204)
+    
+

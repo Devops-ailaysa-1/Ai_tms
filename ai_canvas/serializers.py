@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
-                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts)
+                            CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts,AssetCategory,AssetImage)
                             # PromptCategory,PromptEngine)#TemplatePage
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
@@ -15,6 +15,7 @@ from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
 import cv2 ,os
+from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
 from ai_imagetranslation.utils import create_thumbnail_img_load
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
@@ -47,13 +48,14 @@ class CanvasTargetJsonFilesSerializer(serializers.ModelSerializer):
         else:
             data['thumbnail'] = None
         return data
-
+#ProjectQuickSetupSerializer
+#ProjectQuickSetupSerializer.Meta.fields + 
 class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
     tranlated_json = CanvasTargetJsonFilesSerializer(source = 'canvas_json_tar',many=True,required=False)
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = "__all__"
+        fields = ("id","canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar')
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
                 }
@@ -92,8 +94,8 @@ def get_or_none(classmodel, **kwargs):
         return classmodel.objects.get(**kwargs)
     except classmodel.DoesNotExist:
         return None
-
-class CanvasDesignSerializer(serializers.ModelSerializer):
+#serializers.ModelSerializer
+class CanvasDesignSerializer(serializers.ModelSerializer): 
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
     target_json_file = serializers.JSONField(required=False,write_only=True)
@@ -123,6 +125,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.CharField(required=False)
     # height=serializers.CharField(required=False)
+    #ProjectQuickSetupSerializer.Meta.fields +
 
     class Meta:
         model = CanvasDesign
@@ -131,7 +134,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
                     'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
-                    'new_project','delete_target_design_lang','change_source_lang')
+                    'new_project','delete_target_design_lang','change_source_lang') 
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -1108,3 +1111,40 @@ class AiAssertsSerializer(serializers.ModelSerializer):
         data['imageurl']= HOST_NAME+instance.imageurl.url 
         data['preview_img']= HOST_NAME+instance.preview_img.url
         return data
+    
+
+
+# class AssetImageSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model=AssetImage
+#         fields='__all__'
+
+
+
+class AssetImageSerializer(serializers.ModelSerializer):
+     
+    class Meta:
+        model=AssetImage
+        fields='__all__'
+
+    
+    def create(self, data):
+        instance=AssetImage.objects.create(**data)
+        im = Image.open(instance.image.path)
+        instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=im)
+        instance.save()
+        return instance
+
+class AssetCategorySerializer(serializers.ModelSerializer):
+    cat_asset_image=AssetImageSerializer(many=True,required=False)
+    cat_name=serializers.CharField(required=True)
+    class Meta:
+        model=AssetCategory
+        fields=('id','cat_asset_image','cat_name')
+
+    def create(self, data):
+
+        instance=AssetCategory.objects.create(**data)
+        return instance
+
+     

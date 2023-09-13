@@ -6,7 +6,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 router = DefaultRouter()
 
-
 router.register(r'canvas-templates',api_views.CanvasTemplateViewset,basename='canvas_templates')
 router.register(r'languages',api_views.LanguagesViewset,basename='languages')
 router.register(r'languageslocale',api_views.LanguagesLocaleViewset,basename='languagescode')
@@ -24,6 +23,10 @@ router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV
 router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
 router.register(r'emoji-noto',api_views.EmojiCategoryViewset,basename='emoji-list')
 router.register(r'designer-list',api_views.DesignerListViewset,basename='designer-lists')
+
+router.register(r'generated-asset',api_views.AssetImageViewset,basename='generated_im')
+router.register(r'asset-list',api_views.AssetCategoryViewset,basename='generated_im')
+
 # router.register(r'template-engine',api_views.TemplateEngineGenerate,basename='template-generation')
  
 # router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
@@ -44,6 +47,7 @@ urlpatterns += [
     # path('global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset.as_view({'get':'list',}),name='global-temp-desi-lst'),
     path('design-download',api_views.DesignerDownload,name='designerdownload'),
     path('canvas-user-images-list',api_views.CanvasUserImageAssetsViewsetList.as_view({'get':'list'}),name='image-translate-list'),
+
     path('design-assert',api_views.designer_asset_create,name='designer-asset-create'),
 
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -653,8 +653,6 @@ class FontData(models.Model):
     font_family = models.ForeignKey(FontFamily,related_name='font_data_family', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
- 
-
 
 class SocialMediaSize(models.Model):
     social_media_name=models.CharField(max_length=200,blank=True ,null=True)

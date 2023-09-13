@@ -36,6 +36,24 @@ class TextUnit(models.Model):
     def task_obj(self):
         return self.document.task_obj
 
+# class TextUnitDetail(models.Model):
+#     source = models.TextField(blank=True)
+#     target = models.TextField(null=True, blank=True)
+#     temp_target = models.TextField(null=True, blank=True)
+#     coded_source = models.TextField(null=True, blank=True)
+#     tagged_source = models.TextField(null=True, blank=True)
+#     coded_brace_pattern = models.TextField(null=True, blank=True)
+#     coded_ids_sequence = models.TextField(null=True, blank=True)
+#     random_tag_ids = models.TextField(null=True, blank=True)
+#     target_tags = models.TextField(null=True, blank=True)
+#     okapi_ref_segment_id = models.CharField(max_length=50)
+#     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
+#         models.SET_NULL)
+#     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
+#         "text_unit_detail")
+#     updated_at = models.DateTimeField(auto_now=True)
+#     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
+
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
 

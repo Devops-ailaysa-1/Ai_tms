@@ -3,7 +3,8 @@ from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
                     BillingAddress,UserTaxInfo,Team,InternalMember, 
                     VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,
-                    AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage,SubscriptionOrder)
+                    AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage,SubscriptionOrder,
+                    TroubleshootIssues,AiTroubleshootData)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -133,10 +134,11 @@ class VOIAdmin(admin.ModelAdmin):
 
     def service_rates_status(self,obj):
         res = VendorLanguagePair.objects.filter(user=obj.user).values('user').annotate(service=Count('service')).annotate(service_type=Count('servicetype'))
-        if res[0].get('service',0) > 0 or  res[0].get('servicetype',0) > 0:
-            return True
-        else:
-            return False
+        if len(res) != 0:
+            if res[0].get('service',0) > 0 or  res[0].get('servicetype',0) > 0:
+                return True
+            else:
+                return False
 
     service_rates_status.boolean= True
 
@@ -216,3 +218,5 @@ admin.site.register(TaskRoles)
 admin.site.register(ProjectRoles)
 admin.site.register(SubscriptionOrder)
 #admin.site.register(PersonalInformation)
+admin.site.register(AiTroubleshootData)
+admin.site.register(TroubleshootIssues)
