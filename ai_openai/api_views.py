@@ -1174,9 +1174,6 @@ However, building and maintaining quantum computers is very challenging because 
 #     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
-<<<<<<< HEAD
- 
-=======
 
 
     # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
@@ -1215,4 +1212,3 @@ def translate_html_file(request, input_file, target_language):
 
     return Response({"translated_html":translated_html})
 
->>>>>>> origin/v4-merged-production
