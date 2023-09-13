@@ -1139,7 +1139,7 @@ class AssetImageSerializer(serializers.ModelSerializer):
     
     def create(self, data):
         instance=AssetImage.objects.create(**data)
-        im = Image.open(instance.image.path)
+        im = Image.open(instance.user_asset.image.path)
         instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=im)
         instance.save()
         return instance
