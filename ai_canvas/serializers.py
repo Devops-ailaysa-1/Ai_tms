@@ -55,7 +55,7 @@ class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = ("id","canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar')
+        fields = ("id","canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar','tranlated_json')
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
                 }
@@ -172,8 +172,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
-        project_type = ProjectType.objects.get(id=7)
-        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        # project_type = ProjectType.objects.get(id=7)
+        # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -182,17 +182,17 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
-            new_proj.project= project_instance
+            # new_proj.project= project_instance
             new_proj.save()
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
-            return project_instance #new_proj  ###returned
+            return  new_proj  ###returned project_instance
         else:
             data = {**validated_data ,'user':user}
             instance=CanvasDesign.objects.create(**data)
-            instance.project = project_instance
-            instance.save()
+            # instance.project = project_instance
+            # instance.save()
             self.instance=instance
             # return project_instance
 
@@ -1152,7 +1152,6 @@ class AssetCategorySerializer(serializers.ModelSerializer):
         fields=('id','cat_asset_image','cat_name')
 
     def create(self, data):
-
         instance=AssetCategory.objects.create(**data)
         return instance
 

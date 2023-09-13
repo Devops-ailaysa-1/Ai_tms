@@ -347,6 +347,7 @@ class AssetCategory(models.Model):
     cat_name=models.CharField(max_length=300,null=True,blank=True)
 
 class AssetImage(models.Model):
+    user_asset = models.ForeignKey(CanvasUserImageAssets,on_delete=models.CASCADE,related_name='user_asset_image')
     category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
     image=models.FileField(upload_to="asset",blank=True,null=True)
     thumbnail=models.FileField(upload_to="asset_thumbnail",blank=True,null=True)
@@ -355,5 +356,6 @@ class AssetImage(models.Model):
     negative_prompt=models.TextField(blank=True, null=True)
     type=models.CharField(max_length=300,blank=True, null=True)
     country=models.CharField(max_length=300,blank=True, null=True)
+    is_store=models.BooleanField(default=False)
 
 
