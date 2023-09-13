@@ -1844,9 +1844,9 @@ def invite_accept_notify_send(user,vendor):
             thread_id = thread_ser.errors.get('thread_id')
         print("Thread--->",thread_id)
         if thread_id:
-            message = "Service Provider " + vendor.fullname + " has accepted your invitation in Ailaysa Marketplace."
-            msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
-            notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
+            message = "I am excited to accept your invitation, "+ {{vendor.fullname}}+". I eagerly anticipate our collaboration."
+            msg = ChatMessage.objects.create(message=message,user=vendor,thread_id=thread_id)
+            notify.send(vendor, recipient=user, verb='Message', description=message,thread_id=int(thread_id))
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
