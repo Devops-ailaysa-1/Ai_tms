@@ -51,7 +51,7 @@ class CanvasUserImageAssets(models.Model):
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
 
 class CanvasDesign(models.Model):
-    
+    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="designer_project")
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     # task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_designer_details")
     file_name=models.CharField(max_length=50,null=True,blank=True) 
@@ -78,7 +78,7 @@ class CanvasSourceJsonFiles(models.Model):
 
 
 class CanvasTranslatedJson(models.Model):
-    # project = models.OneToOneField(Project, null=False, blank=False, on_delete=models.CASCADE, related_name="designer_project")
+    # 
     # canvas_src_json=models.ForeignKey(CanvasSourceJsonFiles,related_name='canvas_src',on_delete=models.CASCADE,null=True,blank=True)
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 

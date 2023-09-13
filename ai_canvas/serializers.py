@@ -17,6 +17,7 @@ from PIL import Image
 import cv2 ,os
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
 from ai_imagetranslation.utils import create_thumbnail_img_load
+from ai_workspace.models import Project ,ProjectType
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -48,8 +49,7 @@ class CanvasTargetJsonFilesSerializer(serializers.ModelSerializer):
         else:
             data['thumbnail'] = None
         return data
-#ProjectQuickSetupSerializer
-#ProjectQuickSetupSerializer.Meta.fields + 
+
 class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
     tranlated_json = CanvasTargetJsonFilesSerializer(source = 'canvas_json_tar',many=True,required=False)
 
@@ -88,7 +88,8 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
             data['export_file'] = "media/"+instance.export_file.name
         return data
 
-
+#
+#
 def get_or_none(classmodel, **kwargs):
     try:
         return classmodel.objects.get(**kwargs)
@@ -129,7 +130,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CanvasDesign
-        fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
+        fields = ('id','file_name','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
@@ -157,6 +158,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def create(self,validated_data):
         req_host=self.context.get('request', HttpRequest()).get_host()
+        
         source_json_file=validated_data.pop('source_json_file',None)
         thumbnail_src=validated_data.pop('thumbnail_src',None)
         export_img_src=validated_data.pop('export_img_src',None)
@@ -170,7 +172,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
         user = self.context['request'].user
-
+        project_type = ProjectType.objects.get(id=7)
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -179,14 +182,20 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+            new_proj.project= project_instance
+            new_proj.save()
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
-            return new_proj  ###returned
+            return project_instance #new_proj  ###returned
         else:
             data = {**validated_data ,'user':user}
             instance=CanvasDesign.objects.create(**data)
+            instance.project = project_instance
+            instance.save()
             self.instance=instance
+            # return project_instance
+
 
         if not instance.file_name:
             can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')

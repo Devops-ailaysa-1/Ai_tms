@@ -97,6 +97,7 @@ from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
+from ai_canvas.serializers import CanvasDesignSerializer
 
 class IsCustomer(permissions.BasePermission):
 
@@ -735,6 +736,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
+        elif project_type == 7:
+            print("project_type-->",project_type)
+            return CanvasDesignSerializer
         # if project_type == 4:
         #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
