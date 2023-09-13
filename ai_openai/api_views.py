@@ -1143,3 +1143,32 @@ However, building and maintaining quantum computers is very challenging because 
     # return response(stream())
     #return StreamingHttpResponse(stream(), content_type='text/event-stream')
     #return JsonResponse({'error': 'Error'}, status=405)
+
+
+from google.cloud import translate_v2 as translate
+from html import unescape
+from lxml import html
+
+
+@api_view(["GET"])
+def translate_html_file(request, input_file, target_language):
+    # Initialize the translation client
+    client = translate.Client()
+
+    with open(input_file, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+
+    # Parse the HTML content using lxml
+    root = html.fromstring(html_content)
+
+    # Find all text nodes and translate them
+    for element in root.iter():
+        if element.text:
+            translated_text = client.translate(unescape(element.text), target_language=target_language)
+            element.text = translated_text['translatedText']
+
+    # Serialize the modified HTML tree back to a string
+    translated_html = html.tostring(root, encoding='unicode')
+
+    return Response({"translated_html":translated_html})
+
