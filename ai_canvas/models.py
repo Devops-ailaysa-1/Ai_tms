@@ -347,7 +347,7 @@ class AssetCategory(models.Model):
     cat_name=models.CharField(max_length=300,null=True,blank=True)
 
 class AssetImage(models.Model):
-    # category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
+    category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
     image=models.FileField(upload_to="asset",blank=True,null=True)
     thumbnail=models.FileField(upload_to="asset_thumbnail",blank=True,null=True)
     tags = models.TextField(blank=True, null=True)
