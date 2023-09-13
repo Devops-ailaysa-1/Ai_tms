@@ -1835,6 +1835,7 @@ def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
     receivers =  user.team.get_project_manager if user.team else []
     receivers.append(user)
+    print("Receivers------------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':i.id,'second_person':vendor.id})
         if thread_ser.is_valid():
@@ -1844,8 +1845,9 @@ def invite_accept_notify_send(user,vendor):
             thread_id = thread_ser.errors.get('thread_id')
         print("Thread--->",thread_id)
         if thread_id:
-            message = "I am excited to accept your invitation, "+ {{vendor.fullname}}+". I eagerly anticipate our collaboration."
+            message = "I am excited to accept your invitation, "+ vendor.fullname +". I eagerly anticipate our collaboration."
             msg = ChatMessage.objects.create(message=message,user=vendor,thread_id=thread_id)
+            print("Msg obj-------------->",msg)
             notify.send(vendor, recipient=user, verb='Message', description=message,thread_id=int(thread_id))
 
 @api_view(['POST'])
