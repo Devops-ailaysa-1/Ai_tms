@@ -24,7 +24,6 @@ router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename=
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')
 router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-tone')
-
 router.register(r'font-data',api_views.FontDataViewset ,basename='fontdata')
 router.register(r'font-language',api_views.FontLanguageViewset,basename='fontlanguage')
 router.register(r'font-category',api_views.FontCatagoryListViewset,basename='fontcategory')

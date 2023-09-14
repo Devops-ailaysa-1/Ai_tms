@@ -4,6 +4,7 @@ from ai_canvas import api_views
 from rest_framework.routers import DefaultRouter
 from django.conf import settings
 from django.conf.urls.static import static
+
 router = DefaultRouter()
 
 router.register(r'canvas-templates',api_views.CanvasTemplateViewset,basename='canvas_templates')
@@ -23,7 +24,6 @@ router.register(r'global-template-design',api_views.TemplateGlobalDesignViewsetV
 router.register(r'global-template-design-list',api_views.CategoryWiseGlobaltemplateViewset,basename='global-temp-desi-lst')
 router.register(r'emoji-noto',api_views.EmojiCategoryViewset,basename='emoji-list')
 router.register(r'designer-list',api_views.DesignerListViewset,basename='designer-lists')
-
 router.register(r'generated-asset',api_views.AssetImageViewset,basename='generated_im')
 router.register(r'asset-list',api_views.AssetCategoryViewset,basename='generated_im')
 

@@ -18,6 +18,7 @@ from PIL import Image
 import cv2,os
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
+from ai_workspace.models import ProjectType,Project
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -97,6 +98,7 @@ def get_or_none(classmodel, **kwargs):
         return None
 
 def create_design_jobs_and_tasks(data, project):
+    print("creating job and task")
     from ai_workspace.models import Job,Task,TaskAssign
     j_klass = Job
     t_klass = Task
@@ -291,12 +293,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
+            lang_dict={'source_language':src_lang,'target_language':tar_lang}
             if CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()).exists():
                 pairs='language pair already exists {}_{}'.format(src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                 raise serializers.ValidationError({'msg':pairs})
             if src_lang.locale.first() == tar_lang.locale.first():
                 raise serializers.ValidationError({'msg':'looks like same language pair {} '.format(tar_lang.locale.first().locale_code)})
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
+            canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
+            print(canvas_jobs,canvas_tasks)
             trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
             trans_json_project['projectid']['langNo']=trans_json.source_language.id
             for count,src_json_file in enumerate(source_json_files_all):
@@ -312,6 +317,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                 "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
                     can_tar_ins.json=tar_json_pro
                     can_tar_ins.save()
+
+        
 
     def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
         scale_multiplier_x=width/canvas_width
@@ -419,6 +426,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
         if canvas_translation_tar_lang and src_lang:
+            print("translating")
             source_json_files_all=instance.canvas_json_src.all()
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
