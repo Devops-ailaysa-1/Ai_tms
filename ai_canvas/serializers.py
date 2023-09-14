@@ -3,7 +3,7 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
                             CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts,AssetCategory,AssetImage)
                             # PromptCategory,PromptEngine)#TemplatePage
-from ai_staff.models import Languages,LanguagesLocale  
+from ai_staff.models import Languages,LanguagesLocale ,ImageCategories
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
@@ -16,7 +16,7 @@ from ai_staff.models import SocialMediaSize
 from PIL import Image
 import cv2 ,os
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
-from ai_imagetranslation.utils import create_thumbnail_img_load
+from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_workspace.models import Project ,ProjectType
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
@@ -1139,8 +1139,16 @@ class AssetImageSerializer(serializers.ModelSerializer):
     
     def create(self, data):
         instance=AssetImage.objects.create(**data)
-        im = Image.open(instance.user_asset.image.path)
-        instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=im)
+        if instance.image_category.cat_name in ["Ai Images"]:
+            im = Image.open(instance.user_asset.image.path)
+            instance.preview_img = create_thumbnail_img_load(base_dimension=300,image=im)
+            instance.imageurl = convert_image_url_to_file(im,no_pil_object=False,name="Stock_Image.png")
+            imge_cat_inst = ImageCategories.objects.filter(category=instance.image_category.cat_name).first()
+            instance.category = imge_cat_inst
+            instance.save()
+        else:
+            print("no image")
+        instance.is_store=True
         instance.save()
         return instance
 

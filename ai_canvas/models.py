@@ -348,14 +348,18 @@ class AssetCategory(models.Model):
 
 class AssetImage(models.Model):
     user_asset = models.ForeignKey(CanvasUserImageAssets,on_delete=models.CASCADE,related_name='user_asset_image')
-    category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
-    image=models.FileField(upload_to="asset",blank=True,null=True)
-    thumbnail=models.FileField(upload_to="asset_thumbnail",blank=True,null=True)
+    image_category=models.ForeignKey(AssetCategory, on_delete=models.CASCADE,related_name='cat_asset_image')
+    imageurl=models.FileField(upload_to="asset-image",blank=True,null=True)
+    blob = models.FileField(upload_to="asset-blob",blank=True,null=True)
+    preview_img=models.FileField(upload_to="asset_thumbnail",blank=True,null=True)
     tags = models.TextField(blank=True, null=True)
     positive_prompt=models.TextField(blank=True, null=True)
     negative_prompt=models.TextField(blank=True, null=True)
-    type=models.CharField(max_length=300,blank=True, null=True)
     country=models.CharField(max_length=300,blank=True, null=True)
     is_store=models.BooleanField(default=False)
+    category = models.ForeignKey(ImageCategories, on_delete=models.CASCADE,related_name='image_asset_cat',null=True,blank=True)
+
+
+    
 
 
