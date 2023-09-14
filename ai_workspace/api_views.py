@@ -736,9 +736,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
-        elif project_type == 7:
-            print("project_type-->",project_type)
-            return CanvasDesignSerializer
         # if project_type == 4:
         #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
