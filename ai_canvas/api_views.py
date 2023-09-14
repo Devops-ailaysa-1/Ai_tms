@@ -33,7 +33,7 @@ from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
 from ai_workspace_okapi.utils import get_translation 
-from ai_canvas.utils import convert_image_url_to_file,paginate_items,export_download#,genarate_image
+from ai_canvas.utils import convert_image_url_to_file,paginate_items ,export_download
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
@@ -52,6 +52,10 @@ from ai_imagetranslation.utils import stable_diffusion_public
 from ai_imagetranslation.serializer import StableDiffusionAPISerializer
 import random
 from ai_staff.models import FontFamily,FontData
+import base64
+from ai_staff.serializer import DesignShapeSerializer
+from ai_staff.models import DesignShape
+# HOST_NAME="http://0.0.0.0:8091"
 
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
@@ -152,9 +156,7 @@ class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
-
-
- 
+     
 class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
@@ -325,7 +327,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
             return Response({'msg':'deleted successfully'},status=200)
  
 class CustomPagination(PageNumberPagination):
-    page_size = 20 
+    page_size = 5
     page_size_query_param = 'page_size'
 
 class CustomSocialMediaSizePagination(PageNumberPagination):
@@ -769,6 +771,8 @@ def process_pixabay(**kwargs):
         for j in kwargs['image_cat_see_all']['hits']:
             data.append({'preview_img':j['previewURL'],'id':j['id'],'tags':j['tags'],'type':j['type'],'user':j['user'],'imageurl':j['fullHDURL']})
         return data,total_page
+    
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -814,7 +818,7 @@ def image_list(request):
         src_img_assets_can = ThirdpartyImageMedium.objects.create(image=image_file)
         return Response({'image_url':HOST_NAME+src_img_assets_can.image.url},status=200)
     # itm_pr_pge=6
-    image_cats=list(ImageCategories.objects.exclude(category="Ai Images").values_list('category',flat=True))
+    image_cats=list(ImageCategories.objects.all().values_list('category',flat=True))
     # image_cats=paginate_items(image_cats,page,itm_pr_pge)[0]
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(all_cat_req,image_cats))

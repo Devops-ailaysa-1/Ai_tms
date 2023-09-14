@@ -3,7 +3,9 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
                             CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts,AssetCategory,AssetImage)
                             # PromptCategory,PromptEngine)#TemplatePage
-from ai_staff.models import Languages,LanguagesLocale ,ImageCategories
+from ai_staff.models import Languages,LanguagesLocale ,ImageCategories,CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData
+   
+from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
@@ -14,10 +16,9 @@ import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-import cv2 ,os
-from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
+import cv2,os
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
-from ai_workspace.models import Project ,ProjectType
+from ai_canvas.models import AiAssertscategory,AiAsserts
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -478,7 +479,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
-        fields = ("id","image_name","image",'thumbnail','height','width')
+        fields = ("id","image_name","image",'thumbnail','height','width',"status")
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
@@ -1019,7 +1020,7 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
             #             can_tar_ins.json=tar_json_pro
             #             can_tar_ins.save()
 
-
+from PIL import Image
 
 # class PromptCategoryserializer(serializers.ModelSerializer):
 

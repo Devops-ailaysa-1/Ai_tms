@@ -487,7 +487,7 @@ class ImageGeneratorResolutionSerializer(serializers.ModelSerializer):
 class DesignShapeSerializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShape
-        fields=('id','shape_name','shape','types')
+        fields=('id','shape_name','shape','types',"category","tags")
 
     def to_representation(self, instance):
         return super().to_representation(instance)
@@ -512,7 +512,10 @@ class ImageCategoriesSerializer(serializers.ModelSerializer):
         model = ImageCategories
         fields = '__all__'
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/canvas_staging
 class DesignShapeCategoryserializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShapeCategory

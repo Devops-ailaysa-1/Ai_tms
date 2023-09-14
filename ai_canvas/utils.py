@@ -14,7 +14,7 @@ import shutil
 import io,re
 from PIL import Image ,ImageFont
 
-# HOST_NAME="http://localhost:8091/"
+# HOST_NAME="http://localhost:8091"
 
 
  
@@ -176,7 +176,6 @@ def svg_convert_base64(response_text):
     
 import copy
 from ai_canvas.cmyk_conversion import convertImage
-
 def export_download(json_str,format,multipliervalue,base_image=False):
     dpi = (96,96)
     json_ = json.dumps(json_str)
@@ -371,6 +370,17 @@ def replace_url_with_base64(input_string):
 #                 text.append(grid1)
 #     return text,image
 
+def clip_position(width, height,rows,cols):
+    cell_width = width // rows
+    cell_height = height // cols
+    co_oridination = []
+    for row in range(rows):
+        for col in range(cols):
+            grid = []
+            grid.append(row * cell_height)
+            grid.append(col * cell_width)
+            co_oridination.append(grid)
+    return co_oridination
 
 # from .template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
 # import random
@@ -466,6 +476,16 @@ def replace_url_with_base64(input_string):
 
 #     return bg_image
 
+# def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
+#         temp_height =int(template.height)
+#         temp_width = int(template.width)
+#         text=copy.deepcopy(textbox)
+#         custom_style=attr["textbox"]
+#         text=custom_attr(text,custom_style)
+#         text["textLines"]=instance.prompt
+#         text["text"]=instance.prompt.capitalize()
+#         text["fill"]=color_attr["textbox"]
+#         return text
 
 # def background_scaling(canvas_width, canvas_height, image_width, image_height):
 #     scaleX, scaleY, left, top = 0, 0, 0, 0
@@ -494,5 +514,200 @@ def replace_url_with_base64(input_string):
         
 #     return scaleX, scaleY, left, top
 
-# Example usage
+"""-------------------------------------------------------------------------------"""
 
+# def random_background_image(bg_image,template,instance,style_attr):
+    # temp_height =int(template.height)
+    # temp_width = int(template.width)
+    # background_image=[]
+    # custom_style=style_attr["backgroundImage"]
+    # # bg_image=custom_attr(bg_image,custom_style)
+    # print(len(instance),len(style_attr["backgroundImage"]))
+    # for instance in instance:
+    #     # bg_image["src"]=HOST_NAME+instance.bg_image.url
+    #     # for testing
+    #     bg_image["src"]="https://aicanvas.ailaysa.com/media/backround-template/green-background-with-marbled-vintage-grunge.png"
+    #     scaleX, scaleY, left, top = background_scaling(temp_width, temp_height, instance.width, instance.height)
+
+    #     img_width=instance.width
+    #     img_height=instance.height
+    #     rand=random.randint(0,len(style_attr["backgroundImage"])-1)
+    #     obj=style_attr["backgroundImage"].pop(rand)
+    #     for key, value in obj.items():
+    #         bg_image[key]=obj[key]
+
+    #     bg_image["width"]=img_width
+    #     bg_image["height"]=img_height
+        
+    #     bg_image["oldWidth"]=bg_image["originalWidth"]=img_width
+    #     bg_image["oldHeight"]=bg_image["originalheight"]=img_height
+    #     bg_image["scaleX"]=bg_image["oldScaleX"]=scaleX
+    #     bg_image["scaleY"]=bg_image["oldScaleY"]=scaleY
+
+    #     bg_image["top"]=top
+    #     bg_image["left"]=left
+
+    #     background_image.append(bg_image)
+
+    # return background_image
+
+# def genarate_image(instance,image_grid,template,style_attr):
+#     from ai_imagetranslation.utils import background_remove
+#     # print(instance)
+#     temp_height =int(template.height)
+#     temp_width = int(template.width)
+#     x=temp_width/2
+#     y=temp_height/2
+#     # instance=PromptEngine.objects.filter(id=19).first()
+#     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
+#     picture=[]
+#     for instance in instance:
+#         img=copy.deepcopy(image)
+#         """mask"""
+#         if instance.mask==None or instance.backround_removal_image ==None:
+#             print("masking...........................")
+#             rem_img=background_remove(instance)
+#             instance.backround_removal_image=rem_img
+#             instance.save()   
+
+#         img["name"]="Image"+str(pos[0])+str(pos[1])
+#         if instance.width <= instance.height:
+#             scale=(x/int(instance.width))
+#         else:
+#             scale=(y/int(instance.height))
+
+
+#         rand=random.randint(0,len(style_attr["image"])-1)
+#         obj=style_attr["image"].pop(rand)
+#         for key, value in obj.items():
+#            img[key]=obj[key]
+
+#         img["scaleX"]=img["scaleY"]=scale
+#         img["oldScaleX"]=img["oldScaleY"]=scale
+#         img["width"]=img["oldWidth"]=instance.width
+#         img["height"]=img["oldHeight"]=instance.height
+
+#         # imge=custom_attr(img,attr["image"])
+#         if img["clipPath"]:
+#             print("clip_path...............")
+            
+#             path_string=img["clipPath"]
+#             img["clipPath"]=get_clip_path(path_string)
+#             img["id"]="background"
+#             img["src"]=HOST_NAME+instance.image.url
+            
+#             # img["src"]="https://aicanvas.ailaysa.com/media/prompt-image/0-20cd0623-a4d3-41f1-8cfc-b7547d40371a.png"
+#         else:
+#             # img["src"] ="https://aicanvas.ailaysa.com/media/u124698/background_removel/background_remove_SEpEE1y.png"
+#             img["sourceImage"]=HOST_NAME+instance.image.url
+#             img["bgMask"]=HOST_NAME+instance.mask.url
+#             img["src"]=HOST_NAME+instance.backround_removal_image.url
+#             img["brs"]=2
+
+#         picture.append(img)
+
+#     return picture
+
+
+def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
+        temp_height =int(template.height)
+        temp_width = int(template.width)
+        text_box=[]
+        for instance in instance:
+            text=copy.deepcopy(textbox)
+            custom_style=attr["textbox"]
+            text=custom_attr(text,custom_style)
+            text["textLines"]=instance.prompt
+            text["text"]=instance.prompt.capitalize()
+            text["fill"]=color_attr["textbox"]
+            text_box.append(text)
+        return text_box
+
+"""--------------------------------------------------------------------------------------------"""
+
+
+def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
+    template_json=data
+    # if (temp_height!=temp_json_height):
+    #     scale_y=temp_height/temp_json_height
+    #     for element in template_json["objects"]:
+    #         element["scaleY"] *= scale_y
+    #         if "height" in element:
+    #             element["height"] *= scale_y
+    # if (temp_width!=temp_json_width):
+    #     scale_x=temp_width/temp_json_width
+    #     for element in template_json["objects"]:
+    #         element["scaleX"] *= scale_x
+    #         if "width" in element:
+    #             element["width"] *= scale_x
+
+    if (temp_width!=temp_json_width) or (temp_width!=temp_json_width):
+        scale_y=temp_height/temp_json_height
+        scale_x=temp_width/temp_json_width
+        scale=min(scale_y,scale_x)
+        for element in template_json["objects"]:
+            element["scaleX"] *= scale
+            element["scaleY"] *= scale
+            if temp_height>temp_width:
+                if "height" in element:
+                    element["height"] *= scale
+                else:
+                    element["width"] *= scale
+
+    # scale_multiplier_x=temp_width/temp_json_width
+    # scale_multiplier_y=temp_height/temp_json_height
+    # for i in template_json['objects']:
+    #     i['scaleX']=i['scaleX']*scale_multiplier_x
+    #     i['scaleY']=i['scaleY']*scale_multiplier_x
+    #     i['left']=i['left']*scale_multiplier_x
+    #     i['top']=i['top']*scale_multiplier_y
+    return template_json
+
+from ai_canvas.color import Color_Palettes
+
+def get_color_combinations(colors):
+
+    min_contrast_ratio = 7
+    color_combinations= []
+    for i in range(0,len(colors)):
+        for text_color in colors[i]:
+            for background_color in colors[i]:
+                if text_color != background_color:
+                    contrast_ratio = calculate_contrast_ratio(text_color, background_color)
+                    contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
+
+                    if contrast_ratio >= min_contrast_ratio:
+                        color_combinations.append({i:[text_color, background_color]})
+                    if contrast_ratio2 >= min_contrast_ratio:
+                        color_combinations.append({i:[background_color,text_color]})
+    return color_combinations
+
+def calculate_contrast_ratio(color1, color2):
+    def relative_luminance(rgba_color):
+        color=rgba_string_to_tuple(rgba_color)
+        r, g, b,a = color
+        r = r / 255.0 if r <= 255 else 1.0
+        g = g / 255.0 if g <= 255 else 1.0
+        b = b / 255.0 if b <= 255 else 1.0
+        r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
+        g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
+        b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    L1 = relative_luminance(color1)
+    L2 = relative_luminance(color2)
+
+    contrast_ratio = (L1 + 0.05) / (L2 + 0.05)
+    return contrast_ratio
+
+import re
+def rgba_string_to_tuple(rgba_str):
+  match = re.match(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)', rgba_str)
+  if match:
+    red = int(match.group(1))
+    green = int(match.group(2))
+    blue = int(match.group(3))
+    alpha = float(match.group(4))
+    alpha = int(alpha * 255)
+    return (red, green, blue, alpha)
+  else:
+    raise ValueError("Invalid color format")
