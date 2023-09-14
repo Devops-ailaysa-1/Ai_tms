@@ -512,10 +512,6 @@ class ImageCategoriesSerializer(serializers.ModelSerializer):
         model = ImageCategories
         fields = '__all__'
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/canvas_staging
 class DesignShapeCategoryserializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShapeCategory

@@ -3,12 +3,11 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
                             TemplateGlobalDesign ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,
                             CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData,AiAssertscategory,AiAsserts,AssetCategory,AssetImage)
                             # PromptCategory,PromptEngine)#TemplatePage
-from ai_staff.models import Languages,LanguagesLocale ,ImageCategories,CanvasDownloadFormat,TemplateTag,TextboxUpdate,EmojiCategory,EmojiData
+from ai_staff.models import Languages,LanguagesLocale ,ImageCategories
    
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
-from ai_canvas.utils import install_font
-from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change
+from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change,install_font
 from django import core
 from ai_imagetranslation.utils import image_content 
 from ai_workspace_okapi.utils import get_translation

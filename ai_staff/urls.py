@@ -74,7 +74,6 @@ urlpatterns += [
      path('ai_customize/',api_views.AiCustomizeViewset.as_view({'get':'list'}),name='ai-customize'),
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-<<<<<<< HEAD
      #path('insert',views.Bulk_insert)
       
      path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
@@ -83,12 +82,6 @@ urlpatterns += [
      
 
 
-=======
-     path('insert',views.Bulk_insert),
-      
-     path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
-#    path('design-shape/',api_views.DesignShapeViewset.as_view({'get':'list'})),
->>>>>>> origin/canvas_staging
 ]
 
  

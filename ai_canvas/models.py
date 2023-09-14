@@ -49,7 +49,7 @@ class CanvasUserImageAssets(models.Model):
     height=models.IntegerField(null=True,blank=True)
     width=models.IntegerField(null=True,blank=True)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
-    status=models.BooleanField(default=False)
+    # status=models.BooleanField(default=False)
 
 class CanvasDesign(models.Model):
     project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="designer_project")

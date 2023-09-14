@@ -370,17 +370,17 @@ def replace_url_with_base64(input_string):
 #                 text.append(grid1)
 #     return text,image
 
-def clip_position(width, height,rows,cols):
-    cell_width = width // rows
-    cell_height = height // cols
-    co_oridination = []
-    for row in range(rows):
-        for col in range(cols):
-            grid = []
-            grid.append(row * cell_height)
-            grid.append(col * cell_width)
-            co_oridination.append(grid)
-    return co_oridination
+# def clip_position(width, height,rows,cols):
+#     cell_width = width // rows
+#     cell_height = height // cols
+#     co_oridination = []
+#     for row in range(rows):
+#         for col in range(cols):
+#             grid = []
+#             grid.append(row * cell_height)
+#             grid.append(col * cell_width)
+#             co_oridination.append(grid)
+#     return co_oridination
 
 # from .template import image,textbox,backgroundImage,path,clipPath,backgroundHardboard
 # import random
@@ -609,25 +609,25 @@ def clip_position(width, height,rows,cols):
 #     return picture
 
 
-def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
-        temp_height =int(template.height)
-        temp_width = int(template.width)
-        text_box=[]
-        for instance in instance:
-            text=copy.deepcopy(textbox)
-            custom_style=attr["textbox"]
-            text=custom_attr(text,custom_style)
-            text["textLines"]=instance.prompt
-            text["text"]=instance.prompt.capitalize()
-            text["fill"]=color_attr["textbox"]
-            text_box.append(text)
-        return text_box
+# def genarate_text(font_family,instance,text_grid,template,attr,color_attr):
+#         temp_height =int(template.height)
+#         temp_width = int(template.width)
+#         text_box=[]
+#         for instance in instance:
+#             text=copy.deepcopy(textbox)
+#             custom_style=attr["textbox"]
+#             text=custom_attr(text,custom_style)
+#             text["textLines"]=instance.prompt
+#             text["text"]=instance.prompt.capitalize()
+#             text["fill"]=color_attr["textbox"]
+#             text_box.append(text)
+#         return text_box
 
 """--------------------------------------------------------------------------------------------"""
 
 
-def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
-    template_json=data
+# def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
+#     template_json=data
     # if (temp_height!=temp_json_height):
     #     scale_y=temp_height/temp_json_height
     #     for element in template_json["objects"]:
@@ -641,18 +641,18 @@ def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
     #         if "width" in element:
     #             element["width"] *= scale_x
 
-    if (temp_width!=temp_json_width) or (temp_width!=temp_json_width):
-        scale_y=temp_height/temp_json_height
-        scale_x=temp_width/temp_json_width
-        scale=min(scale_y,scale_x)
-        for element in template_json["objects"]:
-            element["scaleX"] *= scale
-            element["scaleY"] *= scale
-            if temp_height>temp_width:
-                if "height" in element:
-                    element["height"] *= scale
-                else:
-                    element["width"] *= scale
+    # if (temp_width!=temp_json_width) or (temp_width!=temp_json_width):
+    #     scale_y=temp_height/temp_json_height
+    #     scale_x=temp_width/temp_json_width
+    #     scale=min(scale_y,scale_x)
+    #     for element in template_json["objects"]:
+    #         element["scaleX"] *= scale
+    #         element["scaleY"] *= scale
+    #         if temp_height>temp_width:
+    #             if "height" in element:
+    #                 element["height"] *= scale
+    #             else:
+    #                 element["width"] *= scale
 
     # scale_multiplier_x=temp_width/temp_json_width
     # scale_multiplier_y=temp_height/temp_json_height
@@ -661,53 +661,53 @@ def scaletemplate(data,temp_height,temp_json_height,temp_json_width,temp_width):
     #     i['scaleY']=i['scaleY']*scale_multiplier_x
     #     i['left']=i['left']*scale_multiplier_x
     #     i['top']=i['top']*scale_multiplier_y
-    return template_json
+#     return template_json
 
-from ai_canvas.color import Color_Palettes
+# from ai_canvas.color import Color_Palettes
 
-def get_color_combinations(colors):
+# def get_color_combinations(colors):
 
-    min_contrast_ratio = 7
-    color_combinations= []
-    for i in range(0,len(colors)):
-        for text_color in colors[i]:
-            for background_color in colors[i]:
-                if text_color != background_color:
-                    contrast_ratio = calculate_contrast_ratio(text_color, background_color)
-                    contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
+#     min_contrast_ratio = 7
+#     color_combinations= []
+#     for i in range(0,len(colors)):
+#         for text_color in colors[i]:
+#             for background_color in colors[i]:
+#                 if text_color != background_color:
+#                     contrast_ratio = calculate_contrast_ratio(text_color, background_color)
+#                     contrast_ratio2 = calculate_contrast_ratio(background_color,text_color,)
 
-                    if contrast_ratio >= min_contrast_ratio:
-                        color_combinations.append({i:[text_color, background_color]})
-                    if contrast_ratio2 >= min_contrast_ratio:
-                        color_combinations.append({i:[background_color,text_color]})
-    return color_combinations
+#                     if contrast_ratio >= min_contrast_ratio:
+#                         color_combinations.append({i:[text_color, background_color]})
+#                     if contrast_ratio2 >= min_contrast_ratio:
+#                         color_combinations.append({i:[background_color,text_color]})
+#     return color_combinations
 
-def calculate_contrast_ratio(color1, color2):
-    def relative_luminance(rgba_color):
-        color=rgba_string_to_tuple(rgba_color)
-        r, g, b,a = color
-        r = r / 255.0 if r <= 255 else 1.0
-        g = g / 255.0 if g <= 255 else 1.0
-        b = b / 255.0 if b <= 255 else 1.0
-        r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
-        g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
-        b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
-    L1 = relative_luminance(color1)
-    L2 = relative_luminance(color2)
+# def calculate_contrast_ratio(color1, color2):
+#     def relative_luminance(rgba_color):
+#         color=rgba_string_to_tuple(rgba_color)
+#         r, g, b,a = color
+#         r = r / 255.0 if r <= 255 else 1.0
+#         g = g / 255.0 if g <= 255 else 1.0
+#         b = b / 255.0 if b <= 255 else 1.0
+#         r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
+#         g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
+#         b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
+#         return 0.2126 * r + 0.7152 * g + 0.0722 * b
+#     L1 = relative_luminance(color1)
+#     L2 = relative_luminance(color2)
 
-    contrast_ratio = (L1 + 0.05) / (L2 + 0.05)
-    return contrast_ratio
+#     contrast_ratio = (L1 + 0.05) / (L2 + 0.05)
+#     return contrast_ratio
 
-import re
-def rgba_string_to_tuple(rgba_str):
-  match = re.match(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)', rgba_str)
-  if match:
-    red = int(match.group(1))
-    green = int(match.group(2))
-    blue = int(match.group(3))
-    alpha = float(match.group(4))
-    alpha = int(alpha * 255)
-    return (red, green, blue, alpha)
-  else:
-    raise ValueError("Invalid color format")
+# import re
+# def rgba_string_to_tuple(rgba_str):
+#   match = re.match(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)', rgba_str)
+#   if match:
+#     red = int(match.group(1))
+#     green = int(match.group(2))
+#     blue = int(match.group(3))
+#     alpha = float(match.group(4))
+#     alpha = int(alpha * 255)
+#     return (red, green, blue, alpha)
+#   else:
+#     raise ValueError("Invalid color format")
