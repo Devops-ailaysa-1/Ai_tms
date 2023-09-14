@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-from ai_workspace.models import Project
+from ai_workspace.models import Project,Job
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
 from ai_auth.models import AiUser
 from ai_staff.models import ImageCategories  
@@ -84,6 +84,7 @@ class CanvasTranslatedJson(models.Model):
     canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
     target_language=models.ForeignKey(LanguagesLocale,related_name='target', on_delete=models.CASCADE)
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, null=True, blank=True,related_name="canvas_job")
     #canvas_translate_json = models.JSONField(blank=True,null=True)
     #thumbnail_target=models.FileField(upload_to='canva_templates/thumbnails/',blank=True,null=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)

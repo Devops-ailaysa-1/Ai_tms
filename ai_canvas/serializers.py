@@ -55,7 +55,7 @@ class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = ("id","canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar','tranlated_json')
+        fields = ("id",'tranlated_json',"canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar')
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
                 }
@@ -95,6 +95,17 @@ def get_or_none(classmodel, **kwargs):
         return classmodel.objects.get(**kwargs)
     except classmodel.DoesNotExist:
         return None
+
+def create_design_jobs_and_tasks(data, project):
+    from ai_workspace.models import Job,Task,TaskAssign
+    j_klass = Job
+    t_klass = Task
+    canvas_jobs = Job.objects.bulk_create_of_design_project(data, project=project,klass=j_klass) 
+    jobs = project.project_jobs_set.all()
+    canvas_tasks = Task.objects.create_design_tasks_of_jobs(jobs=jobs,klass=t_klass)
+    task_assign = TaskAssign.objects.assign_task(project=project)
+    return canvas_jobs,canvas_tasks
+
 #serializers.ModelSerializer
 class CanvasDesignSerializer(serializers.ModelSerializer): 
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
@@ -124,13 +135,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
-    # width=serializers.CharField(required=False)
-    # height=serializers.CharField(required=False)
+    # width=serializers.IntegerField(required=False)
+    # height=serializers.IntegerField(required=False)
     #ProjectQuickSetupSerializer.Meta.fields +
 
     class Meta:
         model = CanvasDesign
-        fields = ('id','file_name','source_json','width','height','created_at','updated_at',
+        fields = ('id','file_name','project','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
@@ -148,7 +159,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'next_page':{'write_only':True},
             'duplicate':{'write_only':True},
             'social_media_create':{'write_only':True},
-            'update_new_textbox':{'write_only':True},}
+            'update_new_textbox':{'write_only':True},} 
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
@@ -174,6 +185,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         # project_type = ProjectType.objects.get(id=7)
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        project_type = ProjectType.objects.get(id=7)
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        print("prIns--------------->",project_instance)
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -182,29 +196,32 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
-            # new_proj.project= project_instance
+            new_proj.project= project_instance
+            new_proj.file_name = project_instance.project_name
             new_proj.save()
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
-            return  new_proj  ###returned project_instance
+            return instance #new_proj  ###returned
         else:
             data = {**validated_data ,'user':user}
             instance=CanvasDesign.objects.create(**data)
-            # instance.project = project_instance
-            # instance.save()
-            self.instance=instance
-            # return project_instance
-
-
-        if not instance.file_name:
-            can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')
-            # print("can_obj",can_obj)
-            if can_obj:
-                instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
-            else:
-                instance.file_name='Untitled project' 
+            instance.project = project_instance
+            instance.file_name = project_instance.project_name
             instance.save()
+            self.instance=instance
+            #return instance
+
+        
+        # if not instance.file_name:
+        #     print("Inside 1")
+        #     can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')
+        #     # print("can_obj",can_obj)
+        #     if can_obj:
+        #         instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
+        #     else:
+        #         instance.file_name='Untitled project' 
+        #     instance.save()
 
         if source_json_file and social_media_create and width and height:
             source_json_file=json_src_change(source_json_file,req_host,instance,text_box_save=False)
@@ -247,6 +264,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.file_name=social_media_create.social_media_name
             instance.save()
             return instance
+        return instance
+              
           
     def update_text_box_target(self,instance,text_box,is_append):
         text=text_box['text']
