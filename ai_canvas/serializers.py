@@ -302,6 +302,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
             print(canvas_jobs,canvas_tasks)
+            trans_json.job=canvas_jobs
+            trans_json.save()
             trans_json_project=copy.deepcopy(trans_json.canvas_design.canvas_json_src.last().json)
             trans_json_project['projectid']['langNo']=trans_json.source_language.id
             for count,src_json_file in enumerate(source_json_files_all):
