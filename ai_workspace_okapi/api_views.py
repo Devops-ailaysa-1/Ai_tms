@@ -369,10 +369,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         from ai_workspace.models import MTonlytaskCeleryStatus
 
         task = self.get_object(task_id=task_id)
+        print(task.job.project.is_proj_analysed)
         # doc = Document.objects.filter(file_id=task.file.id,job_id=task.job.id).last()
         # if task.document == None and doc:
         #     print("Inside TRTRT")
         #     doc.delete()
+        if task.job.project.is_proj_analysed == False:
+            return Response({'msg':'analysis is still running'}, status = 400)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None

@@ -1165,7 +1165,7 @@ def proz_send_message(request):
     headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
     url = "https://api.proz.com/v2/messages"
     payload = {'recipient_uuids': uuid,
-                'sender_email': user.email ,
+                'sender_email': user.email,
                 'body': message,
                 'subject': subject,
                 'sender_name': user.fullname}
