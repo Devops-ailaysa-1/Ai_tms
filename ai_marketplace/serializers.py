@@ -4,7 +4,8 @@ from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage,
                     ProjectPostTemplateJobDetails,ProjectPostTemplateContentType,
                     ProjectPostTemplateSubjectField,ProjectboardTemplateDetails,
-                    ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps)
+                    ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps,
+                    ProzMessage)
 from ai_auth.models import AiUser,AiUserProfile,HiredEditors,VendorOnboarding
 from ai_staff.models import Languages,Currencies
 from django.db.models import Q
@@ -1111,3 +1112,9 @@ def send_msg(bid_objects):
                 html_message=msg_html,
             )
         print("bid submitted by vendor detail sent to customer>>")	
+
+
+class ProzMessageSerilaizer(serializers.ModelSerializer):
+    class Meta:
+        model = ProzMessage
+        fields= '__all__'
