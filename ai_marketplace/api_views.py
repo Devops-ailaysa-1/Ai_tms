@@ -42,7 +42,8 @@ from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         SimpleProjectSerializer,AvailablePostJobSerializer,ProjectPostStepsSerializer,
-                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer)
+                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer,
+                        ProzMessageSerilaizer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -1061,6 +1062,8 @@ def get_sub_data(expertise_data):
 
 from .serializers import CommonSPSerializer
 from ai_staff.models import Countries
+from allauth.socialaccount.models import SocialAccount
+
 class ProzVendorListView(generics.ListAPIView):
     serializer_class = CommonSPSerializer
     pagination.PageNumberPagination.page_size = 20
@@ -1109,12 +1112,17 @@ class ProzVendorListView(generics.ListAPIView):
         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         integration_users = integration_users_response.json()
+        #queryset = SocialAccount.objects.filter(provider = 'proz')
+        #existing_uuids = [{'uuid':i.get('extra_data').get('uuid'),'uid':i.user.uid} for i in queryset]
         common_users = []
         total = 0
         if integration_users and integration_users.get('success') == 1:
             total = integration_users.get('meta').get('num_results')
             for vendor in integration_users.get('data'):
                 ven = vendor.get('freelancer')
+                # uuid_exists = any(d.get('uuid') == ven.get('uuid') for d in existing_uuids)
+                # if uuid_exists:
+                #     common_users['ailaysa_detail'] = #get_ailaysa_detail(ven.get('uuid'))
                 verified = False
                 bio = None
                 for i in ven.get('qualifications').get('credentials',{}):
@@ -1165,13 +1173,25 @@ def proz_send_message(request):
     headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
     url = "https://api.proz.com/v2/messages"
     payload = {'recipient_uuids': uuid,
-                'sender_email': user.email ,
+                'sender_email': user.email,
                 'body': message,
                 'subject': subject,
                 'sender_name': user.fullname}
     print("Payload------------->",payload)
     response = requests.request("POST", url, headers=headers, data=payload)
-    return Response(response.json())
+    res_data = response.json()
+    if res_data.get('success') == 1:
+        message_id = res_data.get('meta').get('message_vetting_id')
+        serializer = ProzMessageSerilaizer(data={**request.POST.dict(),'proz_uuid':uuid,'proz_message_id':message_id,'customer':user.id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    else:
+        return Response({'msg':'api response error'})
+
+    # response = requests.request("POST", url, headers=headers, data=payload)
+    # return Response(response.json())
 
 
 
@@ -1310,4 +1330,7 @@ def proz_send_message(request):
     #         return res
 
    
-
+# def proz_ailaysa_user_map():
+#     queryset = SocialAccount.objects.filter(provider = 'proz')
+#     existing_uuids = [i.get('extra_data').get('uuid') for i in queryset]
+    
