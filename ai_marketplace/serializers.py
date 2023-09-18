@@ -190,6 +190,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
 class CommonSPSerializer(serializers.Serializer):
     uid = serializers.CharField(required=False)
+    ailaysa_user_uid = serializers.CharField(required=False)
     fullname = serializers.CharField(required=False)
     organisation_name = serializers.CharField(required=False)
     location = serializers.CharField(required=False)
