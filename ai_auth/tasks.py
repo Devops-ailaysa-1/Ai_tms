@@ -1054,3 +1054,41 @@ def sync_user_details_bi(test=False,is_vendor=False):
                 user_lang = UsedLangPairs(**data2)
                 user_lang.save(using="bi")
 
+
+def proz_list_send_email(projectpost_id):
+    instance = ProjectboardDetails.objects.get(id=projectpost_id)
+    jobs = instance.get_postedjobs
+    steps = instance.get_services
+    services = ', '.join(steps)
+    headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+    limit = 25
+    for obj in jobs:
+        source_lang = obj.source_language_id
+        target_lang = obj.target_language_id
+        lang_pair = get_proz_lang_pair(source_lang,target_lang)
+        offset = (int(page) - 1) * int(limit)
+        params = {
+            'language_service_id':1,
+            'language_pair':lang_pair,
+            'limit':limit,
+            'offset':offset
+            }
+        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+        response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        if response and response.get('success') == 1:
+            uuids = []
+            for vendor in response.get('data'):
+                uuids.append(vendor.get('freelancer').get('uuid'))
+        user = instance.customer
+        message = 'Customer Posted project with this language pair. project_title '+instance.proj_name+ ' with biddeadline '+instance.bid_deadline.date().strftime('%d-%m-%Y')+ '. You can bid the project and win. Visit Ailaysa for more details.'
+        subject = request.POST.get('subject', 'Message from Ailaysa Test' )
+        headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+        url = "https://api.proz.com/v2/messages"
+        payload = {'recipient_uuids': uuids,
+                    'sender_email': user.email ,
+                    'body': message,
+                    'subject': subject,
+                    'sender_name': user.fullname}
+        print("Payload------------->",payload)
+        #response = requests.request("POST", url, headers=headers, data=payload)
+    return Response({'msg':'email sent'})
