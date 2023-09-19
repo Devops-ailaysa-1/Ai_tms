@@ -17,9 +17,10 @@ class PdfFileSerializer(serializers.ModelSerializer):
         data=super().to_representation(instance)
         if instance.pdf_task_id:
             task_id=instance.pdf_task_id
-            tsk_ins=TaskResult.objects.get(task_id=task_id)
-            data['progress']=json.loads(tsk_ins.result)  
-            data['info']=tsk_ins.status 
+            tsk_ins=TaskResult.objects.filter(task_id=task_id)
+            if tsk_ins:
+                data['progress']=json.loads(tsk_ins.result)  
+                data['info']=tsk_ins.status 
         return data
     
     def create(self,validated_data):
