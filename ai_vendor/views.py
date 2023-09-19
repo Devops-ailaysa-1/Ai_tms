@@ -349,6 +349,7 @@ class SavedVendorView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
 import pandas as pd
 from ai_staff.models import Currencies ,ServiceTypeunits ,ServiceTypes
 from io import BytesIO
@@ -376,7 +377,9 @@ def vendor_lang_sheet():
         a='A{}'.format(i+2)
         worksheet2.write(a,languages[i])
 
-    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]}) 
+    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]} ) 
+ 
+
     worksheet.write('A1', 'Source Language',header)
     worksheet.write('B1', 'Target Language',header)
     worksheet.write('C1', 'Currency',header)
@@ -422,8 +425,8 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
         print("ser------>",service)
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
-                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate) #
-        print("ser--------->",service) 
+                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+        print("ser--------->",service)
     return service
 
 @api_view(['POST'])
@@ -480,7 +483,7 @@ def vendor_language_pair(request):
                             ser_ven=create_service_types(service,vender_lang_pair[0],unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
-                    ven_lan_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,target_lang=tar_lang)
+                    ven_lan_pair=VendorLanguagePair.objects.get(user=user,source_lang=src_lang,target_lang=tar_lang)
                     ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]
                     service=ven_service_info.services
                     unit_type=ven_service_info.unit_type

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srx xmlns="http://www.lisa.org/srx20" xmlns:okpsrx="http://okapi.sf.net/srx-extensions" version="2.0">
+<header segmentsubflows="yes" cascade="no">
+<formathandle type="start" include="no"></formathandle>
+<formathandle type="end" include="yes"></formathandle>
+<formathandle type="isolated" include="no"></formathandle>
+<okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
+<okpsrx:sample language="en" useMappedRules="yes">日本国外では、主として、中南米（ペルー[15]・ブラジル[15]・ボリビア・ドミニカ共和国・パラグアイなど）やハワイなどの日本人移民の間に日本語の使用がみられる[16]が、3世・4世と世代が下るにしたがって非日本語話者が多くなっているという[17]。また、太平洋戦争の終結以前に日本領ないし日本の勢力下にあった朝鮮総督府の朝鮮半島・台湾総督府の台湾・旧満州国で現在中華人民共和国の一部・樺太庁の樺太（サハリン）・旧南洋庁の南洋諸島（現在の北マリアナ諸島・パラオ・マーシャル諸島・ミクロネシア連邦）などの地域では、日本語教育を受けた人々の中に、現在でも日本語を記憶して話す人がいる[注 4]。台湾では先住民の異なる部族同士の会話に日本語が用いられることがある[19]だけでなく、宜蘭クレオールなど日本語とタイヤル語のクレオール言語も存在している[20]。また、パラオのアンガウル州では歴史的経緯から日本語を公用語の一つとして採用している[21]が、現在州内には日本語を日常会話に用いる住民は存在せず、象徴的なものに留まっている[22]。</okpsrx:sample>
+<okpsrx:rangeRule></okpsrx:rangeRule>
+</header>
+<body>
+<languagerules>
+<languagerule languagerulename="default">
+<rule break="yes">
+<beforebreak>([。！？])?[\n]+|[。！？]</beforebreak>
+<afterbreak></afterbreak>
+</rule>
+</languagerule>
+</languagerules>
+<maprules>
+<languagemap languagepattern=".*" languagerulename="default"></languagemap>
+</maprules>
+</body>
+</srx>

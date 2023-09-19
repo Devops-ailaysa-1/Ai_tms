@@ -59,7 +59,6 @@ list_of_tables.txt
 dummy.txt
 test5.out-2.docx
 *.bak
-
 json_back.zip
 fixtures
 *.ipy
@@ -73,7 +72,6 @@ api_automation
 .idea/
 logs
 *.log
-*.lock
 .env.staging.proxy-companion
 .server_dev.log.swp
 Dockerfile.bak1
@@ -123,8 +121,6 @@ req_ilango.txt
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
 
-okapi_resources
-okapi_resources/tamil.srx
 *.xlsx
 *.sh
 *.zip
@@ -133,6 +129,7 @@ okapi_resources/tamil.srx
 *.save*
 *.txt
 *.dockerignore
+ai_workspace/html2docx_custom.py
 express_try.py
 mydoc-project-try.py
 nupedia_small(en-ta).tmx

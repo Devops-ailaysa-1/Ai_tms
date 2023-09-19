@@ -4,6 +4,3 @@ from django.contrib import admin
 from .models import VendorsInfo
 
 admin.site.register(VendorsInfo)
-
-
- 

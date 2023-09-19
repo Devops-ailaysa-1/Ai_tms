@@ -148,8 +148,6 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
-    'ai_canvas',
-    'ai_imagetranslation',
     "ai_bi",
     #"silk",
 ]
@@ -162,7 +160,6 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
-    # 'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -173,7 +170,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     #'silk.middleware.SilkyMiddleware',
 ]
@@ -382,8 +378,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 560242880
-USE_GZIP=True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
@@ -410,9 +405,7 @@ else:
     STATIC_URL = '/static/'
     STATIC_ROOT =  os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static'),
-        # os.path.join(BASE_DIR, 'ai_canvas/static'),
-
+        os.path.join(BASE_DIR, 'static')
     ]
 
 
@@ -489,31 +482,22 @@ CHANNEL_LAYERS = {
 
 # CACHES = {
 #     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': os.getenv("CACHE_REDIS_URL"),  
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#             'KEY_PREFIX': '',  
-#         },
-#         'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
-#     }
-# }
 #         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
 #     }
 # }
 
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': os.getenv("CACHE_REDIS_URL"),  
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#             'KEY_PREFIX': '',  
-#         },
-#         'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
-#     }
-# }
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+    }
+}
 
 
 STATICFILES_DIRS = [
@@ -537,17 +521,3 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
-
-# FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
-# FONT_THUMBNAIL_URL = '/font-thumnail/'
-#######
-INPAINT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_image')
-INPAINT_IMAGE_URL = '/inpaint_image/'
-
-INPAINT_SOURCE_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_source_image')
-INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
-
-
-EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
-EXPORT_IMAGE_URL = '/temp_download/'
- 

@@ -97,7 +97,6 @@ from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
-from ai_canvas.serializers import CanvasDesignSerializer
 
 class IsCustomer(permissions.BasePermission):
 
@@ -2356,7 +2355,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
     destination_blob_name = filename
-    
+
     upload_blob(bucket_name, source_file_name, destination_blob_name)
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
@@ -4263,11 +4262,10 @@ def project_word_char_count(request):
 from celery.result import AsyncResult
 from django.http import HttpResponse
 from celery import Celery
-
+app = Celery('ai_tms')
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
-    app = Celery('ai_tms')
     task_id = request.GET.get('task_id')
     task = AsyncResult(task_id)
     print("TT---------->",task.state)

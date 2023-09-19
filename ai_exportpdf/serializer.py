@@ -4,28 +4,17 @@ from .models import Ai_PdfUpload # AiImageGeneration
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from itertools import groupby
-from django_celery_results.models import TaskResult
-import json
 
 class PdfFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ai_PdfUpload
         fields = "__all__"
 
-
-    def to_representation(self, instance):
-        data=super().to_representation(instance)
-        if instance.pdf_task_id:
-            task_id=instance.pdf_task_id
-            tsk_ins=TaskResult.objects.get(task_id=task_id)
-            data['progress']=json.loads(tsk_ins.result)  
-            data['info']=tsk_ins.status 
-        return data
     
     def create(self,validated_data):
-        validated_data['pdf_file_name']=str(validated_data['pdf_file'])
-        validated_data['file_name']=str(validated_data['pdf_file'])
-        instance=Ai_PdfUpload.objects.create(**validated_data)
+        validated_data['pdf_file_name'] = str(validated_data['pdf_file'])
+        validated_data['file_name'] = str(validated_data['pdf_file'])
+        instance = Ai_PdfUpload.objects.create(**validated_data)
         return instance
             
 # class PdfFileDownloadLinkSerializer(serializers.ModelSerializer):
@@ -36,7 +25,6 @@ class PdfFileSerializer(serializers.ModelSerializer):
 class PdfFileStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ai_PdfUpload
-        fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id',
-                  'docx_url_field','status' ,'docx_file_name','file_name', 'pdf_file_name')
+        fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_url_field','status' ,'docx_file_name','file_name', 'pdf_file_name')
  
 

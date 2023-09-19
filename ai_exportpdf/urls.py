@@ -17,6 +17,4 @@ urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 
 urlpatterns += [
 path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
-path('revoke_pdf',views.celery_revoke),
-# path('stop_task',views.stop_task)
 ]
