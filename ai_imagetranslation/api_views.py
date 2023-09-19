@@ -20,7 +20,7 @@ from rest_framework import generics
 from rest_framework.decorators import api_view,permission_classes
 from ai_canvas.utils import export_download
 from ai_canvas.api_views import download_file_canvas,mime_type,text_download
-import io
+import io,json
 from django import core
 from zipfile import ZipFile
 from ai_canvas.api_views import CustomPagination
@@ -134,7 +134,11 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
+            
             data = [{'image':im.image,'image_load':im.id} for im in im_details]
+            if 'mask_json' in request.POST.dict().keys():
+                for im in data:
+                    im['mask_json']=json.loads(request.POST.dict()['mask_json'])
             serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
 
         elif canvas_asset_image_id:

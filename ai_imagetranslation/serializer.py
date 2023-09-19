@@ -110,7 +110,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     magic_erase=serializers.BooleanField(required=False,default=False)
     image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),required=False,write_only=True)
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
-    
+    mask_json=serializers.JSONField(required=False)
     class Meta:
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
@@ -148,7 +148,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance=ImageTranslate.objects.create(**data)
             width,height=self.image_shape(instance.image.path)
             instance.width=width
-            instance.height=height 
+            instance.height=height
+            # instance.mask_json=mask_json
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             if not instance.project_name:
