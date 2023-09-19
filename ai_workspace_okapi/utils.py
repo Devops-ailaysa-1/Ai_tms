@@ -1,14 +1,15 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
-import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
+import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib,difflib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
 from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
-
-import string ,backoff
+import string
+import backoff
+# from ai_workspace_okapi.models import SelflearningAsset
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
 client = translate.Client()
@@ -264,7 +265,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
-import backoff
+ 
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
                     target_lang_code, user_id=None, cc=None, from_open_ai = None):
@@ -283,14 +284,20 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         initial_credit = user.credit_balance.get("total_left")
 
     if cc == None:
-        cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
+        if isinstance(source_string,list):
+            for src_text in source_string:
+                cc=0
+                cc+= get_consumable_credits_for_text(src_text,target_lang_code,source_lang_code)
+        else:
+            cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
     print("Init-------->",initial_credit)
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
     
-    if special_character_check(source_string):
+    
+    if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
@@ -329,7 +336,6 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     else:
         print('Not debited in this func')
     print("Translate---------->",translate)
-
     return translate
     
 
@@ -437,11 +443,8 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
             out.write(response.audio_content)
             print('Audio content written to file',filename)
 
-
-
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment
-
     split_seg = SplitSegment.objects.filter(id=segment_id).first()
     if split_seg:
         if split_seg.segment.is_split == True:
@@ -508,6 +511,13 @@ def get_general_prompt(opt,sent):
 
     return prompt
 
+def get_prompt(sent,subs,cont):
+    if subs == []:subs_str = 'English language'
+    else: subs_str =  ', '.join(subs)
+    if cont == []:cont_str = 'easy-to-understand content'
+    else: cont_str = ', '.join(cont)
+    if len(sent)<=20:
+        prompt = '''Rewrite the given text. Text: {} '''.format(sent)
 
 def get_prompt_sent(opt,sent):
 
@@ -523,34 +533,6 @@ def get_prompt_sent(opt,sent):
     elif opt == "Shorten":
         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
     return prompt
-
-
-
-
-# def get_prompt(opt,sent):#,subs,cont):
-#     # subs,cont =[],[]
-#     # if subs == []:subs_str = 'English language'
-#     # else: subs_str =  ', '.join(subs)
-#     # if cont == []:cont_str = 'easy-to-understand content'
-#     # else: cont_str = ', '.join(cont)
-#     if opt == "Rewrite":
-#         # if len(sent)<=20:
-#         #     prompt = '''Rewrite the given text. Text: {} '''.format(sent)
-
-#         if len(sent)>200:
-#             prompt = '''Split the following text into multiple simple sentences: 
-#                         {}'''.format(sent)
-
-#         else:
-#             prompt = '''Paraphrase the given text: {} '''.format(sent)
-
-    
-#     elif opt == "Simplify":
-#         prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
-
-#     elif opt == "Shorten":
-#         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
-#     return prompt
 
     # if subs == []:
     #     subs = 'English language'
@@ -586,24 +568,3 @@ def get_prompt_sent(opt,sent):
     #             Content Types: {} 
     #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
     # else:
-
-
-            # prompt = '''Act as an English language expert, convert this lengthy complex or compound sentence into two or three simple sentences, without affecting the meaning or flow of the sentence. Also, if the sentences contain any idioms, phrases or phrasal verbs, rewrite only those sentences using more straightforward words without altering the meaning or tone. Please provide the final rewritten text without any prefix.
-            # Text: {} '''.format(sent)
-            
-            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
-            #         1. Split the given sentence into multiple sentences.
-            #         2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-            #         3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-            #         If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-            #         Text: {} 
-            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
-
-                        # prompt = '''Act as an English language expert, check if the provided text contains any idioms, phrases or phrasal verbs. If so, rewrite it using more straightforward words without altering the meaning or tone, otherwise just rewrite it. Please provide the final rewritten text without any prefix.
-            # Text: {} '''.format(sent)
-            # prompt = '''As an expert in {} and a writer skilled in creating {} content, please perform the following tasks and provide only one final result without any prefix:
-            #         1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-            #         2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-            #         If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-            #         Text: {} 
-            #         [FINAL RESULT] '''.format(subs_str,cont_str,sent) 
