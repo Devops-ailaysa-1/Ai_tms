@@ -1090,16 +1090,21 @@ from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
 def dict_rec(json_copy):
-    print(type(json_copy))
-
     total_sent = []
-    for  i in enumerate(json_copy['objects']):
-        print(i)
-        if 'objects' in i.keys():
-            dict_rec(i)
-        if i['type']== 'textbox':
-            text = i['text']
-            total_sent.append(text)
+    if 'template_json' in  json_copy.keys():
+        for  i in enumerate(json_copy['template_json']['objects']):
+            if 'objects' in i.keys():
+                dict_rec(i)
+            if i['type']== 'textbox':
+                text = i['text']
+                total_sent.append(text)
+    else:
+        for  i in enumerate(json_copy['objects']):
+            if 'objects' in i.keys():
+                dict_rec(i)
+            if i['type']== 'textbox':
+                text = i['text']
+                total_sent.append(text)
     return total_sent
 
 @api_view(['GET'])
