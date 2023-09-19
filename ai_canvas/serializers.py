@@ -18,7 +18,7 @@ from PIL import Image
 import cv2,os
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
-from ai_workspace.models import ProjectType,Project
+from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv("HOST_NAME")
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -99,6 +99,7 @@ def get_or_none(classmodel, **kwargs):
 
 def create_design_jobs_and_tasks(data, project):
     print("creating job and task")
+    print("Data----------->",data)
     from ai_workspace.models import Job,Task,TaskAssign
     j_klass = Job
     t_klass = Task
@@ -188,7 +189,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # project_type = ProjectType.objects.get(id=7)
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_type = ProjectType.objects.get(id=7)
+        default_step = Steps.objects.get(id=1)
         project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
         if temp_global_design and new_project:
             width=temp_global_design.category.width
@@ -335,6 +338,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         return source_json_file
 
     def update(self, instance, validated_data):
+        print("------------------inside update-----------------------")
         req_host = self.context.get('request', HttpRequest()).get_host()
         canvas_translation_tar_lang=validated_data.get('canvas_translation_tar_lang')
         canvas_translation_tar_thumb=validated_data.get('canvas_translation_tar_thumb',None)
