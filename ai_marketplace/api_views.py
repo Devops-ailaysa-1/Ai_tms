@@ -1118,8 +1118,10 @@ class ProzVendorListView(generics.ListAPIView):
         common_users = []
         total = 0
         if integration_users and integration_users.get('success') == 1:
+            print("Inside If")
             total = integration_users.get('meta').get('num_results')
             for vendor in integration_users.get('data'):
+                print("Inside For")
                 ven = vendor.get('freelancer')
                 verified = False
                 bio = None
