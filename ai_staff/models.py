@@ -672,12 +672,6 @@ class ImageCategories(models.Model):
     def __str__(self):
         return self.category
     
-class DesignShapeCategory(models.Model):
-    name=models.CharField(max_length=200,blank=True ,null=True) 
-
-    def __str__(self) -> str:
-        return self.name
-
 
 class DesignShapeCategory(models.Model):
     name=models.CharField(max_length=200,blank=True ,null=True) 
@@ -694,7 +688,7 @@ class DesignShape(models.Model):
     shape_name=models.CharField(max_length=200,blank=True ,null=True)
     shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
     types=models.CharField(max_length=300,null=True,blank=True,choices=types)
-    # category=models.ForeignKey(DesignShapeCategory,related_name="shape_category", on_delete=models.CASCADE)
+    category=models.ForeignKey(DesignShapeCategory,related_name="shape_category", on_delete=models.CASCADE)
     tags=models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
