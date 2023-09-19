@@ -1078,6 +1078,7 @@ class ProzVendorListView(generics.ListAPIView):
         country = self.request.query_params.get('country',None)
         fullname = self.request.query_params.get('fullname',None)
         #contenttype = self.request.query_params.get('content')
+        account_type = self.request.query_params.get('account_type',None)
         subject=self.request.query_params.get('subject')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
 
@@ -1099,6 +1100,8 @@ class ProzVendorListView(generics.ListAPIView):
             }
         if year_of_experience:
             params.update({'min_yrs_experience':year_of_experience})
+        if account_type:
+            params.update({'account_type_id':account_type})
         if subject:
             subjectlist=subject.split(',')
             proz_expertize_ids = get_proz_expertize(subjectlist)
@@ -1120,9 +1123,8 @@ class ProzVendorListView(generics.ListAPIView):
                 ven = vendor.get('freelancer')
                 verified = False
                 bio = None
-                ailaysa_user_uid = None
                 qs = SocialAccount.objects.filter(provider = 'proz').filter(uid=ven.get('uuid'))
-                if qs:ailaysa_user_uid = qs.last().user.uid
+                ailaysa_user_uid = qs.last().user.uid if qs else None
                 for i in ven.get('qualifications').get('credentials',{}):
                     if i.get('pair_code') == lang_pair:
                         verified = True
