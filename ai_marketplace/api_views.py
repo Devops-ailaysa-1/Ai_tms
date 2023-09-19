@@ -1124,7 +1124,9 @@ class ProzVendorListView(generics.ListAPIView):
                 verified = False
                 bio = None
                 qs = SocialAccount.objects.filter(provider = 'proz').filter(uid=ven.get('uuid'))
+                print("Queryset------------>",qs)
                 ailaysa_user_uid = qs.last().user.uid if qs else None
+                print("AilaysaUserUID------------>",ailaysa_user_uid)
                 for i in ven.get('qualifications').get('credentials',{}):
                     if i.get('pair_code') == lang_pair:
                         verified = True
@@ -1153,6 +1155,7 @@ class ProzVendorListView(generics.ListAPIView):
                     'verified': verified,
                     'vendor_subject':subs,
                 })
+            print("----------------------------------------------------------------------------")
         return common_users,total
 
     def list(self, request, *args, **kwargs):
