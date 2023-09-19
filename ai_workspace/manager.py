@@ -42,7 +42,7 @@ class ProjectManager(models.Manager):
             ai_user, team, project_manager, created_by):
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
-        project = self.create(**data, ai_user=ai_user, project_manager=project_manager,\
+        project = self.create(**data, ai_user=ai_user,project_manager=project_manager,\
                                 team=team,created_by=created_by)
         return self.create_and_jobs_files_bulk_create_for_project(
             project, files_data, jobs_data, f_klass, j_klass
@@ -108,11 +108,6 @@ class JobManager(models.Manager):
         print("job------>",job)
         print("created--------------->",created)
         return job
-
-    def bulk_create_of_design_project(self, \
-            data, project, klass):
-        jobs = [self.get_or_create(**item, project=project) for item in data]
-        return jobs
 
 class ProjectContentTypeManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -206,11 +201,6 @@ class TaskManager(models.Manager):
                 job.save()
         glossary_tasks = [self.get_or_create(job=job) for job in jobs]
         return glossary_tasks
-
-    def create_design_tasks_of_jobs(self, jobs, klass,\
-          project = None):
-        design_tasks = [self.get_or_create(job=job) for job in jobs]
-        return design_tasks
 
     def create_glossary_tasks_of_jobs_by_project(self, project):
         jobs = project.project_jobs_set.all()

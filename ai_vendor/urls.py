@@ -22,7 +22,6 @@ urlpatterns+= [
     path('membership_list/',views.vendor_membership_list, name="vendor-membership-list"),
     path('subject_matter_list/',views.vendor_subject_matter_list, name="vendor-subject-matter-list"),
     path('mtpe_engines_list/',views.vendor_mtpe_engines_list, name="vendor-mtpe-engines-list"),
-    path('vendor_lang_pair/',views.vendor_language_pair,name='language_pair'),
     # path('get_vendor_list/',views.get_vendor_list,name="get-vendor-list"),
     # path('get_vendor_detail/',views.get_vendor_detail,name="get-vendor-detail"),
     # path('assign_vendor/',views.assign_available_vendor_to_customer,name="assign-vendor"),

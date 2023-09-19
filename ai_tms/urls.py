@@ -57,13 +57,11 @@ urlpatterns = [
     # path("integerations/", include("integerations.gitlab_.urls")),
     path("nlp/", include("ai_nlp.urls")),
     path("tm/", include("ai_tm.urls")),
-    path('ai-image-translation/' ,include('ai_imagetranslation.urls')),
+
     path("aipay/", include("ai_pay.urls")),
     path('exportpdf/',include("ai_exportpdf.urls")),
     path("qa/", include("ai_qa.urls")),
-    path("canvas/", include("ai_canvas.urls")),
     path("bi/", include("ai_bi.urls")),
-    
     #path("celery-progress/", include("celery_progress.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
 #     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),

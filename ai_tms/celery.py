@@ -117,4 +117,3 @@ def debug_task(self):
 
 # @app.task(bind=True):
 #     pass
-

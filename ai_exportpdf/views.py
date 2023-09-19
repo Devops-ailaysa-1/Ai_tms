@@ -24,7 +24,6 @@ from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
 from django.db.models import Q
 from ai_workspace_okapi.utils import get_translation
-from celery.result import AsyncResult
 openai_model = os.getenv('OPENAI_MODEL')
 
 logger = logging.getLogger('django')
@@ -131,7 +130,7 @@ class ConversionPortableDoc(APIView):
                 if initial_credit > consumable_credits:
                     task_id = pdf_conversion(int(id))
                     print("TaskId---------->",task_id)
-                    celery_task[int(id)] = task_id  
+                    celery_task[int(id)] = task_id
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 else:
                     return Response({'msg':'Insufficient Credits'},status=400)
@@ -200,40 +199,6 @@ def project_pdf_conversion(request,task_id):
 
 
 
-from celery import Celery
-from ai_exportpdf.utils import ai_export_pdf
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def celery_revoke(request):
-    app = Celery()
-    task_id=request.POST.get('task_id')
-    # result = AsyncResult(task_id)
-    # print(result.result)
-    # if result:
-    # ai_export_pdf.AsyncResult(task_id).revoke()
-    app.control.revoke(task_id, terminate=True)
-    response_data = {"status": "task_revoked"}
-    return JsonResponse(response_data, status=200)
- 
-
-
-
-
-# app = Celery('ai_tms')
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def stop_task(request):
-#     task_id = request.GET.get('task_id')
-#     task = AsyncResult(task_id)
-#     print("TT---------->",task.state)
-#     if task.state == 'STARTED':
-#         app.control.revoke(task_id, terminated=True, signal='SIGKILL')
-#         return JsonResponse({'status':'Task has been stopped.'}) 
-#     elif task.state == 'PENDING':
-#         app.control.revoke(task_id)
-#         return JsonResponse({'status':'Task has been revoked.'})
-#     else:
-#         return JsonResponse({'status':'Task is already running or has completed.'})
 
 
 

@@ -66,7 +66,7 @@ def update_words_from_template(sender, instance, *args, **kwargs):
 
 def delete_words_from_term_model(sender, instance, *args, **kwargs):
     try:
-        terms =glex_model.Terms.objects.filter(file_id=instance.id)
+        terms = glex_model.Terms.objects.filter(file_id = instance.id)
         terms.delete()
     except:
         pass

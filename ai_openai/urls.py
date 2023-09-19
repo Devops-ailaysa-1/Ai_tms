@@ -1,5 +1,5 @@
 from django.urls import path, include
-from ai_openai import api_views
+from . import api_views
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
@@ -13,7 +13,6 @@ router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_articl
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
 urlpatterns = router.urls
 
- 
 urlpatterns += [
     path("prompt_result/",api_views.AiPromptResultViewset.as_view()),
     path("customize_text_generate",api_views.customize_text_openai),
@@ -24,11 +23,6 @@ urlpatterns += [
     path('image/',api_views.image_gen),
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
-    path('article_generate_test/',api_views.generate),
-    path('image_history/<pk>/',api_views.ImageGeneratorPromptDelete.as_view()),
-    path('download_ai_image_generated_file/<int:id>/',api_views.download_ai_image_generated_file),
- 
-    # path('stream_article/',api_views.PostStreamView.as_view()),
     path('credit_blog_check/',api_views.credit_check_blog),
     path('article_generate_test/',api_views.generate),
     #path('instant_translation_custom',api_views.instant_translation_custom)

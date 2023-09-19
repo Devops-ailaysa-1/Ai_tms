@@ -96,13 +96,12 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if instance.description:
                 prompt+=' '+instance.description if lang in ai_langs else instance.description_mt
             
+            prompt+=', in {} tone'.format(instance.Tone.tone)
+            print("prompt-->",prompt)
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
-            prompt+=' in {} tone'.format(instance.Tone.tone)
-            
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
-        print("prompt-->",prompt)
         initial_credit = user.credit_balance.get("total_left")
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
@@ -303,8 +302,6 @@ class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
         #     "created_id":{"write_only": True},
         #     'created_by':{'write_only':True},
         # }
-
- 
 
 class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
@@ -787,7 +784,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
             token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)      ################# 2 times update          
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
         total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
         print("trans---->>>>>>>>>>>>>>>>>>>",consumable_credits)
@@ -905,6 +902,26 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         titles = instance.blog_title_create.order_by('-id')
         representation['blog_title_create'] = BlogtitleSerializer(titles, many=True).data
         return representation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
  
