@@ -29,16 +29,19 @@ from ai_imagetranslation.utils import stable_diffusion_api
 from ai_exportpdf.utils import download_file
 
 class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
+    filter_backends = [DjangoFilterBackend]
     permission_classes = [IsAuthenticated,]
     page_size=20
-
+    search_fields = ['file_name','type' ,'height','width']
     def get_object(self, pk):
         try:
             return Imageload.objects.get(id=pk)
         except Imageload.DoesNotExist:
             raise Http404
+        
     def get(self, request):
         queryset = Imageload.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ImageloadSerializer(pagin_tc ,many =True)
         response = self.get_paginated_response(serializer.data)
@@ -56,6 +59,12 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
