@@ -1087,10 +1087,14 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
 
 from ai_canvas.models import CanvasTranslatedJson
 from ai_workspace.models import TaskDetails
+from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
 def dict_rec(json_copy):
+    print(type(json_copy))
+
     total_sent = []
     for  i in enumerate(json_copy['objects']):
+        print(i)
         if 'objects' in i.keys():
             dict_rec(i)
         if i['type']== 'textbox':
@@ -1108,9 +1112,10 @@ def Designerwordcount(request):
          total_sent.extend(dict_rec(i.json))
     wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
                                                         prompt_string_list= total_sent)
-    TaskDetails.objects.get_or_create(task = design_instance.job,
+    task_det_instance=TaskDetails.objects.get_or_create(task = design_instance.job,
                                       project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(len(" ".join(total_sent)))})
-
+    ser = TaskDetailSerializer(task_det_instance)
+    return Response(ser.data)
  ######################################################canvas______download################################
 
 
