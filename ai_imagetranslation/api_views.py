@@ -1,0 +1,473 @@
+from rest_framework import viewsets 
+from ai_imagetranslation.serializer import (ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer,
+                                            BackgroundRemovelSerializer,ImageTranslateListSerializer,StableDiffusionAPISerializer,
+                                            CustomImageGenerationStyleSerializers,GeneralPromptListStyleSerializers,ImageModificationTechniqueSerializerV2,
+                                            ImageModificationTechniqueSerializerV3,AspectRatioSerializer)
+from rest_framework.response import Response
+from ai_imagetranslation.models import (Imageload ,ImageTranslate,ImageInpaintCreation ,BackgroundRemovel,
+                                        ImageStyleCategories,CustomImageGenerationStyle,GeneralPromptList,ImageModificationTechnique,ImageStyleSD,AspectRatio)
+from rest_framework import status
+from django.http import Http404 
+from rest_framework.permissions import IsAuthenticated
+from ai_canvas.models import CanvasUserImageAssets
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse
+###image_upload
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import generics
+from rest_framework.decorators import api_view,permission_classes
+from ai_canvas.utils import export_download
+from ai_canvas.api_views import download_file_canvas,mime_type,text_download
+import io
+from django import core
+from zipfile import ZipFile
+from ai_canvas.api_views import CustomPagination
+from ai_imagetranslation.models import StableDiffusionAPI
+from ai_imagetranslation.utils import stable_diffusion_api
+from ai_exportpdf.utils import download_file
+
+class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+
+    def get_object(self, pk):
+        try:
+            return Imageload.objects.get(id=pk)
+        except Imageload.DoesNotExist:
+            raise Http404
+    def get(self, request):
+        queryset = Imageload.objects.filter(user=request.user.id).order_by('-id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageloadSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def create(self,request):
+        image = request.FILES.get('image',None)
+        if image:
+            if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+                return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+ 
+        serializer = ImageloadSerializer(data=request.data ,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        query_set = Imageload.objects.get(id = pk)
+        serializer = ImageloadSerializer(query_set )
+        return Response(serializer.data)
+    
+    def delete(self,request,pk):
+        query_obj = Imageload.objects.get(id = pk)
+        query_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+###image upload for inpaint processs
+
+
+# class ImageTranslateFilter(django_filters.FilterSet):
+#     project_name = django_filters.CharFilter(field_name='project_name', lookup_expr='icontains')
+#     types=django_filters.CharFilter(field_name='types', lookup_expr='icontains')
+#     class Meta:
+#         model = ImageTranslate
+#         fields = ['project_name','types']
+ 
+
+
+class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['project_name','types']
+    search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
+ 
+    page_size=20
+    def get_object(self, pk):
+        try:
+            return ImageTranslate.objects.get(id=pk)
+        except ImageTranslate.DoesNotExist:
+            raise Http404
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self, request):
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer =ImageTranslateSerializer(pagin_tc ,many =True) #  ImageTranslateListSerializer
+        response = self.get_paginated_response(serializer.data)
+        return response
+
+    def retrieve(self,request,pk):
+        # obj =self.get_object(pk)
+        query_set = ImageTranslate.objects.get(id = pk)
+        serializer = ImageTranslateSerializer(query_set )
+        return Response(serializer.data)
+        
+    def create(self,request):
+        image = request.FILES.get('image')
+        image_id =  request.POST.getlist('image_id')
+        canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+        
+        if image:
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 
+        
+        elif image_id:
+            im_details = Imageload.objects.filter(id__in = image_id)
+            data = [{'image':im.image,'image_load':im.id} for im in im_details]
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
+
+        elif canvas_asset_image_id:
+             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
+             data={'image':im_details.image,'image_load':im_details.id}
+             serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+        else:
+            return Response({'msg':"upload any image"})
+             
+        if serializer.is_valid():
+            serializer.save()
+            # response=
+            # response.status_code = 200
+            # response["Custom-Header"] = "Value"
+            # print(response)
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+    def update(self,request,pk):
+        obj =self.get_object(pk)
+        query_set = ImageTranslate.objects.get(id=pk)
+        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+                    
+    def delete(self,request,pk):
+        query_obj = ImageTranslate.objects.get(id = pk)
+        query_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+def create_image(json_page,file_format,export_size,page_number,language):
+    file_format_ext = 'png' if file_format == 'png-transparent' else file_format
+    base64_img=export_download(json_page,file_format,export_size)
+    file_name="page_{}_{}.{}".format(str(page_number),language,file_format_ext)
+    return base64_img,file_name
+from ai_canvas.api_views import format_extension_change 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def image_translation_project_view(request):
+    image_id=request.query_params.get('image_id')
+    language=request.query_params.get('language',0)
+    export_size=request.query_params.get('export_size',1)
+    file_format=request.query_params.get('file_format')
+    language = int(language) if language else None
+    file_format = file_format.replace(" ","-") if file_format else ""
+    file_format = format_extension_change(file_format)
+    image_download={}
+    image_instance=ImageTranslate.objects.get(id=image_id)
+    if language==0:
+        buffer=io.BytesIO()
+        format_exe = 'png' if file_format == 'png-transparent' else file_format
+        with ZipFile(buffer, mode="a") as archive:  
+            for tar_json in image_instance.s_im.all():
+                tar_lang=tar_json.target_language.language.language
+                if file_format == 'text':
+                    file_name = '{}.{}'.format(tar_lang,".txt")
+                    tar_image_json=text_download(tar_json.target_canvas_json)
+                else:
+                    file_name = '{}.{}'.format(tar_lang,format_exe)
+                    tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
+                archive.writestr(file_name,tar_image_json)
+        res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')
+        return res
+    
+    elif language == image_instance.source_language.language.id:
+        if file_format == 'text':
+            export_src=text_download(image_instance.source_canvas_json)
+            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language.language.language,"txt")
+        else:
+            img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
+            export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        return response
+    
+    elif language and language != image_instance.source_language.language.id:
+        tar_inst=image_instance.s_im.get(target_language__language__id=language)
+        lang=image_instance.s_im.get(target_language__language__id=language).target_language.language.language
+        if file_format == 'text':
+            export_src=text_download(tar_inst.target_canvas_json)
+            file_name="page_{}_{}.{}".format(str(1),lang,"txt")
+        else:
+            img_res,file_name=create_image(tar_inst.target_canvas_json,file_format,export_size,1,lang)
+            export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+        response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        return response
+    else:
+        image_download[image_instance.source_language.language.language] =image_instance.source_language.language.id
+        for i in image_instance.s_im.all():
+            image_download[i.target_language.language.language]=i.target_language.language.id
+        lang={**{"All":0},**image_download}
+        resp = {"language":  lang , "page":[]}
+        return Response(resp)
+
+
+class ImageTranslateListViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =[]
+    search_fields =['project_name','types','height','width']
+    page_size=20
+ 
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def list(self, request):
+        queryset = ImageTranslate.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ImageTranslateListSerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+
+class ImageInpaintCreationListView(ListAPIView,CustomPagination):
+    queryset = ImageInpaintCreation.objects.all()#.values
+    serializer_class = ImageInpaintCreationListSerializer
+    pagination_class = CustomPagination
+
+    # def get_queryset(self):
+    #     # Specify the fields to include in the serialized representation
+    #     fields = ['id','image', 'width', 'field3']
+    #     return ImageInpaintCreation.objects.only(*fields)
+# class ImageloadRetrieveViewset(generics.RetrieveAPIView):
+#     queryset = Imageload.objects.all()
+#     serializer_class = ImageloadRetrieveRetrieveSerializer
+#     lookup_field = 'id'
+
+class BackgroundRemovelViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    
+    def get_object(self, pk):
+        try:
+            return BackgroundRemovel.objects.get(id=pk)
+        except BackgroundRemovel.DoesNotExist:
+            raise Http404
+
+    def get(self, request):
+        query_set = BackgroundRemovel.objects.filter(user=request.user.id).order_by('id')
+        serializer = BackgroundRemovelSerializer(query_set,many =True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        # obj =self.get_object(pk)
+        query_set = BackgroundRemovel.objects.get(id = pk)
+        serializer = BackgroundRemovelSerializer(query_set )
+        return Response(serializer.data)
+    
+        
+    def create(self,request):
+        # canvas_json=request.POST.get('canvas_json')
+        # preview_json=request.POST.get('preview_json',None)
+        serializer = BackgroundRemovelSerializer(data=request.data,context={'request':request})  
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+
+    def update(self,request,pk):
+        query_set = BackgroundRemovel.objects.get(id=pk)
+        serializer = BackgroundRemovelSerializer(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+
+
+model_list = ['stability','stable_diffusion_api']
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_ai_image_generated_file_stable(request,id):
+    try:
+        file = StableDiffusionAPI.objects.get(id=id).image 
+        file_format=file.path.split(".")[-1]
+        file_name=file.path.split("/")[-1]
+        return download_file_canvas(file,mime_type[file_format.lower()],file_name)
+    except:
+        return Response({'msg':'Requested file not exists'},status=401)
+
+
+class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+    search_fields =['prompt','style']
+
+    def get(self, request):
+        queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset,request,view=self)
+        serializer = StableDiffusionAPISerializer(pagin_tc ,many =True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def retrieve(self,request,pk):
+        query_set = StableDiffusionAPI.objects.get(id = pk)
+        serializer = StableDiffusionAPISerializer(query_set )
+        return Response(serializer.data)
+    
+    #
+    def create(self,request):
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def delete(self,request,pk):
+        query_obj = StableDiffusionAPI.objects.get(id = pk)
+        query_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
+    queryset = CustomImageGenerationStyle.objects.all()
+    serializer_class = CustomImageGenerationStyleSerializers
+    pagination_class = None
+
+class GeneralPromptListView(generics.ListCreateAPIView):
+    queryset = GeneralPromptList.objects.all()
+    serializer_class = GeneralPromptListStyleSerializers
+    pagination_class = None
+
+
+class ImageModificationTechniqueViewSet(viewsets.ViewSet):
+
+    def update(self,request,pk):
+        query_set = ImageModificationTechnique.objects.get(id=pk)
+        serializer = ImageModificationTechniqueSerializerV2(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
+    queryset = ImageStyleSD.objects.all().order_by('id')
+    serializer_class = ImageModificationTechniqueSerializerV3
+    pagination_class = None
+    filter_backend=[DjangoFilterBackend]
+    
+
+class AspectRatioViewSet(generics.ListCreateAPIView):
+    queryset = AspectRatio.objects.all().order_by('id')
+    serializer_class = AspectRatioSerializer
+    pagination_class = None
+
+
+
+
+# def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
+#     if len(pages_list)==1:
+#         print("single___page",pages_list[0].json)
+#         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
+#         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
+#         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        
+#     else:
+#         print("multiple___page")
+#         buffer=io.BytesIO()
+#         with ZipFile(buffer, mode="a") as archive:
+#             for src_json in pages_list:
+#                 file_name = 'page_{}_{}.{}'.format(src_json.page_no,lang,file_format)
+#                 path='{}/{}'.format(lang,file_name)
+#                 # file_format = 'png' if file_format == 'png-transparent' else file_format
+#                 values=export_download(src_json.json,file_format,export_size)
+#                 archive.writestr(path,values)
+#         response=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=projecct_file_name+'.zip')
+#     return response
+
+
+    # def list(self, request):
+    #     # Note the use of `get_queryset()` instead of `self.queryset`
+    #     queryset = self.get_queryset()
+    #     x={}
+    #     for i in queryset:
+    #         style_name=i.image_style.style_name
+    #         style_cat_name=i.style_category.style_category_name
+    #         style_cat_list=list(i.style_category.style_category.all().values_list("custom_style_name",flat=True))
+    #         if not style_name in x.keys():
+    #             x[style_name]=[{style_cat_name:style_cat_list}]
+    #         else:
+    #             lst=x[style_name]
+    #             lst.append({style_cat_name:style_cat_list})
+    #             x[style_name]=lst
+
+
+    #     # serializer = ImageGenCustomizationSerializers(queryset, many=True)
+    #     # print(serializer.data)
+    #     return Response(x)
+
+
+# class X4ListView(generics.ListCreateAPIView):
+#     queryset = X4.objects.all()
+#     serializer_class = X4Serializer
+#     pagination_class = None
+
+
+
+
+
+
+# class CustomImageGenerationCategotyViewset(viewsets.ViewSet,PageNumberPagination):
+#     permission_classes = [IsAuthenticated,]
+ 
+
+#     def get(self, request):
+#         queryset = CustomImageGenerationCategoty.objects.all()
+#         serializer = CustomImageGenerationCategotySerializer(queryset ,many =True)
+#         return Response(serializer.data)
+    
+ 
+    
+    # def create(self,request):    
+    #     serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
+
+
+
+

@@ -336,6 +336,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk,cc=consumable_credits)
                 if target_tags !='':
                     temp_target = mt + target_tags
+                    
                     target = mt + target_tags
                 else:
                     temp_target = mt
@@ -839,9 +840,10 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
-
-
-
+from ai_workspace_okapi.models import SelflearningAsset
+class SelflearningAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SelflearningAsset
 
 
 
@@ -929,3 +931,5 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
 #             coll.update(itr)
 #         ret["text"] = coll
 #         return ret
+
+

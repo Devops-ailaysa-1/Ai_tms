@@ -9,6 +9,8 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
+# router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
+# router.register(r'segment_diff',api_views.SegmentDiffViewset,basename='segment_difference')
 router.register(r"selflearn",api_views.SelflearningView,basename="self_learn")
 router.register(r"choicelist",api_views.ChoicelistView,basename="choice_list")
 router.register(r"choicelistselected",api_views.Choicelistselectedview,basename="choice_list")
@@ -70,7 +72,6 @@ urlpatterns+=[
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
     #path('get_mt_raw/<int:task_id>/',api_views.get_mt_raw),
 ]
-
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
