@@ -1083,7 +1083,34 @@ class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
- 
+
+
+from ai_canvas.models import CanvasTranslatedJson
+from ai_workspace.models import TaskDetails
+from ai_openai.serializers import AiPromptSerializer
+def dict_rec(json_copy):
+    total_sent = []
+    for  i in enumerate(json_copy['objects']):
+        if 'objects' in i.keys():
+            dict_rec(i)
+        if i['type']== 'textbox':
+            text = i['text']
+            total_sent.append(text)
+    return total_sent
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def Designerwordcount(request):
+    canvas_trans_json_id=request.query_params.get('canvas_trans_json_id')
+    design_instance = CanvasTranslatedJson.objects.get(id=canvas_trans_json_id)
+    total_sent=[]
+    for i in design_instance.canvas_design.canvas_json_src.all():
+         total_sent.extend(dict_rec(i.json))
+    wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
+                                                        prompt_string_list= total_sent)
+    TaskDetails.objects.get_or_create(task = design_instance.job,
+                                      project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(len(" ".join(total_sent)))})
+
  ######################################################canvas______download################################
 
 
