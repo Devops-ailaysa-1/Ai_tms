@@ -57,7 +57,6 @@ from django.core.cache import cache
 import functools
 
 
-
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -857,6 +856,7 @@ class Job(models.Model):
         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,\
         related_name="project_jobs_set",)
+    
     job_id =models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
 
@@ -1314,6 +1314,8 @@ class Task(models.Model):
             try:
                 if self.job.project.project_type_id == 5:
                     cached_value = "ExpressEditor"
+                elif self.job.project.project_type_id == 7:
+                    cached_value = "Designer"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:
@@ -1350,7 +1352,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project:
+                if self.job.project.glossary_project or self.job.project.project_type == 7:
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})

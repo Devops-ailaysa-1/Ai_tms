@@ -6,7 +6,8 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
                     TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
-                    ApiProvider,ApiService ,ImageGeneratorResolution,DocumentType,Suggestion,SuggestionType)
+                    ApiProvider,ApiService ,ImageGeneratorResolution,DocumentType,ImageCategories,FontData,FontFamily,FontLanguage,
+                    SocialMediaSize,DesignShape,Suggestion,SuggestionType,DesignShapeCategory)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -76,7 +77,7 @@ admin.site.register(MTLanguageLocaleVoiceSupport)
 # admin.site.register(SubscriptionFeatures)
 admin.site.register(CreditsAddons)
 admin.site.register(CreditAddonPrice)
-admin.site.register(Suggestion)
+admin.site.register(Suggestion) 
 admin.site.register(SuggestionType)
 #admin.site.register(IndianStates)
 # admin.site.register(StripeTaxId)
@@ -112,3 +113,10 @@ admin.site.register(AiCustomize)
 admin.site.register(PromptFields)
 admin.site.register(ImageGeneratorResolution)
 admin.site.register(DocumentType)
+admin.site.register(FontData)
+admin.site.register(FontFamily)
+admin.site.register(FontLanguage)
+admin.site.register(ImageCategories)
+admin.site.register(SocialMediaSize)
+admin.site.register(DesignShape)
+admin.site.register(DesignShapeCategory)
