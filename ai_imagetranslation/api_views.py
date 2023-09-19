@@ -32,7 +32,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     filter_backends = [DjangoFilterBackend]
     permission_classes = [IsAuthenticated,]
     page_size=20
-    search_fields = ['file_name','type' ,'height','width']
+    search_fields = ['file_name','types' ,'height','width']
     def get_object(self, pk):
         try:
             return Imageload.objects.get(id=pk)
