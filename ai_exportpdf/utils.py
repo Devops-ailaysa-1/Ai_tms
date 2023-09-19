@@ -7,6 +7,7 @@ from celery.decorators import task
 from celery import shared_task
 from django.contrib.auth import settings
 from django.http import HttpResponse
+from rest_framework.response import Response
 from google.cloud import vision_v1, vision
 from google.oauth2 import service_account
 from pdf2image import convert_from_path
@@ -105,13 +106,13 @@ def convertiopdf2docx(id ,language,ocr = None ):
         file_format,page_length =  file_pdf_check(fp,id)
         # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
+
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
         print({"result":"Error during input file fetching: couldn't connect to host"})
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         try:
-            
             while (requests.get(url = get_url).json()['data']['step'] != 'finish'): # \
                 # and  (requests.get(url = get_url).json()['status'] != 'ok') \
                 #     and (requests.get(url = get_url).json()['code'] != 200):
@@ -146,26 +147,31 @@ def convertiopdf2docx(id ,language,ocr = None ):
 
 
 import tempfile
+from celery_progress.backend import ProgressRecorder
 #########ocr ######
 @task(queue='default')
 def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
-    user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
     start = time.time()
+    print(start)
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
     pdf_len = pdf.getNumPages()
+    print("pdf_len")
     try:
         no_of_page_processed_counting = 0
-        txt_field_obj.pdf_no_of_page = int(pdf_len)
-        doc = docx.Document()
+        txt_field_obj.pdf_no_of_page=int(pdf_len)
+        doc=docx.Document()
+        progress_recorder=ProgressRecorder(self)
+        print("inst try")
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-                print("Text after preprocess------------>",text)
+                progress_recorder.set_progress(i+1,pdf_len,description='pdf_converting')
                 if i == 1:
                     all_text = doc.add_paragraph(text)
                 else:
@@ -176,8 +182,10 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-        logger.info('finished ocr and saved as docx ,file_name: ' )
+        print("outside try")
+        progress_recorder.set_progress(pdf_len+1, pdf_len+1, "pdf_convert_completed")
  
+        logger.info('finished ocr and saved as docx ,file_name:')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
@@ -186,21 +194,19 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
-        txt_field_obj.pdf_api_use = "google-ocr"
-        txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
+        txt_field_obj.pdf_api_use="google-ocr"
+        txt_field_obj.docx_file_name=str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
- 
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"
         txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp , id ) 
-        # file_format,page_length = pdf_text_check(fp)
-        consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
-        user_credit.credits_left = user_credit.credits_left + consum_cred
-        user_credit.save()
+        # file_format,page_length=file_pdf_check(fp,id) 
+        # consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+        # user_credit.credits_left=user_credit.credits_left + consum_cred
+        # user_credit.save()
         print("pdf_conversion_something went wrong")
  
 def google_ocr_pdf():
@@ -287,6 +293,9 @@ def project_pdf_conversion(id):
     file_format,page_length = file_pdf_check(task_details.file.file.path,id)
 
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+    
+    # print("consumable_credits",consumable_credits)
+    # consumable_credits=1000
     if initial_credit > consumable_credits:
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)

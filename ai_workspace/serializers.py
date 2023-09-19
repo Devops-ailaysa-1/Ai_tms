@@ -35,6 +35,7 @@ from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache
+from ai_canvas.models import CanvasTranslatedJson
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -247,15 +248,17 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			}
 		}
 	def run_validation(self, data):
+		# data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
+		# 	target_language} for target_language in data.get("target_languages", [])]
 		# print("run_validation")
 		return super().run_validation(data=data)
 
 	def to_representation(self, instance):
 		ret = super().to_representation(instance)
-		ret["jobs"] = {
-			"source_language": ret.pop("source_language"),
-			"target_languages": ret.pop("target_languages")
-		}
+		# ret["jobs"] = {
+		# 	"source_language": ret.pop("source_language"),
+		# 	"target_languages": ret.pop("target_languages")
+		# }
 		return  ret
 
 	def is_valid(self, *args, **kwargs):
@@ -1075,6 +1078,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
+	canvas_project = serializers.SerializerMethodField()
 	# open_in =  serializers.SerializerMethodField()
 	# transcribed = serializers.SerializerMethodField()
 	# text_to_speech_convert_enable = serializers.SerializerMethodField()
@@ -1090,7 +1094,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",)
+			"converted_audio_file_exists","download_audio_output_file",'canvas_project',)
+
+
+	def get_canvas_project(self,obj):
+		if self.job.project.project_type_id == 7:
+			canvas_proj_obj = CanvasTranslatedJson.objects.get(job_id = obj.job.id).canvas_design_id
+			return canvas_proj_obj
+		else:return None
 
 
 	def get_bid_job_detail_info(self,obj):
