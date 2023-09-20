@@ -1583,18 +1583,15 @@ class DocumentToFile(views.APIView):
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
-                        if split_seg.target:
-                            target += self.remove_tags(split_seg.target)
-                        elif split_seg.temp_target:
+                        if split_seg.temp_target:
                             target += self.remove_tags(split_seg.temp_target)
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
                     worksheet.write(row, 1, target, cell_format)
                     row += 1
                 # For normal segments
                 else:
-                    target = segment.target if segment.target else segment.temp_target
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, self.remove_tags(target), cell_format)
+                    worksheet.write(row, 1, self.remove_tags(segment.temp_target), cell_format)
                     row += 1
         workbook.close()
 
@@ -2906,25 +2903,20 @@ def segments_with_target(document_id):
         # If the segment is merged
         if (i.get("is_merged") == True and i.get("is_merge_start")):
             merge_obj = MergeSegment.objects.get(id=i.get("segment_id"))
-            if merge_obj.target!=None:
-                data.append(remove_tags(merge_obj.target))
-            elif merge_obj.temp_target!=None:
+            if merge_obj.temp_target!=None:
                 data.append(remove_tags(merge_obj.temp_target))
+                
 
         # If the segment is split
         elif i.get("is_split") == True:
             split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
             for split_seg in split_segs:
-                if split_seg.target!=None:
-                    data.append(remove_tags(split_seg.target))
-                elif split_seg.temp_target!=None:
+                if split_seg.temp_target!=None:
                     data.append(remove_tags(split_seg.temp_target))
 
         # Normal segment
         else:
-            if i.get('target')!=None:
-                data.append(remove_tags(i.get('target')))
-            elif i.get('temp_target')!=None:
+            if i.get('temp_target')!=None:
                 data.append(remove_tags(i.get('temp_target')))
 
     #print("############",data)
