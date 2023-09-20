@@ -114,7 +114,7 @@ def dict_rec(canvas_json_copy,languages,src_lang):
     else:
         for count, i in enumerate(canvas_json_copy['objects']):
             if 'objects' in i.keys():
-                dict_rec(i,languages)
+                dict_rec(i,languages,src_lang)
             if i['type']== 'textbox':
                 text = i['text']
                 fontSize=canvas_json_copy['objects'][count]['fontSize']
