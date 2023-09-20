@@ -1088,6 +1088,7 @@ from ai_canvas.models import CanvasTranslatedJson
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
+
 def dict_rec(json_copy):
     total_sent = []
     if 'template_json' in  json_copy.keys():
@@ -1120,6 +1121,7 @@ def Designerwordcount(request):
                                       project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
     ser = TaskDetailSerializer(task_det_instance)
     return Response(ser.data)
+
  ######################################################canvas______download################################
 
 
