@@ -3,6 +3,8 @@ from ai_staff.models import Languages ,LanguagesLocale
 from ai_auth.models import AiUser
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
+from ai_workspace.models import Project,Job
+
 def user_directory_path_image_load(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_load/",filename)
 
@@ -36,11 +38,9 @@ class Imageload(models.Model):
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
 
-
-
-
 class ImageTranslate(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="image_translate_project")
     image_load=models.ForeignKey(Imageload,on_delete=models.SET_NULL,blank=True,null=True, related_name='s_lang')
     image=models.FileField(upload_to=user_directory_path_image_translate_image,blank=True,null=True)
     project_name=models.CharField(max_length=2000,blank=True,null=True)
@@ -53,7 +53,7 @@ class ImageTranslate(models.Model):
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process,blank=True,null=True)
     source_canvas_json=models.JSONField(blank=True,null=True)
     source_bounding_box=models.JSONField(blank=True,null=True)
-    source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
+    source_language_for_translate=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     # thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
@@ -81,7 +81,9 @@ def user_directory_path_image_translate_process_target(instance, filename):
 
 class ImageInpaintCreation(models.Model):
     source_image=models.ForeignKey(to=ImageTranslate,blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
+    source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang_inpaint')
     target_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,related_name='t_lang')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, null=True, blank=True,related_name="image_translation_job")
     target_canvas_json=models.JSONField(blank=True,null=True) ############
     target_bounding_box=models.JSONField(blank=True,null=True)  ################
     thumbnail=models.FileField(upload_to=user_directory_path_image_translate_thumbnail,blank=True,null=True) ############
