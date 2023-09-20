@@ -172,7 +172,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def create(self,validated_data):
         req_host=self.context.get('request', HttpRequest()).get_host()
-        
+        my_temp=validated_data.pop('my_temp',None)
         source_json_file=validated_data.pop('source_json_file',None)
         thumbnail_src=validated_data.pop('thumbnail_src',None)
         export_img_src=validated_data.pop('export_img_src',None)
@@ -356,6 +356,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         next_page=validated_data.get('next_page',None)
         duplicate=validated_data.get('duplicate',None)
+        my_temp=validated_data.pop('my_temp',None)
         update_new_textbox=validated_data.get('update_new_textbox',None)
         social_media_create=validated_data.get('social_media_create',None)
         width=validated_data.get('width',None)
@@ -427,8 +428,18 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if duplicate and src_page:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            pages = len(instance.canvas_json_src.all())
+            page=pages+1
+            src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
-    
+
+            for count,src_js in enumerate(instance.canvas_json_src.all()):
+                src_js.json['projectid']['pages']=pages+1
+                src_js.json['projectid']['page']=count+1
+                src_js.save()
+
+
         if tar_page and canvas_translation and target_canvas_json:
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
@@ -485,6 +496,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
                 src_js.save()
+        
+        if my_temp:
+            pass
+
         return super().update(instance=instance, validated_data=validated_data)
 
 
