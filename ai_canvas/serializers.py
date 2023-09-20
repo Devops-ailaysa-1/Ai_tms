@@ -194,8 +194,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
 
-        if not social_media_create:
-            raise serializers.ValidationError('no social_media_resolution')
+        # if not social_media_create:
+        #     raise serializers.ValidationError('no social_media_resolution')
 
         if temp_global_design and new_project:
             width=temp_global_design.category.width
