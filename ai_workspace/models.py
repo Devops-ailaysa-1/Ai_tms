@@ -287,7 +287,8 @@ class Project(models.Model):
             if des_obj: 
                 des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design'}
             else:
-                img_trans_obj = ImageTranslate.objects.none()#filter(project=self)
+                img_trans_obj = ImageTranslate.objects.filter(project=self)
+                print("IMage------------->",img_trans_obj)
                 if img_trans_obj:
                     des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate'}
         return des_proj_detail
