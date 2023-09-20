@@ -23,6 +23,9 @@ tms
 tmsenv
 venv/
 *.json
+*.ttf
+*.pdf
+ai_canvas/ICC_profile
 ai_tms/local_settings.py
 AiWorkspace.postman_collection.json
 AiWorkspace.postman_collection.json
