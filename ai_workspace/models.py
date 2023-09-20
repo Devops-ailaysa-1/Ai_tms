@@ -564,16 +564,12 @@ class Project(models.Model):
 
     @property
     def is_proj_analysed(self):
-        cache_key = f'pr_proj_analysed_{self.id}'
-        cached_value = cache.get(cache_key)
-        if cached_value is None:
-            if self.is_all_doc_opened:
-                cached_value = True
-            elif self.get_analysis_tasks.count() == self.task_project.count() and self.get_analysis_tasks.count() != 0:
-                cached_value = True
-            else:
-                cached_value = False
-            cache.set(cache_key,cached_value)
+        if self.is_all_doc_opened:
+            cached_value = True
+        elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+            cached_value = True
+        else:
+            cached_value = False
         return cached_value
 
     @property
@@ -671,7 +667,7 @@ class Project(models.Model):
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
-    
+        #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
             return analysed_true(self,tasks)
 
@@ -1901,7 +1897,7 @@ class TaskDetails(models.Model):
         cache_keys=[
             f'task_word_count_{self.task.pk}',
             f'task_char_count_{self.task.pk}',
-            f'pr_proj_analysed_{self.project.id}',
+            f'pr_proj_analysed_{self.task.job.project.id}',
         ]
         return cache_keys
 post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
@@ -2277,7 +2273,25 @@ class ExpressProjectAIMT(models.Model):
     #             return "Completed"
     #         else:
     #             return "In Progress"
-
+    # @property
+    # def is_proj_analysed(self):
+    #     print("RR---------->",self.get_analysis_tasks.count())
+    #     print("RT----------->",self.task_project.count())
+    #     print("Rs-------------->",self.is_all_doc_opened)
+    #     cache_key = f'pr_proj_analysed_{self.id}'
+    #     cached_value = cache.get(cache_key)
+    #     print("CC---------->",cached_value)
+    #     if cached_value is None:
+    #         if self.is_all_doc_opened:
+    #             cached_value = True
+    #         elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+    #             print("ININIJ")
+    #             cached_value = True
+    #         else:
+    #             cached_value = False
+    #         cache.set(cache_key,cached_value)
+    #     print("ER-------------->",cached_value)
+    #     return cached_value
 
      # if not self.ai_project_id:
             #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)

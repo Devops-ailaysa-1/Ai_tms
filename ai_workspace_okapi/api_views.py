@@ -632,6 +632,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
+        print("PageSe----------->",page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
@@ -3092,8 +3093,9 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError
 
 from nltk.corpus import stopwords
-# nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
+#nltk.download('stopwords')
+#stop_words = set(stopwords.words('english'))
+stop_words = None
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
