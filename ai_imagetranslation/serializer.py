@@ -16,7 +16,7 @@ from ai_imagetranslation.utils import background_remove,background_merge ,create
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 import io
- 
+from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv('HOST_NAME')
 
 
@@ -123,7 +123,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
-            representation['source_language']=instance.source_language.language.id 
+            representation['source_language']=instance.source_language_for_translate.language.id 
         if representation.get('image',None):
             representation['image']=instance.image.url
         if representation.get('mask',None):
@@ -143,6 +143,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         magic_erase=validated_data.pop('magic_erase')
+
+        project_type = ProjectType.objects.get(type='Image Translates')
+        default_step = Steps.objects.get(id=1)
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
+
+
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
             instance=ImageTranslate.objects.create(**data)
@@ -164,7 +171,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def target_check(self,instance,target_list,src_lang):
         for tar_lang in target_list:
             if ImageInpaintCreation.objects.filter(source_image=instance,target_language=tar_lang.locale.first(),
-                                                   source_image__source_language=src_lang).exists():
+                                                   source_image__source_language_for_translate=src_lang).exists():
                 raise serializers.ValidationError({"msg":"language pair already exists"})
     
     def img_trans(self,instance,inpaint_creation_target_lang,src_lang):
@@ -173,12 +180,19 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         tar_json_copy['background']="rgba(231,232,234,0)"
         for tar_lang in inpaint_creation_target_lang:
-            tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first()) 
+            print(src_lang , type(src_lang))
+
+            ##############job__creations#############
+
+            tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
+                                                         target_language=tar_lang.locale.first()) 
+            ########## job__creation #####
+            
             tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
-                    translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
+                    translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language_for_translate.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code)
                     i['text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -245,7 +259,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if src_lang :
-            instance.source_language = src_lang.locale.first()
+            instance.source_language_for_translate = src_lang.locale.first()
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
@@ -279,7 +293,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
             inpaint_creation_target_lang.append(src_lang)
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
-            # image_inpaint_create=ImageInpaintCreation.objects.create(source_image=instance,target_language=src_lang.locale.first(),target_canvas_json=basic_json_copy) 
+           
             # thumb_image=thumbnail_create(image_inpaint_create.target_canvas_json,formats='png')
             # thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
             # image_inpaint_create.thumbnail=thumb_image
@@ -288,9 +302,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             return instance
 
         if inpaint_creation_target_lang:
-            if not instance.source_language:
+            if not instance.source_language_for_translate:
                 raise serializers.ValidationError({'msg':'source language not selected'})
-            src_lang=instance.source_language
+            src_lang=instance.source_language_for_translate
             self.target_check(instance,inpaint_creation_target_lang,src_lang)
             self.img_trans(instance,inpaint_creation_target_lang,src_lang)
             instance.save()
@@ -364,7 +378,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
              
         if target_canvas_json and target_update_id:
             im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
-            if im_cre.source_image.source_language == im_cre.target_language:
+            if im_cre.source_image.source_language_for_translate == im_cre.target_language:
                 print("src and tar id are same")
                 im_cre.source_image.source_canvas_json=target_canvas_json
                 im_cre.save()
@@ -377,7 +391,7 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageTranslate
         fields=('id','width','height','project_name','updated_at','created_at','types',
-                'thumbnail','source_language','image_load','image')
+                'thumbnail','source_language_for_translate','image_load','image')
 
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:
