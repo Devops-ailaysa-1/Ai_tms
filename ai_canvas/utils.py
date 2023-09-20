@@ -93,55 +93,100 @@ def canva_group(_dict,src_lang ,lang):
             canva_group(grp_data['objects'])
 
 
-def designer_json_recursive(design_json):
-    pass
+def dict_rec(canvas_json_copy,languages,src_lang):
+ 
+    if 'template_json' in  canvas_json_copy.keys():
+        for count, i in enumerate(canvas_json_copy['template_json']['objects']):
+            if 'objects' in i.keys():
+                dict_rec(i,languages,src_lang)
+            if i['type']== 'textbox':
+                fontSize=canvas_json_copy['objects'][count]['fontSize']
+                tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = languages.strip())
+                canvas_json_copy['objects'][count]['text']=tar_word
+                canvas_json_copy['objects'][count]['rawMT']=tar_word
+                if languages == 'ar':
+                    # canvas_json_copy['objects'][count]['direction']='rtl'
+                    canvas_json_copy['objects'][count]['textAlign']="right"
+                text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                canvas_json_copy['objects'][count]['fontSize']=font_size
+ 
+    else:
+        for count, i in enumerate(canvas_json_copy['objects']):
+            if 'objects' in i.keys():
+                dict_rec(i,languages)
+            if i['type']== 'textbox':
+                text = i['text']
+                fontSize=canvas_json_copy['objects'][count]['fontSize']
+                tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = languages.strip())
+                canvas_json_copy['objects'][count]['text']=tar_word
+                canvas_json_copy['objects'][count]['rawMT']=tar_word
+                if languages == 'ar':
+                    # canvas_json_copy['objects'][count]['direction']='rtl'
+                    canvas_json_copy['objects'][count]['textAlign']="right"
+                text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+                font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+                canvas_json_copy['objects'][count]['fontSize']=font_size
+ 
+    return canvas_json_copy
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
-    false = False
-    null = 'null'
-    true = True
     languages = languages.split(",")
-    canvas_json_copy =copy.deepcopy(canvas_json)
-    # height=canvas_json_copy['height']
-    # width=canvas_json_copy['width']
     canvas_result = {}
     for lang in languages:
-        if 'template_json' in  canvas_json_copy.keys():
-            for count , i in enumerate(canvas_json_copy['template_json']['objects']):
-                if i['type']== 'textbox':
-                    text = i['text'] 
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
-                    tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
-                    canvas_json_copy['objects'][count]['text']=tar_word
-                    canvas_json_copy['objects'][count]['rawMT']=tar_word
-                    if lang == 'ar':
-                        # canvas_json_copy['objects'][count]['direction']='rtl'
-                        canvas_json_copy['objects'][count]['textAlign']="right"
-
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    canvas_json_copy['objects'][count]['fontSize']=font_size
-                if i['type'] == 'group':
-                    canva_group(i['objects'])
-        else:
-            for count , i in enumerate(canvas_json_copy['objects']):
-                if i['type']== 'textbox':
-                    text = i['text'] 
-                    fontSize=canvas_json_copy['objects'][count]['fontSize']
-                    tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
-                    canvas_json_copy['objects'][count]['text']=tar_word
-                    canvas_json_copy['objects'][count]['rawMT']=tar_word
-                    if lang == 'ar':
-                        # canvas_json_copy['objects'][count]['direction']='rtl'
-                        canvas_json_copy['objects'][count]['textAlign']="right"
-                    text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
-                    font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
-                    canvas_json_copy['objects'][count]['fontSize']=font_size
-                    if i['type'] == 'group':
-                        canva_group(i['objects'])
+        canvas_json_copy =copy.deepcopy(canvas_json)
+        canvas_json_copy = dict_rec(canvas_json_copy,lang,src_lang)
         canvas_result[lang] = canvas_json_copy
     return canvas_result
+    
+         
+
+# def canvas_translate_json_fn(canvas_json,src_lang,languages):
+#     false = False
+#     null = 'null'
+#     true = True
+#     languages = languages.split(",")
+#     canvas_json_copy =copy.deepcopy(canvas_json)
+#     # height=canvas_json_copy['height']
+#     # width=canvas_json_copy['width']
+#     canvas_result = {}
+#     for lang in languages:
+#         if 'template_json' in  canvas_json_copy.keys():
+#             for count , i in enumerate(canvas_json_copy['template_json']['objects']):
+#                 if i['type']== 'textbox':
+#                     text = i['text'] 
+#                     fontSize=canvas_json_copy['objects'][count]['fontSize']
+#                     tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code = lang.strip())
+#                     canvas_json_copy['objects'][count]['text']=tar_word
+#                     canvas_json_copy['objects'][count]['rawMT']=tar_word
+#                     if lang == 'ar':
+#                         # canvas_json_copy['objects'][count]['direction']='rtl'
+#                         canvas_json_copy['objects'][count]['textAlign']="right"
+
+#                     text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+#                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+#                     canvas_json_copy['objects'][count]['fontSize']=font_size
+#                 if i['type'] == 'group':
+#                     canva_group(i['objects'])
+#         else:
+#             for count , i in enumerate(canvas_json_copy['objects']):
+#                 if i['type']== 'textbox':
+#                     text = i['text'] 
+#                     fontSize=canvas_json_copy['objects'][count]['fontSize']
+#                     tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = lang.strip())
+#                     canvas_json_copy['objects'][count]['text']=tar_word
+#                     canvas_json_copy['objects'][count]['rawMT']=tar_word
+#                     if lang == 'ar':
+#                         # canvas_json_copy['objects'][count]['direction']='rtl'
+#                         canvas_json_copy['objects'][count]['textAlign']="right"
+#                     text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
+#                     font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
+#                     canvas_json_copy['objects'][count]['fontSize']=font_size
+#                     if i['type'] == 'group':
+#                         canva_group(i['objects'])
+#         canvas_result[lang] = canvas_json_copy
+#     return canvas_result
 
 
 def thumbnail_create(json_str,formats):

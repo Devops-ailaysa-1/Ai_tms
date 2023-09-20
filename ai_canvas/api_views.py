@@ -1088,6 +1088,7 @@ from ai_canvas.models import CanvasTranslatedJson
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
+
 def dict_rec(json_copy):
     total_sent = []
     if 'template_json' in  json_copy.keys():
