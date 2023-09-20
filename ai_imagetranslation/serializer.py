@@ -144,10 +144,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         magic_erase=validated_data.pop('magic_erase')
 
-        project_type = ProjectType.objects.get(type='Image Translates')
-        default_step = Steps.objects.get(id=1)
-        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
-        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
+        # project_type = ProjectType.objects.get(type='Image Translates')
+        # default_step = Steps.objects.get(id=1)
+        # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        # project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
 
 
         data={**validated_data ,'user':user}
