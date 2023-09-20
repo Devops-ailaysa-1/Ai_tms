@@ -1105,7 +1105,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			image_job = CanvasTranslatedJson.objects.filter(job_id = obj.job.id)
 			if image_job:
 				image_job_obj = image_job.last().id
-				image_proj_obj = image_job_obj.canvas_design_id
+				image_proj_obj = image_job.last().canvas_design_id
 				res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
 			else:
 				image_translation_job = ImageInpaintCreation.objects.filter(job_id=obj.job.id)
