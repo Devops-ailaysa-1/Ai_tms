@@ -127,7 +127,6 @@ def dict_rec(canvas_json_copy,languages,src_lang):
                 text_width, text_height=calculate_textbox_dimensions(text,fontSize,bold=False,italic=False)
                 font_size=calculate_font_size(text_width, text_height,tar_word,fontSize)
                 canvas_json_copy['objects'][count]['fontSize']=font_size
- 
     return canvas_json_copy
 
 

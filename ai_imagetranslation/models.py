@@ -81,6 +81,7 @@ def user_directory_path_image_translate_process_target(instance, filename):
 
 class ImageInpaintCreation(models.Model):
     source_image=models.ForeignKey(to=ImageTranslate,blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
+    source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     target_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,related_name='t_lang')
     target_canvas_json=models.JSONField(blank=True,null=True) ############
     target_bounding_box=models.JSONField(blank=True,null=True)  ################
