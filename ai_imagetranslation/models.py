@@ -41,7 +41,7 @@ class Imageload(models.Model):
 
 class ImageTranslate(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    image_load=models.ForeignKey(Imageload,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
+    image_load=models.ForeignKey(Imageload,on_delete=models.SET_NULL,blank=True,null=True, related_name='s_lang')
     image=models.FileField(upload_to=user_directory_path_image_translate_image,blank=True,null=True)
     project_name=models.CharField(max_length=2000,blank=True,null=True)
     types=models.CharField(max_length=10,blank=True,null=True)
