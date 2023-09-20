@@ -93,7 +93,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
     filterset_fields =['project_name','types']
-    search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
+    search_fields =['types','project_name','source_language_for_translate__language__language','s_im__target_language__language__language']
     page_size=20
     
     def get_object(self, pk):
@@ -139,12 +139,18 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             if 'mask_json' in request.POST.dict().keys():
                 for im in data:
                     im['mask_json']=json.loads(request.POST.dict()['mask_json'])
+                    if 'project_name' in request.POST.dict().keys():
+                        im['project_name'] = request.POST.dict()['project_name']
             serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
 
         elif canvas_asset_image_id:
-             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
-             data={'image':im_details.image,'image_load':im_details.id}
-             serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+            im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
+            data={'image':im_details.image,'image_load':im_details.id}
+            if 'mask_json' in request.POST.dict().keys():
+                data['mask_json']=json.loads(request.POST.dict()['mask_json'])
+            if 'project_name' in request.POST.dict().keys():
+                data['project_name'] = request.POST.dict()['project_name']
+            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
         else:
             return Response({'msg':"upload any image"})
              
@@ -208,17 +214,17 @@ def image_translation_project_view(request):
         res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')
         return res
     
-    elif language == image_instance.source_language.language.id:
+    elif language == image_instance.source_language_for_translate.language.id:
         if file_format == 'text':
             export_src=text_download(image_instance.source_canvas_json)
-            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language.language.language,"txt")
+            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language_for_translate.language.language,"txt")
         else:
-            img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
+            img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language_for_translate.language.language)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     
-    elif language and language != image_instance.source_language.language.id:
+    elif language and language != image_instance.source_language_for_translate.language.id:
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
         lang=image_instance.s_im.get(target_language__language__id=language).target_language.language.language
         if file_format == 'text':
@@ -230,7 +236,7 @@ def image_translation_project_view(request):
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     else:
-        image_download[image_instance.source_language.language.language] =image_instance.source_language.language.id
+        image_download[image_instance.source_language_for_translate.language.language] =image_instance.source_language_for_translate.language.id
         for i in image_instance.s_im.all():
             image_download[i.target_language.language.language]=i.target_language.language.id
         lang={**{"All":0},**image_download}
@@ -407,7 +413,34 @@ class AspectRatioViewSet(generics.ListCreateAPIView):
     serializer_class = AspectRatioSerializer
     pagination_class = None
 
+from ai_canvas.api_views import dict_rec
+from ai_workspace.models import TaskDetails
+from ai_workspace.serializers import TaskDetailSerializer
+from ai_openai.serializers import AiPromptSerializer
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ImageTranslatewordcount(request):
+    image_inpaint_creation_id=request.query_params.get('image_inpaint_creation_id')
+    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id)
+    total_sent=[]
+    source_json = image_inpaint_creation_instance.source_image.source_canvas_json
+    total_sent.append(dict_rec(source_json))
+    wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
+                                                        prompt_string_list= total_sent)
+    task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
+                                      project = image_inpaint_creation_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
+
+    ser = TaskDetailSerializer(task_det_instance)
+    return Response(ser.data)
+
+
+
+
+ 
+ 
+ 
+    
 
 
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):

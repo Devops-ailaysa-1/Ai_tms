@@ -476,7 +476,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if temp_global_design:
             src_json_page = temp_global_design.json #
-            pages = len(instance.canvas_json_src.all())+1
+            pages = len(instance.canvas_json_src.all())
             page=pages+1
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             thumbnail_page = self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
