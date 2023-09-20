@@ -87,6 +87,7 @@ def proz_connect(sender, instance, *args, **kwargs):
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
+    from ai_marketplace.models import ProzMessage
     
     if instance.socialaccount_set.filter(provider='proz'):
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
