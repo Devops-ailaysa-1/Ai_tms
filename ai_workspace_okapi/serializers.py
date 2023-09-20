@@ -175,7 +175,7 @@ class SegmentSerializerV2(SegmentSerializer):
         if instance.target == '' and instance.temp_target == '':
             print("In target empty")
             if (instance.text_unit.document.job.project.mt_enable == False)\
-            or status_id in [102,106,110]:
+            or status_id in [101,102,105,106,109,110]:
                 print("mt dable and manual confirm check")
                 user = instance.text_unit.document.doc_credit_debit_user
                 initial_credit = user.credit_balance.get("total_left")
