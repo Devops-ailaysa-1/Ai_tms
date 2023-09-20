@@ -278,19 +278,19 @@ class Project(models.Model):
     #     return cache_keys
 
     @property
-    def designer_project_id(self):
+    def designer_project_detail(self):
         from ai_canvas.models import CanvasDesign
         from ai_imagetranslation.models import ImageTranslate
-        des_proj_id = None
+        des_proj_detail = None
         if self.project_type_id == 6:
             des_obj = CanvasDesign.objects.filter(project = self)
             if des_obj: 
-                des_proj_id = des_obj.last().id
+                des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design'}
             else:
                 img_trans_obj = ImageTranslate.objects.none()#filter(project=self)
                 if img_trans_obj:
-                    des_proj_id = img_trans_obj.last().id
-        return des_proj_id
+                    des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate'}
+        return des_proj_detail
 
     @property
     def ref_files(self):
