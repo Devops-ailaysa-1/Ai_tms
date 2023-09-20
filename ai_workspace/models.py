@@ -277,7 +277,20 @@ class Project(models.Model):
     #     ]
     #     return cache_keys
 
-
+    @property
+    def designer_project_id(self):
+        from ai_canvas.models import CanvasDesign
+        from ai_imagetranslation.models import ImageTranslate
+        des_proj_id = None
+        if self.project_type_id == 6:
+            des_obj = CanvasDesign.objects.filter(project = self)
+            if des_obj: 
+                des_proj_id = des_obj.last().id
+            else:
+                img_trans_obj = ImageTranslate.objects.none()#filter(project=self)
+                if img_trans_obj:
+                    des_proj_id = img_trans_obj.last().id
+        return des_proj_id
 
     @property
     def ref_files(self):
@@ -646,8 +659,6 @@ class Project(models.Model):
     @property
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
-
-
 
                             
     def project_analysis(self,tasks):
