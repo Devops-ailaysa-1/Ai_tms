@@ -672,12 +672,6 @@ class ImageCategories(models.Model):
     def __str__(self):
         return self.category
     
-class DesignShapeCategory(models.Model):
-    name=models.CharField(max_length=200,blank=True ,null=True) 
-
-    def __str__(self) -> str:
-        return self.name
-
 
 class DesignShapeCategory(models.Model):
     name=models.CharField(max_length=200,blank=True ,null=True) 

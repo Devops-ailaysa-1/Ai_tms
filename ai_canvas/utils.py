@@ -59,7 +59,6 @@ def json_src_change(json_src ,req_host,instance,text_box_save):
 
         if 'objects' in i.keys():
             json_src_change(i,req_host,instance,text_box_save=True)
- 
     return json_src
 
 
@@ -92,6 +91,10 @@ def canva_group(_dict,src_lang ,lang):
             grp_data['text'] = get_translation(1,source_string = grp_data['text'],source_lang_code=src_lang ,target_lang_code = lang.strip())
         if grp_data['type'] == 'group':
             canva_group(grp_data['objects'])
+
+
+def designer_json_recursive(design_json):
+    pass
 
 
 def canvas_translate_json_fn(canvas_json,src_lang,languages):
