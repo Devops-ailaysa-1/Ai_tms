@@ -655,7 +655,7 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks:
+        if not tasks or self.project_type_id == 6:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
@@ -1352,7 +1352,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project or self.job.project.project_type == 7:
+                if self.job.project.glossary_project or self.job.project.project_type_id == 6:
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
