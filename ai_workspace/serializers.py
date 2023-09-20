@@ -523,7 +523,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_id',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -1094,7 +1094,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'canvas_project',)
+			"converted_audio_file_exists","download_audio_output_file",'image_design_project',)
 
 
 	def get_image_design_project(self,obj):
