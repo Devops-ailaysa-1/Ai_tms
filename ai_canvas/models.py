@@ -139,6 +139,9 @@ def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
 def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "aidesign/mytemplatedesign/aidesign_exports_target/exports/",filename)
 
+
+
+
 class MyTemplateDesign(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     file_name=models.CharField(max_length=50,null=True,blank=True) 
@@ -148,6 +151,8 @@ class MyTemplateDesign(models.Model):
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True,related_name='project_cat_mytemplate')
      
+
+
 class MyTemplateDesignPage(models.Model):
     my_template_design=models.ForeignKey(MyTemplateDesign,related_name='my_template_page', on_delete=models.CASCADE)
     my_template_thumbnail=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
@@ -164,6 +169,9 @@ def user_directory_path_canvas_source_image_assets(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "aidesign/assets/sourceimage/",filename)
 
 
+
+
+
 class SourceImageAssetsCanvasTranslate(models.Model):
     canvas_design_img=models.ForeignKey(CanvasDesign , related_name='aidesign_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
     img = models.FileField(upload_to=user_directory_path_canvas_source_image_assets,blank=True,null=True)
@@ -178,6 +186,9 @@ class TemplateKeyword(models.Model):
 
 def user_directory_path_font_file(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "aidesign/font_file/fonts/",filename)
+
+
+
 
 class FontFile(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
@@ -202,6 +213,8 @@ class CanvasDownloadFormat(models.Model):
         return self.format_name
     
 
+
+
 class CanvasSourceUpdate(models.Model):
     text_id=models.CharField(max_length=300,null=True,blank=True)
     # translate_text=models.CharField(max_length=2000,null=True,blank=True)
@@ -213,7 +226,8 @@ class CanvasSourceUpdate(models.Model):
         source_text= "" if not self.source_text else self.source_text
         # translate_text= "" if not self.translate_text else self.translate_text
         return self.text_id+"--"+source_text+"--"+prev_text
-    
+
+
 
 class TextboxUpdate(models.Model):
     canvas=models.ForeignKey(CanvasDesign,related_name='canvas_text_box', on_delete=models.CASCADE)
@@ -237,7 +251,9 @@ class EmojiCategory(models.Model):
             return self.name
         else:
             return ""
-        
+
+
+
 class EmojiData(models.Model):
     emoji_cat=models.ForeignKey(EmojiCategory,on_delete=models.CASCADE,related_name='emoji_cat_data')
     emoji_name=models.CharField(max_length=300,null=True,blank=True)
