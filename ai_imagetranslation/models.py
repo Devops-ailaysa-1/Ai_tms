@@ -35,10 +35,13 @@ class Imageload(models.Model):
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
-    
+
+
+
+
 class ImageTranslate(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    image_load=models.ForeignKey(Imageload,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
+    image_load=models.ForeignKey(Imageload,on_delete=models.SET_NULL,blank=True,null=True, related_name='s_lang')
     image=models.FileField(upload_to=user_directory_path_image_translate_image,blank=True,null=True)
     project_name=models.CharField(max_length=2000,blank=True,null=True)
     types=models.CharField(max_length=10,blank=True,null=True)
@@ -117,6 +120,8 @@ class BackgroundRemovel(models.Model):
     def __str__(self) -> str:
         return self.image_json_id+'----'+self.image_url
     
+
+
 class BackgroundRemovePreviewimg(models.Model):
     back_ground_remove=models.ForeignKey(BackgroundRemovel,on_delete=models.CASCADE,related_name="back_ground_rm_preview_im")
     image_url=models.URLField(blank=True,null=True)
@@ -179,6 +184,9 @@ class StableDiffusionAPI(models.Model):
 #     custom_image_style=models.ForeignKey(ImageStyleCategories,on_delete=models.CASCADE,related_name="style_category")
 #     custom_style_name=models.CharField(max_length=200,blank=True,null=True)
 #     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
+
+
+
 
 class GeneralPromptList(models.Model):
     prompt=models.TextField()
