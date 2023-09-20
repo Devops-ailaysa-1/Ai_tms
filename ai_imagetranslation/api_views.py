@@ -94,8 +94,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     filter_backends = [DjangoFilterBackend]
     filterset_fields =['project_name','types']
     search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
- 
     page_size=20
+    
     def get_object(self, pk):
         try:
             return ImageTranslate.objects.get(id=pk)

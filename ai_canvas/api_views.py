@@ -327,18 +327,19 @@ class CanvasDesignViewset(viewsets.ViewSet):
             return Response({'msg':'deleted successfully'},status=200)
  
 class CustomPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 20
     page_size_query_param = 'page_size'
 
 class CustomSocialMediaSizePagination(PageNumberPagination):
     page_size = 30
     page_size_query_param = 'page_size'
 
-class CanvasDesignListViewset(viewsets.ViewSet,CustomPagination):
-    pagination_class = CanvasDesignListViewsetPagination
+class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
+    # pagination_class = CanvasDesignListViewsetPagination
     permission_classes = [IsAuthenticated,]
     search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
     filter_backends = [DjangoFilterBackend]
+    page_size = 20
 
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
@@ -606,7 +607,7 @@ class FontFamilyFilter(django_filters.FilterSet):
  
  
 class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
-    pagination_class = CustomPagination
+    
     page_size = 20
     def lang_fil(self,request):
         f_lang=FontLanguage.objects.get(id=request.GET['language'])
@@ -832,7 +833,6 @@ def image_list(request):
 
 class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    pagination_class = CustomPagination
     page_size = 20
     def create(self,request):
         print("request.data",request.POST.dict())
@@ -863,7 +863,6 @@ class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
 
 class CategoryWiseGlobaltemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
-    pagination_class = CustomPagination
     page_size = 20
     filter_backends = [DjangoFilterBackend]
  
@@ -1391,8 +1390,7 @@ def Designerwordcount(request):
 #     return template_data
 
 from ai_canvas.serializers import DesignerListSerializer
-class DesignerListViewset(viewsets.ViewSet,CustomPagination):
-    pagination_class = CanvasDesignListViewsetPagination
+class DesignerListViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     search_fields =['file_name',"canvas_translate__target_language__language__language","canvas_translate__source_language__language__language"]
     filter_backends = [DjangoFilterBackend]
@@ -1473,9 +1471,10 @@ def designer_asset_create(request):
 
 
 
-class AssetImageViewset(viewsets.ViewSet,CustomPagination):
+class AssetImageViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
+    
 
     def list(self,request):
         queryset = AssetImage.objects.all().order_by('-id')
