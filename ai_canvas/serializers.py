@@ -430,7 +430,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             pages = len(instance.canvas_json_src.all())
             page=pages+1
-            can_src.json=src_json_page
+            src_json_page=can_src.json
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
 
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
