@@ -1098,7 +1098,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_canvas_project(self,obj):
-		if obj.job.project.project_type_id == 7:
+		print("Type--------->",obj.job.project.project_type_id)
+		if obj.job.project.project_type_id == 6: #Designer Project
 			canvas_proj_obj = CanvasTranslatedJson.objects.get(job_id = obj.job.id).canvas_design_id
 			return canvas_proj_obj
 		else:return None

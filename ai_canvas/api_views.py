@@ -1117,8 +1117,8 @@ def Designerwordcount(request):
          total_sent.extend(dict_rec(i.json))
     wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
                                                         prompt_string_list= total_sent)
-    task_det_instance=TaskDetails.objects.get_or_create(task = design_instance.job,
-                                      project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(len(" ".join(total_sent)))})
+    task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
+                                      project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
     ser = TaskDetailSerializer(task_det_instance)
     return Response(ser.data)
  ######################################################canvas______download################################
