@@ -170,29 +170,30 @@ class SegmentSerializerV2(SegmentSerializer):
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
         print("Seg-His-Create--------------->",seg_his_create)
-        if "target" in validated_data:
-            print("Inside if target")
-            if instance.target == '':
-                print("In target empty")
-                if (instance.text_unit.document.job.project.mt_enable == False)\
-                or status_id in [102,106,110]:
-                    print("mt dable and manual confirm check")
-                    user = instance.text_unit.document.doc_credit_debit_user
-                    initial_credit = user.credit_balance.get("total_left")
-                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                    consumable = max(round(consumable_credits/3),1) 
-                    if initial_credit < consumable:
-                        raise serializers.ValidationError("Insufficient Credits")
-                    else:
-                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
-                        print("Credit Debited",status_code)
-            res = super().update(instance, validated_data)
-            instance.temp_target = instance.target
+        # if "target"  in validated_data:
+        #     print("Inside if target")
+        if instance.target == '' and instance.temp_target == '':
+            print("In target empty")
+            if (instance.text_unit.document.job.project.mt_enable == False)\
+            or status_id in [102,106,110]:
+                print("mt dable and manual confirm check")
+                user = instance.text_unit.document.doc_credit_debit_user
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                consumable = max(round(consumable_credits/3),1) 
+                if initial_credit < consumable:
+                    raise serializers.ValidationError("Insufficient Credits")
+                else:
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+                    print("Credit Debited",status_code)
+        res = super().update(instance, validated_data)
+        if instance.target != '':
+            instance.temp_target = instance.target 
             instance.save()
-            self.update_task_assign(task_obj,user_1,status_id)
-            if seg_his_create:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
-            return res
+            # self.update_task_assign(task_obj,user_1,status_id)
+            # if seg_his_create:
+            #     SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
+            #return res
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
