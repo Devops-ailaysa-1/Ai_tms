@@ -926,7 +926,7 @@ def credit_check_blog(request):
         if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         else:
-            return Response({'msg':'sufficient Credits'},code=200)
+            return Response({'msg':'sufficient Credits'},status=200)
 
             
 

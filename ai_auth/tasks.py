@@ -712,7 +712,7 @@ def count_update(job_id):
 
 
 @task(queue='high-priority')
-def mt_raw_update(task_id):
+def mt_raw_update(task_id,segments):
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -727,12 +727,15 @@ def mt_raw_update(task_id):
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-    segments = task.document.segments_for_find_and_replace
-    merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
-    split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+    if segments == None:
+        segments = task.document.segments_for_find_and_replace
+        merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
+        split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+        final_segments = list(chain(segments, merge_segments, split_segments))
+    else:
+        final_segments = segments
 
-    final_segments = list(chain(segments, merge_segments, split_segments))
-
+    print("SEGS--------------------->",final_segments)
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     

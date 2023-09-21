@@ -35,7 +35,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     search_fields = ['file_name','types' ,'height','width']
     def get_object(self, pk):
         try:
-            return Imageload.objects.get(id=pk)
+            return Imageload.objects.get(user=self.request.user, id=pk)
         except Imageload.DoesNotExist:
             raise Http404
         
@@ -68,12 +68,12 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
-        query_set = Imageload.objects.get(id = pk)
-        serializer = ImageloadSerializer(query_set )
+        # query_set = Imageload.objects.get(id = pk)
+        serializer = ImageloadSerializer(obj )
         return Response(serializer.data)
     
     def delete(self,request,pk):
-        query_obj = Imageload.objects.get(id = pk)
+        query_obj = Imageload.objects.get(user=request.user,id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -98,7 +98,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     
     def get_object(self, pk):
         try:
-            return ImageTranslate.objects.get(id=pk)
+            return ImageTranslate.objects.get(user=self.request.user ,id=pk)
         except ImageTranslate.DoesNotExist:
             raise Http404
         
@@ -117,9 +117,9 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
 
     def retrieve(self,request,pk):
-        # obj =self.get_object(pk)
-        query_set = ImageTranslate.objects.get(id = pk)
-        serializer = ImageTranslateSerializer(query_set )
+        obj =self.get_object(pk)
+        # query_set = ImageTranslate.objects.get(id = pk)
+        serializer = ImageTranslateSerializer(obj )
         return Response(serializer.data)
         
     def create(self,request):
@@ -175,8 +175,10 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.errors)
                     
     def delete(self,request,pk):
-        query_obj = ImageTranslate.objects.get(id = pk)
+        query_obj = ImageTranslate.objects.get(user=request.user, id = pk)
+        proj = query_obj.project
         query_obj.delete()
+        proj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 def create_image(json_page,file_format,export_size,page_number,language):
@@ -197,7 +199,7 @@ def image_translation_project_view(request):
     file_format = file_format.replace(" ","-") if file_format else ""
     file_format = format_extension_change(file_format)
     image_download={}
-    image_instance=ImageTranslate.objects.get(id=image_id)
+    image_instance=ImageTranslate.objects.get(user=request.user,id=image_id)
     if language==0:
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
@@ -284,7 +286,7 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
     
     def get_object(self, pk):
         try:
-            return BackgroundRemovel.objects.get(id=pk)
+            return BackgroundRemovel.objects.get(user=self.request.user,id=pk)
         except BackgroundRemovel.DoesNotExist:
             raise Http404
 
@@ -294,9 +296,9 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
-        # obj =self.get_object(pk)
-        query_set = BackgroundRemovel.objects.get(id = pk)
-        serializer = BackgroundRemovelSerializer(query_set )
+        obj =self.get_object(pk)
+        # query_set = BackgroundRemovel.objects.get(id = pk)
+        serializer = BackgroundRemovelSerializer(obj)
         return Response(serializer.data)
     
         
@@ -331,7 +333,7 @@ model_list = ['stability','stable_diffusion_api']
 @permission_classes([IsAuthenticated])
 def download_ai_image_generated_file_stable(request,id):
     try:
-        file = StableDiffusionAPI.objects.get(id=id).image 
+        file = StableDiffusionAPI.objects.get(user=request.user,id=id).image 
         file_format=file.path.split(".")[-1]
         file_name=file.path.split("/")[-1]
         return download_file_canvas(file,mime_type[file_format.lower()],file_name)
@@ -353,7 +355,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
     def retrieve(self,request,pk):
-        query_set = StableDiffusionAPI.objects.get(id = pk)
+        query_set = StableDiffusionAPI.objects.get(user=request.user, id = pk)
         serializer = StableDiffusionAPISerializer(query_set )
         return Response(serializer.data)
     
@@ -377,6 +379,7 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+####view for all user#### 
 
 class CustomImageGenerationStyleListView(generics.ListCreateAPIView):
     queryset = CustomImageGenerationStyle.objects.all()
@@ -422,7 +425,7 @@ from ai_openai.serializers import AiPromptSerializer
 @permission_classes([IsAuthenticated])
 def ImageTranslatewordcount(request):
     image_inpaint_creation_id=request.query_params.get('image_inpaint_creation_id')
-    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id)
+    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(user=request.user,id=image_inpaint_creation_id)
     total_sent=[]
     source_json = image_inpaint_creation_instance.source_image.source_canvas_json
     total_sent.append(dict_rec(source_json))
