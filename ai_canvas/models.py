@@ -1,5 +1,4 @@
 from django.db import models
-
 # Create your models here.
 from ai_workspace.models import Project,Job
 from ai_staff.models import Languages ,LanguagesLocale,SocialMediaSize
@@ -59,6 +58,7 @@ class CanvasDesign(models.Model):
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='canvasdesign_created_by')  
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True)
 

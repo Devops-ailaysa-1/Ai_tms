@@ -94,6 +94,7 @@ class LanguagesLocaleViewset(viewsets.ViewSet):
         serializer = LocaleSerializer(queryset,many=True)
         return Response(serializer.data)
 
+######viewed by all#############
 class CanvasTemplateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
 
@@ -110,6 +111,7 @@ class CanvasTemplateViewset(viewsets.ViewSet):
 
     def create(self,request):
         thumbnail = request.FILES.get('thumbnail')
+
         serializer = CanvasTemplateSerializer(data={**request.POST.dict(),'thumbnail':thumbnail})
         if serializer.is_valid():
             serializer.save()
@@ -131,7 +133,7 @@ class CanvasTemplateViewset(viewsets.ViewSet):
         
     def destroy(self,request,pk):
         try:
-            obj = CanvasTemplates.objects.get(id=pk)
+            obj = CanvasTemplates.objects.get(user=request.user,id=pk)
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
         except:
@@ -147,7 +149,6 @@ def image_check(image_path):
 class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
-    
     def list(self, request):
         ids=[canvas_in.id for canvas_in in CanvasUserImageAssets.objects.filter(user=request.user.id) if image_check(canvas_in.image.path)]
         queryset=CanvasUserImageAssets.objects.filter(id__in=ids).order_by("-id")
@@ -164,7 +165,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
     def get_object(self, pk):
         try:
-            return CanvasUserImageAssets.objects.get(id=pk)
+            return CanvasUserImageAssets.objects.get(self.request.user,id=pk)
         except CanvasUserImageAssets.DoesNotExist:
             raise Http404
 
@@ -207,7 +208,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
         
     def destroy(self,request,pk):
         try:
-            obj = CanvasUserImageAssets.objects.get(id=pk)
+            obj = CanvasUserImageAssets.objects.get(user=request.user,id=pk)
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
         except:
@@ -242,7 +243,18 @@ def page_no_update(can_page,is_update,page_len):
 #             src_json['projectid']['pages']=page_len
 #             i.json=src_json
 #             i.save()
-
+# elif tar_page_no and tar_lang:
+#     CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no=tar_page_no).delete()
+#     can_page=CanvasTargetJsonFiles.objects.filter(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no__gt=tar_page_no)
+#     for i in can_page:
+#         updated_page_no=int(i.page_no)-1
+#         tar_json=copy.deepcopy(i.json)
+#         i.page_no = updated_page_no
+#         tar_json['projectid']['page']=updated_page_no
+#         tar_json['projectid']['pages']=len(can_page)
+#         i.json=tar_json
+#         i.save()
+    # return Response({'msg':'deleted successfully'},status=200)
 
 
 class CanvasDesignViewset(viewsets.ViewSet):
@@ -250,12 +262,13 @@ class CanvasDesignViewset(viewsets.ViewSet):
 
     def get_object(self, pk):
         try:
-            return CanvasDesign.objects.get(id=pk)
+            return CanvasDesign.objects.get(user=self.request.user,id=pk)
         except CanvasDesign.DoesNotExist:
             raise Http404
 
     def create(self,request):
         thumbnail = request.FILES.get('thumbnail')
+        user = request.user.team.owner  if request.user.team  else request.user
         serializer = CanvasDesignSerializer(data=request.data,context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -284,8 +297,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
         src_page_no = request.query_params.get('src_page_no',None)
         tar_page_no = request.query_params.get('tar_page_no',None)
         tar_lang = request.query_params.get('tar_lang',None)
-        obj = CanvasDesign.objects.get(id=pk)
-        
+        obj = CanvasDesign.objects.get(user=request.user,id=pk)
+        project = obj.project
         if src_page_no:
             can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)
             if len(can_src_del)==1:
@@ -307,23 +320,12 @@ class CanvasDesignViewset(viewsets.ViewSet):
             page_no_update(can_page=can_page_last,is_update=True,page_len=total_page)
             can_page_first=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__lt=src_page_no)
             page_no_update(can_page=can_page_first,is_update=False,page_len=total_page)
+
             return Response({'msg':'deleted successfully'},status=200)
 
-        
-        # elif tar_page_no and tar_lang:
-        #     CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no=tar_page_no).delete()
-        #     can_page=CanvasTargetJsonFiles.objects.filter(canvas_trans_json__canvas_design=obj,canvas_trans_json__target_language=tar_lang,page_no__gt=tar_page_no)
-        #     for i in can_page:
-        #         updated_page_no=int(i.page_no)-1
-        #         tar_json=copy.deepcopy(i.json)
-        #         i.page_no = updated_page_no
-        #         tar_json['projectid']['page']=updated_page_no
-        #         tar_json['projectid']['pages']=len(can_page)
-        #         i.json=tar_json
-        #         i.save()
-            # return Response({'msg':'deleted successfully'},status=200)
         else:
             obj.delete()
+            project.delete()
             return Response({'msg':'deleted successfully'},status=200)
  
 class CustomPagination(PageNumberPagination):
@@ -365,7 +367,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
     #     return queryset
 
 
-
+# user = request.user.team.owner  if request.user.team  else request.user
 
 
 class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
@@ -403,7 +405,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
         return queryset   
     
     def destroy(self,request,pk):
-        MyTemplateDesign.objects.get(id=pk).delete()
+        MyTemplateDesign.objects.get(user=request.user,id=pk).delete()
         return Response({'msg':'deleted'})
     
 
@@ -491,7 +493,7 @@ def instant_canvas_translation(request):
     return Response({'translated_text_list':text_translation})
 
 ##################################
-
+#######view for all user#########
 class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
@@ -564,7 +566,7 @@ class FontFileViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
-        query_set=FontFile.objects.get(id = pk)
+        query_set=FontFile.objects.get(user=request.user,id = pk)
         serializer=FontFileSerializer(query_set )
         return Response(serializer.data)
         
@@ -589,7 +591,7 @@ class FontFileViewset(viewsets.ViewSet):
             return Response(serializer.errors)
         
     def delete(self,request,pk):
-        query_set=FontFile.objects.get(id=pk)
+        query_set=FontFile.objects.get(user=request.user,id=pk)
         query_set.delete()
         return Response(status=204)
 
@@ -605,7 +607,7 @@ class FontFamilyFilter(django_filters.FilterSet):
         queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
         return queryset
  
- 
+###########view for all user###########
 class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     
     page_size = 20
@@ -646,7 +648,9 @@ class FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         if response.data["previous"]:
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
-    
+
+
+###########view for all user ##############
 
 class SocialMediaSizeValueViewset(viewsets.ViewSet):
     def list(self,request):
@@ -661,6 +665,7 @@ class SocialMediaSizeCustom(viewsets.ViewSet):
         return Response(serializer.data)
      
 
+###########view for all user ##############
 
 class SocialMediaSizeViewset(viewsets.ViewSet,PageNumberPagination):
     filter_backends = [DjangoFilterBackend]
@@ -913,7 +918,6 @@ def format_extension_change(file_format):
 from PIL import Image
 def download__page(pages_list,file_format,export_size,page_number_list,lang,projecct_file_name ):
     format_ext = format_extension_change(file_format)
-    print(format_ext)
     if len(pages_list)==1:
         if file_format=="text":
             export_src=text_download(pages_list[0].json)
@@ -964,7 +968,7 @@ def DesignerDownload(request):
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
     language = int(language) if language else None
-    canvas=CanvasDesign.objects.get(id=canvas_id)
+    canvas=CanvasDesign.objects.get(user=request.user, id=canvas_id)
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
     page_src=[]
     file_format = file_format.replace(" ","-") if file_format else ""
@@ -1042,7 +1046,7 @@ def DesignerDownload(request):
     else:
         return Response({"page":list(canvas.canvas_json_src.all().values_list("page_no",flat=True))})
     
-
+######## view for all user
 class EmojiCategoryViewset(viewsets.ViewSet,PageNumberPagination):
     # pagination_class = CustomPagination
     page_size = 30
@@ -1111,7 +1115,7 @@ def dict_rec(json_copy):
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
     canvas_trans_json_id=request.query_params.get('canvas_trans_json_id')
-    design_instance = CanvasTranslatedJson.objects.get(id=canvas_trans_json_id)
+    design_instance = CanvasTranslatedJson.objects.get(user =request.user, id=canvas_trans_json_id)
     total_sent=[]
     for i in design_instance.canvas_design.canvas_json_src.all():
          total_sent.extend(dict_rec(i.json))

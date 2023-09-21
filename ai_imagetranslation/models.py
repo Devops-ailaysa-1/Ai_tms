@@ -55,6 +55,7 @@ class ImageTranslate(models.Model):
     source_bounding_box=models.JSONField(blank=True,null=True)
     source_language_for_translate=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='imagetranslate_created_by')
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     # thumbnail=models.FileField(upload_to=user_directory_path_image_load_thumbnail,blank=True ,null=True)
 
