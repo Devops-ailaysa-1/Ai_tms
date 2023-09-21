@@ -280,18 +280,19 @@ class Project(models.Model):
 
     @property
     def designer_project_detail(self):
-        from ai_canvas.models import CanvasDesign
+        from ai_canvas.models import CanvasDesign,CanvasSourceJsonFiles
         from ai_imagetranslation.models import ImageTranslate
         des_proj_detail = None
         if self.project_type_id == 6:
             des_obj = CanvasDesign.objects.filter(project = self)
             if des_obj: 
-                des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design'}
+                pages= des_obj.last().canvas_json_src.all().count()
+                des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design','pages':pages}
             else:
                 img_trans_obj = ImageTranslate.objects.filter(project=self)
                 print("IMage------------->",img_trans_obj)
                 if img_trans_obj:
-                    des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate'}
+                    des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate','pages':None}
         return des_proj_detail
 
     @property
