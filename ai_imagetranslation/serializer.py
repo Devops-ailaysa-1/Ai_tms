@@ -142,12 +142,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         return width,height #thumb_nail
     
     def create(self, validated_data):
-        user=self.context['request'].user
+        # user=self.context['request'].user
+
+        request = self.context['request']
+        user = request.user.team.owner  if request.user.team  else request.user
+        created_by = request.user
         magic_erase=validated_data.pop('magic_erase')
 
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
-        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        project_instance = Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
 
 
@@ -157,6 +161,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height
+            instance.created_by=created_by
             # instance.mask_json=mask_json
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]

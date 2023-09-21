@@ -185,7 +185,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         update_new_textbox=validated_data.pop('update_new_textbox',None)
         temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user.team.owner  if request.user.team  else request.user
+        created_by = request.user
+        # user = self.context['request'].user
         # project_type = ProjectType.objects.get(id=7)
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_type = ProjectType.objects.get(id=6) #Designer Project
@@ -198,8 +201,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         #     raise serializers.ValidationError('no social_media_resolution')
 
         if my_temp:
-            data = {**validated_data ,'user':user}
+            data = {**validated_data ,'user':user,'created_by':created_by}
             new_proj=CanvasDesign.objects.create(**data)
+
             page_instance = my_temp.my_template_page.first()
             # file_name = my_temp.file_name
             width = my_temp.width
@@ -214,8 +218,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
             return new_proj
 
-
-
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -223,7 +225,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             category=temp_global_design.category
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
-            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height,created_by=created_by)
             new_proj.project= project_instance
             new_proj.file_name = project_instance.project_name
             new_proj.save()
@@ -232,7 +234,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
             return new_proj  ###returned
         else:
-            data = {**validated_data ,'user':user}
+            data = {**validated_data ,'user':user,'created_by':created_by}
             instance=CanvasDesign.objects.create(**data)
             instance.project = project_instance
             instance.file_name = project_instance.project_name
