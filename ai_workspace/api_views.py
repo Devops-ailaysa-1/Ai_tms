@@ -495,7 +495,7 @@ class Files_Jobs_List(APIView):
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
         return Response({"files":files.data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
-                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
+                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
 
