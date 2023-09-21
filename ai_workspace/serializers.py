@@ -778,7 +778,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.save()
 
 		if 'get_mt_by_page' in validated_data:
-			instance.copy_paste_enable = validated_data.get("get_mt_by_page",\
+			instance.get_mt_by_page = validated_data.get("get_mt_by_page",\
 									instance.get_mt_by_page)
 			instance.save()
 
