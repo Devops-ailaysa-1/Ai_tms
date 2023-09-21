@@ -197,6 +197,25 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # if not social_media_create:
         #     raise serializers.ValidationError('no social_media_resolution')
 
+        if my_temp:
+            data = {**validated_data ,'user':user}
+            new_proj=CanvasDesign.objects.create(**data)
+            page_instance = my_temp.my_template_page.first()
+            # file_name = my_temp.file_name
+            width = my_temp.width
+            height = my_temp.height
+            category=my_temp.project_category
+            json = page_instance.my_template_json
+            thumbnail = page_instance.my_template_page
+            new_proj.height = height
+            new_proj.width = width
+            json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+                                    "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+            CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
+            return instance
+
+
+
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
