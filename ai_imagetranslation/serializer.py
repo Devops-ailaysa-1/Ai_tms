@@ -244,6 +244,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
         if image_translate_delete_target:
             for i in image_translate_delete_target:
+                try: i.job.delete()
+                except: pass
                 i.delete()
 
         if canvas_asset_image_id:
