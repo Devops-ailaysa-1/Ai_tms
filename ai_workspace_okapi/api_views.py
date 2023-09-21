@@ -634,7 +634,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         print("PageSe----------->",page_segments)
-        if page_segments and task.job.project.get_mt_by_page == True:
+        if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
            mt_raw_update(task.id,page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
 
