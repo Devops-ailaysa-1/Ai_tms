@@ -392,6 +392,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if delete_target_design_lang:
             for i in delete_target_design_lang:
+                try: i.job.delete()
+                except: pass
                 i.delete()
 
         if social_media_create and width and height: ##########################this one same fun below  ####custome resize
