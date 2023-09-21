@@ -206,7 +206,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             height = my_temp.height
             category=my_temp.project_category
             json = page_instance.my_template_json
-            thumbnail = page_instance.my_template_page
+            thumbnail = page_instance.my_template_thumbnail
             new_proj.height = height
             new_proj.width = width
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
