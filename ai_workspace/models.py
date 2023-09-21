@@ -221,6 +221,7 @@ class Project(models.Model):
     mt_enable = models.BooleanField(default=True)
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
+    get_mt_by_page = models.BooleanField(default=True) 
 
 
     class Meta:

@@ -625,6 +625,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
+        task = Task.objects.get(document=document)
         segments = document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
@@ -633,7 +634,10 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         print("PageSe----------->",page_segments)
+        if page_segments and task.job.project.get_mt_by_page == True:
+           mt_raw_update(task.id,page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
+
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
         return res
@@ -1512,7 +1516,7 @@ class DocumentToFile(views.APIView):
         final_segments = list(chain(segments, split_segments))
         print("Fs---------->",final_segments)
         if final_segments:
-            cel = mt_raw_update.apply_async((task.id,), queue='high-priority')
+            cel = mt_raw_update.apply_async((task.id,None,), queue='high-priority')
             if cel:
                 return {'status':False,'celery_id':cel.id}
         else:
