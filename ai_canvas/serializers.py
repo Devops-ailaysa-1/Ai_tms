@@ -172,7 +172,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def create(self,validated_data):
         req_host=self.context.get('request', HttpRequest()).get_host()
-        
+        my_temp=validated_data.pop('my_temp',None)
         source_json_file=validated_data.pop('source_json_file',None)
         thumbnail_src=validated_data.pop('thumbnail_src',None)
         export_img_src=validated_data.pop('export_img_src',None)
@@ -185,7 +185,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         update_new_textbox=validated_data.pop('update_new_textbox',None)
         temp_global_design=validated_data.pop('temp_global_design',None)
         # project_category=validated_data.get('project_category',None)
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user.team.owner  if request.user.team  else request.user
+        created_by = request.user
+        # user = self.context['request'].user
         # project_type = ProjectType.objects.get(id=7)
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_type = ProjectType.objects.get(id=6) #Designer Project
@@ -197,6 +200,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # if not social_media_create:
         #     raise serializers.ValidationError('no social_media_resolution')
 
+        if my_temp:
+            data = {**validated_data ,'user':user,'created_by':created_by}
+            new_proj=CanvasDesign.objects.create(**data)
+
+            page_instance = my_temp.my_template_page.first()
+            # file_name = my_temp.file_name
+            width = my_temp.width
+            height = my_temp.height
+            category=my_temp.project_category
+            json = page_instance.my_template_json
+            thumbnail = page_instance.my_template_thumbnail
+            new_proj.height = height
+            new_proj.width = width
+            json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+                                    "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+            CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
+            return new_proj
+
         if temp_global_design and new_project:
             width=temp_global_design.category.width
             height=temp_global_design.category.height
@@ -204,7 +225,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             category=temp_global_design.category
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
-            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height)
+            new_proj=CanvasDesign.objects.create(user=user,width=width,height=height,created_by=created_by)
             new_proj.project= project_instance
             new_proj.file_name = project_instance.project_name
             new_proj.save()
@@ -213,7 +234,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
             return new_proj  ###returned
         else:
-            data = {**validated_data ,'user':user}
+            data = {**validated_data ,'user':user,'created_by':created_by}
             instance=CanvasDesign.objects.create(**data)
             instance.project = project_instance
             instance.file_name = project_instance.project_name
@@ -356,6 +377,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         next_page=validated_data.get('next_page',None)
         duplicate=validated_data.get('duplicate',None)
+        my_temp=validated_data.pop('my_temp',None)
         update_new_textbox=validated_data.get('update_new_textbox',None)
         social_media_create=validated_data.get('social_media_create',None)
         width=validated_data.get('width',None)
@@ -427,8 +449,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if duplicate and src_page:
             can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
-    
+            pages = len(instance.canvas_json_src.all())
+            page=pages+1
+            src_json_page=can_src.json
+            src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
+
+            for count,src_js in enumerate(instance.canvas_json_src.all()):
+                src_js.json['projectid']['pages']=pages+1
+                src_js.json['projectid']['page']=count+1
+                src_js.save()
+
+
         if tar_page and canvas_translation and target_canvas_json:
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
@@ -485,7 +518,39 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
                 src_js.save()
+        
+        if my_temp:
+            page_instance = my_temp.my_template_page.first()
+            thumbnail_page = page_instance.my_template_thumbnail
+            src_json_page = page_instance.my_template_json
+            pages = len(instance.canvas_json_src.all())
+            page=pages+1
+            src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,json=src_json_page,page_no=pages+1)
+            for count,src_js in enumerate(instance.canvas_json_src.all()):
+                src_js.json['projectid']['pages']=pages+1
+                src_js.json['projectid']['page']=count+1
+                src_js.save()
+
         return super().update(instance=instance, validated_data=validated_data)
+    
+
+        # if my_temp:
+        #     data = {**validated_data ,'user':user}
+        #     new_proj=CanvasDesign.objects.create(**data)
+        #     
+        #     # file_name = my_temp.file_name
+        #     width = my_temp.width
+        #     height = my_temp.height
+        #     category=my_temp.project_category
+        #     
+        #     
+        #     new_proj.height = height
+        #     new_proj.width = width
+        #     json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+        #                             "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+        #     CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
+        #     return new_proj
 
 
 import io
