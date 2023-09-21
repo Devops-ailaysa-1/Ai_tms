@@ -518,9 +518,37 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 src_js.save()
         
         if my_temp:
-            pass
+            page_instance = my_temp.my_template_page.first()
+            thumbnail_page = page_instance.my_template_thumbnail
+            src_json_page = page_instance.my_template_json
+            pages = len(instance.canvas_json_src.all())
+            page=pages+1
+            src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,json=src_json_page,page_no=pages+1)
+            for count,src_js in enumerate(instance.canvas_json_src.all()):
+                src_js.json['projectid']['pages']=pages+1
+                src_js.json['projectid']['page']=count+1
+                src_js.save()
 
         return super().update(instance=instance, validated_data=validated_data)
+    
+
+        # if my_temp:
+        #     data = {**validated_data ,'user':user}
+        #     new_proj=CanvasDesign.objects.create(**data)
+        #     
+        #     # file_name = my_temp.file_name
+        #     width = my_temp.width
+        #     height = my_temp.height
+        #     category=my_temp.project_category
+        #     
+        #     
+        #     new_proj.height = height
+        #     new_proj.width = width
+        #     json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
+        #                             "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
+        #     CanvasSourceJsonFiles.objects.create(canvas_design=new_proj,json=json,page_no=1,thumbnail=thumbnail)
+        #     return new_proj
 
 
 import io
