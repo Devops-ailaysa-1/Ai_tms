@@ -148,7 +148,7 @@ class BaseSegment(models.Model):
 
     @property
     def coded_target(self):
-        return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
+        return  set_runs_to_ref_tags( self.coded_source, self.temp_target, get_runs_and_ref_ids(\
                 self.coded_brace_pattern, self.coded_ids_aslist ) )
     @property
     def owner_pk(self):
@@ -190,8 +190,8 @@ class Segment(BaseSegment):
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
-                if split_seg.target != None:
-                    target_joined += split_seg.target
+                if split_seg.temp_target != None:
+                    target_joined += split_seg.temp_target
                 else:
                     target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \

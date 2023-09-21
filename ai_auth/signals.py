@@ -70,15 +70,27 @@ def create_lang_details(lang_pairs,instance):
                 lang,created = VendorLanguagePair.objects.get_or_create(source_lang_id=source,target_lang_id=target,user=instance)
                 print(lang, created)
             except:pass
-    
+
+def proz_msg_send(user,msg,vendor):
+    from ai_marketplace.serializers import ThreadSerializer
+    thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    print("Thread--->",thread_id)
+    msg = ChatMessage.objects.create(message=msg,user=user,thread_id=thread_id)
+    notify.send(user, recipient=vendor, verb='Message', description=msg,thread_id=int(thread_id))  
 
 def proz_connect(sender, instance, *args, **kwargs):
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
+    from ai_marketplace.models import ProzMessage
     
     if instance.socialaccount_set.filter(provider='proz'):
-        uuid = instance.socialaccount_set.filter(provider='proz')[0].extra_data.get('uuid')
+        uuid = instance.socialaccount_set.filter(provider='proz').last().uid
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
         headers = {
         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
@@ -112,6 +124,9 @@ def proz_connect(sender, instance, *args, **kwargs):
             lang_pairs = ven.get('skills').get('language_pairs',None)
             if lang_pairs:
                 create_lang_details(lang_pairs,instance)
+        queryset = ProzMessage.objects.filter(proz_uuid = uuid)
+        for i in queryset:
+            proz_msg_send(i.customer,i.message,instance)
 
 
 

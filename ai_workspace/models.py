@@ -277,7 +277,21 @@ class Project(models.Model):
     #     ]
     #     return cache_keys
 
-
+    @property
+    def designer_project_detail(self):
+        from ai_canvas.models import CanvasDesign
+        from ai_imagetranslation.models import ImageTranslate
+        des_proj_detail = None
+        if self.project_type_id == 6:
+            des_obj = CanvasDesign.objects.filter(project = self)
+            if des_obj: 
+                des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design'}
+            else:
+                img_trans_obj = ImageTranslate.objects.filter(project=self)
+                print("IMage------------->",img_trans_obj)
+                if img_trans_obj:
+                    des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate'}
+        return des_proj_detail
 
     @property
     def ref_files(self):
@@ -550,16 +564,12 @@ class Project(models.Model):
 
     @property
     def is_proj_analysed(self):
-        cache_key = f'pr_proj_analysed_{self.id}'
-        cached_value = cache.get(cache_key)
-        if cached_value is None:
-            if self.is_all_doc_opened:
-                cached_value = True
-            elif self.get_analysis_tasks.count() == self.task_project.count() and self.get_analysis_tasks.count() != 0:
-                cached_value = True
-            else:
-                cached_value = False
-            cache.set(cache_key,cached_value)
+        if self.is_all_doc_opened:
+            cached_value = True
+        elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+            cached_value = True
+        else:
+            cached_value = False
         return cached_value
 
     @property
@@ -647,19 +657,17 @@ class Project(models.Model):
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
-
-
                             
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks:
+        if not tasks or self.project_type_id == 6:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
-    
+        #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
             return analysed_true(self,tasks)
 
@@ -1314,7 +1322,7 @@ class Task(models.Model):
             try:
                 if self.job.project.project_type_id == 5:
                     cached_value = "ExpressEditor"
-                elif self.job.project.project_type_id == 7:
+                elif self.job.project.project_type_id == 6:
                     cached_value = "Designer"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -1352,7 +1360,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project or self.job.project.project_type == 7:
+                if self.job.project.glossary_project or self.job.project.project_type_id == 6:
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
@@ -1889,7 +1897,7 @@ class TaskDetails(models.Model):
         cache_keys=[
             f'task_word_count_{self.task.pk}',
             f'task_char_count_{self.task.pk}',
-            f'pr_proj_analysed_{self.project.id}',
+            f'pr_proj_analysed_{self.task.job.project.id}',
         ]
         return cache_keys
 post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
@@ -2265,7 +2273,25 @@ class ExpressProjectAIMT(models.Model):
     #             return "Completed"
     #         else:
     #             return "In Progress"
-
+    # @property
+    # def is_proj_analysed(self):
+    #     print("RR---------->",self.get_analysis_tasks.count())
+    #     print("RT----------->",self.task_project.count())
+    #     print("Rs-------------->",self.is_all_doc_opened)
+    #     cache_key = f'pr_proj_analysed_{self.id}'
+    #     cached_value = cache.get(cache_key)
+    #     print("CC---------->",cached_value)
+    #     if cached_value is None:
+    #         if self.is_all_doc_opened:
+    #             cached_value = True
+    #         elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+    #             print("ININIJ")
+    #             cached_value = True
+    #         else:
+    #             cached_value = False
+    #         cache.set(cache_key,cached_value)
+    #     print("ER-------------->",cached_value)
+    #     return cached_value
 
      # if not self.ai_project_id:
             #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)

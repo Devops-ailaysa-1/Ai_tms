@@ -15,6 +15,7 @@ from ai_canvas.utils import convert_image_url_to_file
 from ai_imagetranslation.utils import background_remove,background_merge ,create_thumbnail_img_load
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
+from ai_canvas.serializers import create_design_jobs_and_tasks
 import io
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv('HOST_NAME')
@@ -144,10 +145,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user=self.context['request'].user
         magic_erase=validated_data.pop('magic_erase')
 
-        # project_type = ProjectType.objects.get(type='Image Translates')
-        # default_step = Steps.objects.get(id=1)
-        # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
-        # project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
+        project_type = ProjectType.objects.get(id=6)
+        default_step = Steps.objects.get(id=1)
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
 
 
         data={**validated_data ,'user':user}
@@ -159,12 +160,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             # instance.mask_json=mask_json
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
-            if not instance.project_name:
-                img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
-                if img_obj:
-                    instance.project_name='Untitled project ({})'.format(str(len(img_obj)+1))
-                else:
-                    instance.project_name='Untitled project'
+            instance.project = project_instance
+            instance.project_name = project_instance.project_name
+            # if not instance.project_name:
+            #     img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
+            #     if img_obj:
+            #         instance.project_name='Untitled project ({})'.format(str(len(img_obj)+1))
+            #     else:
+            #         instance.project_name='Untitled project'
             instance.save()
             return instance
     
@@ -180,12 +183,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         tar_json_copy['background']="rgba(231,232,234,0)"
         for tar_lang in inpaint_creation_target_lang:
+            lang_dict={'source_language':src_lang,'target_language':tar_lang}
             print(src_lang , type(src_lang))
 
             ##############job__creations#############
 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
+            img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
+            #print("JB & Tasks----------------------->", img_trans_jobs,img_trans_tasks)
+            tar_bbox.job=img_trans_jobs[0][0]
             ########## job__creation #####
             
             tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,

@@ -632,6 +632,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
+        print("PageSe----------->",page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
@@ -1582,15 +1583,15 @@ class DocumentToFile(views.APIView):
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
-                        if split_seg.target:
-                            target += self.remove_tags(split_seg.target)
+                        if split_seg.temp_target:
+                            target += self.remove_tags(split_seg.temp_target)
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
                     worksheet.write(row, 1, target, cell_format)
                     row += 1
                 # For normal segments
                 else:
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
+                    worksheet.write(row, 1, self.remove_tags(segment.temp_target), cell_format)
                     row += 1
         workbook.close()
 
@@ -2902,20 +2903,21 @@ def segments_with_target(document_id):
         # If the segment is merged
         if (i.get("is_merged") == True and i.get("is_merge_start")):
             merge_obj = MergeSegment.objects.get(id=i.get("segment_id"))
-            if merge_obj.target!=None:
-                data.append(remove_tags(merge_obj.target))
+            if merge_obj.temp_target!=None:
+                data.append(remove_tags(merge_obj.temp_target))
+                
 
         # If the segment is split
         elif i.get("is_split") == True:
             split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
             for split_seg in split_segs:
-                if split_seg.target!=None:
-                    data.append(remove_tags(split_seg.target))
+                if split_seg.temp_target!=None:
+                    data.append(remove_tags(split_seg.temp_target))
 
         # Normal segment
         else:
-            if i.get('target')!=None:
-                data.append(remove_tags(i.get('target')))
+            if i.get('temp_target')!=None:
+                data.append(remove_tags(i.get('temp_target')))
 
     #print("############",data)
 
@@ -3092,8 +3094,9 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError
 
 from nltk.corpus import stopwords
-# nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
+#nltk.download('stopwords')
+#stop_words = set(stopwords.words('english'))
+stop_words = None
 class SelflearningView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20

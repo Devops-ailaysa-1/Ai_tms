@@ -36,6 +36,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache
 from ai_canvas.models import CanvasTranslatedJson
+from ai_imagetranslation.models import ImageInpaintCreation
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -523,7 +524,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -1078,7 +1079,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
-	canvas_project = serializers.SerializerMethodField()
+	design_project = serializers.SerializerMethodField()
 	# open_in =  serializers.SerializerMethodField()
 	# transcribed = serializers.SerializerMethodField()
 	# text_to_speech_convert_enable = serializers.SerializerMethodField()
@@ -1094,15 +1095,35 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'canvas_project',)
+			"converted_audio_file_exists","download_audio_output_file",'design_project',)
 
 
-	def get_canvas_project(self,obj):
-		if obj.job.project.project_type_id == 7:
-			canvas_proj_obj = CanvasTranslatedJson.objects.get(job_id = obj.job.id).canvas_design_id
-			return canvas_proj_obj
-		else:return None
+	def get_design_project(self,obj):
+		#print("Type--------->",obj.job.project.project_type_id)
+		res = None
+		if obj.job.project.project_type_id == 6: #Designer Project
+			image_job = CanvasTranslatedJson.objects.filter(job_id = obj.job.id)
+			if image_job:
+				image_job_obj = image_job.last().id
+				image_proj_obj = image_job.last().canvas_design_id
+				res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
+			else:
+				image_translation_job = ImageInpaintCreation.objects.filter(job_id=obj.job.id)
+				if image_translation_job:
+					image_job_obj = image_translation_job.last().id
+					image_proj_obj = image_translation_job.last().source_image.id
+					res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
+			return res
+		else:return res
 
+	# def get_image_translate_project(self,obj):
+	# 	if obj.job.project.project_type_id == 6: #Designer Project
+	# 		try:
+	# 			image_translate_obj = CanvasTranslatedJson.objects.get(job_id = obj.job.id)
+	# 			canvas_proj_obj = canvas_job_obj.canvas_design_id
+	# 			return {'project':canvas_proj_obj.id,'job': canvas_job_obj.id}
+	# 		except: return None
+	# 	else:return None
 
 	def get_bid_job_detail_info(self,obj):
 		cache_key = f'bid_job_detail_{obj.job.project.pk}'

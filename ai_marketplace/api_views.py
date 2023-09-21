@@ -1078,6 +1078,7 @@ class ProzVendorListView(generics.ListAPIView):
         country = self.request.query_params.get('country',None)
         fullname = self.request.query_params.get('fullname',None)
         #contenttype = self.request.query_params.get('content')
+        account_type = self.request.query_params.get('account_type',None)
         subject=self.request.query_params.get('subject')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
 
@@ -1099,6 +1100,8 @@ class ProzVendorListView(generics.ListAPIView):
             }
         if year_of_experience:
             params.update({'min_yrs_experience':year_of_experience})
+        if account_type:
+            params.update({'account_type_id':account_type})
         if subject:
             subjectlist=subject.split(',')
             proz_expertize_ids = get_proz_expertize(subjectlist)
@@ -1111,20 +1114,23 @@ class ProzVendorListView(generics.ListAPIView):
             params.update({'keyword':fullname})
         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        print("Status---------->",integration_users_response)
         integration_users = integration_users_response.json()
-        #queryset = SocialAccount.objects.filter(provider = 'proz')
-        #existing_uuids = [{'uuid':i.get('extra_data').get('uuid'),'uid':i.user.uid} for i in queryset]
+        print("Integration--------------->",integration_users.get('success'))
         common_users = []
         total = 0
         if integration_users and integration_users.get('success') == 1:
+            print("Inside If")
             total = integration_users.get('meta').get('num_results')
             for vendor in integration_users.get('data'):
+                print("Inside For")
                 ven = vendor.get('freelancer')
-                # uuid_exists = any(d.get('uuid') == ven.get('uuid') for d in existing_uuids)
-                # if uuid_exists:
-                #     common_users['ailaysa_detail'] = #get_ailaysa_detail(ven.get('uuid'))
                 verified = False
                 bio = None
+                qs = SocialAccount.objects.filter(provider = 'proz').filter(uid=ven.get('uuid'))
+                print("Queryset------------>",qs)
+                ailaysa_user_uid = qs.last().user.uid if qs else None
+                print("AilaysaUserUID------------>",ailaysa_user_uid)
                 for i in ven.get('qualifications').get('credentials',{}):
                     if i.get('pair_code') == lang_pair:
                         verified = True
@@ -1138,6 +1144,7 @@ class ProzVendorListView(generics.ListAPIView):
                 
                 common_users.append({
                     'uid': ven.get('uuid'),
+                    'ailaysa_user_uid' : ailaysa_user_uid,
                     'fullname': ven.get('site_name'),
                     'email': ven.get('contact_info').get('email',None),
                     'cv_file': ven.get('qualifications').get('cv_url',None),
@@ -1152,10 +1159,13 @@ class ProzVendorListView(generics.ListAPIView):
                     'verified': verified,
                     'vendor_subject':subs,
                 })
+            print("----------------------------------------------------------------------------")
         return common_users,total
 
     def list(self, request, *args, **kwargs):
+        print("Inside List")
         queryset,total = self.get_queryset()
+        print("QS-------------->",queryset)
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
         data.append({'total':total})
@@ -1282,6 +1292,14 @@ def proz_send_message(request):
     #             'source': 'App User'
     #         })
     #     return common_users
+           # queryset = SocialAccount.objects.filter(provider = 'proz')
+        # print("Queryset----------->",queryset)
+        # existing_uuids = [{'uuid':i.extra_data.get('uuid'),'uid':i.user.uid} for i in queryset]
+        # print("Exist---------------->",existing_uuids)
+        # for d in existing_uuids:
+        #     if d.get('uuid') == ven.get('uuid'):
+        #         common_users['ailaysa_detail'] = d.get('uid')
+        #         break
 
     # def get_proz_users(self):
     #     page = self.request.query_params.get('page', 1)
