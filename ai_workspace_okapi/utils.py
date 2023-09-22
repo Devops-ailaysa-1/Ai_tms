@@ -568,3 +568,39 @@ def get_prompt_sent(opt,sent):
     #             Content Types: {} 
     #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
     # else:
+
+
+GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
+GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
+
+google_mime_type = {'doc':'application/msword',	 
+                    'docx':	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'pdf':	'application/pdf',
+                    'ppt':	'application/vnd.ms-powerpoint'	,
+                    'pptx':	'application/vnd.openxmlformats-officedocument.presentationml.presentation'	,
+                    'xls':	'application/vnd.ms-excel',
+                    'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'	}
+
+
+from google.cloud import translate_v3beta1 as translate
+from django import core
+def file_translate(file_path,target_language_code):
+    parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
+    file_type = file_path.split("/")[-1].split(".")
+    file_format=file_type[-1]
+    file_name = file_type[0]
+    client = translate.TranslationServiceClient()
+    if file_format not in google_mime_type.keys():
+        print("file not support")
+    mime_type = google_mime_type.get(file_format,None)
+    with open(file_path, "rb") as document:
+        document_content = document.read()
+        document_input_config = {"content": document_content,"mime_type": mime_type,}
+    response = client.translate_document(request={
+            "parent": parent,
+            "target_language_code": target_language_code,
+            "document_input_config": document_input_config})
+    file_name = file_name+"_"+target_language_code+"."+file_format
+    byte_text = response.document_translation.byte_stream_outputs[0]
+    return core.files.File(core.files.base.ContentFile(byte_text),file_name)
+ 
