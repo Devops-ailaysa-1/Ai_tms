@@ -93,7 +93,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
     filterset_fields =['project_name','types']
-    search_fields =['types','project_name','source_language_for_translate__language__language','s_im__target_language__language__language']
+    search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
     page_size=20
     
     def get_object(self, pk):
@@ -217,17 +217,17 @@ def image_translation_project_view(request):
         res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=project_name+'.zip')
         return res
     
-    elif language == image_instance.source_language_for_translate.language.id:
+    elif language == image_instance.source_language.language.id:
         if file_format == 'text':
             export_src=text_download(image_instance.source_canvas_json)
-            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language_for_translate.language.language,"txt")
+            file_name="page_{}_{}.{}".format(str(1),image_instance.source_language.language.language,"txt")
         else:
-            img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language_for_translate.language.language)
+            img_res,file_name=create_image(image_instance.source_canvas_json,file_format,export_size,1,image_instance.source_language.language.language)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     
-    elif language and language != image_instance.source_language_for_translate.language.id:
+    elif language and language != image_instance.source_language.language.id:
         tar_inst=image_instance.s_im.get(target_language__language__id=language)
         lang=image_instance.s_im.get(target_language__language__id=language).target_language.language.language
         if file_format == 'text':
@@ -239,7 +239,7 @@ def image_translation_project_view(request):
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         return response
     else:
-        image_download[image_instance.source_language_for_translate.language.language] =image_instance.source_language_for_translate.language.id
+        image_download[image_instance.source_language.language.language] =image_instance.source_language.language.id
         for i in image_instance.s_im.all():
             image_download[i.target_language.language.language]=i.target_language.language.id
         lang={**{"All":0},**image_download}

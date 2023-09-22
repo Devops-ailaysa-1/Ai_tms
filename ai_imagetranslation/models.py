@@ -53,7 +53,7 @@ class ImageTranslate(models.Model):
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process,blank=True,null=True)
     source_canvas_json=models.JSONField(blank=True,null=True)
     source_bounding_box=models.JSONField(blank=True,null=True)
-    source_language_for_translate=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
+    source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='imagetranslate_created_by')
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
