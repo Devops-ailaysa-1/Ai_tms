@@ -508,6 +508,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
+	get_mt_by_page = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
@@ -524,7 +525,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -560,6 +561,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
+		data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -773,6 +775,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if 'copy_paste_enable' in validated_data:
 			instance.copy_paste_enable = validated_data.get("copy_paste_enable",\
 									instance.copy_paste_enable)
+			instance.save()
+
+		if 'get_mt_by_page' in validated_data:
+			instance.get_mt_by_page = validated_data.get("get_mt_by_page",\
+									instance.get_mt_by_page)
 			instance.save()
 
 		if validated_data.get('project_deadline'):
