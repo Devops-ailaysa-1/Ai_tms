@@ -921,10 +921,10 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
     if len(pages_list)==1:
         if file_format=="text":
             export_src=text_download(pages_list[0].json)
-            file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,"txt")
+            file_name="{}_page_{}_{}.{}".format(projecct_file_name,str(pages_list[0].page_no),lang,"txt")
         else:
             img_res=export_download(pages_list[0].json,file_format,export_size)
-            file_name="page_{}_{}_{}.{}".format(str(export_size),str(pages_list[0].page_no),lang,format_ext)
+            file_name="{}_page_{}_{}_{}.{}".format(projecct_file_name,str(pages_list[0].page_no),lang,format_ext)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:
@@ -975,6 +975,10 @@ def DesignerDownload(request):
     # format_ext = 'png' if file_format == 'png-transparent' else file_format
     format_ext = format_extension_change(file_format=file_format)
     canvas_src_json=canvas.canvas_json_src.all()
+    if not canvas.file_name:
+        can_obj=CanvasDesign.objects.filter(user=request.user.id,file_name__icontains='Untitled project')
+        canvas.file_name='Untitled project ({})'.format(str(len(can_obj)+1)) if can_obj else 'Untitled project'
+        canvas.save()
     if any(canvas.canvas_translate.all()):
         canvas_trans_inst=canvas.canvas_translate.all()
         src_lang=canvas_trans_inst[0].source_language.language.language
@@ -986,11 +990,11 @@ def DesignerDownload(request):
                 for src_json in src_jsons:
                     if file_format=="text":
                         values=text_download(src_json.json)
-                        file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,"txt")
+                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,src_lang,"txt")
                         path='{}/{}'.format(src_lang,file_name)
                         
                     else:
-                        file_name = 'page_{}_{}.{}'.format(src_json.page_no,src_lang,format_ext)
+                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,src_lang,format_ext)
                         path='{}/{}'.format(src_lang,file_name)
                         values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
@@ -999,18 +1003,18 @@ def DesignerDownload(request):
                     for tar_json in tar_jsons:
                         if file_format=="text":
                             values=text_download(tar_json.json)
-                            file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,"txt")
+                            file_name='{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,"txt")
                             path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         else:
                             values=export_download(tar_json.json,file_format,export_size)
-                            file_name='page_{}_{}.{}'.format(tar_json.page_no,tar_lang.target_language.language,format_ext)
+                            file_name='{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,format_ext)
                             path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             if buffer.getvalue():
-                if not canvas.file_name:
-                    can_obj=CanvasDesign.objects.filter(user=request.user.id,file_name__icontains='Untitled project')
-                    canvas.file_name='Untitled project ({})'.format(str(len(can_obj)+1)) if can_obj else 'Untitled project'
-                    canvas.save()
+                # if not canvas.file_name:
+                #     can_obj=CanvasDesign.objects.filter(user=request.user.id,file_name__icontains='Untitled project')
+                #     canvas.file_name='Untitled project ({})'.format(str(len(can_obj)+1)) if can_obj else 'Untitled project'
+                #     canvas.save()
                 res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=canvas.file_name+'.zip')
                 return res
             else:
