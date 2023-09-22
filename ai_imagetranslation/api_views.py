@@ -200,6 +200,7 @@ def image_translation_project_view(request):
     file_format = format_extension_change(file_format)
     image_download={}
     image_instance=ImageTranslate.objects.get(user=request.user,id=image_id)
+    project_name = image_instance.project_name
     if language==0:
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
@@ -213,7 +214,7 @@ def image_translation_project_view(request):
                     file_name = '{}.{}'.format(tar_lang,format_exe)
                     tar_image_json=export_download(json_str=tar_json.target_canvas_json,format=file_format, multipliervalue=export_size )
                 archive.writestr(file_name,tar_image_json)
-        res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name="image_download"+'.zip')
+        res=download_file_canvas(file_path=buffer.getvalue(),mime_type=mime_type["zip"],name=project_name+'.zip')
         return res
     
     elif language == image_instance.source_language_for_translate.language.id:
