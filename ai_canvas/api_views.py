@@ -260,9 +260,21 @@ def page_no_update(can_page,is_update,page_len):
 class CanvasDesignViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
 
+
+    def get_queryset(self):
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
+                    |Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)|Q(user = user)\
+                    |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        return queryset
+
+
     def get_object(self, pk):
         try:
-            return CanvasDesign.objects.get(user=self.request.user,id=pk)
+            queryset = self.get_queryset()
+            return queryset.get(id=pk)
         except CanvasDesign.DoesNotExist:
             raise Http404
 
@@ -276,10 +288,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
-        
-
-
-        queryset = CanvasDesign.objects.filter(user=request.user.id)
+        queryset = self.get_queryset()
         serializer = CanvasDesignSerializer(queryset,many=True)
         return Response(serializer.data)
 
