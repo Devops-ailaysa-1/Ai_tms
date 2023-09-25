@@ -2,7 +2,6 @@ from statistics import mode
 from rest_framework import serializers
 from .models import Ai_PdfUpload # AiImageGeneration
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from itertools import groupby
 from django_celery_results.models import TaskResult
 import json

@@ -9,17 +9,18 @@ from ai_staff.models import Languages,LanguagesLocale
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create,json_sr_url_change,install_font
 from django import core
-from ai_imagetranslation.utils import image_content 
 from ai_workspace_okapi.utils import get_translation
 import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-import cv2,os
+import os
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv("HOST_NAME")
+
+
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = LanguagesLocale
