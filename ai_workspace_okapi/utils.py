@@ -605,5 +605,6 @@ def file_translate(file_path,target_language_code):
             "document_input_config": document_input_config})
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
-    return core.files.File(core.files.base.ContentFile(byte_text),file_name)
+    file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
+    return file_obj,file_name
  

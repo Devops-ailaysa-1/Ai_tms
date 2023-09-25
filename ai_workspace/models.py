@@ -222,6 +222,7 @@ class Project(models.Model):
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
     get_mt_by_page = models.BooleanField(default=True) 
+    file_translate = models.BooleanField(default=False)
 
 
     class Meta:
@@ -665,7 +666,7 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks or self.project_type_id == 6:
+        if not tasks or self.project_type_id == 6 or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
@@ -1536,6 +1537,17 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 post_save.connect(invalidate_cache_on_save, sender=Task)
 pre_delete.connect(invalidate_cache_on_delete, sender=Task)
+
+
+def target_file_upload_path(instance, filename):
+    print("Ins,name--------->",instance,filename)
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,'source',filename)
+    return file_path
+
+class TaskTranslatedFile(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_file_detail")
+    target_file = models.FileField(upload_to=target_file_upload_path,blank=True, null=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_trans_mt")
 
 def my_doc_image_upload_path(instance, filename):
     file_path = os.path.join(instance.ai_user.uid,"MyDocImages", filename)
