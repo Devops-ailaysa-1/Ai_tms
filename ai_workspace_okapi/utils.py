@@ -579,11 +579,14 @@ google_mime_type = {'doc':'application/msword',
                     'ppt':	'application/vnd.ms-powerpoint'	,
                     'pptx':	'application/vnd.openxmlformats-officedocument.presentationml.presentation'	,
                     'xls':	'application/vnd.ms-excel',
-                    'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'	}
+                    'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'txt':  'application/msword'
+                    }
 
 
 from google.cloud import translate_v3beta1 as translate
 from django import core
+
 def file_translate(file_path,target_language_code):
     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
     file_type = file_path.split("/")[-1].split(".")
