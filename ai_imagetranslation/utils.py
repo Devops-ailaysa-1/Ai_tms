@@ -1,23 +1,18 @@
 from .models import *
 from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
-import extcolors 
 from django import core
-import random
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
-
 from django.core.exceptions import ValidationError
-import os 
-import requests
+import os , requests ,copy,uuid,json,random,extcolors
 import cv2,requests,base64,io 
 from PIL import Image,ImageFilter
 import numpy as np
 from io import BytesIO
 from rest_framework import serializers
 from ai_canvas.template_json import textbox_json
-import copy
-import uuid,math,json
+
 from cv2 import (
     BORDER_DEFAULT,
     MORPH_OPEN,
@@ -301,6 +296,8 @@ def post_process(mask: np.ndarray) -> np.ndarray:
     mask = np.where(mask < 127, 0, 255).astype(np.uint8)  # convert again to binary
     return mask
 
+def get_consumable_credits_for_image_generation_sd(number_of_image):
+    return number_of_image * 10
 
 def background_remove(instance):
     try:
@@ -336,9 +333,11 @@ def sd_status_check(ids,url):
  
 from celery.decorators import task
 @task(queue='default')
-def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
-    sd_instance=StableDiffusionAPI.objects.get(id=id)
+def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
+    from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
+    sd_instance=StableDiffusionAPI.objects.get(id=instance.id)
     model="sdxl"
+    consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
     if sd_instance.width==sd_instance.height==512:
         print("512")
         model="sdv1"
@@ -393,6 +392,7 @@ def stable_diffusion_public(id): #prompt,41,height,width,negative_prompt
         sd_instance.status="DONE"
         sd_instance.save()
         print("finished_generate")
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(sd_instance.user,consumble_credits_to_image_generate)
         # return 
     else:
         sd_instance.status="ERROR"
@@ -428,9 +428,7 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     "Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",
     }
 
-    response = requests.post(
-    url,
-    headers=headers,
+    response = requests.post(url,headers=headers,
     json=body,
     )
 
@@ -571,3 +569,5 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     # "webhook": None,
     # "track_id": None
     # }
+
+
