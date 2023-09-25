@@ -300,7 +300,7 @@ def get_consumable_credits_for_image_generation_sd(number_of_image):
     return number_of_image * 10
 
 
-from rembg import remove
+# from rembg import remove
 def background_remove(instance):
     try:
         image_path=instance.original_image.path
@@ -323,11 +323,11 @@ def background_remove(instance):
     instance.mask=mask_store
     instance.save()
     
-    img = Image.open(image_path)
-    output = remove(img)
-    img_byte_arr = output.getvalue()
-    bck_gur_res=core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
-    # bck_gur_res=background_merge(y0,user_image)
+    # img = Image.open(image_path)
+    # output = remove(img)
+    # img_byte_arr = output.getvalue()
+    # bck_gur_res=core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
+    bck_gur_res=background_merge(y0,user_image)
     return bck_gur_res
 
 

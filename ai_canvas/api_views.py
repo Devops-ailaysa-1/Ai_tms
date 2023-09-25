@@ -276,6 +276,9 @@ class CanvasDesignViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
+        
+
+
         queryset = CanvasDesign.objects.filter(user=request.user.id)
         serializer = CanvasDesignSerializer(queryset,many=True)
         return Response(serializer.data)
@@ -344,7 +347,15 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
     page_size = 20
 
     def list(self,request):
-        queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
+
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+
+        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+                    | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
+                    |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasDesignListSerializer(pagin_tc,many=True)
