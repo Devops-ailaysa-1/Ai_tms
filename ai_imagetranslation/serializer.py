@@ -5,22 +5,26 @@ from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTran
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
-from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_api,stable_diffusion_public
+from ai_imagetranslation.utils import inpaint_image_creation ,image_content,stable_diffusion_public
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from django.db.models import Case, When
 from ai_canvas.utils import thumbnail_create
 import copy,os,cv2,numpy
 from ai_canvas.utils import convert_image_url_to_file 
-from ai_imagetranslation.utils import background_remove,background_merge ,create_thumbnail_img_load
+from ai_imagetranslation.utils import background_remove,background_merge ,create_thumbnail_img_load,get_consumable_credits_for_image_generation_sd
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 from ai_canvas.serializers import create_design_jobs_and_tasks
-import io
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv('HOST_NAME')
 
 
+
+def credit_calculation_for_img_gen():
+    pass 
+
+    
 
 
 class ImageloadSerializer(serializers.ModelSerializer):
@@ -118,7 +122,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id')
+            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
        
         
     def to_representation(self, instance):
@@ -407,7 +411,7 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageTranslate
         fields=('id','width','height','project_name','updated_at','created_at','types',
-                'thumbnail','source_language','image_load','image')
+                'thumbnail','source_language','image_load','image','project')
 
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:
@@ -532,19 +536,22 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if not image_resolution:
             raise serializers.ValidationError({'no image resolution'}) 
         
-        
         #prompt,steps,height,width,negative_prompt
+        initial_credit = user.credit_balance.get("total_left")
+        consumble_credits= get_consumable_credits_for_image_generation_sd(number_of_image=1)
+        if initial_credit>=consumble_credits:
+            instance=StableDiffusionAPI.objects.create(user=user,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
+                                                    height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
 
-        instance=StableDiffusionAPI.objects.create(user=user,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
-                                                   height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
+            image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
+            
 
-        image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
-        
-
-        instance.celery_id=image
-        instance.status="PENDING"
-        instance.save()
-        return instance
+            instance.celery_id=image
+            instance.status="PENDING"
+            instance.save()
+            return instance
+        else:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
 
 class ImageModificationTechniqueSerializers(serializers.ModelSerializer):
 

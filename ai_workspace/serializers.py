@@ -3,7 +3,7 @@ from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType, TranscribeSupportedPunctuation, LanguagesLocale
 from rest_framework import serializers
-from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
+from .models import Project, Job, File, ProjectContentType, Tbxfiles,TaskTranslatedFile,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
@@ -516,6 +516,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
+	file_translate = serializers.BooleanField(required=False,allow_null=True)
 	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
 	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
@@ -525,7 +526,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
+					'file_translate',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -562,6 +564,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
 		data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
+		data['file_translate'] =data.get('file_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -780,6 +783,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if 'get_mt_by_page' in validated_data:
 			instance.get_mt_by_page = validated_data.get("get_mt_by_page",\
 									instance.get_mt_by_page)
+			instance.save()
+
+		if 'file_translate' in validated_data:
+			instance.file_translate = validated_data.get("file_translate",\
+									instance.file_translate)
 			instance.save()
 
 		if validated_data.get('project_deadline'):
@@ -1885,7 +1893,10 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
         model = DocumentImages
         fields = "__all__"
 
-
+class TaskTranslatedFileSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskTranslatedFile
+		fields = "__all__"
 
 class MyDocumentSerializerNew(serializers.Serializer):
 	id = serializers.IntegerField(read_only=True)

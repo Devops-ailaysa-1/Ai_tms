@@ -519,8 +519,12 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
 
-
-
+@task(queue='high-priority')
+def translate_file_task_cel(task_id):
+    from ai_workspace.api_views import translate_file_process
+    translate_file_process(task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id,status=1,task_name='translate_file_task_cel',celery_task_id=translate_file_task_cel.request.id)
+    logger.info('File Translate called')
 
 @task(queue='high-priority')
 def pre_translate_update(task_id):

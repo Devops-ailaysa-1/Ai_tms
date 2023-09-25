@@ -427,9 +427,9 @@ class AiImageHistoryViewset(generics.ListAPIView):
     # pagination_class = AiImageHistoryPagination
     #filterset_class = PromptFilter
     search_fields = ['prompt',]
-    # pagination_class = NoPagination
-    # page_size = None
-    paginate_by=20
+    pagination_class = NoPagination
+    page_size = None
+    #paginate_by=20
 
     def get_queryset(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []

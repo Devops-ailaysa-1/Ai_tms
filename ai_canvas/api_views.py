@@ -924,7 +924,7 @@ def download__page(pages_list,file_format,export_size,page_number_list,lang,proj
             file_name="{}_page_{}_{}.{}".format(projecct_file_name,str(pages_list[0].page_no),lang,"txt")
         else:
             img_res=export_download(pages_list[0].json,file_format,export_size)
-            file_name="{}_page_{}_{}_{}.{}".format(projecct_file_name,str(pages_list[0].page_no),lang,format_ext)
+            file_name="{}_page_{}_{}.{}".format(projecct_file_name,str(pages_list[0].page_no),lang,format_ext)
             export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
     else:

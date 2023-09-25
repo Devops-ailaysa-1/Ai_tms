@@ -65,7 +65,7 @@ from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
-from ai_workspace_okapi.utils import get_translation
+from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
@@ -73,14 +73,14 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
 from .models import Task
 from cacheops import cached
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
                           TaskSerializer, FileSerializerv2, TmxFileSerializer, \
                           PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
                           VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
-                          TbxTemplateSerializer, \
+                          TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
@@ -2740,6 +2740,19 @@ def download_speech_to_text_source(request):
         print(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
+@api_view(["GET"])
+#@permission_classes([IsAuthenticated])
+def download_task_target_file(request):
+    task = request.GET.get('task')
+    obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="download",actor=request.user)
+    try:
+        output_file =  obj.task_file_detail.first().target_file
+        return download_file(output_file.path)
+    except BaseException as e:
+        print(f"Error : {str(e)}")
+        return Response({'msg':'something went wrong'})
+
 
 # @api_view(["GET"])
 # @permission_classes([IsAuthenticated])
@@ -4285,6 +4298,8 @@ def stop_task(request):
     else:
         return HttpResponse('Task is already running or has completed.')
 
+
+
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 @api_view(['POST'])
@@ -4335,6 +4350,133 @@ def msg_to_extend_deadline(request):
     )
     print("vendor requested expiry date extension  mailsent to vendor>>")	
     return Response({"msg":"Notification sent"})   
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def translate_file(request):
+    task = request.GET.get('task')
+    project  = request.GET.get('project')
+    user = request.user
+    if task:
+        obj = Task.objects.get(id=task)
+        tt = translate_file_task(task)
+        if tt!=None and (tt.get('status') == 400 or tt.get('status') == 402):
+            return Response(tt)
+        else:
+            ser = TaskTranslatedFileSerializer(obj.task_file_detail.first())
+            return Response(ser.data)
+    if project:
+        tasks =[]
+        task_list = []
+        pr = Project.objects.get(id=project)
+        for obj in pr.get_tasks:
+            if obj.task_file_detail.first() == None: #need to change for different mt_engines
+                conversion = translate_file_task(obj.id)
+                if conversion.get('status') == 200:
+                    task_list.append({'task':obj.id,'msg':True,'status':200})
+                elif conversion.get('status') == 400 or conversion.get('status') == 402:
+                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+                # tasks.append(_task)
+            else:
+                task_list.append({'task':obj.id,'msg':True,'status':200})
+        return JsonResponse({"results":task_list}, safe=False)   
+    else:
+        return Response({'msg':'task_id or project_id must'})    
+    
+    #     if tasks:
+    #         for obj in tasks:
+    #             print("Obj-------------->",obj)
+    #             conversion = translate_file_task(obj.id)
+    #             print("Conv----------->",conversion)
+    #             print("Msg------------>",conversion.get('msg'))
+    #             if conversion.get('status') == 200:
+    #                 task_list.append({'task':obj.id,'msg':True,'status':200})
+    #             elif conversion.get('status') == 400 or conversion.get('status') == 402:
+    #                 task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+    #         return JsonResponse({"results":task_list}, safe=False)
+    #                 #return conversion#Response({'msg':'Insufficient Credits'},status=400)
+    #     queryset = TaskTranslatedFile.objects.filter(task__in = pr.get_tasks)
+    #     ser = TaskTranslatedFileSerializer(queryset,many=True)
+    #     return Response(ser.data)
+    # else:
+    #     return Response({'msg':'task_id or project_id must'})
+
+def translate_file_process(task_id):
+    tsk = Task.objects.get(id=task_id)
+    file,name = file_translate(tsk.file.get_source_file_path,tsk.job.target_language_code)
+    ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
+    if ser.is_valid():
+        ser.save()
+    print(ser.errors)
+
+
+def translate_file_task(task_id):
+    from .models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import translate_file_task_cel
+    tsk = Task.objects.get(id=task_id)
+    user = tsk.job.project.ai_user
+    consumable_credits = 200  #get_consumable_credits_for_file_translate()
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit>consumable_credits:
+        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tsk.id) & Q(task_name='translate_file_task_cel')).last()
+        state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
+        print("State--------------->",state)
+        if state == 'PENDING' or state == 'STARTED':
+            return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
+        elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
+            if state == "FAILURE":
+                user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+                user_credit.credits_left = user_credit.credits_left + consumable_credits
+                user_credit.save()
+            celery_task = translate_file_task_cel.apply_async((tsk.id,),queue='high-priority' )
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            return {'msg':'Translation ongoing. Please wait','celery_id':celery_task.id,'task_id':tsk.id,'status':400}
+    else:
+        return {'msg':'Insufficient Credits','status':402}
+
+
+    # print(ser.errors)
+    # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
+    # ser = TaskTranslatedFileSerializer(queryset,many=True)
+    # return Response(ser.data)
+# ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
+#             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
+#             print("State--------------->",state)
+#             if state == 'PENDING' or state == 'STARTED':
+#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
+#             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
+#                 if state == "FAILURE":
+#                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+#                     user_credit.credits_left = user_credit.credits_left + consumable_credits
+#                     user_credit.save()
+#                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
+#                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def translate_file_process(task_id):
+#     pr_id = request.GET.get(project_id)
+#     tsk_id = request.GET.get(task_id)
+#     pr = Project.objects.get(id=pr_id)
+#     tsk = Task.objects.filter(id=tsk_id)
+#     user = pr.ai_user
+#     tasks = pr.get_tasks if pr_id else tsk
+#     for i in tasks:
+#         file,name = file_translate(i.file.get_source_file_path,i.job.target_language_code)
+#         ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":i.id})
+#         if ser.is_valid():
+#             ser.save()
+#         print(ser.errors)
+#     queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
+#     ser = TaskTranslatedFileSerializer(queryset,many=True)
+#     return Response(ser.data)
+
+
+
+
     # @integrity_error
     # def create(self,request):
     #     step = request.POST.get('step')
