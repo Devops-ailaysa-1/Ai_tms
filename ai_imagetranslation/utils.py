@@ -311,7 +311,10 @@ def post_process(mask: np.ndarray) -> np.ndarray:
 def naive_cutout(im , msk ) :
     empty = Image.new("RGBA", (im.size), 0)
     cutout = Image.composite(im, empty, msk)
-    return cutout
+    img_io = io.BytesIO()
+    cutout.save(img_io, format='PNG')
+    img_byte_arr = img_io.getvalue()
+    return img_byte_arr
 
 def get_consumable_credits_for_image_generation_sd(number_of_image):
     return number_of_image * 10
@@ -349,8 +352,7 @@ def background_remove(instance):
     mask = mask.resize(img.size, Image.LANCZOS)
     mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
-    cutout = naive_cutout(img, mask)
-    img_byte_arr = cutout.getvalue()
+    img_byte_arr = naive_cutout(img, mask)
     instance.mask=mask_store
     instance.save()
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
@@ -467,7 +469,6 @@ def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
 #########stabilityai
 def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
-
     body = {
     "steps": steps,
     "width": width,
@@ -487,15 +488,8 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     ],
     }
 
-    headers = {
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    "Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",
-    }
-
-    response = requests.post(url,headers=headers,
-    json=body,
-    )
+    headers = {"Accept": "application/json","Content-Type": "application/json","Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",}
+    response = requests.post(url,headers=headers,json=body,)
 
     if response.status_code != 200:
         raise Exception("Non-200 response: " + str(response.text))
