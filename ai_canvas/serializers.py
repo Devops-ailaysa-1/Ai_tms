@@ -492,6 +492,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
                     if text['type']== 'textbox':
+                        # text['evented'] = True
+                        # text['']
                         TextboxUpdate.objects.get_or_create(canvas=instance,text=text['text'],text_id=text['name'])
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
             return instance
