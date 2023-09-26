@@ -23,17 +23,17 @@ from cv2 import (
 )
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
 
-# from ai_canvas.utils import convert_image_url_to_file 
-# import numpy as np
-# import onnxruntime as ort
-# from ai_tms.settings import BASE_DIR
+from ai_canvas.utils import convert_image_url_to_file 
+import numpy as np
+import onnxruntime as ort
+from ai_tms.settings import BASE_DIR
 
-# path = '/bgr_onnx_model/u2.pt'
-# _providers = ort.get_available_providers()
-# providers=[]
-# providers.extend(_providers)
-# sess_opts = ort.SessionOptions()
-# inner_session = ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
+path = '/bgr_onnx_model/u2.pt'
+_providers = ort.get_available_providers()
+providers=[]
+providers.extend(_providers)
+sess_opts = ort.SessionOptions()
+inner_session = ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
