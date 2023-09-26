@@ -140,7 +140,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     delete_target_design_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all()),
                                         required=False,write_only=True)
     change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    #project_detail = ProjectQuickSetupSerializer(required=False,read_only=True,source='designer_project')
+    assigned = serializers.SerializerMethodField()
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.IntegerField(required=False)
     # height=serializers.IntegerField(required=False)
@@ -153,7 +153,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
                     'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
-                    'new_project','delete_target_design_lang','change_source_lang',)#'project_detail', 
+                    'new_project','delete_target_design_lang','change_source_lang','assigned',) 
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -168,6 +168,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'social_media_create':{'write_only':True},
             'update_new_textbox':{'write_only':True},}
 
+    
+    def get_assigned(self,obj):
+        return obj.project.assigned
+    
+    
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('managers')
