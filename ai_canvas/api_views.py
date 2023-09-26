@@ -260,57 +260,35 @@ def page_no_update(can_page,is_update,page_len):
 class CanvasDesignViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
 
-
-    def get_queryset(self):
-        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
-                    |Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)|Q(user = user)\
-                    |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        return queryset
-
-
     def get_object(self, pk):
         try:
-            queryset = self.get_queryset()
-            return queryset.get(id=pk)
+            return CanvasDesign.objects.get(user=self.request.user,id=pk)
         except CanvasDesign.DoesNotExist:
             raise Http404
 
-    def get_user(self):
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        project_managers.append(user)
-        print("Pms----------->",project_managers)
-        return user,project_managers
-
     def create(self,request):
         thumbnail = request.FILES.get('thumbnail')
-        user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers})
+        user = request.user.team.owner  if request.user.team  else request.user
+        serializer = CanvasDesignSerializer(data=request.data,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
     
-
     def list(self, request):
-        queryset = self.get_queryset()
-        user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(queryset,many=True,context={'user':user,'managers':pr_managers})
+
+        queryset = CanvasDesign.objects.filter(user=request.user.id)
+        serializer = CanvasDesignSerializer(queryset,many=True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
-        user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(obj,context={'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(obj)
         return Response(serializer.data)
     
     def update(self,request,pk):
         obj =self.get_object(pk)
-        user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -371,7 +349,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
-        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
+        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
                     |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
@@ -511,17 +489,17 @@ def pixabay_api(request):
 
 #################################################################
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def instant_canvas_translation(request):
-    text_list = request.POST.getlist('text')
-    src_lang_id = request.POST.get('src_lang_id',None)
-    tar_lang_id = request.POST.get('tar_lang_id')
-    if src_lang_id:
-        src_lang_code = Languages.objects.get(id=src_lang_id).locale.first().locale_code
-    tar_lang_code = Languages.objects.get(id=tar_lang_id).locale.first().locale_code
-    text_translation = get_translation(1,text_list,'en',tar_lang_code)
-    return Response({'translated_text_list':text_translation})
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def instant_canvas_translation(request):
+#     text_list = request.POST.getlist('text')
+#     src_lang_id = request.POST.get('src_lang_id',None)
+#     tar_lang_id = request.POST.get('tar_lang_id')
+#     if src_lang_id:
+#         src_lang_code = Languages.objects.get(id=src_lang_id).locale.first().locale_code
+#     tar_lang_code = Languages.objects.get(id=tar_lang_id).locale.first().locale_code
+#     text_translation = get_translation(1,text_list,'en',tar_lang_code)
+#     return Response({'translated_text_list':text_translation})
 
 ##################################
 #######view for all user#########
