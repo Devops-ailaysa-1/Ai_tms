@@ -487,6 +487,19 @@ CHANNEL_LAYERS = {
 }
 # settings.py
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+    }
+}
+
+
 # CACHES = {
 #     'default': {
 #         'BACKEND': 'django_redis.cache.RedisCache',
