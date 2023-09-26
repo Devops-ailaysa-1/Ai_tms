@@ -324,15 +324,16 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 json=j.json
                 if is_append:
                     copy_txt_box=copy.copy(text_box)
-                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
-                    copy_txt_box['text']=trans_text    
+                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                    copy_txt_box['text']=trans_text 
+                    copy_txt_box['mt_text']=trans_text  ####appended new text_box
                     obj_list=json['objects']
                     obj_list.append(copy_txt_box)
                     j.save()
                 else:
                     for tar_jsn in json['objects']:
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
-                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar)
+                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
@@ -352,7 +353,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             for count,src_json_file in enumerate(source_json_files_all):
                 src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                 src_json_file.save()
-                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code,instance.user.id)
                 if res[tar_lang.locale.first().locale_code]:
                     tar_json_form=res[tar_lang.locale.first().locale_code]             
                     tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1)
@@ -1144,7 +1145,7 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
             #             can_tar_ins.json=tar_json_pro
             #             can_tar_ins.save()
 
-from PIL import Image
+
 
 # class PromptCategoryserializer(serializers.ModelSerializer):
 
@@ -1157,7 +1158,7 @@ from PIL import Image
 #     class Meta:
 #         model=PromptEngine
 #         fields="__all__"
-
+from PIL import Image
 
 class DesignerListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)

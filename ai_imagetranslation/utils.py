@@ -22,7 +22,17 @@ from cv2 import (
     MORPH_ELLIPSE
 )
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
+
 from ai_canvas.utils import convert_image_url_to_file 
+
+
+path = '/bgr_onnx_model/u2.pt'
+_providers = ort.get_available_providers()
+providers=[]
+providers.extend(_providers)
+sess_opts = ort.SessionOptions()
+inner_session = ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
+
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
 BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
@@ -296,39 +306,86 @@ def post_process(mask: np.ndarray) -> np.ndarray:
     mask = np.where(mask < 127, 0, 255).astype(np.uint8)  # convert again to binary
     return mask
 
+def naive_cutout(im , msk ) :
+    empty = Image.new("RGBA", (im.size), 0)
+    cutout = Image.composite(im, empty, msk)
+    return cutout
+
 def get_consumable_credits_for_image_generation_sd(number_of_image):
     return number_of_image * 10
 
+import numpy as np
+import onnxruntime as ort
+from ai_tms.settings import BASE_DIR
 
-# from rembg import remove
+def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
+    im = img.convert("RGB").resize(size, Image.LANCZOS)
+    im_ary = np.array(im)
+    im_ary = im_ary / np.max(im_ary)
+    tmpImg = np.zeros((im_ary.shape[0], im_ary.shape[1], 3))
+    tmpImg[:, :, 0] = (im_ary[:, :, 0] - mean[0]) / std[0]
+    tmpImg[:, :, 1] = (im_ary[:, :, 1] - mean[1]) / std[1]
+    tmpImg[:, :, 2] = (im_ary[:, :, 2] - mean[2]) / std[2]
+    tmpImg = tmpImg.transpose((2, 0, 1))
+    return {
+        inner_session.get_inputs()[0]
+        .name: np.expand_dims(tmpImg, 0)
+        .astype(np.float32)
+    }
+
 def background_remove(instance):
     try:
         image_path=instance.original_image.path
     except:
         image_path=instance.image.path
-    headers={}
-    data={}
-    files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
-    response = requests.request("POST",BACKGROUND_REMOVAL_URL, headers=headers, data=data, files=files)
-    arr = np.frombuffer(response.content, dtype=np.uint8)
-    res=np.reshape(arr,(320,320,3))
-    res = post_process(res)
-    user_image=cv2.imread(image_path)
-    image_h, image_w, _ = user_image.shape
-    y0=cv2.resize(res, (image_w, image_h))
-    im_mask=Image.fromarray(y0).convert('RGBA')
-    mask_store = convert_image_url_to_file(im_mask,no_pil_object=False,name="mask.png")
-    # eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
-    # instance.eraser_transparent_mask=eraser_transparent_mask
+    img = Image.open(image_path)
+    ort_outs = inner_session.run(None,normalize(img, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), (320, 320)),)
+    pred = ort_outs[0][:, 0, :, :]
+    ma = np.max(pred)
+    mi = np.min(pred)
+    pred = (pred - mi) / (ma - mi)
+    pred = np.squeeze(pred)
+    mask = Image.fromarray((pred * 255).astype("uint8"), mode="L")
+    mask = mask.resize(img.size, Image.LANCZOS)
+    mask = Image.fromarray(post_process(np.array(mask)))
+    mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
+    cutout = naive_cutout(img, mask)
+    img_byte_arr = cutout.getvalue()
     instance.mask=mask_store
     instance.save()
+    return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
+
+
+# from rembg import remove
+# def background_remove(instance):
+#     try:
+#         image_path=instance.original_image.path
+#     except:
+#         image_path=instance.image.path
+#     headers={}
+#     data={}
+#     files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
+#     response = requests.request("POST",BACKGROUND_REMOVAL_URL, headers=headers, data=data, files=files)
+#     arr = np.frombuffer(response.content, dtype=np.uint8)
+#     res=np.reshape(arr,(320,320,3))
+#     res = post_process(res)
+#     user_image=cv2.imread(image_path)
+#     image_h, image_w, _ = user_image.shape
+#     y0=cv2.resize(res, (image_w, image_h))
+#     im_mask=Image.fromarray(y0).convert('RGBA')
+#     mask_store = convert_image_url_to_file(im_mask,no_pil_object=False,name="mask.png")
     
-    # img = Image.open(image_path)
-    # output = remove(img)
-    # img_byte_arr = output.getvalue()
-    # bck_gur_res=core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
-    bck_gur_res=background_merge(y0,user_image)
-    return bck_gur_res
+#     # eraser_transparent_mask=convert_transparent_for_image(im_mask,255)
+#     # instance.eraser_transparent_mask=eraser_transparent_mask
+#     instance.mask=mask_store
+#     instance.save()
+    
+#     # img = Image.open(image_path)
+#     # output = remove(img)
+#     # img_byte_arr = output.getvalue()
+#     # bck_gur_res=core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
+#     bck_gur_res=background_merge(y0,user_image)
+#     return bck_gur_res
 
 
 def sd_status_check(ids,url):
@@ -339,6 +396,7 @@ def sd_status_check(ids,url):
 
  
 from celery.decorators import task
+
 @task(queue='default')
 def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
     from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
@@ -447,10 +505,11 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     return image
 
+ 
 
 
 
-
+ 
 ########################################################################################################
 
 
