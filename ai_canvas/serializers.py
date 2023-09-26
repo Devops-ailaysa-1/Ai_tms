@@ -15,6 +15,7 @@ from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
 import os
+from django.db.models import Q
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
@@ -117,8 +118,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     target_json_file = serializers.JSONField(required=False,write_only=True)
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     export_img_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
-    #page_no = serializers.IntegerField(read_only=True)    
-    canvas_translation = CanvasTranslatedJsonSerializer(many=True,read_only=True,source='canvas_translate')
+    #page_no = serializers.IntegerField(read_only=True)
+    canvas_translation = serializers.SerializerMethodField()    
+    #canvas_translation = CanvasTranslatedJsonSerializer(many=True,read_only=True,source='canvas_translate')
     canvas_translation_target = serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all(),required=False,write_only=True)
     canvas_translation_tar_thumb = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     canvas_translation_tar_export = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
@@ -163,7 +165,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'next_page':{'write_only':True},
             'duplicate':{'write_only':True},
             'social_media_create':{'write_only':True},
-            'update_new_textbox':{'write_only':True},} 
+            'update_new_textbox':{'write_only':True},}
+
+    def get_canvas_translation(self,obj):
+        user = self.context.get('user')
+        pr_managers = self.context.get('managers')
+        queryset = obj.canvas_translate.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers))
+        return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
