@@ -22,6 +22,7 @@ from cv2 import (
     MORPH_ELLIPSE
 )
 # from ai_canvas.serializers import TemplateGlobalDesignSerializer
+
 from ai_canvas.utils import convert_image_url_to_file 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
@@ -339,6 +340,7 @@ def sd_status_check(ids,url):
 
  
 from celery.decorators import task
+
 @task(queue='default')
 def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
     from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
@@ -447,10 +449,34 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
     return image
 
+import onnxruntime as ort
+_providers = ort.get_available_providers()
+providers=[]
+providers.extend(_providers)
+sess_opts = ort.SessionOptions()
+inner_session = ort.InferenceSession(r"C:\Users\Admin\Downloads\u2.onnx",providers=providers,sess_options=sess_opts)
 
+def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
+    im = img.convert("RGB").resize(size, Image.LANCZOS)
 
+    im_ary = np.array(im)
+    im_ary = im_ary / np.max(im_ary)
 
+    tmpImg = np.zeros((im_ary.shape[0], im_ary.shape[1], 3))
+    tmpImg[:, :, 0] = (im_ary[:, :, 0] - mean[0]) / std[0]
+    tmpImg[:, :, 1] = (im_ary[:, :, 1] - mean[1]) / std[1]
+    tmpImg[:, :, 2] = (im_ary[:, :, 2] - mean[2]) / std[2]
 
+    tmpImg = tmpImg.transpose((2, 0, 1))
+
+    return {
+        inner_session.get_inputs()[0]
+        .name: np.expand_dims(tmpImg, 0)
+        .astype(np.float32)
+    }
+
+def remove_bg():
+    pass
 ########################################################################################################
 
 
