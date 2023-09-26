@@ -296,7 +296,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
 
     def list(self, request):
         queryset = self.get_queryset()
-        serializer = CanvasDesignSerializer(queryset,many=True)
+        user,pr_managers = self.get_user()
+        serializer = CanvasDesignSerializer(queryset,many=True,context={'user':user,'managers':pr_managers})
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
@@ -307,7 +308,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
     
     def update(self,request,pk):
         obj =self.get_object(pk)
-        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request})
+        user,pr_managers = self.get_user()
+        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request,'user':user,'managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
