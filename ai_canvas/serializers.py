@@ -113,7 +113,6 @@ def create_design_jobs_and_tasks(data, project):
 
 #serializers.ModelSerializer
 class CanvasDesignSerializer(serializers.ModelSerializer): 
-    from ai_workspace.serializers import ProjectQuickSetupSerializer
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
     target_json_file = serializers.JSONField(required=False,write_only=True)

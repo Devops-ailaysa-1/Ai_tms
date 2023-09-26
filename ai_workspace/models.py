@@ -1338,7 +1338,9 @@ class Task(models.Model):
                             cached_value = "Download"
                         else:cached_value = "Transeditor"
                 elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-                    if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                    if self.job.project.file_translate == True:
+                        cached_value = "Download"
+                    elif self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
                         try:cached_value = self.pdf_task.last().pdf_api_use
                         except:cached_value = None
                     else:cached_value= "Transeditor"	
