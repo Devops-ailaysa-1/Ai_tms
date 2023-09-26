@@ -235,6 +235,7 @@ littlecms
 pygame==2.5.1
 img2pdf==0.4.4
 rembg==2.0.50
+onnxruntime==1.16.0
 
 
 
