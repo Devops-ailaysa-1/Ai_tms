@@ -33,7 +33,7 @@ _providers = ort.get_available_providers()
 providers=[]
 providers.extend(_providers)
 sess_opts = ort.SessionOptions()
-inner_session = ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
+inner_session = 0#ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')

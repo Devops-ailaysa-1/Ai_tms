@@ -1229,7 +1229,16 @@ class Task(models.Model):
                 else:cached_value = None
             else:cached_value = "null"
             cache.set(cache_key,cached_value)
-        return cached_value    
+        return cached_value   
+
+
+    @property
+    def file_translate_done(self):
+        res = False
+        if self.job.project.file_translate == True:
+            if self.task_file_detail.exists() == True:
+                res = True
+        return res
 	
     @property
     def is_task_translated(self):
