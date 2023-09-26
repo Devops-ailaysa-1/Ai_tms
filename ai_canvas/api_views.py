@@ -278,21 +278,22 @@ class CanvasDesignViewset(viewsets.ViewSet):
         except CanvasDesign.DoesNotExist:
             raise Http404
 
-    def create(self,request):
-        thumbnail = request.FILES.get('thumbnail')
-        user = request.user.team.owner  if request.user.team  else request.user
-        serializer = CanvasDesignSerializer(data=request.data,context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-    
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
         project_managers.append(user)
         print("Pms----------->",project_managers)
         return user,project_managers
+
+    def create(self,request):
+        thumbnail = request.FILES.get('thumbnail')
+        user,pr_managers = self.get_user()
+        serializer = CanvasDesignSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
 
     def list(self, request):
         queryset = self.get_queryset()
