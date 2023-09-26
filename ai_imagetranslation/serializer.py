@@ -209,8 +209,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                    target_lang_code=tar_lang.locale.first().locale_code)
+                                                    target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)
                     i['text']=translate_bbox
+                    i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
                     i['name']='Background-current'
             tar_bbox.target_canvas_json=tar_json_copy
@@ -363,8 +364,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     for text_box in text_box_list:
                         txt_box=copy.deepcopy(text_box)
                         if 'text' in txt_box:
-                            translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',target_lang_code=tar_ins.target_language.locale_code)
+                            translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+                                                           target_lang_code=tar_ins.target_language.locale_code,user_id=instance.user.id)
                             txt_box['text']=translate_bbox
+                            txt_box['mt_text']=translate_bbox
                         text_box_list_new.append(txt_box)
                     tar_json['objects'][0]['src']=HOST_NAME+instance.inpaint_image.url
                     obj_list=tar_json['objects']

@@ -320,17 +320,13 @@ from ai_tms.settings import BASE_DIR
 
 def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
     im = img.convert("RGB").resize(size, Image.LANCZOS)
-
     im_ary = np.array(im)
     im_ary = im_ary / np.max(im_ary)
-
     tmpImg = np.zeros((im_ary.shape[0], im_ary.shape[1], 3))
     tmpImg[:, :, 0] = (im_ary[:, :, 0] - mean[0]) / std[0]
     tmpImg[:, :, 1] = (im_ary[:, :, 1] - mean[1]) / std[1]
     tmpImg[:, :, 2] = (im_ary[:, :, 2] - mean[2]) / std[2]
-
     tmpImg = tmpImg.transpose((2, 0, 1))
-
     return {
         inner_session.get_inputs()[0]
         .name: np.expand_dims(tmpImg, 0)
