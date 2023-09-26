@@ -113,6 +113,7 @@ def create_design_jobs_and_tasks(data, project):
 
 #serializers.ModelSerializer
 class CanvasDesignSerializer(serializers.ModelSerializer): 
+    from ai_workspace.serializers import ProjectQuickSetupSerializer
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
     source_json_file = serializers.JSONField(required=False,write_only=True)
     target_json_file = serializers.JSONField(required=False,write_only=True)
@@ -139,7 +140,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     delete_target_design_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all()),
                                         required=False,write_only=True)
     change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    
+    #project_detail = ProjectQuickSetupSerializer(required=False,read_only=True,source='designer_project')
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.IntegerField(required=False)
     # height=serializers.IntegerField(required=False)
@@ -152,7 +153,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
                     'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
-                    'new_project','delete_target_design_lang','change_source_lang') 
+                    'new_project','delete_target_design_lang','change_source_lang',)#'project_detail', 
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
