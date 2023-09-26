@@ -96,9 +96,28 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
     page_size=20
     
+
+    def get_queryset(self):
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = ImageTranslate.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
+                    | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
+                    |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        print("QS----------------->",queryset)
+        return queryset
+
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
     def get_object(self, pk):
         try:
-            return ImageTranslate.objects.get(user=self.request.user ,id=pk)
+            queryset = self.get_queryset()
+            return queryset.get(id=pk)
         except ImageTranslate.DoesNotExist:
             raise Http404
         
@@ -109,35 +128,36 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return queryset
     
     def list(self, request): #.filter(user=request.user.id)
-        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        # pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        # user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
-        queryset = ImageTranslate.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
-                    | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
-                    |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        
-        queryset = self.filter_queryset(queryset)
+        # queryset = ImageTranslate.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
+        #             | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+        #             |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
+        #             |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        user,pr_managers = self.get_user()
+        queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer =ImageTranslateSerializer(pagin_tc ,many =True) #  ImageTranslateListSerializer
+        serializer =ImageTranslateSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
         return response
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         # query_set = ImageTranslate.objects.get(id = pk)
-        serializer = ImageTranslateSerializer(obj )
+        serializer = ImageTranslateSerializer(obj,context={'user':user,'managers':pr_managers} )
         return Response(serializer.data)
         
     def create(self,request):
         image = request.FILES.get('image')
         image_id =  request.POST.getlist('image_id')
         canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
+        user,pr_managers = self.get_user()
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         
         if image:
-            serializer=ImageTranslateSerializer(data=request.data,context={'request':request}) 
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
         
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
@@ -148,7 +168,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                     im['mask_json']=json.loads(request.POST.dict()['mask_json'])
                     if 'project_name' in request.POST.dict().keys():
                         im['project_name'] = request.POST.dict()['project_name']
-            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request}) 
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'managers':pr_managers}) 
 
         elif canvas_asset_image_id:
             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
@@ -157,7 +177,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                 data['mask_json']=json.loads(request.POST.dict()['mask_json'])
             if 'project_name' in request.POST.dict().keys():
                 data['project_name'] = request.POST.dict()['project_name']
-            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request}) 
+            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'managers':pr_managers}) 
         else:
             return Response({'msg':"upload any image"})
              
@@ -173,8 +193,9 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         
     def update(self,request,pk):
         obj =self.get_object(pk)
+        user,pr_managers = self.get_user()
         query_set = ImageTranslate.objects.get(id=pk)
-        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True)
+        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'user':user,'managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

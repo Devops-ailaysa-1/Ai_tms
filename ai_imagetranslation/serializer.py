@@ -16,6 +16,7 @@ from ai_imagetranslation.utils import background_remove,background_merge ,create
 from ai_canvas.template_json import img_json,basic_json
 from ai_canvas.models import CanvasUserImageAssets
 from ai_canvas.serializers import create_design_jobs_and_tasks
+from django.db.models import Q
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
 HOST_NAME=os.getenv('HOST_NAME')
 
@@ -100,7 +101,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
 
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
-    image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
+    #image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
     inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),required=False,write_only=True)
     bounding_box_target_update=serializers.JSONField(required=False)
     bounding_box_source_update=serializers.JSONField(required=False)
@@ -116,6 +117,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_translate_delete_target=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all()),required=False,write_only=True)
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
     mask_json=serializers.JSONField(required=False)
+    image_inpaint_creation=serializers.SerializerMethodField()
     class Meta:
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
@@ -124,7 +126,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
             'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
        
-        
+    def get_image_inpaint_creation(self,obj):
+        user = self.context.get('user')
+        pr_managers = self.context.get('managers')
+        print("User------------->",user)
+        print("Prmanagers--------------->",pr_managers)
+        queryset = obj.s_im.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|Q(job__project__ai_user=user))
+        return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
+
+
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('source_language' , None):
