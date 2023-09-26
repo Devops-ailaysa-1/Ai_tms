@@ -349,7 +349,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
-        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+        queryset = CanvasDesign.objects.filter(((Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(project__ai_user = user))\
                     | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
                     |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
