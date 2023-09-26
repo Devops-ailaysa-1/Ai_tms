@@ -2,7 +2,6 @@ from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale
 from ai_auth.models import AiUser
 from django.core.validators import FileExtensionValidator
-from django.core.exceptions import ValidationError
 from ai_workspace.models import Project,Job
 
 def user_directory_path_image_load(instance, filename):

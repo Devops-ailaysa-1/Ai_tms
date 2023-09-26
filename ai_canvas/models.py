@@ -213,8 +213,6 @@ class CanvasDownloadFormat(models.Model):
         return self.format_name
     
 
-
-
 class CanvasSourceUpdate(models.Model):
     text_id=models.CharField(max_length=300,null=True,blank=True)
     # translate_text=models.CharField(max_length=2000,null=True,blank=True)
@@ -251,7 +249,6 @@ class EmojiCategory(models.Model):
             return self.name
         else:
             return ""
-
 
 
 class EmojiData(models.Model):
