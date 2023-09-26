@@ -171,7 +171,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('managers')
-        queryset = obj.canvas_translate.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers))
+        print("User------------->",user)
+        print("Prmanagers--------------->",pr_managers)
+        queryset = obj.canvas_translate.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|Q(job__project__ai_user=user))
         return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
 
     def thumb_create(self,json_str,formats,multiplierValue):
