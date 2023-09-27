@@ -373,7 +373,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
         
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = CanvasDesignListSerializer(pagin_tc,many=True)
+        serializer = CanvasDesignListSerializer(pagin_tc,many=True,context={'request':request})
         response = self.get_paginated_response(serializer.data)
         return response
     

@@ -1560,6 +1560,8 @@ def account_delete(request):
         else:
             return Response({"msg":"password didn't match"},status = 400)
     else:
+        if query.filter(provider='proz'):
+            ProzMessage.objects.filter(proz_uuid = query.last().uid).delete()
         user_delete(user)
     return JsonResponse({"msg":"user account deleted"},safe = False)
 
