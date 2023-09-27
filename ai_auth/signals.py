@@ -74,6 +74,8 @@ def create_lang_details(lang_pairs,instance):
 def proz_msg_send(user,msg,vendor):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
+    from notifications.signals import notify
+    
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
         thread_ser.save()
