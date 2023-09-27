@@ -169,9 +169,6 @@ def user_directory_path_canvas_source_image_assets(instance, filename):
     return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "aidesign/assets/sourceimage/",filename)
 
 
-
-
-
 class SourceImageAssetsCanvasTranslate(models.Model):
     canvas_design_img=models.ForeignKey(CanvasDesign , related_name='aidesign_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
     img = models.FileField(upload_to=user_directory_path_canvas_source_image_assets,blank=True,null=True)
