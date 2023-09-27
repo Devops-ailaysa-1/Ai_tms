@@ -586,9 +586,10 @@ def read_avif_image(image_path):
 class CanvasDesignListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     translate_available = serializers.BooleanField(required=False,default=False)
+    assigned = serializers.ReadOnlyField(source='project.assigned')
     class Meta:
         model = CanvasDesign
-        fields = ('id','file_name','width','height','thumbnail_src','translate_available','updated_at')
+        fields = ('id','project','assigned','file_name','width','height','thumbnail_src','translate_available','updated_at')
         
     def to_representation(self, instance):
         data = super().to_representation(instance)
