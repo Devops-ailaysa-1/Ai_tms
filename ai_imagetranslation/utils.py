@@ -476,17 +476,7 @@ def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,n
     "seed": 0,
     "cfg_scale": weight,
     "samples": sampler,
-    "text_prompts": [
-        {
-        "text":prompt,
-        "weight": 1
-        },
-        {
-        "text": negative_prompt,
-        "weight": -1
-        }
-    ],
-    }
+    "text_prompts": [{"text":prompt,"weight": 1},{"text": negative_prompt,"weight": -1}],}
 
     headers = {"Accept": "application/json","Content-Type": "application/json","Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",}
     response = requests.post(url,headers=headers,json=body,)

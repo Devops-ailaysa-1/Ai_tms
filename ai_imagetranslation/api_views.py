@@ -145,6 +145,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     def retrieve(self,request,pk):
         user,pr_managers = self.get_user()
         obj =self.get_object(pk)
+        user,pr_managers = self.get_user()
         # query_set = ImageTranslate.objects.get(id = pk)
         serializer = ImageTranslateSerializer(obj,context={'user':user,'managers':pr_managers} )
         return Response(serializer.data)
@@ -156,7 +157,6 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         user,pr_managers = self.get_user()
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
-        
         if image:
             serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
         
