@@ -143,6 +143,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
 
     def retrieve(self,request,pk):
+        user,pr_managers = self.get_user()
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         # query_set = ImageTranslate.objects.get(id = pk)
