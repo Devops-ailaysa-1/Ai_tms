@@ -380,6 +380,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
         response = self.get_paginated_response(serializer.data)
         return response
     
+    
     def filter_queryset(self, queryset):
         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
         for backend in list(filter_backends):
