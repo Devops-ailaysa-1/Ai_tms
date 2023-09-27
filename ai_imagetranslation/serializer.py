@@ -80,7 +80,7 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
                 # print("target_canvas_json",target_canvas_json)
                 if isinstance(target_canvas_json,dict) and  'backgroundImage' in target_canvas_json.keys():
                     target_canvas_json_bs64=thumbnail_create(json_str=target_canvas_json,formats='png')
-                    name=instance.source_image.project_name
+                    name=instance.source_image.file_name
                     thumb_image=core.files.File(core.files.base.ContentFile(target_canvas_json_bs64),'thumbnail_{}.png'.format(name))
                     instance.thumbnail=thumb_image
                     instance.save()
@@ -118,9 +118,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
     mask_json=serializers.JSONField(required=False)
     image_inpaint_creation=serializers.SerializerMethodField()
+    
     class Meta:
         model=ImageTranslate
-        fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
+        fields=('id','image','file_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
@@ -180,7 +181,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             # instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             instance.project = project_instance
-            instance.project_name = project_instance.project_name
+            instance.file_name = project_instance.file_name
             # if not instance.project_name:
             #     img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
             #     if img_obj:
@@ -279,8 +280,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
             
-        if validated_data.get('project_name' ,None):
-            instance.project_name = validated_data.get('project_name')
+        if validated_data.get('file_name' ,None):
+            file_name=validated_data.get('file_name')
+            instance.file_name = file_name
+            instance.project.project_name = file_name
             instance.save()
             
         if validated_data.get('mask_json',None):
@@ -423,7 +426,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 class ImageTranslateListSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageTranslate
-        fields=('id','width','height','project_name','updated_at','created_at','types',
+        fields=('id','width','height','file_name','updated_at','created_at','types',
                 'thumbnail','source_language','image_load','image','project')
 
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
