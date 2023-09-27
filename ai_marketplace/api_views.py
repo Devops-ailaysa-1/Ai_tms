@@ -1111,7 +1111,7 @@ class ProzVendorListView(generics.ListAPIView):
             country_code = Countries.objects.get(id=country).sortname.lower()
             params.update({'country_code':country_code})
         if fullname:
-            params.update({'keyword':fullname})
+            params.update({'site_name':fullname})
         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         print("Status---------->",integration_users_response)
