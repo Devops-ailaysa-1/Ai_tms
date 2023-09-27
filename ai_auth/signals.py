@@ -85,8 +85,8 @@ def proz_msg_send(user,msg,vendor,timestamp):
     print("Thread--->",thread_id)
     if thread_id:
         message = '''Message: {} 
-                     Date: {}
-                     Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
+                     Contacted Date: {}
+                     Contacted Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
         print("Message----------->",message)
         msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
@@ -133,6 +133,7 @@ def proz_connect(sender, instance, *args, **kwargs):
             if lang_pairs:
                 create_lang_details(lang_pairs,instance)
         queryset = ProzMessage.objects.filter(proz_uuid = uuid)
+        print("Queryset------------->",queryset)
         for i in queryset:
             proz_msg_send(i.customer,i.message,instance,i.timestamp)
 
