@@ -273,7 +273,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        project_managers.append(user)
+        #project_managers.append(user)
         print("Pms----------->",project_managers)
         return user,project_managers
 
