@@ -137,8 +137,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         #             |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         user,pr_managers = self.get_user()
         queryset = self.filter_queryset(self.get_queryset())
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer =ImageTranslateSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
+        pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
+        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
         return response
 
