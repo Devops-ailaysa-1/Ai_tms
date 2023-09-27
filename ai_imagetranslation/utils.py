@@ -25,15 +25,15 @@ from cv2 import (
 
 from ai_canvas.utils import convert_image_url_to_file 
 import numpy as np
-import onnxruntime as ort
+# import onnxruntime as ort
 from ai_tms.settings import BASE_DIR
 
-path = '/bgr_onnx_model/u2.pt'
-_providers = ort.get_available_providers()
-providers=[]
-providers.extend(_providers)
-sess_opts = ort.SessionOptions()
-inner_session = 0#ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
+# path = '/bgr_onnx_model/u2.pt'
+# _providers = ort.get_available_providers()
+# providers=[]
+# providers.extend(_providers)
+# sess_opts = ort.SessionOptions()
+# inner_session = 0#ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
@@ -321,40 +321,61 @@ def get_consumable_credits_for_image_generation_sd(number_of_image):
 
 
 
-def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
-    im = img.convert("RGB").resize(size, Image.LANCZOS)
-    im_ary = np.array(im)
-    im_ary = im_ary / np.max(im_ary)
-    tmpImg = np.zeros((im_ary.shape[0], im_ary.shape[1], 3))
-    tmpImg[:, :, 0] = (im_ary[:, :, 0] - mean[0]) / std[0]
-    tmpImg[:, :, 1] = (im_ary[:, :, 1] - mean[1]) / std[1]
-    tmpImg[:, :, 2] = (im_ary[:, :, 2] - mean[2]) / std[2]
-    tmpImg = tmpImg.transpose((2, 0, 1))
-    return {
-        inner_session.get_inputs()[0]
-        .name: np.expand_dims(tmpImg, 0)
-        .astype(np.float32)
-    }
+# def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
+#     im = img.convert("RGB").resize(size, Image.LANCZOS)
+#     im_ary = np.array(im)
+#     im_ary = im_ary / np.max(im_ary)
+#     tmpImg = np.zeros((im_ary.shape[0], im_ary.shape[1], 3))
+#     tmpImg[:, :, 0] = (im_ary[:, :, 0] - mean[0]) / std[0]
+#     tmpImg[:, :, 1] = (im_ary[:, :, 1] - mean[1]) / std[1]
+#     tmpImg[:, :, 2] = (im_ary[:, :, 2] - mean[2]) / std[2]
+#     tmpImg = tmpImg.transpose((2, 0, 1))
+#     return {
+#         inner_session.get_inputs()[0]
+#         .name: np.expand_dims(tmpImg, 0)
+#         .astype(np.float32)
+#     }
+
+# def background_remove(instance):
+#     try:
+#         image_path=instance.original_image.path
+#     except:
+#         image_path=instance.image.path
+#     img = Image.open(image_path)
+#     ort_outs = inner_session.run(None,normalize(img, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), (320, 320)),)
+#     pred = ort_outs[0][:, 0, :, :]
+#     ma = np.max(pred)
+#     mi = np.min(pred)
+#     pred = (pred - mi) / (ma - mi)
+#     pred = np.squeeze(pred)
+#     mask = Image.fromarray((pred * 255).astype("uint8"), mode="L")
+#     mask = mask.resize(img.size, Image.LANCZOS)
+#     mask = Image.fromarray(post_process(np.array(mask)))
+#     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
+#     img_byte_arr = naive_cutout(img, mask)
+#     instance.mask=mask_store
+#     instance.save()
+#     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
+
+bg_url = '/remove/bg_result/'
 
 def background_remove(instance):
     try:
         image_path=instance.original_image.path
     except:
         image_path=instance.image.path
+    url = "http://143.244.129.12:8091/remove/bg-remove"
     img = Image.open(image_path)
-    ort_outs = inner_session.run(None,normalize(img, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), (320, 320)),)
-    pred = ort_outs[0][:, 0, :, :]
-    ma = np.max(pred)
-    mi = np.min(pred)
-    pred = (pred - mi) / (ma - mi)
-    pred = np.squeeze(pred)
-    mask = Image.fromarray((pred * 255).astype("uint8"), mode="L")
-    mask = mask.resize(img.size, Image.LANCZOS)
-    mask = Image.fromarray(post_process(np.array(mask)))
+    payload = {}
+    files=[('image',('',open(image_path,'rb'),'image/jpeg'))]
+    headers = {}
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
+    mask=Image.open(requests.get(image_path, stream=True).raw)
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
-    img_byte_arr = naive_cutout(img, mask)
     instance.mask=mask_store
     instance.save()
+    img_byte_arr = naive_cutout(img, mask)
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
 
@@ -467,27 +488,27 @@ def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
  
 
 #########stabilityai
-def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
-    url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
-    body = {
-    "steps": steps,
-    "width": width,
-    "height": height,
-    "seed": 0,
-    "cfg_scale": weight,
-    "samples": sampler,
-    "text_prompts": [{"text":prompt,"weight": 1},{"text": negative_prompt,"weight": -1}],}
+# def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
+#     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
+#     body = {
+#     "steps": steps,
+#     "width": width,
+#     "height": height,
+#     "seed": 0,
+#     "cfg_scale": weight,
+#     "samples": sampler,
+#     "text_prompts": [{"text":prompt,"weight": 1},{"text": negative_prompt,"weight": -1}],}
 
-    headers = {"Accept": "application/json","Content-Type": "application/json","Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",}
-    response = requests.post(url,headers=headers,json=body,)
+#     headers = {"Accept": "application/json","Content-Type": "application/json","Authorization": "Bearer sk-cOAr0wUc8dGtN21bNKww39A0Gl6ABIzjX3GhHksQTC0cTXh5",}
+#     response = requests.post(url,headers=headers,json=body,)
 
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
+#     if response.status_code != 200:
+#         raise Exception("Non-200 response: " + str(response.text))
 
-    data = response.json()
-    data =base64.b64decode(response.json()['artifacts'][0]['base64'])
-    image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
-    return image
+#     data = response.json()
+#     data =base64.b64decode(response.json()['artifacts'][0]['base64'])
+#     image = core.files.File(core.files.base.ContentFile(data),"stable_diffusion_stibility_image.png")
+#     return image
 
  
 

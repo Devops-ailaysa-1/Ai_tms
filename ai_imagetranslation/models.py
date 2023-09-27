@@ -42,7 +42,7 @@ class ImageTranslate(models.Model):
     project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="image_translate_project")
     image_load=models.ForeignKey(Imageload,on_delete=models.SET_NULL,blank=True,null=True, related_name='s_lang')
     image=models.FileField(upload_to=user_directory_path_image_translate_image,blank=True,null=True)
-    project_name=models.CharField(max_length=2000,blank=True,null=True)
+    file_name=models.CharField(max_length=2000,blank=True,null=True)
     types=models.CharField(max_length=10,blank=True,null=True)
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
