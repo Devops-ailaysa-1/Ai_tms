@@ -71,11 +71,11 @@ def create_lang_details(lang_pairs,instance):
                 print(lang, created)
             except:pass
 
-def proz_msg_send(user,msg,vendor):
+def proz_msg_send(user,msg,vendor,timestamp):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     from notifications.signals import notify
-    
+
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
         thread_ser.save()
@@ -83,8 +83,13 @@ def proz_msg_send(user,msg,vendor):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    msg = ChatMessage.objects.create(message=msg,user=user,thread_id=thread_id)
-    notify.send(user, recipient=vendor, verb='Message', description=msg,thread_id=int(thread_id))  
+    if thread_id:
+        message = '''Message: {} 
+                     Contacted Date: {}
+                     Contacted Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
+        print("Message----------->",message)
+        msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
+        notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
 def proz_connect(sender, instance, *args, **kwargs):
     from ai_vendor.models import VendorsInfo
@@ -128,8 +133,9 @@ def proz_connect(sender, instance, *args, **kwargs):
             if lang_pairs:
                 create_lang_details(lang_pairs,instance)
         queryset = ProzMessage.objects.filter(proz_uuid = uuid)
+        print("Queryset------------->",queryset)
         for i in queryset:
-            proz_msg_send(i.customer,i.message,instance)
+            proz_msg_send(i.customer,i.message,instance,i.timestamp)
 
 
 
