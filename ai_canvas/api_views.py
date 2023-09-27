@@ -259,8 +259,6 @@ def page_no_update(can_page,is_update,page_len):
 
 class CanvasDesignViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
-
-
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
