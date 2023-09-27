@@ -143,6 +143,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
 
     def retrieve(self,request,pk):
+        user,pr_managers = self.get_user()
         obj =self.get_object(pk)
         # query_set = ImageTranslate.objects.get(id = pk)
         serializer = ImageTranslateSerializer(obj,context={'user':user,'managers':pr_managers} )
