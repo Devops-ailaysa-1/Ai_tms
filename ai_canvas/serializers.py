@@ -140,6 +140,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                         required=False,write_only=True)
     change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    assign_enable = serializers.SerializerMethodField()
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.IntegerField(required=False)
     # height=serializers.IntegerField(required=False)
@@ -152,7 +153,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
                     'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
-                    'new_project','delete_target_design_lang','change_source_lang','assigned',) 
+                    'new_project','delete_target_design_lang','change_source_lang','assigned','assign_enable',) 
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -170,6 +171,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     
     # def get_assigned(self,obj):
     #     return obj.project.assigned
+
+    def get_assign_enable(self, instance):
+        user = self.context.get("request").user
+        try:
+            if instance.project.team:
+                cached_value = True if ((instance.project.team.owner == user)\
+                    or(instance.project.team.internal_member_team_info.all().\
+                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+                    or(instance.project.team.owner.user_info.all()\
+                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                    else False
+            else:
+                cached_value = True if ((instance.project.ai_user == user) or\
+                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                else False
+            return cached_value
+        except: return None
+
     
     
     def get_canvas_translation(self,obj):
