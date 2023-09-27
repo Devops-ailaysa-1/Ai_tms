@@ -92,8 +92,8 @@ from django.db.models import Q
 class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields =['project_name','types']
-    search_fields =['types','project_name','source_language__language__language','s_im__target_language__language__language']
+    filterset_fields =['file_name','types']
+    search_fields =['types','file_name','source_language__language__language','s_im__target_language__language__language']
     page_size=20
     
 
@@ -167,8 +167,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             if 'mask_json' in request.POST.dict().keys():
                 for im in data:
                     im['mask_json']=json.loads(request.POST.dict()['mask_json'])
-                    if 'project_name' in request.POST.dict().keys():
-                        im['project_name'] = request.POST.dict()['project_name']
+                    if 'file_name' in request.POST.dict().keys():
+                        im['file_name'] = request.POST.dict()['file_name']
             serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'managers':pr_managers}) 
 
         elif canvas_asset_image_id:
@@ -176,8 +176,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             data={'image':im_details.image,'image_load':im_details.id}
             if 'mask_json' in request.POST.dict().keys():
                 data['mask_json']=json.loads(request.POST.dict()['mask_json'])
-            if 'project_name' in request.POST.dict().keys():
-                data['project_name'] = request.POST.dict()['project_name']
+            if 'file_name' in request.POST.dict().keys():
+                data['file_name'] = request.POST.dict()['file_name']
             serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'managers':pr_managers}) 
         else:
             return Response({'msg':"upload any image"})
@@ -229,7 +229,7 @@ def image_translation_project_view(request):
     file_format = format_extension_change(file_format)
     image_download={}
     image_instance=ImageTranslate.objects.get(user=request.user,id=image_id)
-    project_name = image_instance.project_name
+    project_name = image_instance.file_name
     if language==0:
         buffer=io.BytesIO()
         format_exe = 'png' if file_format == 'png-transparent' else file_format
@@ -280,7 +280,7 @@ class ImageTranslateListViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
     filterset_fields =[]
-    search_fields =['project_name','types','height','width']
+    search_fields =['file_name','types','height','width']
     page_size=20
  
     def filter_queryset(self, queryset):
