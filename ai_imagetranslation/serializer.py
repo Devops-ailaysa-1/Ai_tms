@@ -123,7 +123,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
-            'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
+            'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update','assigned',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
             'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
        
