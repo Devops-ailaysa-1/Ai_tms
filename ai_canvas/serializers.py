@@ -426,6 +426,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design = validated_data.get('temp_global_design',None)
         delete_target_design_lang=validated_data.get('delete_target_design_lang',None)
         change_source_lang=validated_data.get('change_source_lang',None)
+        file_name = validated_data.get('file_name',None)
+
+        if file_name:
+            instance.file_name = file_name
+            instance.project.project_name=file_name
+            instance.save()
 
         if change_source_lang:
             CanvasTranslatedJson.objects.filter(canvas_design=instance).update(source_language=change_source_lang.locale.first())
