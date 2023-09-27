@@ -85,7 +85,20 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
                     instance.thumbnail=thumb_image
                     instance.save()
         return representation
+    
+class ImageTranslateListSerializer(serializers.ModelSerializer):
+    assigned = serializers.ReadOnlyField(source='project.assigned')
+    class Meta:
+        model=ImageTranslate
+        fields=('id','created_at','assigned','updated_at','project','assigned','thumbnail','width','height','file_name')
 
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if instance.s_im.count() ==0:
+            representation['translate_available']=False
+        else:
+            representation['translate_available']=True
+        return representation
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
@@ -98,6 +111,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         if representation.get('target_language' ,None):
             representation['target_language'] = instance.target_language.language.id   
         return representation
+    
 
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
@@ -118,12 +132,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
     mask_json=serializers.JSONField(required=False)
     image_inpaint_creation=serializers.SerializerMethodField()
-    
+    assigned = serializers.ReadOnlyField(source='project.assigned')
     class Meta:
         model=ImageTranslate
         fields=('id','image','file_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
-            'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
+            'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update','assigned',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
             'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
        
@@ -132,7 +146,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         pr_managers = self.context.get('managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
-        queryset = obj.s_im.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|Q(job__project__ai_user=user))
+        queryset = obj.s_im.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
+                                                & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
+                                                & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
+                                                |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
+                                                |Q(job__project__ai_user=user))
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
 
 
@@ -423,11 +441,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         return instance 
 
 
-class ImageTranslateListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=ImageTranslate
-        fields=('id','width','height','file_name','updated_at','created_at','types',
-                'thumbnail','source_language','image_load','image','project')
+
 
 class BackgroundRemovePreviewimgSerializer(serializers.ModelSerializer):
     class Meta:

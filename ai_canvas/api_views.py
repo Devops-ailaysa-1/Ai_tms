@@ -273,7 +273,6 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        project_managers.append(user)
         print("Pms----------->",project_managers)
         return user,project_managers
 
@@ -297,13 +296,13 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def list(self, request):
         queryset = self.get_queryset()
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(queryset,many=True,context={'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(queryset,many=True,context={'request':request,'user':user,'managers':pr_managers})
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(obj,context={'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'managers':pr_managers})
         return Response(serializer.data)
     
     def update(self,request,pk):

@@ -139,7 +139,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     delete_target_design_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=CanvasTranslatedJson.objects.all()),
                                         required=False,write_only=True)
     change_source_lang= serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required=False)
-    assigned = serializers.SerializerMethodField()
+    assigned = serializers.ReadOnlyField(source='project.assigned')
+    assign_enable = serializers.SerializerMethodField()
     # project_category=serializers.PrimaryKeyRelatedField(queryset=SocialMediaSize.objects.all(),required=False)
     # width=serializers.IntegerField(required=False)
     # height=serializers.IntegerField(required=False)
@@ -152,7 +153,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
                     'temp_global_design','my_temp','target_canvas_json','next_page','duplicate','social_media_create','update_new_textbox',
-                    'new_project','delete_target_design_lang','change_source_lang','assigned',) 
+                    'new_project','delete_target_design_lang','change_source_lang','assigned','assign_enable',) 
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -168,8 +169,26 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'update_new_textbox':{'write_only':True},}
 
     
-    def get_assigned(self,obj):
-        return obj.project.assigned
+    # def get_assigned(self,obj):
+    #     return obj.project.assigned
+
+    def get_assign_enable(self, instance):
+        user = self.context.get("request").user
+        try:
+            if instance.project.team:
+                cached_value = True if ((instance.project.team.owner == user)\
+                    or(instance.project.team.internal_member_team_info.all().\
+                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+                    or(instance.project.team.owner.user_info.all()\
+                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                    else False
+            else:
+                cached_value = True if ((instance.project.ai_user == user) or\
+                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                else False
+            return cached_value
+        except: return None
+
     
     
     def get_canvas_translation(self,obj):
@@ -177,7 +196,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         pr_managers = self.context.get('managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
-        queryset = obj.canvas_translate.filter(Q(job__job_tasks_set__task_info__assign_to=user)|Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|Q(job__project__ai_user=user))
+        queryset = obj.canvas_translate.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
+                                                & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
+                                                & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
+                                                |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
+                                                Q(job__project__ai_user=user))
         return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
 
     def thumb_create(self,json_str,formats,multiplierValue):
