@@ -616,10 +616,32 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
     thumbnail_src = serializers.FileField(allow_empty_file=False,required=False,write_only=True)
     translate_available = serializers.BooleanField(required=False,default=False)
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    assign_enable = serializers.SerializerMethodField()
+    
     class Meta:
         model = CanvasDesign
-        fields = ('id','project','assigned','file_name','width','height','thumbnail_src','translate_available','updated_at')
+        fields = ('id','project','assigned','assign_enable','file_name','width','height','thumbnail_src','translate_available','updated_at')
         
+    
+    def get_assign_enable(self, instance):
+        user = self.context.get("request").user
+        try:
+            if instance.project.team:
+                cached_value = True if ((instance.project.team.owner == user)\
+                    or(instance.project.team.internal_member_team_info.all().\
+                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+                    or(instance.project.team.owner.user_info.all()\
+                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                    else False
+            else:
+                cached_value = True if ((instance.project.ai_user == user) or\
+                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+                else False
+            return cached_value
+        except: return None
+    
+    
+    
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # if hasattr(instance.canvas_json_src.first(),'thumbnail'):
