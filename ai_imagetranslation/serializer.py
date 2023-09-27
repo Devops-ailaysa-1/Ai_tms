@@ -118,6 +118,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_id =serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all(),required=False,write_only=True)
     mask_json=serializers.JSONField(required=False)
     image_inpaint_creation=serializers.SerializerMethodField()
+    assigned = serializers.ReadOnlyField(source='project.assigned')
     class Meta:
         model=ImageTranslate
         fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',

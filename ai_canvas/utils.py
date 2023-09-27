@@ -92,7 +92,7 @@ def dict_rec(canvas_json_copy,languages,src_lang,user_id):
                 tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code=languages.strip(),user_id=user_id)
                 canvas_json_copy['objects'][count]['text']=tar_word
                 canvas_json_copy['objects'][count]['rawMT']=tar_word
-                canvas_json_copy['objects'][count]['mt_text']=tar_word
+                canvas_json_copy['objects'][count]['mtText']=tar_word
                 if languages == 'ar':
                     # canvas_json_copy['objects'][count]['direction']='rtl'
                     canvas_json_copy['objects'][count]['textAlign']="right"
