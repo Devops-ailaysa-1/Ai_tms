@@ -368,11 +368,9 @@ def background_remove(instance):
     img = Image.open(image_path)
     file_name = image_path.split("/")[-1]
     payload = {}
-    files=[(file_name,(file_name,open(image_path,'rb'),'image/jpeg'))]
+    files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
-     
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-     
     image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
