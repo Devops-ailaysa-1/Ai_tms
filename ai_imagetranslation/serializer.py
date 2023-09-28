@@ -88,7 +88,6 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
     
 class ImageTranslateListSerializer(serializers.ModelSerializer):
     assigned = serializers.ReadOnlyField(source='project.assigned')
-    thumbnail=serializers.FileField(required=False)
     class Meta:
         model=ImageTranslate
         fields=('id','created_at','assigned','updated_at','project','assigned','thumbnail','width','height','file_name')
