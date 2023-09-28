@@ -140,6 +140,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
         serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
+        print("resss",response)
         return response
 
     def retrieve(self,request,pk):

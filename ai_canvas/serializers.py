@@ -189,8 +189,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return cached_value
         except: return None
 
-    
-    
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('managers')

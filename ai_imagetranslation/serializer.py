@@ -100,8 +100,9 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
         else:
             representation['translate_available']=True
         if not instance.thumbnail:
-            instance.thumbnail
-        representation['thumbnail'] = instance.s_im.first()
+            instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+            instance.save()
+        representation['thumbnail'] = HOST_NAME+ instance.thumbnail.url
         return representation
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
