@@ -93,12 +93,13 @@ def proz_msg_send(user,msg,vendor,timestamp):
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
 def proz_connect(sender, instance, created, *args, **kwargs):
+    Print("---------------In------------------------>", created)
     if created:
         from ai_vendor.models import VendorsInfo
         from ai_vendor.models import VendorSubjectFields
         from ai_marketplace.api_views import get_sub_data
         from ai_marketplace.models import ProzMessage
-        
+
         if instance.socialaccount_set.filter(provider='proz'):
             uuid = instance.socialaccount_set.filter(provider='proz').last().uid
             url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
@@ -108,6 +109,7 @@ def proz_connect(sender, instance, created, *args, **kwargs):
             response = requests.request("GET", url, headers=headers)
             res = response.json()
             if res and res.get('success') == 1:
+                print("-------------success----------------------")
                 ven = res.get('data')
                 if ven.get('qualifications',False):
                     cv_file = ven.get('qualifications').get('cv_url',None)
