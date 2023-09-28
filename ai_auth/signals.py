@@ -99,12 +99,6 @@ def proz_connect(user, sociallogin=None , **kwargs):
     from ai_marketplace.api_views import get_sub_data
     from ai_marketplace.models import ProzMessage
     instance = user
-
-    # print("---------------In------------------------>",created)
-    # if created:
-    #     print("-----------------------------created----------------------------------")
-    #     print("SObject--------------------------->",instance.socialaccount_set.filter(provider='proz'))
-    # if instance.socialaccount_set.filter(provider='proz'):
     if sociallogin and instance.socialaccount_set.filter(provider='proz'):
         print("---------------In------------------------>")
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
@@ -322,7 +316,7 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
 
 
 def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
-    if created:
+    if instance.currency_based_on_country_id == None:
         if instance.is_internal_member == True:
             instance.currency_based_on_country_id = 144
             instance.save()
