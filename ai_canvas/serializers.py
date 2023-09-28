@@ -133,7 +133,7 @@ def assigne_json_change(json_copy):
                 i['evented'] = False
                 i['selectable'] =False
                  
- 
+    print(json_cpy_2)
     return json_cpy_2
 
 
@@ -199,7 +199,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if not data['assigned']:
             return data
             
-        if not data['assigned']: #assign_enable
+        if data['assigned']: #assign_enable assigned
             print("assigned")
             src_json = data['source_json']
             for count,i in enumerate(src_json):
