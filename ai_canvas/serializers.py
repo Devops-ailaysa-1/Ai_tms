@@ -111,6 +111,25 @@ def create_design_jobs_and_tasks(data, project):
     task_assign = TaskAssign.objects.assign_task(project=project)
     return canvas_jobs,canvas_tasks
 
+def assigne_json_change(json_copy):
+    if 'template_json' in  json_copy.keys():
+        for count ,i in enumerate(json_copy['template_json']['objects']):
+            if 'objects' in i.keys():
+                assigne_json_change(i)
+            if i['type']== 'textbox':
+                i['evented'] = False
+                i['selectable'] =False
+ 
+    else:
+        for count, i in enumerate(json_copy['objects']):
+            if 'objects' in i.keys():
+                assigne_json_change(i)
+            if i['type']== 'textbox':
+                i['evented'] = False
+                i['selectable'] =False
+    return json_copy
+
+
 #serializers.ModelSerializer
 class CanvasDesignSerializer(serializers.ModelSerializer): 
     source_json = CanvasSourceJsonFilesSerializer(source='canvas_json_src',many=True,read_only=True)
@@ -168,6 +187,23 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'social_media_create':{'write_only':True},
             'update_new_textbox':{'write_only':True},}
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data['assigned']:
+            return data
+            
+        elif data['assigned']: #assign_enable
+            print("assigned")
+            src_json = data['source_json']
+            for count,i in enumerate(src_json):
+                i = assigne_json_change(i['json'])
+                src_json[count] = i     
+            return data 
+        else:
+            return data 
+
+            
+         
     
     # def get_assigned(self,obj):
     #     return obj.project.assigned
