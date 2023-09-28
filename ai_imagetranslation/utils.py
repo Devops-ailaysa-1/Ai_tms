@@ -426,9 +426,9 @@ def sd_status_check(ids,url):
 from celery.decorators import task
 
 @task(queue='default')
-def stable_diffusion_public(instance): #prompt,41,height,width,negative_prompt
+def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
     from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
-    sd_instance=StableDiffusionAPI.objects.get(id=instance.id)
+    sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
     model="sdxl"
     consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
     if sd_instance.width==sd_instance.height==512:
