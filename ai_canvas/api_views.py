@@ -1023,11 +1023,11 @@ def DesignerDownload(request):
                 for src_json in src_jsons:
                     if file_format=="text":
                         values=text_download(src_json.json)
-                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,src_lang,"txt")
+                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,"txt")
                         path='{}/{}'.format(src_lang,file_name)
                         
                     else:
-                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,src_lang,format_ext)
+                        file_name = '{}_page_{}.{}'.format(canvas.file_name,src_json.page_no,format_ext)
                         path='{}/{}'.format(src_lang,file_name)
                         values=export_download(src_json.json,file_format,export_size)
                     archive.writestr(path,values)
@@ -1036,11 +1036,11 @@ def DesignerDownload(request):
                     for tar_json in tar_jsons:
                         if file_format=="text":
                             values=text_download(tar_json.json)
-                            file_name='{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,"txt")
+                            file_name='{}_{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,"txt")
                             path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         else:
                             values=export_download(tar_json.json,file_format,export_size)
-                            file_name='{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,format_ext)
+                            file_name='{}_{}_page_{}.{}'.format(canvas.file_name,tar_json.page_no,tar_lang.target_language.language,format_ext)
                             path='{}/{}'.format(tar_lang.target_language.language,file_name)
                         archive.writestr(path,values)
             if buffer.getvalue():
