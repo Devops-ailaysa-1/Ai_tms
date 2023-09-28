@@ -98,6 +98,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
     from ai_marketplace.models import ProzMessage
+    instance = user
 
     # print("---------------In------------------------>",created)
     # if created:
@@ -105,7 +106,6 @@ def proz_connect(user, sociallogin=None , **kwargs):
     #     print("SObject--------------------------->",instance.socialaccount_set.filter(provider='proz'))
     # if instance.socialaccount_set.filter(provider='proz'):
     if sociallogin and instance.socialaccount_set.filter(provider='proz'):
-        instance = user
         print("---------------In------------------------>")
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
