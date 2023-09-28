@@ -92,54 +92,54 @@ def proz_msg_send(user,msg,vendor,timestamp):
         print("Chat------>",msg)
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
-def proz_connect(sender, instance, created, *args, **kwargs):
+def proz_connect(sender, instance, *args, **kwargs):
     Print("---------------In------------------------>", created)
-    if created:
-        from ai_vendor.models import VendorsInfo
-        from ai_vendor.models import VendorSubjectFields
-        from ai_marketplace.api_views import get_sub_data
-        from ai_marketplace.models import ProzMessage
+    #if created:
+    from ai_vendor.models import VendorsInfo
+    from ai_vendor.models import VendorSubjectFields
+    from ai_marketplace.api_views import get_sub_data
+    from ai_marketplace.models import ProzMessage
 
-        if instance.socialaccount_set.filter(provider='proz'):
-            uuid = instance.socialaccount_set.filter(provider='proz').last().uid
-            url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
-            headers = {
-            'X-Proz-API-Key': os.getenv("PROZ-KEY"),
-            }
-            response = requests.request("GET", url, headers=headers)
-            res = response.json()
-            if res and res.get('success') == 1:
-                print("-------------success----------------------")
-                ven = res.get('data')
-                if ven.get('qualifications',False):
-                    cv_file = ven.get('qualifications').get('cv_url',None)
-                    native_lang = ven.get('qualifications').get('native_language')[0]
-                if ven.get('professional_history',False):
-                    year_of_experience = ven.get('professional_history').get('years_of_experience')
-                location = ven.get('contact_info').get('address',{}).get('region',None)
-                if ven.get('about_me_localizations') != []:
-                    bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
-                else:bio = None
-                obj,created = VendorsInfo.objects.get_or_create(user=instance)
-                obj.cv_file = cv_file
-                if native_lang:
-                    obj.native_lang_id = staff_model.ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
-                obj.year_of_experience = year_of_experience
-                obj.location = location
-                obj.bio = bio
-                obj.save()
-                profile,created = auth_model.AiUserProfile.objects.get_or_create(user=instance)
-                profile.organisation_name = ven.get('contact_info').get('company_name',None)
-                profile.save()
-                subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
-                [VendorSubjectFields.objects.create(user=instance,subject_id = i.get('subject')) for i in subs]
-                lang_pairs = ven.get('skills').get('language_pairs',None)
-                if lang_pairs:
-                    create_lang_details(lang_pairs,instance)
-            queryset = ProzMessage.objects.filter(proz_uuid = uuid)
-            print("Queryset------------->",queryset)
-            for i in queryset:
-                proz_msg_send(i.customer,i.message,instance,i.timestamp)
+    if instance.socialaccount_set.filter(provider='proz'):
+        uuid = instance.socialaccount_set.filter(provider='proz').last().uid
+        url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
+        headers = {
+        'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+        }
+        response = requests.request("GET", url, headers=headers)
+        res = response.json()
+        if res and res.get('success') == 1:
+            print("-------------success----------------------")
+            ven = res.get('data')
+            if ven.get('qualifications',False):
+                cv_file = ven.get('qualifications').get('cv_url',None)
+                native_lang = ven.get('qualifications').get('native_language')[0]
+            if ven.get('professional_history',False):
+                year_of_experience = ven.get('professional_history').get('years_of_experience')
+            location = ven.get('contact_info').get('address',{}).get('region',None)
+            if ven.get('about_me_localizations') != []:
+                bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
+            else:bio = None
+            obj,created = VendorsInfo.objects.get_or_create(user=instance)
+            obj.cv_file = cv_file
+            if native_lang:
+                obj.native_lang_id = staff_model.ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
+            obj.year_of_experience = year_of_experience
+            obj.location = location
+            obj.bio = bio
+            obj.save()
+            profile,created = auth_model.AiUserProfile.objects.get_or_create(user=instance)
+            profile.organisation_name = ven.get('contact_info').get('company_name',None)
+            profile.save()
+            subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
+            [VendorSubjectFields.objects.get_or_create(user=instance,subject_id = i.get('subject')) for i in subs]
+            lang_pairs = ven.get('skills').get('language_pairs',None)
+            if lang_pairs:
+                create_lang_details(lang_pairs,instance)
+        queryset = ProzMessage.objects.filter(proz_uuid = uuid)
+        print("Queryset------------->",queryset)
+        for i in queryset:
+            proz_msg_send(i.customer,i.message,instance,i.timestamp)
 
 
 
