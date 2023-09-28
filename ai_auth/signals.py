@@ -93,7 +93,7 @@ def proz_msg_send(user,msg,vendor,timestamp):
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
 def proz_connect(sender, instance, *args, **kwargs):
-    Print("---------------In------------------------>", created)
+    print("---------------In------------------------>", created)
     #if created:
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
