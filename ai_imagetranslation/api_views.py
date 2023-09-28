@@ -457,10 +457,10 @@ from ai_openai.serializers import AiPromptSerializer
 def ImageTranslatewordcount(request):
     image_inpaint_creation_id=request.query_params.get('image_inpaint_creation_id')
     image_inpaint_creation_instance = ImageInpaintCreation.objects.get(source_image__user=request.user,id=image_inpaint_creation_id)
-    print(image_inpaint_creation_instance)
+
+    print(image_inpaint_creation_instance.source_language)
     total_sent=[]
     source_json = image_inpaint_creation_instance.source_image.source_canvas_json
-    print(source_json)
     total_sent.append(dict_rec(source_json))
     wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                         prompt_string_list= total_sent)

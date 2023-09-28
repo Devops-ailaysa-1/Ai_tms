@@ -1145,7 +1145,7 @@ def dict_rec(json_copy):
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
     canvas_trans_json_id=request.query_params.get('canvas_trans_json_id')
-    design_instance = CanvasTranslatedJson.objects.get(user =request.user, id=canvas_trans_json_id)
+    design_instance = CanvasTranslatedJson.objects.get(canvas_design__user =request.user, id=canvas_trans_json_id)
     total_sent=[]
     for i in design_instance.canvas_design.canvas_json_src.all():
          total_sent.extend(dict_rec(i.json))

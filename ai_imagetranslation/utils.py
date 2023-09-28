@@ -36,6 +36,9 @@ from ai_tms.settings import BASE_DIR
 # inner_session = 0#ort.InferenceSession(BASE_DIR+path,providers=providers,sess_options=sess_opts)
 
 
+ 
+
+
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
 BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
 STABLE_DIFFUSION_API= os.getenv('STABLE_DIFFUSION_API') 
@@ -373,6 +376,7 @@ def background_remove(instance):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
+    mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
     instance.mask=mask_store
     instance.save()
