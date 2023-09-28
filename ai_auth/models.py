@@ -216,7 +216,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
 post_save.connect(update_internal_member_status, sender=AiUser)
 post_save.connect(get_currency_based_on_country, sender=AiUser)
-post_save.connect(proz_connect, sender=AiUser)
+#post_save.connect(proz_connect, sender=AiUser)
 
 
 

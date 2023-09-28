@@ -92,6 +92,7 @@ def proz_msg_send(user,msg,vendor,timestamp):
         print("Chat------>",msg)
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
+@receiver(user_signed_up)
 def proz_connect(sender, instance, *args, **kwargs):
     print("---------------In------------------------>")
     #if created:
