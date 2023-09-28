@@ -110,9 +110,12 @@ def create_design_jobs_and_tasks(data, project):
     canvas_tasks = Task.objects.create_design_tasks_of_jobs(jobs=jobs,klass=t_klass)
     task_assign = TaskAssign.objects.assign_task(project=project)
     return canvas_jobs,canvas_tasks
+
+
  
+
 from copy import deepcopy
-def assigne_json_change(json_copy):
+def assigne_json_change(json_copy,instance):
     json_cpy_2=copy.deepcopy(json_copy)
     if 'template_json' in  json_cpy_2.keys():
         for count ,i in enumerate(json_cpy_2['template_json']['objects']):
@@ -124,7 +127,6 @@ def assigne_json_change(json_copy):
             i['evented'] = False
             # if 'selectable'== i.keys():
             i['selectable'] =False
-        
  
     else:
         for count, i in enumerate(json_cpy_2['objects']):
@@ -193,7 +195,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'duplicate':{'write_only':True},
             'social_media_create':{'write_only':True},
             'update_new_textbox':{'write_only':True},}
-
+# canvas_translate.all()[0].job.job_tasks_set.last().task_info.last().task_assign_info
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # if not data['assigned']:
@@ -202,8 +204,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # if data['assigned']: #assign_enable assigned
         #     print("assigned")
         src_json = data['source_json']
+
+        # for count,i in enumerate(canvas_translate.all()):
         for count,i in enumerate(src_json):
-            i = assigne_json_change(i['json'])
+            instance.canvas_translate.all()[0].job.job_tasks_set.last().task_info.last().task_assign_info
+            i = assigne_json_change(i['json'], instance)
             src_json[count]['json'] = i   
         data['source_json'] = src_json
         return data 
@@ -243,6 +248,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
                                                 Q(job__project__ai_user=user))
+        
         return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
 
     def thumb_create(self,json_str,formats,multiplierValue):
@@ -468,11 +474,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design = validated_data.get('temp_global_design',None)
         delete_target_design_lang=validated_data.get('delete_target_design_lang',None)
         change_source_lang=validated_data.get('change_source_lang',None)
-        file_name = validated_data.get('file_name',None)
+        project_name = validated_data.get('project_name',None)
 
-        if file_name:
+        if project_name:
             instance.file_name = file_name
-            instance.project.project_name=file_name
+            instance.project.project_name=project_name
             instance.save()
 
         if change_source_lang:

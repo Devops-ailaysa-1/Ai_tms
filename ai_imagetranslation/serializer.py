@@ -304,8 +304,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
             
-        if validated_data.get('file_name' ,None):
-            file_name=validated_data.get('file_name')
+        if validated_data.get('project_name' ,None):
+            file_name=validated_data.get('project_name')
             instance.file_name = file_name
             instance.project.project_name = file_name
             instance.save()
