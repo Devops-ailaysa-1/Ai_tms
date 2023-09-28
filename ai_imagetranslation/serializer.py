@@ -101,7 +101,7 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
         if not instance.thumbnail:
             instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
             instance.save()
-        representation['thumbnail'] = HOST_NAME+ instance.thumbnail.url
+        representation['thumbnail'] = instance.thumbnail.url
         return representation
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
@@ -307,7 +307,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if validated_data.get('project_name' ,None):
             file_name=validated_data.get('project_name')
             instance.file_name = file_name
-            instance.project.project_name = file_name
+            proj_inst = Project.objects.get(id = instance.project.id)
+            proj_inst.project_name = file_name
+            proj_inst.save()
             instance.save()
             
         if validated_data.get('mask_json',None):

@@ -198,7 +198,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 # canvas_translate.all()[0].job.job_tasks_set.last().task_info.last().task_assign_info
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data['assigned']: #assign_enable assigned
+        if data.get('assigned',None): #assign_enable assigned
             print("assigned")
             src_json = data['source_json']
             for count,i in enumerate(src_json):
@@ -468,11 +468,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design = validated_data.get('temp_global_design',None)
         delete_target_design_lang=validated_data.get('delete_target_design_lang',None)
         change_source_lang=validated_data.get('change_source_lang',None)
-        project_name = validated_data.get('file_name',None)
+        name = validated_data.get('file_name',None)
 
-        if project_name:
-            instance.file_name = project_name
-            instance.project.project_name=project_name
+        if name:
+            instance.file_name = name
+            proj_inst = Project.objects.get(id = instance.project.id)
+            proj_inst.project_name =name
+            proj_inst.save()
             instance.save()
 
         if change_source_lang:
