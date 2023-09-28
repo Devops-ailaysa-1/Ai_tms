@@ -92,10 +92,10 @@ def proz_msg_send(user,msg,vendor,timestamp):
         print("Chat------>",msg)
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
-@receiver(user_signed_up)
-def proz_connect(sender, instance, *args, **kwargs):
-    print("---------------In------------------------>")
-    #if created:
+def proz_connect(sender, instance, *args, created, **kwargs):
+    print("---------------In------------------------>",created)
+    if created:
+        print("-----------------------------created----------------------------------")
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
