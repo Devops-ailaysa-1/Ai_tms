@@ -118,22 +118,22 @@ def assigne_json_change(json_copy):
         for count ,i in enumerate(json_cpy_2['template_json']['objects']):
             if 'objects' in i.keys():
                 assigne_json_change(i)
-            if i['type']== 'textbox':
-     
-                i['evented'] = False
-                i['selectable'] =False
+            # print(i.keys())
+            # if 'evented'== i.keys():
+                # print(i.keys())
+            i['evented'] = False
+            # if 'selectable'== i.keys():
+            i['selectable'] =False
         
  
     else:
         for count, i in enumerate(json_cpy_2['objects']):
             if 'objects' in i.keys():
                 assigne_json_change(i)
-            if i['type']== 'textbox':
- 
-                i['evented'] = False
-                i['selectable'] =False
-                 
-    print(json_cpy_2)
+            # if 'evented'== i.keys():
+            i['evented'] = False
+            # if 'selectable'== i.keys():
+            i['selectable'] =False
     return json_cpy_2
 
 
@@ -196,19 +196,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not data['assigned']:
-            return data
+        # if not data['assigned']:
+        #     return data
             
-        if data['assigned']: #assign_enable assigned
-            print("assigned")
-            src_json = data['source_json']
-            for count,i in enumerate(src_json):
-                i = assigne_json_change(i['json'])
-                src_json[count]['json'] = i   
-            data['source_json'] = src_json
-            return data 
-        else:
-            return data 
+        # if data['assigned']: #assign_enable assigned
+        #     print("assigned")
+        src_json = data['source_json']
+        for count,i in enumerate(src_json):
+            i = assigne_json_change(i['json'])
+            src_json[count]['json'] = i   
+        data['source_json'] = src_json
+        return data 
+        # else:
+        #     return data 
 
             
          
