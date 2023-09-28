@@ -115,7 +115,7 @@ def create_design_jobs_and_tasks(data, project):
  
 
 from copy import deepcopy
-def assigne_json_change(json_copy,instance):
+def assigne_json_change(json_copy):
     json_cpy_2=copy.deepcopy(json_copy)
     if 'template_json' in  json_cpy_2.keys():
         for count ,i in enumerate(json_cpy_2['template_json']['objects']):
@@ -202,7 +202,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             print("assigned")
             src_json = data['source_json']
             for count,i in enumerate(src_json):
-                i = assigne_json_change(i['json'], instance)
+                i = assigne_json_change(i['json'])
                 src_json[count]['json'] = i   
             data['source_json'] = src_json
             return data 
@@ -468,7 +468,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         temp_global_design = validated_data.get('temp_global_design',None)
         delete_target_design_lang=validated_data.get('delete_target_design_lang',None)
         change_source_lang=validated_data.get('change_source_lang',None)
-        project_name = validated_data.get('project_name',None)
+        project_name = validated_data.get('file_name',None)
 
         if project_name:
             instance.file_name = project_name
