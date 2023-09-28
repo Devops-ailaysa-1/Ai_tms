@@ -643,9 +643,11 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # if hasattr(instance.canvas_json_src.first(),'thumbnail'):
-        if instance.canvas_json_src.first().thumbnail:
+        if instance.canvas_json_src.first() and instance.canvas_json_src.first().thumbnail:
             # if 'thumbnail_src' in data.keys():
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
+        else:
+            data['thumbnail_src'] = None
         if instance.canvas_translate.all():
             data['translate_available'] = True
         # if not instance.project_category:     
