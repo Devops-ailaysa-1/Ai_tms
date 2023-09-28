@@ -1126,14 +1126,14 @@ from ai_openai.serializers import AiPromptSerializer
 def dict_rec(json_copy):
     total_sent = []
     if 'template_json' in  json_copy.keys():
-        for  i in enumerate(json_copy['template_json']['objects']):
+        for count ,i in enumerate(json_copy['template_json']['objects']):
             if 'objects' in i.keys():
                 dict_rec(i)
             if i['type']== 'textbox':
                 text = i['text']
                 total_sent.append(text)
     else:
-        for  i in enumerate(json_copy['objects']):
+        for count, i in enumerate(json_copy['objects']):
             if 'objects' in i.keys():
                 dict_rec(i)
             if i['type']== 'textbox':
