@@ -78,6 +78,9 @@ params = {
         }
 
 
+
+
+
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
@@ -256,6 +259,24 @@ def page_no_update(can_page,is_update,page_len):
 #         i.save()
     # return Response({'msg':'deleted successfully'},status=200)
 
+def assigne_json_change(json_copy):
+    if 'template_json' in  json_copy.keys():
+        for count ,i in enumerate(json_copy['template_json']['objects']):
+            if 'objects' in i.keys():
+                dict_rec_json(i)
+            if i['type']== 'textbox':
+                i['evented'] = False
+                i['selectable'] =False
+ 
+    else:
+        for count, i in enumerate(json_copy['objects']):
+            if 'objects' in i.keys():
+                dict_rec_json(i)
+            if i['type']== 'textbox':
+                i['evented'] = False
+                i['selectable'] =False
+    return json_copy
+
 
 class CanvasDesignViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -302,9 +323,16 @@ class CanvasDesignViewset(viewsets.ViewSet):
         user,pr_managers = self.get_user()
 
         serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'managers':pr_managers})
-        data = serializer.data['assign_enable']
-        print("-----tjdffa-",data)
-        return Response(serializer.data)
+        data = serializer.data
+        if not data['assigned']:
+            return Response(serializer.data)
+        elif data['assigned']:
+            src_json = data['source_json']
+            for count,i in enumerate(src_json):
+                i = assigne_json_change(i['json'])
+                src_json[count] = i      
+            
+        return Response(data)
     
     def update(self,request,pk):
         obj =self.get_object(pk)
