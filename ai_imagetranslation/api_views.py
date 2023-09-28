@@ -447,7 +447,7 @@ class AspectRatioViewSet(generics.ListCreateAPIView):
     serializer_class = AspectRatioSerializer
     pagination_class = None
 
-from ai_canvas.api_views import dict_rec
+from ai_canvas.api_views import dict_rec_json
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
@@ -456,12 +456,12 @@ from ai_openai.serializers import AiPromptSerializer
 @permission_classes([IsAuthenticated])
 def ImageTranslatewordcount(request):
     image_inpaint_creation_id=request.query_params.get('image_inpaint_creation_id')
-    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(source_image__user=request.user,id=image_inpaint_creation_id)
+    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id) #source_image__user=request.user,
 
     print(image_inpaint_creation_instance.source_language)
     total_sent=[]
     source_json = image_inpaint_creation_instance.source_image.source_canvas_json
-    total_sent.append(dict_rec(source_json))
+    total_sent.append(dict_rec_json(source_json))
     wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                         prompt_string_list= total_sent)
     task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
