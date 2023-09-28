@@ -324,15 +324,15 @@ class CanvasDesignViewset(viewsets.ViewSet):
 
         serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'managers':pr_managers})
         data = serializer.data
-        if not data['assigned']:
-            return Response(serializer.data)
-        elif data['assigned']:
-            src_json = data['source_json']
-            for count,i in enumerate(src_json):
-                i = assigne_json_change(i['json'])
-                src_json[count] = i      
+        # if not data['assigned']:
+        return Response(serializer.data)
+        # elif data['assigned']:
+        #     src_json = data['source_json']
+        #     for count,i in enumerate(src_json):
+        #         i = assigne_json_change(i['json'])
+        #         src_json[count] = i      
             
-        return Response(data)
+        # return Response(data)
     
     def update(self,request,pk):
         obj =self.get_object(pk)
