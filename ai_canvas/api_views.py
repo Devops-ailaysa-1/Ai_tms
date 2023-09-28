@@ -300,7 +300,10 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
+
         serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'managers':pr_managers})
+        data = serializer.data['assign_enable']
+        print("-----tjdffa-",data)
         return Response(serializer.data)
     
     def update(self,request,pk):
@@ -1123,19 +1126,19 @@ from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
 
-def dict_rec(json_copy):
+def dict_rec_json(json_copy):
     total_sent = []
     if 'template_json' in  json_copy.keys():
         for count ,i in enumerate(json_copy['template_json']['objects']):
             if 'objects' in i.keys():
-                dict_rec(i)
+                dict_rec_json(i)
             if i['type']== 'textbox':
                 text = i['text']
                 total_sent.append(text)
     else:
         for count, i in enumerate(json_copy['objects']):
             if 'objects' in i.keys():
-                dict_rec(i)
+                dict_rec_json(i)
             if i['type']== 'textbox':
                 text = i['text']
                 total_sent.append(text)
@@ -1145,10 +1148,11 @@ def dict_rec(json_copy):
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
     canvas_trans_json_id=request.query_params.get('canvas_trans_json_id')
-    design_instance = CanvasTranslatedJson.objects.get(canvas_design__user =request.user, id=canvas_trans_json_id)
+    design_instance = CanvasTranslatedJson.objects.get(id=canvas_trans_json_id) #canvas_design__user=request.user, 
     total_sent=[]
     for i in design_instance.canvas_design.canvas_json_src.all():
-         total_sent.extend(dict_rec(i.json))
+         total_sent.extend(dict_rec_json(i.json))
+    print(total_sent)
     wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
                                                         prompt_string_list= total_sent)
     task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
