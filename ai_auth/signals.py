@@ -93,7 +93,7 @@ def proz_msg_send(user,msg,vendor,timestamp):
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
 @receiver(user_signed_up)
-def proz_connect(instance, sociallogin=None , **kwargs):
+def proz_connect(user, sociallogin=None , **kwargs):
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
@@ -105,6 +105,7 @@ def proz_connect(instance, sociallogin=None , **kwargs):
     #     print("SObject--------------------------->",instance.socialaccount_set.filter(provider='proz'))
     # if instance.socialaccount_set.filter(provider='proz'):
     if sociallogin and instance.socialaccount_set.filter(provider='proz'):
+        instance = user
         print("---------------In------------------------>")
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
