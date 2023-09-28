@@ -110,24 +110,31 @@ def create_design_jobs_and_tasks(data, project):
     canvas_tasks = Task.objects.create_design_tasks_of_jobs(jobs=jobs,klass=t_klass)
     task_assign = TaskAssign.objects.assign_task(project=project)
     return canvas_jobs,canvas_tasks
-
+ 
+from copy import deepcopy
 def assigne_json_change(json_copy):
-    if 'template_json' in  json_copy.keys():
-        for count ,i in enumerate(json_copy['template_json']['objects']):
+    json_cpy_2=copy.deepcopy(json_copy)
+    if 'template_json' in  json_cpy_2.keys():
+        for count ,i in enumerate(json_cpy_2['template_json']['objects']):
             if 'objects' in i.keys():
                 assigne_json_change(i)
             if i['type']== 'textbox':
+     
                 i['evented'] = False
                 i['selectable'] =False
+        
  
     else:
-        for count, i in enumerate(json_copy['objects']):
+        for count, i in enumerate(json_cpy_2['objects']):
             if 'objects' in i.keys():
                 assigne_json_change(i)
             if i['type']== 'textbox':
+ 
                 i['evented'] = False
                 i['selectable'] =False
-    return json_copy
+                 
+ 
+    return json_cpy_2
 
 
 #serializers.ModelSerializer
@@ -192,12 +199,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if not data['assigned']:
             return data
             
-        elif data['assigned']: #assign_enable
+        if not data['assigned']: #assign_enable
             print("assigned")
             src_json = data['source_json']
             for count,i in enumerate(src_json):
                 i = assigne_json_change(i['json'])
-                src_json[count] = i     
+                src_json[count]['json'] = i   
+            data['source_json'] = src_json
             return data 
         else:
             return data 
