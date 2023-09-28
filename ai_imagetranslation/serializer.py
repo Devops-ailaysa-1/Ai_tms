@@ -88,6 +88,7 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
     
 class ImageTranslateListSerializer(serializers.ModelSerializer):
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    thumbnail=serializers.FileField(required=False)
     class Meta:
         model=ImageTranslate
         fields=('id','created_at','assigned','updated_at','project','assigned','thumbnail','width','height','file_name')
@@ -98,6 +99,10 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
             representation['translate_available']=False
         else:
             representation['translate_available']=True
+        if not instance.thumbnail:
+            instance.thumbnail = create_thumbnail_img_load(base_dimension=300,image=Image.open(instance.image.path))
+            instance.save()
+        representation['thumbnail'] = HOST_NAME+ instance.thumbnail.url
         return representation
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
@@ -171,8 +176,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     @staticmethod
     def image_shape(image):
         im = Image.open(image)
+        thumb_nail = create_thumbnail_img_load(base_dimension=300,image=im)
         width, height = im.size
-        return width,height #thumb_nail
+        return width,height ,thumb_nail
     
     def create(self, validated_data):
         # user=self.context['request'].user
@@ -191,15 +197,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
             instance=ImageTranslate.objects.create(**data)
-            width,height=self.image_shape(instance.image.path)
+            width,height,thumb_nail=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height
             instance.created_by=created_by
             # instance.mask_json=mask_json
-            # instance.thumbnail=thumb_nail
+            instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             instance.project = project_instance
-            instance.file_name = project_instance.file_name
+            instance.file_name = project_instance.project_name
             # if not instance.project_name:
             #     img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
             #     if img_obj:
@@ -293,7 +299,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
-            width , height = self.image_shape(instance.image)
+            width , height ,thumb = self.image_shape(instance.image)
+            instance.thumbnail = thumb
             instance.width = width
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
