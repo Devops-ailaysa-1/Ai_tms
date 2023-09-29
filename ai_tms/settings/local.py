@@ -692,4 +692,4 @@ SILKY_AUTHORISATION = True  # User must have permissions
 #     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
 # }
 
-STRIPE_API_HOST = "http://localhost:12111"  
+#STRIPE_API_HOST = "http://localhost:12111"  
