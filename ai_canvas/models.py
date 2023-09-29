@@ -40,13 +40,14 @@ def user_directory_path_canvas_user_imageassets(instance, filename):
 
 
 class CanvasUserImageAssets(models.Model):
-    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE, related_name = 'img_asst_ai_user')
     image_name=models.CharField(max_length=2000,null=True,blank=True)
     image= models.FileField(upload_to=user_directory_path_canvas_image_assets,blank=True,null=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
     width=models.IntegerField(null=True,blank=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='img_asst_created_by')  
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
     status=models.BooleanField(default=False)
 
@@ -143,10 +144,11 @@ def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
 
 
 class MyTemplateDesign(models.Model):
-    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='template_ai_user')
     file_name=models.CharField(max_length=50,null=True,blank=True) 
     width=models.IntegerField(null=True,blank=True)
     height=models.IntegerField(null=True,blank=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='template_created_by')  
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
     project_category=models.ForeignKey(SocialMediaSize,on_delete=models.CASCADE,null=True,related_name='project_cat_mytemplate')
@@ -191,6 +193,7 @@ class FontFile(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
     name=models.CharField(max_length=2000,blank=True,null=True)
     font_family=models.FileField(upload_to=user_directory_path_font_file,blank=True,null=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='font_created_by')
 
     def __str__(self) -> str:
         return self.name
