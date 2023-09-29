@@ -89,15 +89,18 @@ def proz_msg_send(user,msg,vendor,timestamp):
                      Contacted Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
         print("Message----------->",message)
         msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
+        print("Chat------>",msg)
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
-def proz_connect(sender, instance, *args, **kwargs):
+@receiver(user_signed_up)
+def proz_connect(user, sociallogin=None , **kwargs):
     from ai_vendor.models import VendorsInfo
     from ai_vendor.models import VendorSubjectFields
     from ai_marketplace.api_views import get_sub_data
     from ai_marketplace.models import ProzMessage
-    
-    if instance.socialaccount_set.filter(provider='proz'):
+    instance = user
+    if sociallogin and instance.socialaccount_set.filter(provider='proz'):
+        print("---------------In------------------------>")
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
         url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
         headers = {
@@ -106,6 +109,7 @@ def proz_connect(sender, instance, *args, **kwargs):
         response = requests.request("GET", url, headers=headers)
         res = response.json()
         if res and res.get('success') == 1:
+            print("-------------success----------------------")
             ven = res.get('data')
             if ven.get('qualifications',False):
                 cv_file = ven.get('qualifications').get('cv_url',None)
@@ -128,7 +132,7 @@ def proz_connect(sender, instance, *args, **kwargs):
             profile.organisation_name = ven.get('contact_info').get('company_name',None)
             profile.save()
             subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
-            [VendorSubjectFields.objects.create(user=instance,subject_id = i.get('subject')) for i in subs]
+            [VendorSubjectFields.objects.get_or_create(user=instance,subject_id = i.get('subject')) for i in subs]
             lang_pairs = ven.get('skills').get('language_pairs',None)
             if lang_pairs:
                 create_lang_details(lang_pairs,instance)
@@ -312,7 +316,7 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
 
 
 def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
-    if created:
+    if instance.currency_based_on_country_id == None:
         if instance.is_internal_member == True:
             instance.currency_based_on_country_id = 144
             instance.save()
