@@ -153,7 +153,8 @@ class CanvasUserImageAssetsViewsetList(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size=20
     def list(self, request):
-        ids=[canvas_in.id for canvas_in in CanvasUserImageAssets.objects.filter(user=request.user.id) if image_check(canvas_in.image.path)]
+        user = request.user.team.owner if request.user.team else request.user
+        ids=[canvas_in.id for canvas_in in CanvasUserImageAssets.objects.filter(user=user) if image_check(canvas_in.image.path)]
         queryset=CanvasUserImageAssets.objects.filter(id__in=ids).order_by("-id")
         # queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
@@ -168,22 +169,25 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
 
     def get_object(self, pk):
         try:
-            return CanvasUserImageAssets.objects.get(self.request.user,id=pk)
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return CanvasUserImageAssets.objects.get(user,id=pk)
         except CanvasUserImageAssets.DoesNotExist:
             raise Http404
 
     def create(self,request):
         image = request.FILES.get('image')
+        user = request.user.team.owner if request.user.team else request.user
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
-        serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request})
+        serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request,'user':user,'created_by':request.user})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = CanvasUserImageAssets.objects.filter(user=request.user.id).order_by('-id')
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = CanvasUserImageAssets.objects.filter(user=user).order_by('-id')
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasUserImageAssetsSerializer(pagin_tc,many=True)
@@ -211,7 +215,8 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
         
     def destroy(self,request,pk):
         try:
-            obj = CanvasUserImageAssets.objects.get(user=request.user,id=pk)
+            user = request.user.team.owner if request.user.team else request.user
+            obj = CanvasUserImageAssets.objects.get(user=user,id=pk)
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
         except:
@@ -411,7 +416,8 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     search_fields =['file_name',]
 
     def list(self,request):
-        queryset = MyTemplateDesign.objects.filter(user=request.user.id).order_by('-id')
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = MyTemplateDesign.objects.filter(user=user).order_by('-id')
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
@@ -425,8 +431,9 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     #     return Response(queryset)
 
     def create(self,request):
+        user = request.user.team.owner if request.user.team else request.user
         template_global_id = request.POST.get('template_global_id')
-        serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request})
+        serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request,'user':user,'created_by':self.request.user})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -439,7 +446,8 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
         return queryset   
     
     def destroy(self,request,pk):
-        MyTemplateDesign.objects.get(user=request.user,id=pk).delete()
+        user = request.user.team.owner if request.user.team else request.user
+        MyTemplateDesign.objects.get(user=user,id=pk).delete()
         return Response({'msg':'deleted'})
     
 
@@ -595,19 +603,22 @@ class TemplateKeywordViewset(viewsets.ViewSet):
 class FontFileViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set=FontFile.objects.filter(user=request.user.id)
+        user = request.user.team.owner if request.user.team else request.user
+        query_set=FontFile.objects.filter(user=user)
         serializer=FontFileSerializer(query_set ,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
-        query_set=FontFile.objects.get(user=request.user,id = pk)
+        user = request.user.team.owner if request.user.team else request.user
+        query_set=FontFile.objects.get(user=user,id = pk)
         serializer=FontFileSerializer(query_set )
         return Response(serializer.data)
         
     def create(self,request):
         font_file=request.FILES.get('font_file',None)
+        user = request.user.team.owner if request.user.team else request.user
         print({**request.POST.dict(),'font_family':font_file})
-        serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':request.user.id})
+        serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':user.id,'created_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -625,7 +636,8 @@ class FontFileViewset(viewsets.ViewSet):
             return Response(serializer.errors)
         
     def delete(self,request,pk):
-        query_set=FontFile.objects.get(user=request.user,id=pk)
+        user = request.user.team.owner if request.user.team else request.user
+        query_set=FontFile.objects.get(user=user,id=pk)
         query_set.delete()
         return Response(status=204)
 

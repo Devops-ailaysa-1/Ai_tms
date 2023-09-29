@@ -283,8 +283,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         if my_temp:
             data = {**validated_data ,'user':user,'created_by':created_by}
-            new_proj=CanvasDesign.objects.create(**data)
-
+            new_proj=CanvasDesign.objects.create(**data) #file_name
+            project_instance.project_name = new_proj.file_name
+            project_instance.save()
             page_instance = my_temp.my_template_page.first()
             # file_name = my_temp.file_name
             width = my_temp.width
@@ -300,6 +301,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return new_proj
 
         if temp_global_design and new_project:
+            name = temp_global_design.template_name
             width=temp_global_design.category.width
             height=temp_global_design.category.height
             json=temp_global_design.json
@@ -307,8 +309,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             thumbnail=temp_global_design.thumbnail_page
             user = self.context['request'].user
             new_proj=CanvasDesign.objects.create(user=user,width=width,height=height,created_by=created_by)
+            new_proj.file_name = name
+            project_instance.project_name = name
+            project_instance.save()
             new_proj.project= project_instance
-            new_proj.file_name = project_instance.project_name
+            # new_proj.file_name = project_instance.project_name
             new_proj.save()
             json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": new_proj.id,
                                     "projectType": "design","project_category_label":category.social_media_name,"project_category_id":category.id}
@@ -347,6 +352,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
 
         if social_media_create and width and height:
+             
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(width)
             basic_jsn['backgroundImage']['height']=int(height)
@@ -357,7 +363,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
             instance.height=int(width)
             instance.width=int(height)
-            # instance.file_name=social_media_create.social_media_name
+            instance.file_name=social_media_create.social_media_name
+            project_instance.project_name = social_media_create.social_media_name
+            project_instance.save()
             instance.save()
             return instance
             
@@ -374,6 +382,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             instance.width=int(social_media_create.width)
             instance.file_name=social_media_create.social_media_name
             instance.save()
+            project_instance.project_name = social_media_create.social_media_name
+            project_instance.save()
             return instance
         return instance
               
@@ -500,6 +510,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 can_src.save()
             instance.width=int(width)
             instance.height=int(height)
+            project_instance = Project.objects.get(id = instance.project.id)
+            project_instance.project_name = social_media_create.social_media_name
+            project_instance.save()
             instance.save()
             return instance
 
@@ -564,7 +577,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             source_json_files_all=instance.canvas_json_src.all()
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
-                    if text['type']== 'textbox':
+                    if text['type']== 'textbox' and 'name' in text.keys():
+                        print("--------------------------",text['name'])
                         # text['evented'] = True
                         # text['']
                         TextboxUpdate.objects.get_or_create(canvas=instance,text=text['text'],text_id=text['name'])
@@ -721,8 +735,9 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
          
 
     def create(self, validated_data):
-        user =  self.context['request'].user
-        data = {**validated_data ,'user':user}
+        user =  self.context.get('user')
+        created_by = self.context.get('created_by')
+        data = {**validated_data ,'user':user,'created_by':created_by}
         instance = CanvasUserImageAssets.objects.create(**data)
         if validated_data.get('image',None):
             extension=instance.image.path.split('.')[-1]
@@ -913,7 +928,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             data['social_media_id']=social_media_size.id
         return data
     
-    def mytemp_create(self,canvas_design_id,user):
+    def mytemp_create(self,canvas_design_id,user,created_by):
         file_name=canvas_design_id.file_name
         width=canvas_design_id.width
         height=canvas_design_id.height
@@ -924,7 +939,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             project_category=canvas_design_id.project_category
         else:
             project_category=canvas_design_id.project_category
-        my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+        my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,created_by=created_by,project_category=project_category)
         return my_temp_design
 
     def create(self, validated_data):
@@ -934,11 +949,12 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
         trans_page_no=validated_data.pop('trans_page_no',None)
         src_page_no=validated_data.pop('src_page_no',None)
         tar_lang=validated_data.pop('tar_lang',None)
-        user = self.context['request'].user
+        user = self.context.get('user')
+        created_by = self.context.get('created_by')
 
         if canvas_design_id:
             if trans_page_no and tar_lang:
-                my_temp_design=self.mytemp_create(canvas_design_id,user)
+                my_temp_design=self.mytemp_create(canvas_design_id,user,created_by)
                 canvas_target=CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=canvas_design_id,
                                                                 canvas_trans_json__target_language=tar_lang,page_no=trans_page_no)
                 canvas_target.json=copy.copy(canvas_trans_id.json)
@@ -947,7 +963,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,my_template_json=my_template_json )
  
             elif src_page_no:
-                my_temp_design=self.mytemp_create(canvas_design_id,user)
+                my_temp_design=self.mytemp_create(canvas_design_id,user,created_by)
                 canvas_source  = canvas_design_id.canvas_json_src.get(page_no=src_page_no)
                 my_template_thumbnail = canvas_source.thumbnail
                 my_template_json=copy.copy(canvas_source.json)
@@ -964,7 +980,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             project_category=template_global_id.category
             my_template_thumbnail=template_global_id.thumbnail_page
             my_template_json=template_global_id.json
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category,created_by=created_by)
             MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                      my_template_json=my_template_json )
         return my_temp_design
