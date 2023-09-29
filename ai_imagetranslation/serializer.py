@@ -189,7 +189,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
-        project_instance = Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        team = created_by.team if created_by.team else None
+        project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
 
 
