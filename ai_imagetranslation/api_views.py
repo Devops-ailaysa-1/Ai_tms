@@ -317,12 +317,14 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
     
     def get_object(self, pk):
         try:
-            return BackgroundRemovel.objects.get(user=self.request.user,id=pk)
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return BackgroundRemovel.objects.get(user=user,id=pk)
         except BackgroundRemovel.DoesNotExist:
             raise Http404
 
     def get(self, request):
-        query_set = BackgroundRemovel.objects.filter(user=request.user.id).order_by('id')
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        query_set = BackgroundRemovel.objects.filter(user=user).order_by('id')
         serializer = BackgroundRemovelSerializer(query_set,many =True)
         return Response(serializer.data)
 
@@ -334,9 +336,10 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
     
         
     def create(self,request):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
         # canvas_json=request.POST.get('canvas_json')
         # preview_json=request.POST.get('preview_json',None)
-        serializer = BackgroundRemovelSerializer(data=request.data,context={'request':request})  
+        serializer = BackgroundRemovelSerializer(data=request.data,context={'request':request,'user':user,'created_by':self.request.user})  
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -345,7 +348,7 @@ class BackgroundRemovelViewset(viewsets.ViewSet):
         
 
     def update(self,request,pk):
-        query_set = BackgroundRemovel.objects.get(id=pk)
+        query_set = self.get_object(pk)
         serializer = BackgroundRemovelSerializer(query_set,data=request.data ,partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -378,7 +381,8 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
     search_fields =['prompt','style']
 
     def get(self, request):
-        queryset = StableDiffusionAPI.objects.filter(user=request.user.id).order_by('-id')
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        queryset = StableDiffusionAPI.objects.filter(user=user).order_by('-id')
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset,request,view=self)
         serializer = StableDiffusionAPISerializer(pagin_tc ,many =True)
@@ -386,13 +390,15 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
     def retrieve(self,request,pk):
-        query_set = StableDiffusionAPI.objects.get(user=request.user, id = pk)
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        query_set = StableDiffusionAPI.objects.get(user=user, id = pk)
         serializer = StableDiffusionAPISerializer(query_set )
         return Response(serializer.data)
     
     #
     def create(self,request):
-        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request,'user':user,'created_by':self.request.user})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -406,7 +412,8 @@ class StableDiffusionAPIViewset(viewsets.ViewSet,PageNumberPagination):
         return queryset
     
     def delete(self,request,pk):
-        query_obj = StableDiffusionAPI.objects.get(id = pk)
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        query_obj = StableDiffusionAPI.objects.filter(user=user, id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
