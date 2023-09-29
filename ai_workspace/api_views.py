@@ -4414,10 +4414,16 @@ def translate_file_process(task_id):
 def translate_file_task(task_id):
     from .models import MTonlytaskCeleryStatus
     from ai_auth.tasks import translate_file_task_cel
+    from ai_workspace_okapi.utils import get_consumption_of_file_translate
+
     tsk = Task.objects.get(id=task_id)
     user = tsk.job.project.ai_user
-    consumable_credits = 200  #get_consumable_credits_for_file_translate()
+    consumable_credits = get_consumption_of_file_translate(tsk)#200  #get_consumable_credits_for_file_translate()
+    print("Consumable--------------->",consumable_credits)
+    if consumable_credits == None:
+        return {'msg':'something went wrong in calculating page count','status':400}
     initial_credit = user.credit_balance.get("total_left")
+    print("Initial------------->",initial_credit)
     if initial_credit>consumable_credits:
         ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tsk.id) & Q(task_name='translate_file_task_cel')).last()
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None

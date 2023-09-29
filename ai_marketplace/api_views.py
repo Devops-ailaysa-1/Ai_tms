@@ -1179,12 +1179,22 @@ def proz_send_message(request):
     user = request.user.team.owner if request.user.team else request.user
     message = request.POST.get('message')
     uuid = request.POST.get('uuid')
+    body = '''Hi, Greetings from the Ailaysa Multilingual AI Platform. One of our customers would like to contact you in order to know if they can use your services.
+              
+              Message: {}
+              
+              You receive the message as Ailaysa is integrated with Proz.com, the international translation service provider platform. 
+              
+              Sign up or log in at https://www.ailaysa.com to learn more about the job, using your Proz credentials. 
+              
+              If you have any questions, please feel free to contact us at support@ailaysa.com.'''.format(message)
+    
     subject = request.POST.get('subject', 'Message from Ailaysa Test' )
     headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
     url = "https://api.proz.com/v2/messages"
     payload = {'recipient_uuids': uuid,
                 'sender_email': user.email,
-                'body': message,
+                'body': body,
                 'subject': subject,
                 'sender_name': user.fullname}
     print("Payload------------->",payload)
