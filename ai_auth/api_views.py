@@ -932,14 +932,16 @@ def check_subscription(request):
     is_active = is_active_subscription(request.user)
     if is_active == (False,True):
         customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
-        subscriptions = Subscription.objects.filter(customer=customer).last()
-        if subscriptions is not None:
+        subscriptions = Subscription.objects.filter(customer=customer)
+        if subscriptions.count() != 0:
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
             return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,
                             'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial,'canceled_at':subscriptions.canceled_at}, status=200)
-        else:
+        elif subscriptions.count() > 0:
             return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
+        else:
+            return Response({"msg":"creating_subscription"}, status=202)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         #subscription = Subscription.objects.filter(customer=customer).last()
