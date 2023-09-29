@@ -934,6 +934,7 @@ def check_subscription(request):
         customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         subscriptions = Subscription.objects.filter(customer=customer)
         if subscriptions.count() != 0:
+            subscriptions = subscriptions.last()
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
             return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,
