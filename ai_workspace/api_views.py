@@ -4443,6 +4443,19 @@ def translate_file_task(task_id):
         return {'msg':'Insufficient Credits','status':402}
 
 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_translate_file_detail(request,project_id):
+    pr = Project.objects.get(id=project_id)
+    if pr.file_translate == True:
+        data = []
+        for i in pr.get_tasks:
+            translated = True if i.task_file_detail.exists() else False
+            data.append({'task_id':i.id,'Translated':translated})
+        return Response(data,status=200)
+    else:
+        return Response({'msg':'Not a file translate project'},status=400) 
     # print(ser.errors)
     # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
     # ser = TaskTranslatedFileSerializer(queryset,many=True)

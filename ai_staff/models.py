@@ -656,8 +656,11 @@ class FontData(models.Model):
 
 class DesignerOrientation(models.Model):
     orientation_name = models.CharField(max_length=200,blank=True ,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SocialMediaSize(models.Model):
+    orientation = models.ForeignKey(to=DesignerOrientation ,on_delete=models.CASCADE,related_name='design_orientation_size',blank=True ,null=True)
     social_media_name=models.CharField(max_length=200,blank=True ,null=True)
     width=models.CharField(max_length=200,blank=True ,null=True)
     height=models.CharField(max_length=200,blank=True ,null=True)
