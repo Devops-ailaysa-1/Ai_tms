@@ -29,6 +29,8 @@ router.register(r'font-language',api_views.FontLanguageViewset,basename='fontlan
 router.register(r'font-category',api_views.FontCatagoryListViewset,basename='fontcategory')
 router.register(r'design-shape',api_views.DesignShapeViewset,basename='design_shape')
 router.register(r'image-cat',api_views.ImageCategoriesViewset,basename='imag-cat')
+router.register(r'design-orientation-size',api_views.DesignerOrientationViewset,basename='design-orientation')
+
  
 urlpatterns = router.urls
 
