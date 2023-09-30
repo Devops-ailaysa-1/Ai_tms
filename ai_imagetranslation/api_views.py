@@ -441,11 +441,20 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-from itertools import chain
+from django.db.models import Case, When, F, Value, IntegerField
+
 class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
-    queryset = ImageStyleSD.objects.all().exclude(style_name__icontains="Stock Photo").order_by('id')
-    stock_photo = ImageStyleSD.objects.filter(style_name__icontains="Stock Photo").first()
-    queryset = list(chain([stock_photo],queryset))
+    # queryset = ImageStyleSD.objects.all().exclude(style_name__icontains="Stock Photo").order_by('id')
+    # stock_photo = ImageStyleSD.objects.filter(style_name__icontains="Stock Photo").first()
+    # queryset = list(chain([stock_photo],queryset))
+    queryset = ImageStyleSD.objects.all().annotate(
+    custom_order=Case(
+        When(id=1, then=Value(0)),
+        When(id=78, then=Value(1)),
+        default=F('id'),
+        output_field=IntegerField(),
+    )
+    ).order_by('custom_order')
     serializer_class = ImageModificationTechniqueSerializerV3
     pagination_class = None
     filter_backend=[DjangoFilterBackend]
