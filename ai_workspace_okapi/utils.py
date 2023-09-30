@@ -689,7 +689,7 @@ def consumption_of_credits_for_page(page_count):
 def get_consumption_of_file_translate(task):
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
-        pdf = PdfFileReader(open(file,'rb') ,strict=False)
+        pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
         pages = pdf.getNumPages()
         return consumption_of_credits_for_page(pages)
 
