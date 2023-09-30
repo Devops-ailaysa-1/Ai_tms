@@ -317,7 +317,7 @@ LOGGING = {
         'dev_formatter' : {
             'format' : '{levelname} {asctime} {pathname} {message}',
             'style' : '{',
-        }
+        },
         'newrelic_formatter': {
            '()': NewRelicContextFormatter,
         },
