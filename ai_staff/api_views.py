@@ -1277,14 +1277,14 @@ class ImageCategoriesViewset(viewsets.ViewSet):
 
 
 
-class DesignerOrientationViewset(viewsets.ViewSet,PageNumberPagination):
+class DesignerOrientationViewset(viewsets.ViewSet):
     # page_size = 30
     # pagination_class = DesignerOrientation
     # search_fields =['shape_name']
 
     def list(self,request):
         queryset = DesignerOrientation.objects.all().order_by("created_at")
-        queryset = self.filter_queryset(queryset)
+        # queryset = self.filter_queryset(queryset)
         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignerOrientationSerializer(queryset,many=True)
         return Response(serializer.data)
