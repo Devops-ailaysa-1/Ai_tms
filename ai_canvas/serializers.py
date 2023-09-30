@@ -274,7 +274,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_type = ProjectType.objects.get(id=6) #Designer Project
         default_step = Steps.objects.get(id=1)
-        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        team = user.team if user.team else None
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user,team=team)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
 
