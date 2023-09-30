@@ -7,8 +7,14 @@ from xlwt import Workbook
 from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
+from PyPDF2 import PdfFileReader
+from pptx import Presentation
 import string
 import backoff
+
+
+spring_host = os.environ.get("SPRING_HOST")
+
 # from ai_workspace_okapi.models import SelflearningAsset
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
@@ -580,12 +586,13 @@ google_mime_type = {'doc':'application/msword',
                     'pptx':	'application/vnd.openxmlformats-officedocument.presentationml.presentation'	,
                     'xls':	'application/vnd.ms-excel',
                     'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'txt':  'application/msword'
-                    }
+                    'txt':  'application/msword' }
 
 
 from google.cloud import translate_v3beta1 as translate
 from django import core
+import requests, os
+
 
 def file_translate(file_path,target_language_code):
     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
@@ -607,4 +614,79 @@ def file_translate(file_path,target_language_code):
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
     return file_obj,file_name
- 
+
+
+def page_count_in_docx(docx_path):
+    import zipfile
+    import xml.etree.ElementTree as ET
+    namespace = {'ns': 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties'}
+    with zipfile.ZipFile(docx_path, 'r') as zip_file: 
+        zip_file_contents = zip_file.namelist()
+        for file_name in zip_file_contents:
+            if file_name.endswith("docProps/app.xml"):
+                extracted_data = zip_file.read(file_name)
+                xml_tree = ET.fromstring(extracted_data)
+                if docx_path.split(".")[-1] in ["docx","doc"]:
+                    element_to_find = 'Pages'
+                if docx_path.split(".")[-1] in ["ppt","pptx"]:
+                    element_to_find = 'Slides'
+                found_element = xml_tree.find(f'.//ns:{element_to_find}', namespaces=namespace)
+                if found_element is not None:
+                    return int(found_element.text)
+                else:
+                    return None
+
+def count_pptx_slides(pptx_file_path):
+    slide_count=0
+    # from pptx import Presentation
+    # presentation = Presentation(pptx_file_path)
+    # slide_count = len(presentation.slides)
+    return slide_count
+
+def get_word_count(task):
+    from ai_workspace.serializers import TaskSerializer
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    
+    data = TaskSerializer(task).data
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+    res_paths = get_res_path(params_data["source_language"])
+    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+        "doc_req_params":json.dumps(params_data),
+        "doc_req_res_params": json.dumps(res_paths)
+    })
+    print("status------------>",doc.status_code)
+    if doc.status_code == 200:
+        doc_data = doc.json()
+        return doc_data.get('total_word_count')
+    else:
+        return None
+
+
+def consumption_of_credits_for_page(page_count):
+    return page_count * 250
+
+def get_consumption_of_file_translate(task):
+    file,ext = os.path.splitext(task.file.file.path)
+    if ext == '.pdf':
+        pdf = PdfFileReader(open(fp,'rb') ,strict=False)
+        pages = pdf.getNumPages()
+        return consumption_of_credits_for_page(pages)
+
+    if ext == '.docx' or ext == '.doc':
+        page_count = page_count_in_docx(task.file.file.path)
+        return consumption_of_credits_for_page(page_count)
+
+    if ext == '.pptx': #or ext == '.ppt':
+        page_count = count_pptx_slides(task.file.file.path)
+        return consumption_of_credits_for_page(page_count)
+
+    if ext == '.xlsx':# or ext == '.xls':
+        word_count = get_word_count(task)
+        return word_count
+
+    else:
+        return None
+
+
+
