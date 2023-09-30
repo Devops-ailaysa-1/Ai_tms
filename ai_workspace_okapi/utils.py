@@ -592,7 +592,7 @@ google_mime_type = {'doc':'application/msword',
 from google.cloud import translate_v3beta1 as translate
 from django import core
 import requests, os
-from pptx import Presentation
+
 
 def file_translate(file_path,target_language_code):
     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
@@ -637,8 +637,10 @@ def page_count_in_docx(docx_path):
                     return None
 
 def count_pptx_slides(pptx_file_path):
-    presentation = Presentation(pptx_file_path)
-    slide_count = len(presentation.slides)
+    slide_count=0
+    # from pptx import Presentation
+    # presentation = Presentation(pptx_file_path)
+    # slide_count = len(presentation.slides)
     return slide_count
 
 def get_word_count(task):
