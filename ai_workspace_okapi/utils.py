@@ -586,8 +586,7 @@ google_mime_type = {'doc':'application/msword',
                     'pptx':	'application/vnd.openxmlformats-officedocument.presentationml.presentation'	,
                     'xls':	'application/vnd.ms-excel',
                     'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'txt':  'application/msword'
-                    }
+                    'txt':  'application/msword' }
 
 
 from google.cloud import translate_v3beta1 as translate
