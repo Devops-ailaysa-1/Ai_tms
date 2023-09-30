@@ -4371,7 +4371,7 @@ def translate_file(request):
                 conversion = translate_file_task(obj.id)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
-                elif conversion.get('status') == 400 or conversion.get('status') == 402:
+                elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
                     task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
             else:
                 task_list.append({'task':obj.id,'msg':True,'status':200})
@@ -4416,7 +4416,7 @@ def translate_file_task(task_id):
     consumable_credits = get_consumption_of_file_translate(tsk)#200  #get_consumable_credits_for_file_translate()
     print("Consumable--------------->",consumable_credits)
     if consumable_credits == None:
-        return {'msg':'something went wrong in calculating page count','status':400}
+        return {'msg':'something went wrong in calculating page count','status':404}
     initial_credit = user.credit_balance.get("total_left")
     print("Initial------------->",initial_credit)
     if initial_credit>consumable_credits:
