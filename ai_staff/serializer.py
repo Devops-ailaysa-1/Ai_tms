@@ -8,7 +8,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
                     PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
-                    ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType,FontCatagoryList,DesignShapeCategory)
+                    ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType,FontCatagoryList,DesignShapeCategory,
+                    DesignerOrientation)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -478,6 +479,15 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
         instance.height=validated_data.get('height',instance.height)
         instance.save()
         return instance
+
+
+class DesignerOrientationSerializer(serializers.ModelSerializer):
+    design_orientation_size = SocialMediaSizeSerializer(many=True,required=False)
+    class Meta:
+        model=DesignerOrientation
+        fields=('id','design_orientation_size','orientation_name')
+    
+
 
 class ImageGeneratorResolutionSerializer(serializers.ModelSerializer):
     class Meta:
