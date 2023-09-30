@@ -23,7 +23,6 @@ tms
 tmsenv
 venv/
 *.json
-*.ttf
 *.pdf
 ai_canvas/ICC_profile
 ai_tms/local_settings.py
