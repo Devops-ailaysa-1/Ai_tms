@@ -4356,29 +4356,23 @@ def msg_to_extend_deadline(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def translate_file(request):
-    task = request.GET.get('task')
+    tasks = request.GET.getlist('task')
     project  = request.GET.get('project')
     user = request.user
-    if task:
-        obj = Task.objects.get(id=task)
-        tt = translate_file_task(task)
-        if tt!=None and (tt.get('status') == 400 or tt.get('status') == 402):
-            return Response(tt)
-        else:
-            ser = TaskTranslatedFileSerializer(obj.task_file_detail.first())
-            return Response(ser.data)
-    if project:
-        tasks =[]
-        task_list = []
-        pr = Project.objects.get(id=project)
-        for obj in pr.get_tasks:
+    task_list = []
+    if project or tasks:
+        if project:
+            pr = Project.objects.get(id=project)
+            task_objs = pr.get_tasks
+        if tasks:
+            task_objs = Task.objects.filter(id__in=tasks)
+        for obj in task_objs:
             if obj.task_file_detail.first() == None: #need to change for different mt_engines
                 conversion = translate_file_task(obj.id)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402:
                     task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
-                # tasks.append(_task)
             else:
                 task_list.append({'task':obj.id,'msg':True,'status':200})
         return JsonResponse({"results":task_list}, safe=False)   
@@ -4444,18 +4438,18 @@ def translate_file_task(task_id):
 
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_translate_file_detail(request,project_id):
-    pr = Project.objects.get(id=project_id)
-    if pr.file_translate == True:
-        data = []
-        for i in pr.get_tasks:
-            translated = True if i.task_file_detail.exists() else False
-            data.append({'task_id':i.id,'Translated':translated})
-        return Response(data,status=200)
-    else:
-        return Response({'msg':'Not a file translate project'},status=400) 
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def get_translate_file_detail(request,project_id):
+#     pr = Project.objects.get(id=project_id)
+#     if pr.file_translate == True:
+#         data = []
+#         for i in pr.get_tasks:
+#             translated = True if i.task_file_detail.exists() else False
+#             data.append({'task_id':i.id,'Translated':translated})
+#         return Response(data,status=200)
+#     else:
+#         return Response({'msg':'Not a file translate project'},status=400) 
     # print(ser.errors)
     # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
     # ser = TaskTranslatedFileSerializer(queryset,many=True)
