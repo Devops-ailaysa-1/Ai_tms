@@ -234,6 +234,7 @@ class AIimageCategory(models.Model):
     image_category=models.CharField(max_length=200,blank=True,null=True)
 
 
+
 class ImageStyleSD(models.Model):
     # category=models.ForeignKey(AIimageCategory,on_delete=models.CASCADE,related_name="ai-image-cat")
     style_name=models.CharField(max_length=200,blank=True,null=True)

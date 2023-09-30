@@ -156,7 +156,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         image_id =  request.POST.getlist('image_id')
         canvas_asset_image_id=request.POST.get('canvas_asset_image_id')
         user,pr_managers = self.get_user()
-        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg' ,"JPEG","PNG" ,"JPG" ,"SVG"]:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         if image:
             serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
@@ -441,9 +441,11 @@ class ImageModificationTechniqueViewSet(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-
+from itertools import chain
 class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
-    queryset = ImageStyleSD.objects.all().order_by('id')
+    queryset = ImageStyleSD.objects.all().exclude(style_name__icontains="Stock Photo").order_by('id')
+    stock_photo = ImageStyleSD.objects.filter(style_name__icontains="Stock Photo").first()
+    queryset = list(chain([stock_photo],queryset))
     serializer_class = ImageModificationTechniqueSerializerV3
     pagination_class = None
     filter_backend=[DjangoFilterBackend]
