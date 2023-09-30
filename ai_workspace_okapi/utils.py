@@ -616,25 +616,47 @@ def file_translate(file_path,target_language_code):
     return file_obj,file_name
 
 
+import subprocess
+import io
+
 def page_count_in_docx(docx_path):
-    import zipfile
-    import xml.etree.ElementTree as ET
-    namespace = {'ns': 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties'}
-    with zipfile.ZipFile(docx_path, 'r') as zip_file: 
-        zip_file_contents = zip_file.namelist()
-        for file_name in zip_file_contents:
-            if file_name.endswith("docProps/app.xml"):
-                extracted_data = zip_file.read(file_name)
-                xml_tree = ET.fromstring(extracted_data)
-                if docx_path.split(".")[-1] in ["docx","doc"]:
-                    element_to_find = 'Pages'
-                if docx_path.split(".")[-1] in ["ppt","pptx"]:
-                    element_to_find = 'Slides'
-                found_element = xml_tree.find(f'.//ns:{element_to_find}', namespaces=namespace)
-                if found_element is not None:
-                    return int(found_element.text)
-                else:
-                    return None
+
+    command = [
+        'libreoffice',
+        '--headless',
+        '--convert-to', 'pdf',
+        '--outdir', '/tmp',  # Specify an output directory
+        docx_path
+    ]
+
+
+    subprocess.run(command, check=True)
+    filename = os.path.basename(docx_path)
+    file_path = '/tmp/'+filename.split('.')[0]+'.pdf'
+    # Read the generated PDF into memory
+    pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
+    pages = pdf.getNumPages()
+    return pages,file_path
+
+# def page_count_in_docx(docx_path):
+#     import zipfile
+#     import xml.etree.ElementTree as ET
+#     namespace = {'ns': 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties'}
+#     with zipfile.ZipFile(docx_path, 'r') as zip_file: 
+#         zip_file_contents = zip_file.namelist()
+#         for file_name in zip_file_contents:
+#             if file_name.endswith("docProps/app.xml"):
+#                 extracted_data = zip_file.read(file_name)
+#                 xml_tree = ET.fromstring(extracted_data)
+#                 if docx_path.split(".")[-1] in ["docx","doc"]:
+#                     element_to_find = 'Pages'
+#                 if docx_path.split(".")[-1] in ["ppt","pptx"]:
+#                     element_to_find = 'Slides'
+#                 found_element = xml_tree.find(f'.//ns:{element_to_find}', namespaces=namespace)
+#                 if found_element is not None:
+#                     return int(found_element.text)
+#                 else:
+#                     return None
 
 def count_pptx_slides(pptx_file_path):
     presentation = Presentation(pptx_file_path)
@@ -667,12 +689,14 @@ def consumption_of_credits_for_page(page_count):
 def get_consumption_of_file_translate(task):
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
-        pdf = PdfFileReader(open(fp,'rb') ,strict=False)
+        pdf = PdfFileReader(open(file,'rb') ,strict=False)
         pages = pdf.getNumPages()
         return consumption_of_credits_for_page(pages)
 
     if ext == '.docx' or ext == '.doc':
-        page_count = page_count_in_docx(task.file.file.path)
+        page_count,file_path = page_count_in_docx(task.file.file.path)
+        print("PC----------->",page_count)
+        os.remove(file_path)
         return consumption_of_credits_for_page(page_count)
 
     if ext == '.pptx': #or ext == '.ppt':
