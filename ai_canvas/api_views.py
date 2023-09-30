@@ -433,7 +433,7 @@ class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     def create(self,request):
         user = request.user.team.owner if request.user.team else request.user
         template_global_id = request.POST.get('template_global_id')
-        serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request,'user':user,'created_by':request.user.id})
+        serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request,'user':user,'created_by':self.request.user})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

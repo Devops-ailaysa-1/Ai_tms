@@ -108,6 +108,7 @@ def user_directory_path_image_background_removel(instance, filename):
 
 class BackgroundRemovel(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='bgremoval_created_by')
     image_json_id=models.CharField(max_length=100,blank=True,null=True)
     image_url=models.URLField(blank=True,null=True)
     canvas_json=models.JSONField(blank=True,null=True)
@@ -154,6 +155,7 @@ class BackgroundRemovePreviewimg(models.Model):
 
 class StableDiffusionAPI(models.Model):
     user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='stable_diff_created_by')
     generated_image=models.FileField(upload_to='stable-diffusion-image-gen',blank=True,null=True)
     image=models.FileField(upload_to='stable-diffusion-image',blank=True,null=True)
     used_api=models.CharField(max_length=200,blank=True,null=True)

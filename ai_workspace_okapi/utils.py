@@ -580,8 +580,7 @@ google_mime_type = {'doc':'application/msword',
                     'pptx':	'application/vnd.openxmlformats-officedocument.presentationml.presentation'	,
                     'xls':	'application/vnd.ms-excel',
                     'xlsx':	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'txt':  'application/msword'
-                    }
+                    'txt':  'application/msword' }
 
 
 from google.cloud import translate_v3beta1 as translate
@@ -607,4 +606,14 @@ def file_translate(file_path,target_language_code):
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
     return file_obj,file_name
+
+
+
+# def batch_file_translate(file_path,target_language_code):
+#     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
+#     file_type = file_path.split("/")[-1].split(".")
+#     file_format=file_type[-1]
+#     file_name = file_type[0]
+
+
  
