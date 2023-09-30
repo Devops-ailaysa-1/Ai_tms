@@ -40,6 +40,7 @@ from ai_staff.models import LanguageMetaDetails
 from django.db.models import Value, IntegerField, CharField
 from django_oso.auth import authorize
 from ai_workspace.signals import invalidate_cache_on_save
+
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -118,8 +119,8 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def list(self,request):
         job = request.GET.get('job')
-        queryset = GlossaryFiles.objects.filter(job_id = job)
-        serializer = GlossaryFileSerializer(queryset,many=True)
+        queryset=GlossaryFiles.objects.filter(job_id=job)
+        serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
     def create(self, request):
@@ -130,15 +131,17 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
+        print(job_id)
         if job_id:
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+            print(data)
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
-            data = [{"project": proj.id, "file": file, "job":job.id, "usage_type":8, "source_only":True} for file in files for job in jobs]
-        serializer = GlossaryFileSerializer(data=data,many=True)
+            data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
+        serializer=GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
             print(serializer.is_valid())
             serializer.save()
@@ -163,6 +166,8 @@ class GlossaryFileView(viewsets.ViewSet):
         return Response({"Msg":"Files Deleted"})
 
 ###############################Terms CRUD########################################
+
+
 
 class TermUploadView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

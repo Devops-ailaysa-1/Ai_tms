@@ -3,7 +3,7 @@ from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType, TranscribeSupportedPunctuation, LanguagesLocale
 from rest_framework import serializers
-from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
+from .models import Project, Job, File, ProjectContentType, Tbxfiles,TaskTranslatedFile,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
@@ -35,6 +35,8 @@ from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache
+from ai_canvas.models import CanvasTranslatedJson
+from ai_imagetranslation.models import ImageInpaintCreation
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -247,15 +249,17 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			}
 		}
 	def run_validation(self, data):
+		# data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
+		# 	target_language} for target_language in data.get("target_languages", [])]
 		# print("run_validation")
 		return super().run_validation(data=data)
 
 	def to_representation(self, instance):
 		ret = super().to_representation(instance)
-		ret["jobs"] = {
-			"source_language": ret.pop("source_language"),
-			"target_languages": ret.pop("target_languages")
-		}
+		# ret["jobs"] = {
+		# 	"source_language": ret.pop("source_language"),
+		# 	"target_languages": ret.pop("target_languages")
+		# }
 		return  ret
 
 	def is_valid(self, *args, **kwargs):
@@ -504,6 +508,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
+	get_mt_by_page = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
@@ -511,6 +516,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
+	file_translate = serializers.BooleanField(required=False,allow_null=True)
 	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
 	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
@@ -520,7 +526,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
-					"mt_enable","from_text",'get_assignable_tasks_exists',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
+					'file_translate',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},
@@ -556,6 +563,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
+		data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
+		data['file_translate'] =data.get('file_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -703,29 +712,26 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 				obj_is_allowed(project,"create",user)
-				# print("files---",files[0].id)
-				#objls_is_allowed(files,"create",user)
-				#objls_is_allowed(jobs,"create",user)
 				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
 					pro_fil = ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
-					#obj_is_allowed(pro_fil,"create",user)
+				
 				else:
 					pro_fil = ProjectFilesCreateType.objects.create(project=project)
-					#obj_is_allowed(pro_fil,"create",user)
+					
 				if proj_subject:
 					proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-					#objls_is_allowed(proj_subj_ls,"create",user)
+					
 				if proj_content_type:
 					proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
-					#objls_is_allowed(proj_content_ls,"create",user)
+					
 				if proj_steps:
 					proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
-					#objls_is_allowed(proj_steps_ls,"create",user)
+					
 
 				if project_type == 1 or project_type == 2 or project_type == 5:
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
-					#objls_is_allowed(tasks,"create",user)
+					
 				if voice_proj_detail:
 					voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
 					if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
@@ -733,16 +739,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 						if voice_project.project_type_sub_category.id == 2 and rr:
 							tasks = Task.objects.create_tasks_of_files_and_jobs(
 								files=files, jobs=jobs, project=project, klass=Task)
-							#objls_is_allowed(tasks,"create",user)
+							
 						else:
 							tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
-							#objls_is_allowed(tasks,"create",user)
+							
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
 				# tasks = Task.objects.create_tasks_of_files_and_jobs(
 				# 	files=files, jobs=jobs, project=project, klass=Task)
 				task_assign = TaskAssign.objects.assign_task(project=project)
-				ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+				#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
 				#objls_is_allowed(task_assign,"create",user)
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
@@ -772,6 +778,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if 'copy_paste_enable' in validated_data:
 			instance.copy_paste_enable = validated_data.get("copy_paste_enable",\
 									instance.copy_paste_enable)
+			instance.save()
+
+		if 'get_mt_by_page' in validated_data:
+			instance.get_mt_by_page = validated_data.get("get_mt_by_page",\
+									instance.get_mt_by_page)
+			instance.save()
+
+		if 'file_translate' in validated_data:
+			instance.file_translate = validated_data.get("file_translate",\
+									instance.file_translate)
 			instance.save()
 
 		if validated_data.get('project_deadline'):
@@ -829,7 +845,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
-		ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
+		#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
 		return  project
 
 	# def to_representation(self, value):
@@ -1078,6 +1094,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
+	design_project = serializers.SerializerMethodField()
 	# open_in =  serializers.SerializerMethodField()
 	# transcribed = serializers.SerializerMethodField()
 	# text_to_speech_convert_enable = serializers.SerializerMethodField()
@@ -1093,8 +1110,35 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",)
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done',)
 
+
+	def get_design_project(self,obj):
+		#print("Type--------->",obj.job.project.project_type_id)
+		res = None
+		if obj.job.project.project_type_id == 6: #Designer Project
+			image_job = CanvasTranslatedJson.objects.filter(job_id = obj.job.id)
+			if image_job:
+				image_job_obj = image_job.last().id
+				image_proj_obj = image_job.last().canvas_design_id
+				res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
+			else:
+				image_translation_job = ImageInpaintCreation.objects.filter(job_id=obj.job.id)
+				if image_translation_job:
+					image_job_obj = image_translation_job.last().id
+					image_proj_obj = image_translation_job.last().source_image.id
+					res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
+			return res
+		else:return res
+
+	# def get_image_translate_project(self,obj):
+	# 	if obj.job.project.project_type_id == 6: #Designer Project
+	# 		try:
+	# 			image_translate_obj = CanvasTranslatedJson.objects.get(job_id = obj.job.id)
+	# 			canvas_proj_obj = canvas_job_obj.canvas_design_id
+	# 			return {'project':canvas_proj_obj.id,'job': canvas_job_obj.id}
+	# 		except: return None
+	# 	else:return None
 
 	def get_bid_job_detail_info(self,obj):
 		cache_key = f'bid_job_detail_{obj.job.project.pk}'
@@ -1849,7 +1893,10 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
         model = DocumentImages
         fields = "__all__"
 
-
+class TaskTranslatedFileSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskTranslatedFile
+		fields = "__all__"
 
 class MyDocumentSerializerNew(serializers.Serializer):
 	id = serializers.IntegerField(read_only=True)

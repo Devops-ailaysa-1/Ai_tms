@@ -42,7 +42,7 @@ class ProjectManager(models.Manager):
             ai_user, team, project_manager, created_by):
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
-        project = self.create(**data, ai_user=ai_user,project_manager=project_manager,\
+        project = self.create(**data, ai_user=ai_user, project_manager=project_manager,\
                                 team=team,created_by=created_by)
         return self.create_and_jobs_files_bulk_create_for_project(
             project, files_data, jobs_data, f_klass, j_klass
@@ -73,18 +73,18 @@ class ProjectManager(models.Manager):
             )
          return project, contents, subjects, steps
 
-    def add_default_choice_list_for_project(self,project):
-        if project.project_type_id not in [3,5]:
-            from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
-            jobs = project.project_jobs_set.all()
-            target_languages = [i.target_language_id for i in jobs if i.target_language]
-            print("TL----------->", target_languages)
-            for i in target_languages:
-                ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
-                exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
-                if not exists:
-                    ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
-            return None
+    # def add_default_choice_list_for_project(self,project):
+    #     if project.project_type_id not in [3,5]:
+    #         from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
+    #         jobs = project.project_jobs_set.all()
+    #         target_languages = [i.target_language_id for i in jobs if i.target_language]
+    #         print("TL----------->", target_languages)
+    #         for i in target_languages:
+    #             ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
+    #             exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
+    #             if not exists:
+    #                 ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
+    #         return None
 
 
 class FileManager(models.Manager):
@@ -108,6 +108,11 @@ class JobManager(models.Manager):
         print("job------>",job)
         print("created--------------->",created)
         return job
+
+    def bulk_create_of_design_project(self, \
+            data, project, klass):
+        jobs = [self.get_or_create(**item, project=project) for item in data]
+        return jobs
 
 class ProjectContentTypeManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -155,6 +160,9 @@ class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
           project = None):
 
+        if project.file_translate == True:
+            tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+            return tasks
 
         epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
         pdf_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.pdf']
@@ -201,6 +209,11 @@ class TaskManager(models.Manager):
                 job.save()
         glossary_tasks = [self.get_or_create(job=job) for job in jobs]
         return glossary_tasks
+
+    def create_design_tasks_of_jobs(self, jobs, klass,\
+          project = None):
+        design_tasks = [self.get_or_create(job=job) for job in jobs]
+        return design_tasks
 
     def create_glossary_tasks_of_jobs_by_project(self, project):
         jobs = project.project_jobs_set.all()

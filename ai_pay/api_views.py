@@ -936,7 +936,7 @@ class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
 
         
 def msg_send_po(po,input):
-    url = settings.USERPORTAL_URL+"payments/marketplace-payments"
+    #url = settings.USERPORTAL_URL+"payments/marketplace-payments"
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = po.client

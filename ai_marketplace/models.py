@@ -309,3 +309,12 @@ class ChatMessage(models.Model):
     # @property
     # def get_sender_and_receiver(self):
     #     Thread.objects.get()
+
+class ProzMessage(models.Model):
+    proz_uuid = models.CharField(max_length=250,blank=True, null=True)
+    proz_message_id = models.CharField(max_length=250,blank=True, null=True)
+    customer = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    job_notify = models.BooleanField(default=False)
+    

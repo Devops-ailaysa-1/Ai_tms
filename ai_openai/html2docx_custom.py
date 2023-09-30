@@ -176,7 +176,6 @@ styles = {
 }
 
 class HtmlToDocx(HTMLParser):
-
     def __init__(self):
         super().__init__()
         self.options = {

@@ -20,6 +20,7 @@ from .utils import split_check
 import collections
 import csv
 import io,time
+from django.db.models import Func, F, CharField
 
 client = translate.Client()
 
@@ -169,29 +170,30 @@ class SegmentSerializerV2(SegmentSerializer):
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
         print("Seg-His-Create--------------->",seg_his_create)
-        if "target" in validated_data:
-            print("Inside if target")
-            if instance.target == '':
-                print("In target empty")
-                if (instance.text_unit.document.job.project.mt_enable == False)\
-                or status_id in [102,106,110]:
-                    print("mt dable and manual confirm check")
-                    user = instance.text_unit.document.doc_credit_debit_user
-                    initial_credit = user.credit_balance.get("total_left")
-                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                    consumable = max(round(consumable_credits/3),1) 
-                    if initial_credit < consumable:
-                        raise serializers.ValidationError("Insufficient Credits")
-                    else:
-                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
-                        print("Credit Debited",status_code)
-            res = super().update(instance, validated_data)
-            instance.temp_target = instance.target
+        # if "target"  in validated_data:
+        #     print("Inside if target")
+        if instance.target == '' and instance.temp_target == '':
+            print("In target empty")
+            if (instance.text_unit.document.job.project.mt_enable == False)\
+            or status_id in [101,102,105,106,109,110]:
+                print("mt dable and manual confirm check")
+                user = instance.text_unit.document.doc_credit_debit_user
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                consumable = max(round(consumable_credits/3),1) 
+                if initial_credit < consumable:
+                    raise serializers.ValidationError("Insufficient Credits")
+                else:
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+                    print("Credit Debited",status_code)
+        res = super().update(instance, validated_data)
+        if instance.target != '':
+            instance.temp_target = instance.target 
             instance.save()
-            self.update_task_assign(task_obj,user_1,status_id)
-            if seg_his_create:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
-            return res
+            # self.update_task_assign(task_obj,user_1,status_id)
+            # if seg_his_create:
+            #     SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
+            #return res
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
@@ -335,6 +337,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk,cc=consumable_credits)
                 if target_tags !='':
                     temp_target = mt + target_tags
+                    
                     target = mt + target_tags
                 else:
                     temp_target = mt
@@ -426,8 +429,11 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     count += 1
                     mt_params.extend([self.remove_tags(i.target),mt_engine,mt_engine,i.id])
 
-            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
-            VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))
+            mt_raw_sql = '''INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
+                            VALUES {}  ON CONFLICT (segment_id) DO UPDATE
+                            SET mt_raw = EXCLUDED.mt_raw,
+                                mt_engine_id = EXCLUDED.mt_engine_id,
+                                task_mt_engine_id = EXCLUDED.task_mt_engine_id;'''.format(','.join(['(%s, %s, %s, %s)'] * count))
             if mt_params:
                 with closing(connection.cursor()) as cursor:
                     cursor.execute(mt_raw_sql, mt_params)
@@ -573,7 +579,20 @@ class MT_RawSerializer(serializers.ModelSerializer):
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField())).filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
+        print("SEG OBJ---------------------------------------------->",seg_obj)
+        if seg_obj:
+            print("No Translation")
+            if seg_obj.first().target:
+                validated_data["mt_raw"] = seg_obj.first().target
+            elif seg_obj.first().temp_target:
+                validated_data["mt_raw"] = seg_obj.first().temp_target
+            else:
+                print("get trans")
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+        else:
+            print("In Translation")
+            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         #word update in mt_raw
@@ -822,9 +841,10 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
-
-
-
+from ai_workspace_okapi.models import SelflearningAsset
+class SelflearningAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SelflearningAsset
 
 
 
@@ -912,3 +932,5 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
 #             coll.update(itr)
 #         ret["text"] = coll
 #         return ret
+
+

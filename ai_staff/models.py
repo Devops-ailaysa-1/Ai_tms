@@ -446,8 +446,7 @@ class PromptTones(models.Model):
         return self.tone 
 
 class PromptSubCategories(models.Model):
-    category = models.ForeignKey(PromptCategories,related_name='prompt_category',
-                                 on_delete = models.CASCADE,blank=True, null=True)
+    category = models.ForeignKey(PromptCategories,related_name='prompt_category',on_delete = models.CASCADE,blank=True, null=True)
     sub_category = models.CharField(max_length=1000, null=True, blank=True)
     # fields = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -476,9 +475,6 @@ class ImageGeneratorResolution(models.Model):
     
     def __str__(self) -> str:
         return self.image_resolution 
-    
-    
-
  
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
@@ -634,4 +630,88 @@ class ApiServiceList(models.Model):
     service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
 
 
+class FontLanguage(models.Model):
+    name = models.CharField(max_length=100 ,null=True,blank=True)
+    language  =  models.CharField(max_length=100 ,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
+
+class FontCatagoryList(models.Model):
+    catagory_name=models.CharField(max_length=200)
+    def __str__(self) -> str:
+        return self.catagory_name
+
+class FontFamily(models.Model):
+    catagory=models.ForeignKey(FontCatagoryList,on_delete=models.CASCADE,related_name='font_catagory_family')
+    font_family_name = models.CharField(max_length=100 ,null=True , blank=True)
+    name = models.CharField(max_length=100,null=True , blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+
+class FontData(models.Model):
+    font_lang = models.ForeignKey(FontLanguage,related_name='font_data_language', on_delete=models.CASCADE)
+    font_family = models.ForeignKey(FontFamily,related_name='font_data_family', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+
+class DesignerOrientation(models.Model):
+    orientation_name = models.CharField(max_length=200,blank=True ,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class SocialMediaSize(models.Model):
+    orientation = models.ForeignKey(to=DesignerOrientation ,on_delete=models.CASCADE,related_name='design_orientation_size',blank=True ,null=True)
+    social_media_name=models.CharField(max_length=200,blank=True ,null=True)
+    width=models.CharField(max_length=200,blank=True ,null=True)
+    height=models.CharField(max_length=200,blank=True ,null=True)
+    src=models.FileField(upload_to='socialmediasize',blank=True ,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+
+    def __str__(self) -> str:
+        return self.social_media_name
+    
+class ImageCategories(models.Model):
+    category= models.CharField(max_length=50,blank=True ,null=True)
+
+    def __str__(self):
+        return self.category
+    
+
+class DesignShapeCategory(models.Model):
+    name=models.CharField(max_length=200,blank=True ,null=True) 
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class DesignShape(models.Model):
+    types = (
+        (1, "Outline"),
+        (2, "Filled"),
+        (3, "Line"))
+    shape_name=models.CharField(max_length=200,blank=True ,null=True)
+    shape=models.FileField(upload_to='design_shape',blank=True ,null=True)
+    types=models.CharField(max_length=300,null=True,blank=True,choices=types)
+    # category=models.ForeignKey(DesignShapeCategory,related_name="shape_category", on_delete=models.CASCADE)
+    tags=models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.shape_name
+ 
+class ProzLanguagesCode(models.Model):
+    language = models.ForeignKey(Languages, related_name='lang', on_delete=models.CASCADE)    
+    language_code = models.CharField(max_length=191, blank=True, null=True)
+
+class ProzExpertize(models.Model):
+    subject_field = models.ForeignKey(SubjectFields, related_name='sub_field', on_delete=models.CASCADE)    
+    expertize_ids = models.TextField(blank=True, null=True)
+
+
+
+
+ 
+    
