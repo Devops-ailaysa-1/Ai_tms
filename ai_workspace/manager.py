@@ -160,6 +160,9 @@ class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
           project = None):
 
+        if project.file_translate == True:
+            tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+            return tasks
 
         epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
         pdf_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.pdf']
