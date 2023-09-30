@@ -189,7 +189,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
 
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
-        project_instance = Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        team = created_by.team if created_by.team else None
+        project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
 
 
@@ -481,12 +482,13 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         return representation
 
     def create(self, validated_data):
-        user=self.context['request'].user
+        user=self.context.get('user')
+        created_by = self.context.get('created_by')
         canvas_json=validated_data.get('canvas_json',None)
         preview_json=validated_data.get('preview_json',None)
         
         if canvas_json: 
-            data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user}
+            data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user, 'created_by': created_by}
             instance=BackgroundRemovel.objects.create(**data)
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.original_image=image_path_create
@@ -558,7 +560,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     #     return representation
 
     def create(self, validated_data):
-        user=self.context['request'].user
+        user=self.context.get('user')
+        created_by = self.context.get('created_by')
         prompt=validated_data.get('prompt',None)
         step=validated_data.pop('step',None)
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
@@ -578,7 +581,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         initial_credit = user.credit_balance.get("total_left")
         consumble_credits= get_consumable_credits_for_image_generation_sd(number_of_image=1)
         if initial_credit>=consumble_credits:
-            instance=StableDiffusionAPI.objects.create(user=user,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
+            instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
                                                     height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
 
             image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt

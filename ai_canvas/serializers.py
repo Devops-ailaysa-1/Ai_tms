@@ -274,7 +274,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
         project_type = ProjectType.objects.get(id=6) #Designer Project
         default_step = Steps.objects.get(id=1)
-        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user)
+        team = user.team if user.team else None
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user,team=team)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
 
@@ -735,8 +736,9 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
          
 
     def create(self, validated_data):
-        user =  self.context['request'].user
-        data = {**validated_data ,'user':user}
+        user =  self.context.get('user')
+        created_by = self.context.get('created_by')
+        data = {**validated_data ,'user':user,'created_by':created_by}
         instance = CanvasUserImageAssets.objects.create(**data)
         if validated_data.get('image',None):
             extension=instance.image.path.split('.')[-1]
@@ -927,7 +929,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             data['social_media_id']=social_media_size.id
         return data
     
-    def mytemp_create(self,canvas_design_id,user):
+    def mytemp_create(self,canvas_design_id,user,created_by):
         file_name=canvas_design_id.file_name
         width=canvas_design_id.width
         height=canvas_design_id.height
@@ -938,7 +940,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             project_category=canvas_design_id.project_category
         else:
             project_category=canvas_design_id.project_category
-        my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+        my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,created_by=created_by,project_category=project_category)
         return my_temp_design
 
     def create(self, validated_data):
@@ -948,11 +950,12 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
         trans_page_no=validated_data.pop('trans_page_no',None)
         src_page_no=validated_data.pop('src_page_no',None)
         tar_lang=validated_data.pop('tar_lang',None)
-        user = self.context['request'].user
+        user = self.context.get('user')
+        created_by = self.context.get('created_by')
 
         if canvas_design_id:
             if trans_page_no and tar_lang:
-                my_temp_design=self.mytemp_create(canvas_design_id,user)
+                my_temp_design=self.mytemp_create(canvas_design_id,user,created_by)
                 canvas_target=CanvasTargetJsonFiles.objects.get(canvas_trans_json__canvas_design=canvas_design_id,
                                                                 canvas_trans_json__target_language=tar_lang,page_no=trans_page_no)
                 canvas_target.json=copy.copy(canvas_trans_id.json)
@@ -961,7 +964,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                 MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,my_template_json=my_template_json )
  
             elif src_page_no:
-                my_temp_design=self.mytemp_create(canvas_design_id,user)
+                my_temp_design=self.mytemp_create(canvas_design_id,user,created_by)
                 canvas_source  = canvas_design_id.canvas_json_src.get(page_no=src_page_no)
                 my_template_thumbnail = canvas_source.thumbnail
                 my_template_json=copy.copy(canvas_source.json)
@@ -978,7 +981,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             project_category=template_global_id.category
             my_template_thumbnail=template_global_id.thumbnail_page
             my_template_json=template_global_id.json
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category)
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user,project_category=project_category,created_by=created_by)
             MyTemplateDesignPage.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                      my_template_json=my_template_json )
         return my_temp_design
