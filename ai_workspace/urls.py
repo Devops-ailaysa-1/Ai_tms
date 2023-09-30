@@ -83,6 +83,7 @@ urlpatterns += [
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
 	path('convert_text_to_speech_source/',api_views.convert_text_to_speech_source),
 	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
+	path('download_task_target_file/',api_views.download_task_target_file),
 	path('task/unassign/',api_views.task_unassign),
 	path('get_quill_data/',api_views.get_quill_data),
 	path('writer_save/',api_views.writer_save),
@@ -103,6 +104,8 @@ urlpatterns += [
 	path('all_proj_lists/',api_views.CombinedProjectListView.as_view({'get':'list'})),
 	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
 	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
+	path('translate_file/',api_views.translate_file),
+	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),
 ]
 # views urls adding for local testing
 urlpatterns += [

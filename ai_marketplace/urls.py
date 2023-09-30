@@ -46,4 +46,6 @@ urlpatterns+= [
     path('get_template/',api_views.project_post_template_get),
     path('delete_sample_file/<int:bid_propasal_id>/',api_views.sample_file_delete),
     path('get_talents/',api_views.get_talents),
+    path('get_proz_list/',api_views.ProzVendorListView.as_view(),name='get-proz-list'),
+    path('proz_send_message/',api_views.proz_send_message),
     ]

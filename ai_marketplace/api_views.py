@@ -42,7 +42,8 @@ from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         SimpleProjectSerializer,AvailablePostJobSerializer,ProjectPostStepsSerializer,
-                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer)
+                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer,
+                        ProzMessageSerilaizer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -50,9 +51,9 @@ from ai_vendor.serializers import (ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,VendorLanguagePairCloneSerializer,
                           VendorLanguagePairSerializer,VendorServiceInfoSerializer,
                            VendorsInfoSerializer)
-from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
+from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,ProzExpertize,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
-                            MtpeEngines, SubjectFields,ServiceTypeunits)
+                            MtpeEngines, SubjectFields,ServiceTypeunits,ProzLanguagesCode)
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
 import json,requests
@@ -170,7 +171,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             print("ID------------------->",serializer.data.get('id'))
             shortlisted_vendor_list_send_email_new.apply_async((
             serializer.data.get('id'),
-            ))
+            ),queue='low-priority')
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
@@ -339,7 +340,9 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.errors)
 
     def delete(self,request,pk):
-        Bid_info = BidPropasalDetails.objects.get(Q(id=pk) & Q(vendor=request.user))
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
+        Bid_info = BidPropasalDetails.objects.get(Q(id=pk) & Q(vendor=user))
         Bid_info.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1015,3 +1018,347 @@ def sample_file_delete(request,bid_propasal_id):
         return JsonResponse({"msg":"File Deleted Successfully"})
     else:
         return JsonResponse({"msg":"no file associated with it"})
+###########################################################################################
+
+
+def get_proz_lang_pair(source,target):
+    source_lang = Languages.objects.get(id=source).lang.first().language_code
+    target_lang = Languages.objects.get(id=target).lang.first().language_code
+    return source_lang + '_' + target_lang
+
+def get_native_langs(langs):
+    native_langs=[]
+    for i in langs:
+        obj = ProzLanguagesCode.objects.filter(language_code = i)
+        lan = obj.first().language.language if obj else None
+        native_langs.append(lan)
+    return native_langs
+
+def get_proz_expertize(sub_id_list):
+    queryset = ProzExpertize.objects.filter(subject_field__id__in = sub_id_list)
+    print("Queur----------->",queryset)
+    expertize_ids_list = [obj.expertize_ids for obj in queryset if obj.expertize_ids]
+    print("ES------------->",expertize_ids_list)
+    if expertize_ids_list:
+        expertize_str = ",".join(expertize_ids_list)
+        return expertize_str
+    else: return None
+    
+def get_sub_data(expertise_data):
+    subject_data = []
+    seen_ids = set()
+    for expertise in expertise_data:
+        disc_spec_id = expertise['disc_spec_id']
+        #print("$$$$$$$$$$$$$$$---------------------->",expertise['disc_spec_name'])
+        expertize_obj = ProzExpertize.objects.filter(expertize_ids__contains=str(disc_spec_id))
+        if expertize_obj:
+            sub_obj = expertize_obj.first().subject_field
+            if sub_obj.id not in seen_ids:
+                subject_data.append({"subject": sub_obj.id, "subject_name": sub_obj.name})
+                seen_ids.add(sub_obj.id)
+            #print("EXprtz-------------->",sub_obj.name)
+    return subject_data
+
+
+from .serializers import CommonSPSerializer
+from ai_staff.models import Countries
+from allauth.socialaccount.models import SocialAccount
+
+class ProzVendorListView(generics.ListAPIView):
+    serializer_class = CommonSPSerializer
+    pagination.PageNumberPagination.page_size = 20
+
+    def get_queryset(self):
+        page = self.request.query_params.get('page', 1)
+        limit = self.request.query_params.get('limit', 20)
+        service = self.request.query_params.get('service', 1)
+        source_lang=self.request.query_params.get('source_lang')
+        target_lang=self.request.query_params.get('target_lang')
+        year_of_experience = self.request.query_params.get('year_of_experience')
+        country = self.request.query_params.get('country',None)
+        fullname = self.request.query_params.get('fullname',None)
+        #contenttype = self.request.query_params.get('content')
+        account_type = self.request.query_params.get('account_type',None)
+        subject=self.request.query_params.get('subject')
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+
+        headers = {
+            'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+            }
+        
+        offset = (int(page) - 1) * int(limit)
+        print("Limit------->",limit)
+        print("Offset-------->",offset)
+        
+        lang_pair = get_proz_lang_pair(source_lang,target_lang)
+        print("LangPair-------->",lang_pair)
+        params={
+            'language_service_id':service,
+            'language_pair':lang_pair,
+            'limit':limit,
+            'offset':offset
+            }
+        if year_of_experience:
+            params.update({'min_yrs_experience':year_of_experience})
+        if account_type:
+            params.update({'account_type_id':account_type})
+        if subject:
+            subjectlist=subject.split(',')
+            proz_expertize_ids = get_proz_expertize(subjectlist)
+            if proz_expertize_ids:
+                params.update({'disc_spec_id':proz_expertize_ids}) 
+        if country:
+            country_code = Countries.objects.get(id=country).sortname.lower()
+            params.update({'country_code':country_code})
+        if fullname:
+            params.update({'site_name':fullname})
+        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+        integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        print("Status---------->",integration_users_response)
+        integration_users = integration_users_response.json()
+        print("Integration--------------->",integration_users.get('success'))
+        common_users = []
+        total = 0
+        if integration_users and integration_users.get('success') == 1:
+            print("Inside If")
+            total = integration_users.get('meta').get('num_results')
+            for vendor in integration_users.get('data'):
+                print("Inside For")
+                ven = vendor.get('freelancer')
+                verified = False
+                bio = None
+                qs = SocialAccount.objects.filter(provider = 'proz').filter(uid=ven.get('uuid'))
+                print("Queryset------------>",qs)
+                ailaysa_user_uid = qs.last().user.uid if qs else None
+                print("AilaysaUserUID------------>",ailaysa_user_uid)
+                for i in ven.get('qualifications').get('credentials',{}):
+                    if i.get('pair_code') == lang_pair:
+                        verified = True
+                        break
+                if ven.get('about_me_localizations') != []:
+                    bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
+                native_langs = ven.get('qualifications').get("native_language")
+                native_lang_names = get_native_langs(native_langs) if native_langs else None
+                subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
+                #print("----------------------------------------------------------------------------")        
+                
+                common_users.append({
+                    'uid': ven.get('uuid'),
+                    'ailaysa_user_uid' : ailaysa_user_uid,
+                    'fullname': ven.get('site_name'),
+                    'email': ven.get('contact_info').get('email',None),
+                    'cv_file': ven.get('qualifications').get('cv_url',None),
+                    'professional_identity': ven.get('image_url',None),
+                    'country': ven.get('contact_info').get('country_code').upper(),
+                    'legal_category': ven.get('account_type'),
+                    'year_of_experience': ven.get('professional_history').get('years_of_experience'),
+                    'location': ven.get('contact_info').get('address',{}).get('region',None),
+                    'bio': bio,
+                    'organisation_name': ven.get('contact_info').get('company_name',None),
+                    'native_lang':native_lang_names,
+                    'verified': verified,
+                    'vendor_subject':subs,
+                })
+            print("----------------------------------------------------------------------------")
+        return common_users,total
+
+    def list(self, request, *args, **kwargs):
+        print("Inside List")
+        queryset,total = self.get_queryset()
+        print("QS-------------->",queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        data.append({'total':total})
+        return Response(data)
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def proz_send_message(request):
+    user = request.user.team.owner if request.user.team else request.user
+    message = request.POST.get('message')
+    uuid = request.POST.get('uuid')
+    body = '''Hi, Greetings from the Ailaysa Multilingual AI Platform. One of our customers would like to contact you in order to know if they can use your services.
+              
+              Message: {}
+              
+              You receive the message as Ailaysa is integrated with Proz.com, the international translation service provider platform. 
+              
+              Sign up or log in at https://www.ailaysa.com to learn more about the job, using your Proz credentials. 
+              
+              If you have any questions, please feel free to contact us at support@ailaysa.com.'''.format(message)
+    
+    subject = request.POST.get('subject', 'Message from Ailaysa Test' )
+    headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+    url = "https://api.proz.com/v2/messages"
+    payload = {'recipient_uuids': uuid,
+                'sender_email': user.email,
+                'body': body,
+                'subject': subject,
+                'sender_name': user.fullname}
+    print("Payload------------->",payload)
+    response = requests.request("POST", url, headers=headers, data=payload)
+    res_data = response.json()
+    if res_data.get('success') == 1:
+        message_id = res_data.get('meta').get('message_vetting_id')
+        serializer = ProzMessageSerilaizer(data={**request.POST.dict(),'proz_uuid':uuid,'proz_message_id':message_id,'customer':user.id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    else:
+        return Response({'msg':'api response error'})
+
+    # response = requests.request("POST", url, headers=headers, data=payload)
+    # return Response(response.json())
+
+
+
+# def get_proz_lang_pair(source,target):
+#     source_lang = Languages.objects.get(id=source).lang.first().language_code
+#     target_lang = Languages.objects.get(id=target).lang.first().language_code
+#     return source_lang + '_' + target_lang
+
+# from .serializers import CommonSPSerializer
+
+# class CommonSPListView(generics.ListAPIView):
+#     serializer_class = CommonSPSerializer
+#     pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+
+#     def get_queryset(self):
+#         page = self.request.query_params.get('page', 1)
+#         limit = self.request.query_params.get('limit', 20)
+#         source_lang=self.request.query_params.get('source_lang')
+#         target_lang=self.request.query_params.get('target_lang')
+
+#         user = self.request.user.team.owner if self.request.user.team else self.request.user
+
+#         headers = {
+#             'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+#             }
+#         offset = (int(page) - 1) * int(limit)
+#         print("Limit------->",limit)
+#         print("Offset-------->",offset)
+#         app_users = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
+#                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
+#                     .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(is_active=False).exclude(deactivate=True)
+
+#         lang_pair = get_proz_lang_pair(source_lang,target_lang)
+#         print("LangPair-------->",lang_pair)
+
+#         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+#         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
+#         integration_users = integration_users_response.json()
+#         #print("IU---------------------->",integration_users)
+#         common_users = []
+
+#         for vendor in app_users:
+#             common_users.append({
+#                 'id': vendor.id,
+#                 'name': vendor.fullname,
+#                 'email': vendor.email,
+#                 'source': 'App User'
+#             })
+
+#         if integration_users:
+#             for vendor in integration_users.get('data'):
+#                 common_users.append({
+#                     'id': vendor.get('freelancer').get('uid'),
+#                     'name': vendor.get('freelancer').get('site_name'),
+#                     'email': vendor.get('freelancer').get('contact_info').get('email',None),
+#                     'source': 'Integrated User'
+#                 })
+#         print("CU----------->",common_users)
+#         print("Length------------>",len(common_users))
+#         return common_users
+
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         page = self.paginate_queryset(queryset)
+#         serializer = self.get_serializer(page, many=True)
+#         return Response(serializer.data)
+        
+
+    # def get_queryset(self):
+    #     page = self.request.query_params.get('page', 1)
+    #     limit = self.request.query_params.get('limit', 20)
+    #     source_lang = self.request.query_params.get('source_lang')
+    #     target_lang = self.request.query_params.get('target_lang')
+
+    #     user = self.request.user.team.owner if self.request.user.team else self.request.user
+
+    #     app_users = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
+    #                 .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
+    #                 .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(is_active=False).exclude(deactivate=True)
+                
+    #     common_users = []
+
+    #     for vendor in app_users:
+    #         common_users.append({
+    #             'id': vendor.id,
+    #             'name': vendor.fullname,
+    #             'email': vendor.email,
+    #             'source': 'App User'
+    #         })
+    #     return common_users
+           # queryset = SocialAccount.objects.filter(provider = 'proz')
+        # print("Queryset----------->",queryset)
+        # existing_uuids = [{'uuid':i.extra_data.get('uuid'),'uid':i.user.uid} for i in queryset]
+        # print("Exist---------------->",existing_uuids)
+        # for d in existing_uuids:
+        #     if d.get('uuid') == ven.get('uuid'):
+        #         common_users['ailaysa_detail'] = d.get('uid')
+        #         break
+
+    # def get_proz_users(self):
+    #     page = self.request.query_params.get('page', 1)
+    #     limit = self.request.query_params.get('limit', 20)
+    #     source_lang = self.request.query_params.get('source_lang')
+    #     target_lang = self.request.query_params.get('target_lang')
+    #     lang_pair = get_proz_lang_pair(source_lang,target_lang)
+    #     offset = (int(page) - 1) * int(limit)
+    #     print("Limit------->",limit)
+    #     print("Offset-------->",offset)
+    #     print("LangPair-------->",lang_pair)
+    #     headers = {
+    #         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+    #         }
+    #     integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+    #     integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
+    #     integration_users = integration_users_response.json()
+    #     common_users = []
+
+    #     if integration_users:
+    #         for vendor in integration_users.get('data'):
+    #             common_users.append({
+    #                 'id': vendor.get('freelancer').get('uid'),
+    #                 'name': vendor.get('freelancer').get('site_name'),
+    #                 'email': vendor.get('freelancer').get('contact_info').get('email',None),
+    #                 'source': 'Integrated User'
+    #             })
+    #     print("CU----------->",common_users)
+    #     return common_users
+
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.get_queryset()
+    #     page = self.paginate_queryset(queryset)
+    #     serializer = self.get_serializer(page, many=True)
+    #     res = self.get_paginated_response(serializer.data)
+    #     print("REs------------>",res.data.get('next'))
+    #     # return res
+    #     if res.data['next'] == None:
+    #         print("$$$$$$$$$$$$$$$$$$$$")
+    #         queryset = self.get_proz_users()
+    #         page = self.paginate_queryset(queryset)
+    #         serializer = self.get_serializer(page, many=True)
+    #         res = self.get_paginated_response(serializer.data) 
+    #         return res
+    #     else:
+    #         return res
+
+   
+# def proz_ailaysa_user_map():
+#     queryset = SocialAccount.objects.filter(provider = 'proz')
+#     existing_uuids = [i.get('extra_data').get('uuid') for i in queryset]
+    

@@ -57,7 +57,6 @@ from django.core.cache import cache
 import functools
 
 
-
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -222,6 +221,8 @@ class Project(models.Model):
     mt_enable = models.BooleanField(default=True)
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
+    get_mt_by_page = models.BooleanField(default=True) 
+    file_translate = models.BooleanField(default=False)
 
 
     class Meta:
@@ -278,7 +279,22 @@ class Project(models.Model):
     #     ]
     #     return cache_keys
 
-
+    @property
+    def designer_project_detail(self):
+        from ai_canvas.models import CanvasDesign,CanvasSourceJsonFiles
+        from ai_imagetranslation.models import ImageTranslate
+        des_proj_detail = None
+        if self.project_type_id == 6:
+            des_obj = CanvasDesign.objects.filter(project = self)
+            if des_obj: 
+                pages= des_obj.last().canvas_json_src.all().count()
+                des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design','pages':pages}
+            else:
+                img_trans_obj = ImageTranslate.objects.filter(project=self)
+                print("IMage------------->",img_trans_obj)
+                if img_trans_obj:
+                    des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate','pages':None}
+        return des_proj_detail
 
     @property
     def ref_files(self):
@@ -551,16 +567,12 @@ class Project(models.Model):
 
     @property
     def is_proj_analysed(self):
-        cache_key = f'pr_proj_analysed_{self.id}'
-        cached_value = cache.get(cache_key)
-        if cached_value is None:
-            if self.is_all_doc_opened:
-                cached_value = True
-            if self.get_tasks.count() == self.task_project.count() and self.get_tasks.count() != 0:
-                cached_value = True
-            else:
-                cached_value = False
-            cache.set(cache_key,cached_value)
+        if self.is_all_doc_opened:
+            cached_value = True
+        elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+            cached_value = True
+        else:
+            cached_value = False
         return cached_value
 
     @property
@@ -648,19 +660,17 @@ class Project(models.Model):
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
-
-
                             
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks:
+        if not tasks or self.project_type_id == 6 or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
-    
+        #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
             return analysed_true(self,tasks)
 
@@ -677,7 +687,7 @@ class Project(models.Model):
                 elif state == 'SUCCESS' and self.is_proj_analysed == True:
                     return analysed_true(self,tasks)
                 else:
-                    celery_task = project_analysis_property.apply_async((self.id,), )
+                    celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(self.id)
             except:
@@ -857,6 +867,7 @@ class Job(models.Model):
         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,\
         related_name="project_jobs_set",)
+    
     job_id =models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
 
@@ -914,11 +925,11 @@ class Job(models.Model):
     def target_language_code(self):
         return self.target_language.locale.first().locale_code
 
-    @cached_property
-    def source__language(self):
-        print("called first time!!!")
+    @property
+    def source__language(self):  #used in task serilaizer
+        #print("called first time!!!")
         # return self.source_language.locale.first().language
-        return self.source_language
+        return self.source_language_code
 
     @property
     def type_of_job(self):
@@ -1218,7 +1229,16 @@ class Task(models.Model):
                 else:cached_value = None
             else:cached_value = "null"
             cache.set(cache_key,cached_value)
-        return cached_value    
+        return cached_value   
+
+
+    @property
+    def file_translate_done(self):
+        res = False
+        if self.job.project.file_translate == True:
+            if self.task_file_detail.exists() == True:
+                res = True
+        return res
 	
     @property
     def is_task_translated(self):
@@ -1314,6 +1334,8 @@ class Task(models.Model):
             try:
                 if self.job.project.project_type_id == 5:
                     cached_value = "ExpressEditor"
+                elif self.job.project.project_type_id == 6:
+                    cached_value = "Designer"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:
@@ -1325,7 +1347,9 @@ class Task(models.Model):
                             cached_value = "Download"
                         else:cached_value = "Transeditor"
                 elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-                    if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
+                    if self.job.project.file_translate == True:
+                        cached_value = "Download"
+                    elif self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
                         try:cached_value = self.pdf_task.last().pdf_api_use
                         except:cached_value = None
                     else:cached_value= "Transeditor"	
@@ -1350,7 +1374,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project:
+                if self.job.project.glossary_project or self.job.project.project_type_id == 6:
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
@@ -1524,6 +1548,17 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 post_save.connect(invalidate_cache_on_save, sender=Task)
 pre_delete.connect(invalidate_cache_on_delete, sender=Task)
+
+
+def target_file_upload_path(instance, filename):
+    print("Ins,name--------->",instance,filename)
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,'source',filename)
+    return file_path
+
+class TaskTranslatedFile(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_file_detail")
+    target_file = models.FileField(upload_to=target_file_upload_path,blank=True, null=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_trans_mt")
 
 def my_doc_image_upload_path(instance, filename):
     file_path = os.path.join(instance.ai_user.uid,"MyDocImages", filename)
@@ -1887,7 +1922,7 @@ class TaskDetails(models.Model):
         cache_keys=[
             f'task_word_count_{self.task.pk}',
             f'task_char_count_{self.task.pk}',
-            f'pr_proj_analysed_{self.project.id}',
+            f'pr_proj_analysed_{self.task.job.project.id}',
         ]
         return cache_keys
 post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
@@ -2263,7 +2298,25 @@ class ExpressProjectAIMT(models.Model):
     #             return "Completed"
     #         else:
     #             return "In Progress"
-
+    # @property
+    # def is_proj_analysed(self):
+    #     print("RR---------->",self.get_analysis_tasks.count())
+    #     print("RT----------->",self.task_project.count())
+    #     print("Rs-------------->",self.is_all_doc_opened)
+    #     cache_key = f'pr_proj_analysed_{self.id}'
+    #     cached_value = cache.get(cache_key)
+    #     print("CC---------->",cached_value)
+    #     if cached_value is None:
+    #         if self.is_all_doc_opened:
+    #             cached_value = True
+    #         elif (self.get_analysis_tasks.count() != 0) and (self.get_analysis_tasks.count() == self.task_project.count()):
+    #             print("ININIJ")
+    #             cached_value = True
+    #         else:
+    #             cached_value = False
+    #         cache.set(cache_key,cached_value)
+    #     print("ER-------------->",cached_value)
+    #     return cached_value
 
      # if not self.ai_project_id:
             #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)

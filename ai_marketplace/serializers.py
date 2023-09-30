@@ -4,7 +4,8 @@ from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage,
                     ProjectPostTemplateJobDetails,ProjectPostTemplateContentType,
                     ProjectPostTemplateSubjectField,ProjectboardTemplateDetails,
-                    ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps)
+                    ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps,
+                    ProzMessage)
 from ai_auth.models import AiUser,AiUserProfile,HiredEditors,VendorOnboarding
 from ai_staff.models import Languages,Currencies
 from django.db.models import Q
@@ -184,6 +185,31 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
                                             status_id=5,edited_count=edited_count)
             return queryset[0]
         return instance
+
+
+
+class CommonSPSerializer(serializers.Serializer):
+    uid = serializers.CharField(required=False)
+    ailaysa_user_uid = serializers.CharField(required=False)
+    fullname = serializers.CharField(required=False)
+    organisation_name = serializers.CharField(required=False)
+    location = serializers.CharField(required=False)
+    currency = serializers.CharField(required=False)
+    native_lang = serializers.ListField(required=False)
+    email = serializers.CharField(required=False)
+    source = serializers.CharField(required=False)
+    professional_identity = serializers.URLField(allow_blank=True,required=False)
+    cv_file = serializers.URLField(allow_blank=True)
+    country = serializers.CharField(required=False)
+    year_of_experience = serializers.IntegerField(required=False)
+    legal_category = serializers.IntegerField(required=False)
+    bio = serializers.CharField(required=False)
+    vendor_subject = serializers.ListField(required=False)
+    #vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
+    #vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True) 
+    #vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
+    #saved = serializers.SerializerMethodField()
+    verified = serializers.CharField(required=False)
 
 
 
@@ -1087,3 +1113,9 @@ def send_msg(bid_objects):
                 html_message=msg_html,
             )
         print("bid submitted by vendor detail sent to customer>>")	
+
+
+class ProzMessageSerilaizer(serializers.ModelSerializer):
+    class Meta:
+        model = ProzMessage
+        fields= '__all__'

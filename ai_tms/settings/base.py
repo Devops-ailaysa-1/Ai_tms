@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.github',
     'allauth.socialaccount.providers.google',
     "allauth.socialaccount.providers.twitter",
+    "ai_auth.providers.proz",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
@@ -147,6 +148,8 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
+    'ai_canvas',
+    'ai_imagetranslation',
     "ai_bi",
     #"silk",
 ]
@@ -159,6 +162,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    # 'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -169,6 +173,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     #'silk.middleware.SilkyMiddleware',
 ]
@@ -349,7 +354,17 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'offline',
         }
-}
+    },
+    'proz':{
+              'SCOPE': [
+            'public',
+            'user.email',
+            'user.name'
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }  
+    }
 }
 
 
@@ -367,7 +382,8 @@ USE_L10N = True
 
 USE_TZ = True
 
-
+DATA_UPLOAD_MAX_MEMORY_SIZE = 560242880
+USE_GZIP=True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
@@ -394,7 +410,9 @@ else:
     STATIC_URL = '/static/'
     STATIC_ROOT =  os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static')
+        os.path.join(BASE_DIR, 'static'),
+        # os.path.join(BASE_DIR, 'ai_canvas/static'),
+
     ]
 
 
@@ -469,13 +487,6 @@ CHANNEL_LAYERS = {
 }
 # settings.py
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-#     }
-# }
-
-
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -489,6 +500,35 @@ CACHES = {
 }
 
 
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'KEY_PREFIX': '',  
+#         },
+#         'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+#     }
+# }
+#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+#     }
+# }
+
+
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'KEY_PREFIX': '',  
+#         },
+#         'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+#     }
+# }
+
+
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
@@ -497,6 +537,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+PROZ_CALLBACK_URL = os.getenv('PROZ_CALLBACK_URL')
 
 
 # DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
@@ -509,3 +550,17 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
+
+# FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
+# FONT_THUMBNAIL_URL = '/font-thumnail/'
+#######
+INPAINT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_image')
+INPAINT_IMAGE_URL = '/inpaint_image/'
+
+INPAINT_SOURCE_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_source_image')
+INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
+
+
+EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
+EXPORT_IMAGE_URL = '/temp_download/'
+ 

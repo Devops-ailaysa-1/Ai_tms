@@ -1,9 +1,11 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings)
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
+                     BlogKeywordGenerate,Blogtitle,BlogOutline,
+                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse)
+import logging ,os         
 from django.core import serializers
 import logging ,os ,json
 from rest_framework import status
+ 
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
@@ -27,7 +29,7 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 #from langdetect import detect
 #import langid
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -95,7 +97,7 @@ class AiPromptResultViewset(generics.ListAPIView):
     filterset_class = PromptFilter
     search_fields = ['description','catagories__category','sub_catagories__sub_category',]
     pagination_class = NoPagination
-    page_size = None
+     
 
     def get_queryset(self):
         prmp_id = self.request.query_params.get('prompt_id')
@@ -108,9 +110,10 @@ class AiPromptResultViewset(generics.ListAPIView):
             queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
+            
+        
         return queryset
-
-
+ 
 
 def instant_customize_response(customize ,user_text,used_tokens):
     print("Initial----------->",used_tokens)
@@ -128,8 +131,9 @@ def instant_customize_response(customize ,user_text,used_tokens):
         prompt = customize.prompt +' "{}"'.format(text_)
         #prompt = customize.prompt+" "+text+"."
         print("Prompt------------------->",prompt)
-        response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
-        text = response['choices'][0]['text']
+        response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
+        #text = response['choices'][0]['text']
+        text = response["choices"][0]["message"]["content"]
         text = text.strip('\n').strip('\"')
         final = final + "\n\n" + text
         tokens = response['usage']['total_tokens']
@@ -151,7 +155,7 @@ def customize_response(customize ,user_text,tone,used_tokens):
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
-            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
+            response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =150,n=1)
         else:
             if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
@@ -160,7 +164,7 @@ def customize_response(customize ,user_text,tone,used_tokens):
                 prompt = customize.prompt +' "{}"'.format(user_text)
                 #prompt = customize.prompt+" "+user_text+"."
             print("Pr-------->",prompt)
-            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
+            response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
         total_tokens += used_tokens
@@ -266,7 +270,8 @@ def customize_text_openai(request):
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
-            result_txt = response['choices'][0]['text']
+            #result_txt = response['choices'][0]['text']
+            result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
@@ -276,7 +281,8 @@ def customize_text_openai(request):
         
     else:##english      
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-        result_txt = response['choices'][0]['text']
+        #result_txt = response['choices'][0]['text']
+        result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
     data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
@@ -369,7 +375,7 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        obj = CustomizationSettings.objects.filter(id = pk, user=user)
+        obj = CustomizationSettings.objects.filter(id = pk, user=request.user)
         if not obj:
             return Response({"msg":"No detail"})
         obj.delete()
@@ -411,23 +417,41 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))
         return queryset
 
-    
+
 class AiImageHistoryViewset(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ImageGeneratorPromptSerializer
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
     ordering_fields = ['id']
     ordering = ('-id')
+    # pagination_class = AiImageHistoryPagination
     #filterset_class = PromptFilter
     search_fields = ['prompt',]
     pagination_class = NoPagination
     page_size = None
+    #paginate_by=20
 
     def get_queryset(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_img__created_by__in=project_managers)|Q(gen_img__user=owner))
         return queryset
+
+
+class ImageGeneratorPromptDelete(generics.DestroyAPIView):
+    queryset = ImageGeneratorPrompt.objects.all()
+    serializer_class = ImageGeneratorPromptSerializer
+    lookup_field = 'pk'
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_ai_image_generated_file(request,id):
+    try:
+        file = ImageGenerationPromptResponse.objects.get(id=id).generated_image 
+        return download_file(file.path)
+    except:
+        return Response({'msg':'Requested file not exists'},status=401)
 
 
 
@@ -454,7 +478,7 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
     def update(self,request,pk):
-        selected_keywords_list= request.POST.getlist('selected_keywords_list',None)
+        selected_keywords_list=request.POST.getlist('selected_keywords_list',None)
         unselected_keywords_list=request.POST.getlist('unselected_keywords_list',None)
         query_set = BlogCreation.objects.get(id = pk)
         serializer = BlogCreationSerializer(query_set,data=request.data,partial=True)
@@ -469,8 +493,6 @@ class BlogCreationViewset(viewsets.ViewSet):
         obj.delete()
         return Response(status=204)
 
-
- 
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
     def retrieve(self, request,pk=None):
@@ -748,10 +770,7 @@ class BlogArticleViewset(viewsets.ViewSet):
             
         # else:
         #     return  Response({'msg':'Insufficient Credits'},status=400)
-        
-        
-        
-        
+         
 
 # class InstantTranslationViewset(viewsets.ViewSet):
 #     model = InstantTranslation
@@ -857,8 +876,11 @@ def credit_check_blog(request):
 #         else:txt_generated = 'Something Went Wrong.Try Again'
 #         #print("Txt------>",txt_generated.strip())
 #     #total_tokens = response['usage']['total_tokens']
+ 
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
-
+ 
+#     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
+ 
 from django.http import StreamingHttpResponse,JsonResponse
 import openai  #blog_cre_id list
 from ai_staff.models import PromptSubCategories
@@ -869,13 +891,44 @@ import tiktoken
 import os
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
-
+from ai_openai.models import MyDocuments
 
 def num_tokens_from_string(string) -> int:
     print("openai____",string)
     num_tokens = len(encoding.encode(string))
     token_usage=get_consumable_credits_for_openai_text_generator(num_tokens)
     return token_usage
+
+@api_view(['GET'])
+def blog_crt(request):
+    instance=request.query_params.get('blog_creation_instance')
+    title = instance.blog_creation.user_title
+    detected_lang = lang_detector(title)
+    if detected_lang!='en':
+        title = instance.blog_creation.user_title_mt
+    article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+    tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+    instance.document = tt
+    return Response({'id':tt.id})
+
+
+
+@api_view(["GET"])
+def credit_check_blog(request):
+    if request.method=='GET':
+        blog_id=request.query_params.get('blog_id')
+        blog_creation=BlogCreation.objects.get(id=blog_id)
+        initial_credit = request.user.credit_balance.get("total_left")
+        if blog_creation.user_language_code != 'en':
+            credits_required = 2000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        else:
+            return Response({'msg':'sufficient Credits'},status=200)
+
+            
 
 @api_view(["GET"])
 def generate_article(request):
@@ -885,8 +938,7 @@ def generate_article(request):
         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
         outline_list=request.query_params.get('outline_section_list')
         blog_creation=request.query_params.get('blog_creation')
-        print("outline_list",outline_list)
-        print("blog_creation",blog_creation)
+ 
         blog_creation=BlogCreation.objects.get(id=blog_creation)
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
@@ -952,6 +1004,11 @@ def generate_article(request):
                         token_usage=num_tokens_from_string(str_con+" "+prompt)
                         print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                        print("token_usage---------->>",token_usage)
+                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+                        # instance.document = tt
+                        # instance.save()
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
@@ -978,7 +1035,6 @@ def generate_article(request):
                                     print("Consumable--------->",consumable)
                                     print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                     token_usage=num_tokens_from_string(str_cont)
-                                    print("token_usage------->>",token_usage)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                     print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable:
@@ -998,7 +1054,6 @@ def generate_article(request):
                                         print("Consumable--------->",consumable)
                                         print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                         token_usage=num_tokens_from_string(str_cont)
-                                        print("token_usage------->>",token_usage)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                                         print("StrContent------------->",str_cont) 
                                         if initial_credit >= consumable:
@@ -1015,8 +1070,14 @@ def generate_article(request):
                                 arr.append(word)
                     else:
                         token_usage=num_tokens_from_string(prompt)
+                        print("prompt",prompt)
+                        print("tot_us",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
                         print("finished")
+                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+                        # instance.document = tt
+                        # instance.save()
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
@@ -1049,7 +1110,6 @@ However, building and maintaining quantum computers is very challenging because 
         return StreamingHttpResponse(stream(),content_type='text/event-stream')
     
     return JsonResponse({'error':'Method not allowed.'},status=405)
-
 
 # @api_view(["GET"])
 # def generate_article(request):
@@ -1089,46 +1149,29 @@ However, building and maintaining quantum computers is very challenging because 
 #         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
 #     return JsonResponse({'error':'Method not allowed.'},status=405)
 
-# from django.http import HttpResponse, StreamingHttpResponse
-# import time
-# @api_view(["POST"])
-# def generate_article(request):
-    
-#     text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
-#             Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
-#             Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
-#             Understanding Backpropagation in the Context of Vanishing Gradient
-#             Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
-#             The Cause and Effect of Vanishing Gradient on Neural Networks
-#             Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
-#             The Impact of Vanishing Gradient on Deep Learning Performance
-#             Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
-#             Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
-#             Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
-#             Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
-#             Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
-#             Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
-#             Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
-#             Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
-#             Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
-#             The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
-#             As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
-#             Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
-#             Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
-
-#     def stream():
-#         for chunk in text.split(' '):
-#             yield chunk
-#             print(chunk)
-#             time.sleep(0.2)
-#             ##print(chunk)
-
-#     response = HttpResponse(stream(),content_type='text/event-stream')
-#     response['Cache-Control'] = 'no-cache'
-#     response['Connection'] = 'keep-alive'
-#     return response
+# from django.http import StreamingHttpResponse
+# import time,json
+# from django.http import JsonResponse
+# text="Please generate a 700-word blog post titled '{}' with sections: {} Use keywords such as {} and a {} tone. Keep the language simple and concise. Pre-written content for the section headlines is allowed. Please format everything in Markdown and blog post sections should be in ## tag. Please generate the content as quickly as possible.".format('Cost-Saving Strategies',
+#                                                                                                                                                                                                                                                                                                                                                           'Introduction and overview of vanishing gradient and backpropagation ,The problem of vanishing gradients and how it affects neural network training,Explaining backpropagation and its role in solving the vanishing gradient problem,Analyzing the mathematical concepts behind backpropagation and gradient descent',
+#                                                                                                                                                                                                                                                                                                                                                           'machine learning,cost machine gpu',
+#                                                                                                                                                                                                                                                                                                                                                           'professional')
 
 
+# @api_view(["GET"])
+# def generate(request):
+#     if request.method=='GET':
+#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":text}],stream=True)
+#         def stream_article_response_en():
+#             for chunk in completion:
+#                 ins=chunk['choices'][0]
+#                 if ins["finish_reason"]!='stop':
+#                     delta=ins['delta']
+#                     if 'content' in delta.keys():
+#                         content=delta['content']
+#                         yield '\ndata: {}\n\n'.format({"t":content})
+#         return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')  #text/event-stream
+#     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
 
@@ -1140,3 +1183,32 @@ However, building and maintaining quantum computers is very challenging because 
     # return response(stream())
     #return StreamingHttpResponse(stream(), content_type='text/event-stream')
     #return JsonResponse({'error': 'Error'}, status=405)
+
+
+from google.cloud import translate_v2 as translate
+from html import unescape
+from lxml import html
+
+
+@api_view(["GET"])
+def translate_html_file(request, input_file, target_language):
+    # Initialize the translation client
+    client = translate.Client()
+
+    with open(input_file, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+
+    # Parse the HTML content using lxml
+    root = html.fromstring(html_content)
+
+    # Find all text nodes and translate them
+    for element in root.iter():
+        if element.text:
+            translated_text = client.translate(unescape(element.text), target_language=target_language)
+            element.text = translated_text['translatedText']
+
+    # Serialize the modified HTML tree back to a string
+    translated_html = html.tostring(root, encoding='unicode')
+
+    return Response({"translated_html":translated_html})
+

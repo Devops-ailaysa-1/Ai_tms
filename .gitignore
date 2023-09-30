@@ -20,6 +20,8 @@ tms
 tmsenv
 venv/
 *.json
+*.pdf
+ai_canvas/ICC_profile
 ai_tms/local_settings.py
 AiWorkspace.postman_collection.json
 AiWorkspace.postman_collection.json
@@ -56,6 +58,7 @@ list_of_tables.txt
 dummy.txt
 test5.out-2.docx
 *.bak
+
 json_back.zip
 fixtures
 *.ipy
@@ -117,7 +120,7 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
-
+ai_workspace/html2docx_custom.py
 *.xlsx
 *.sh
 *.zip
@@ -126,9 +129,7 @@ ai_tms/settings/local_settings.py
 *.save*
 *.txt
 *.dockerignore
-ai_workspace/html2docx_custom.py
 express_try.py
 mydoc-project-try.py
 nupedia_small(en-ta).tmx
 price
-okapi_resources/tamil.srx

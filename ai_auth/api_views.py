@@ -1,10 +1,11 @@
 from logging import INFO
+from ai_auth.checks import AilaysaTroubleShoot
 from langdetect import detect
 import logging
 import re , requests, os
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
-from ai_auth.soc_auth import GoogleLogin
+from ai_auth.soc_auth import GoogleLogin,ProzLogin
 from allauth.account.models import EmailAddress
 from dj_rest_auth.registration.serializers import SocialLoginSerializer
 from djstripe.models.billing import Plan, TaxId
@@ -77,6 +78,7 @@ from allauth.socialaccount.providers.oauth2.views import (
     OAuth2CallbackView,
     OAuth2LoginView,
 )
+from ai_auth.providers.proz.views import ProzAdapter
 from django.contrib.sessions.models import Session
 from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
@@ -930,14 +932,17 @@ def check_subscription(request):
     is_active = is_active_subscription(request.user)
     if is_active == (False,True):
         customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
-        subscriptions = Subscription.objects.filter(customer=customer).last()
-        if subscriptions is not None:
+        subscriptions = Subscription.objects.filter(customer=customer)
+        if subscriptions.count() != 0:
+            subscriptions = subscriptions.last()
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
             return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,
                             'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial,'canceled_at':subscriptions.canceled_at}, status=200)
-        else:
+        elif subscriptions.count() > 0:
             return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
+        else:
+            return Response({"msg":"creating_subscription"}, status=202)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         #subscription = Subscription.objects.filter(customer=customer).last()
@@ -1387,7 +1392,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 
-from .models import CarrierSupport
+from .models import AiTroubleshootData, CarrierSupport
 class CarrierSupportCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
@@ -1549,15 +1554,17 @@ def account_delete(request):
     if not query:
         match_check = check_password(password_entered,user.password)
         if match_check:
-            # present = datetime.now()
-            # three_mon_rel = relativedelta(months=3)
-            # user.is_active = False
-            # user.deactivation_date = present.date()+three_mon_rel
-            # user.save()
-            user_delete(user)
+            present = datetime.now()
+            three_mon_rel = relativedelta(months=3)
+            user.is_active = False
+            user.deactivation_date = present.date()+three_mon_rel
+            user.save()
+            #user_delete(user)
         else:
             return Response({"msg":"password didn't match"},status = 400)
     else:
+        if query.filter(provider='proz'):
+            ProzMessage.objects.filter(proz_uuid = query.last().uid).delete()
         user_delete(user)
     return JsonResponse({"msg":"user account deleted"},safe = False)
 
@@ -1828,18 +1835,38 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+def invite_accept_notify_send(user,vendor):
+    from ai_marketplace.serializers import ThreadSerializer
+    receivers =  user.team.get_project_manager if user.team else []
+    receivers.append(user)
+    print("Receivers------------->",receivers)
+    for i in receivers:
+        thread_ser = ThreadSerializer(data={'first_person':i.id,'second_person':vendor.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        print("Thread--->",thread_id)
+        if thread_id:
+            message = "I am excited to accept your invitation, "+ vendor.fullname +". I eagerly anticipate our collaboration."
+            msg = ChatMessage.objects.create(message=message,user=vendor,thread_id=thread_id)
+            print("Msg obj-------------->",msg)
+            notify.send(vendor, recipient=user, verb='Message', description=message,thread_id=int(thread_id))
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
     vendor_id = urlsafe_base64_decode(uid)
-    vendor = HiredEditors.objects.get(id=vendor_id)
-    # user = AiUser.objects.get(id=vendor.external_member_id)
-    # if user is not None and invite_accept_token.check_token(user, token):
-    if vendor is not None and invite_accept_token.check_token(vendor, token):
-        vendor.status = 2
-        vendor.save()
+    obj = HiredEditors.objects.get(id=vendor_id)
+    if obj is not None and invite_accept_token.check_token(obj, token):
+        obj.status = 2
+        obj.save()
+        try:invite_accept_notify_send(obj.user,obj.hired_editor)
+        except:pass
         print("success & updated")
         return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
@@ -2125,18 +2152,26 @@ def get_user(request):
     # except:
     #     return Response({'user_exist':False})
 
+def get_soc_adapter(provider_id):
+    match provider_id:
+        case "google":
+            return GoogleOAuth2Adapter
+        case "proz":
+            return ProzAdapter
+        case default:
+            return GoogleOAuth2Adapter
+  
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def ai_social_login(request):
-    provider = request.POST.get('provider')
+    provider_id = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
     product_id =request.POST.get('product_id',None)
     price_id =request.POST.get('price_id',None)
     process = request.POST.get('process',None)
-    print('provider>>',provider)
-    print('requests>>',request)
-    base_url="http://127.0.0.1:8089"
-    provider_id="google"
+
+    # base_url="http://127.0.0.1:8089"
     # print(reverse(provider_id +'_login'))
     # url=base_url+reverse(provider_id +'_login')
 
@@ -2147,20 +2182,28 @@ def ai_social_login(request):
     state_data["socialaccount_user_product"]=product_id
     state_data["socialaccount_user_price"]=price_id
     state_data["socialaccount_process"]=process
-    if is_vendor=='True':
+    state_data["socialaccount_provider"]=provider_id.upper()
+
+    if is_vendor=='True' or  provider_id.upper() == "PROZ":
         #request.session['socialaccount_user_state']='vendor'
         state_data["socialaccount_user_state"]="vendor"
 
     else:
         #request.session['socialaccount_user_state']='customer'
         state_data["socialaccount_user_state"]="customer"
+    adapter= get_soc_adapter(provider_id)
 
-    adapter = GoogleOAuth2Adapter(request)
+    # adapter = GoogleOAuth2Adapter(request)
 
     print("adapter",adapter)
     print("request",request)
-    provider=adapter.get_provider()
-    oauth2_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
+    # adapter(request)
+    provider=adapter(request).get_provider()
+
+    print('provider>>',provider)
+    print('requests>>',request)
+
+    oauth2_login = OAuth2LoginView.adapter_view(adapter)
 
     # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
     rs=oauth2_login(request)
@@ -2169,7 +2212,7 @@ def ai_social_login(request):
     url =rs.url
     parsed = urlsplit(url)
     query_dict = parse_qs(parsed.query)
-    query_dict['redirect_uri'][0] = settings.GOOGLE_CALLBACK_URL
+    query_dict['redirect_uri'][0] = getattr(settings,f"{provider_id.upper()}_CALLBACK_URL")
     state = query_dict['state'][0]
     query_new = urlencode(query_dict, doseq=True)
     parsed=parsed._replace(query=query_new)
@@ -2225,6 +2268,7 @@ def ai_social_callback(request):
     # print(session.get_decoded().get('socialaccount_user_state',None))
     user_state=load_state(state)
     if user_state == None:
+        logger.error(f"on social login state none {state}")
         return JsonResponse({"error": "invalid_state"},status=440)
 
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
@@ -2278,8 +2322,15 @@ def ai_social_callback(request):
     # #res= requests.post(url,data)
     # #print(res)
     # try:
+    print(user_state)
     try:
-        response = GoogleLogin.as_view()(request=request._request).data
+        provider = user_state.get("socialaccount_provider")
+        if provider=="GOOGLE":
+            response = GoogleLogin.as_view()(request=request._request).data
+        elif provider=="PROZ":
+            response = ProzLogin.as_view()(request=request._request).data
+        else:
+            raise ValueError("no login view found")
     except BaseException as e:
         logger.error("on social login",str(e))
         return JsonResponse({"error":str(e)},status=400)
@@ -2549,7 +2600,7 @@ def oso_test_querys(request):
 
 
 from .models import CoCreateForm
-from .serializers import CoCreateFormSerializer,CampaignRegisterSerializer
+from .serializers import AiUserDetailsSerializer, CoCreateFormSerializer,CampaignRegisterSerializer
 
 class CampaignRegistrationView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
@@ -2681,3 +2732,38 @@ def subscription_customer_portal(request):
 
     }
     return JsonResponse(data,status=200)
+
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated,])
+def account_troubleshoot(request):
+    user = request.user
+    check_obj = AilaysaTroubleShoot(user)
+    check_obj.account_signup_check()
+    issues = check_obj.issues_found
+    for issue in issues:
+        AiTroubleshootData.objects.create(user=user,issue=issue)
+    return Response({"msg":"troubleshoot_done","issues_found":[issue.issue for issue in issues]},status=200)
+
+
+@api_view(['PUT',])
+@permission_classes([IsAuthenticated,])
+def user_info_update(request):
+    user = request.user
+    country_id = request.POST.get('country')
+    if user.is_internal_member: # country should not be updated for internal member
+         return Response({"msg":"updation failed"},status=400)
+    cust = user.djstripe_customers.last()
+
+    if country_id not in ['',None]:
+        return Response({"msg":"updation failed"},status=400)
+    elif cust:
+        return Response({"msg":"updation failed"},status=400)
+    else:
+        ser = AiUserDetailsSerializer(user,data={'country':country_id},partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)

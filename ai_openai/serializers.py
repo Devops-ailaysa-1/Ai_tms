@@ -8,7 +8,7 @@ import re
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations ,\
+                    get_prompt_freestyle ,get_prompt_image_generations ,get_prompt_gpt_4,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL
@@ -96,19 +96,22 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if instance.description:
                 prompt+=' '+instance.description if lang in ai_langs else instance.description_mt
             
-            prompt+=', in {} tone'.format(instance.Tone.tone)
-            print("prompt-->",prompt)
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
+            prompt+=' in {} tone'.format(instance.Tone.tone)
+            
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
+        print("prompt-->",prompt)
         initial_credit = user.credit_balance.get("total_left")
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 256
-        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
-        generated_text = openai_response.get('choices' ,None)
+        # openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
+        # generated_text = openai_response.get('choices' ,None)
+        openai_response =get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
+        generated_text =openai_response.get('choices',None)#["choices"][0]["message"]["content"]
         response_id =openai_response.get('id' , None)
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
@@ -126,7 +129,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
-                    'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip().strip('\"')}) for j,i in enumerate(generated_text)]
+                    'response_id':response_id,'token_usage':token_usage,'api_result':i["message"]["content"].strip()}) for j,i in enumerate(generated_text)]#'api_result':i['text'].strip().strip('\"')#'api_result':i["message"]["content"].strip().strip('\"')
         return None
 
     def customize_token_deduction(self,instance ,total_tokens,user=None):
@@ -300,6 +303,8 @@ class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
         #     "created_id":{"write_only": True},
         #     'created_by':{'write_only':True},
         # }
+
+ 
 
 class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
@@ -636,11 +641,6 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         print("DL--------->>",detected_lang)
         if detected_lang!='en':
             keywords = blog_create_instance.keywords_mt
-        #prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
-        #title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
-        #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
-        print("User Title----->",title)
-        print("Keywords-------->",keywords)
         if keywords:
             prompt+=' with keywords '+ keywords 
         prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
@@ -649,18 +649,19 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         if initial_credit < consumable_credits:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
-        openai_response = get_prompt(prompt,OPENAI_MODEL,title_start_phrase.max_token,1)
+        #openai_response = get_prompt(prompt,OPENAI_MODEL,title_start_phrase.max_token,1)
+        openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
         token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         AiPromptSerializer().customize_token_deduction(blog_create_instance,token_usage_to_reduce)
         
-        blog_titles = openai_response['choices'][0]['text']
+        #blog_titles = openai_response['choices'][0]['text']
+        blog_titles = openai_response["choices"][0]["message"]["content"]
         #title creation
         for blog_title in blog_titles.split('\n'):
             if blog_title.strip().strip('.'):
                 blog_title = re.sub(r'\d+.','',blog_title)
-                blog_title = blog_title.strip()
-                
+                blog_title = blog_title.strip().strip('"')
                 if (blog_create_instance.user_language_id not in blog_available_langs):
                     print("blog title create not in en")
                     initial_credit = blog_create_instance.user.credit_balance.get("total_left")
@@ -675,7 +676,6 @@ class BlogtitleSerializer(serializers.ModelSerializer):
                                          blog_title=blog_title_in_other_lang,blog_title_mt=blog_title,
                                          token_usage=token_usage,selected_field=False)
                 else:
-                    print("blog title create in en")
                     Blogtitle.objects.create(blog_creation_gen=blog_create_instance,sub_categories=sub_categories,
                                                 blog_title=blog_title,token_usage=token_usage,selected_field=False)
 
@@ -726,9 +726,11 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
     prompt+=', in {} tone'.format(instance.tone.tone)
     print("Prompt------------>",prompt)
     print("Trans----------->",trans)
-    openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token,1)
+    #openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token,1)
+    openai_response = get_prompt_chatgpt_turbo(prompt,1,blog_sub_phrase.max_token)
     token_usage = openai_token_usage(openai_response)
-    keywords = openai_response['choices'][0]['text']
+    #keywords = openai_response['choices'][0]['text']
+    keywords = openai_response["choices"][0]["message"]["content"]
     print("From openai-------->",keywords)
     print("RR---------->",instance.user_language_code)
     for blog_keyword in keywords.split('\n'):
@@ -785,7 +787,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
             token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)      ################# 2 times update          
         total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
         print("trans---->>>>>>>>>>>>>>>>>>>",consumable_credits)
@@ -903,26 +905,6 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         titles = instance.blog_title_create.order_by('-id')
         representation['blog_title_create'] = BlogtitleSerializer(titles, many=True).data
         return representation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
  

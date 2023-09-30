@@ -5,7 +5,7 @@ from django.utils.text import slugify
 #from ai_auth.api_views import update_billing_address
 from ai_auth import models as auth_model
 from ai_staff import models as staff_model
-import os
+import os, requests
 import random
 from djstripe.models import Customer,Account
 import stripe
@@ -17,6 +17,7 @@ from django.db.models import Q
 from django.db import IntegrityError
 import logging
 logger = logging.getLogger('django')
+import requests
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -38,7 +39,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
-def  vendor_status_send_email(sender, instance, *args, **kwargs):
+def vendor_status_send_email(sender, instance, *args, **kwargs):
     from ai_auth.api_views import subscribe_vendor
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
@@ -54,6 +55,92 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
        auth_forms.vendor_status_mail(email,status)
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
+
+
+def create_lang_details(lang_pairs,instance):
+    from ai_vendor.models import VendorLanguagePair
+    for i in lang_pairs:
+        if i.get('services')[0].get('service_id') == 1:
+            pairs = i.get('pair_code')
+            src,tar = pairs.split('_')
+            print(src,tar)
+            source = staff_model.ProzLanguagesCode.objects.filter(language_code = src).first().language.id
+            target = staff_model.ProzLanguagesCode.objects.filter(language_code = tar).first().language.id
+            try:
+                lang,created = VendorLanguagePair.objects.get_or_create(source_lang_id=source,target_lang_id=target,user=instance)
+                print(lang, created)
+            except:pass
+
+def proz_msg_send(user,msg,vendor,timestamp):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    from notifications.signals import notify
+
+    thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    print("Thread--->",thread_id)
+    if thread_id:
+        message = '''Message: {} 
+                     Contacted Date: {}
+                     Contacted Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
+        print("Message----------->",message)
+        msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
+        print("Chat------>",msg)
+        notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
+
+@receiver(user_signed_up)
+def proz_connect(user, sociallogin=None , **kwargs):
+    from ai_vendor.models import VendorsInfo
+    from ai_vendor.models import VendorSubjectFields
+    from ai_marketplace.api_views import get_sub_data
+    from ai_marketplace.models import ProzMessage
+    instance = user
+    if sociallogin and instance.socialaccount_set.filter(provider='proz'):
+        print("---------------In------------------------>")
+        uuid = instance.socialaccount_set.filter(provider='proz').last().uid
+        url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
+        headers = {
+        'X-Proz-API-Key': os.getenv("PROZ-KEY"),
+        }
+        response = requests.request("GET", url, headers=headers)
+        res = response.json()
+        if res and res.get('success') == 1:
+            print("-------------success----------------------")
+            ven = res.get('data')
+            if ven.get('qualifications',False):
+                cv_file = ven.get('qualifications').get('cv_url',None)
+                native_lang = ven.get('qualifications').get('native_language')[0]
+            if ven.get('professional_history',False):
+                year_of_experience = ven.get('professional_history').get('years_of_experience')
+            location = ven.get('contact_info').get('address',{}).get('region',None)
+            if ven.get('about_me_localizations') != []:
+                bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
+            else:bio = None
+            obj,created = VendorsInfo.objects.get_or_create(user=instance)
+            obj.cv_file = cv_file
+            if native_lang:
+                obj.native_lang_id = staff_model.ProzLanguagesCode.objects.filter(language_code = native_lang).first().language.id
+            obj.year_of_experience = year_of_experience
+            obj.location = location
+            obj.bio = bio
+            obj.save()
+            profile,created = auth_model.AiUserProfile.objects.get_or_create(user=instance)
+            profile.organisation_name = ven.get('contact_info').get('company_name',None)
+            profile.save()
+            subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
+            [VendorSubjectFields.objects.get_or_create(user=instance,subject_id = i.get('subject')) for i in subs]
+            lang_pairs = ven.get('skills').get('language_pairs',None)
+            if lang_pairs:
+                create_lang_details(lang_pairs,instance)
+        queryset = ProzMessage.objects.filter(proz_uuid = uuid)
+        print("Queryset------------->",queryset)
+        for i in queryset:
+            proz_msg_send(i.customer,i.message,instance,i.timestamp)
+
 
 
 # def updated_billingaddress(sender, instance, *args, **kwargs):
@@ -191,7 +278,7 @@ def password_changed_handler(request, user,instance, **kwargs):
     try:
         customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
-        cust = Customer.get_or_create(subscriber=user,djstripe_owner_account=default_djstripe_owner)
+        cust = Customer.get_or_create(subscriber=user)
         customer = cust[0]
     stripe.api_key = api_key
     # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
@@ -229,7 +316,7 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
 
 
 def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
-    if created:
+    if instance.currency_based_on_country_id == None:
         if instance.is_internal_member == True:
             instance.currency_based_on_country_id = 144
             instance.save()
@@ -260,10 +347,21 @@ def create_postjob_id(sender, instance, *args, **kwargs):
 def populate_user_details(user, sociallogin=None,**kwargs):
 
     if sociallogin:
+        full_name = None
         if sociallogin.account.provider == 'google':
             user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
             full_name = user_data['name']
+        if sociallogin.account.provider == 'proz':
+            user_data = user.socialaccount_set.filter(provider='proz')[0].extra_data
+            user.is_vendor = True
+            if user_data.get('account_type') in ["2",]:
+                user.is_agency = True
+            if user_data['contact_info']['first_name'] == None:
+                full_name = user_data['site_name']
+            else:
+                full_name = f"{user_data['contact_info']['first_name']} {user_data['contact_info']['last_name']}"
         user.fullname = full_name
+        user.first_login = True
         user.save()
         user_attr = auth_model.UserAttribute.objects.create(user=user,user_type_id=1)
         if user_attr == None:

@@ -46,6 +46,10 @@ def get_prompt(prompt ,model_name , max_token ,n ):
     response = openai.Completion.create(model=model_name, prompt=prompt.strip(),temperature=temperature,
                                         max_tokens=int(max_token),top_p=top_p,frequency_penalty=frequency_penalty,
                                         presence_penalty=presence_penalty,n=n)    # stop = ['#'],#logit_bias = {"50256": -100}        
+    choic=[]
+    for i in response["choices"]:
+        choic.append({'text':i['message']['content']})
+    response["choices"]=choic
     return response
 
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
@@ -66,10 +70,11 @@ def get_prompt_edit(input_text ,instruction ):
 def get_prompt_image_generations(prompt,size,no_of_image):
     #prompt = "Generate an image based on the following text description: " + prompt
     print("Prompt--------->",prompt)
-    try:
-        response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
-    except:
-        response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
+    # try:
+    response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
+         
+     
+        # response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
 
 
@@ -81,10 +86,20 @@ def get_img_content_from_openai_url(image_url):
     img_byte_arr = img_byte_arr.getvalue()
     return img_byte_arr
 
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
+def get_prompt_gpt_4(prompt,max_token,n):
+    completion = openai.ChatCompletion.create(model="gpt-4",messages=[{"role":"user","content": prompt}],n=n, max_tokens=int(max_token))
+    return completion
+
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
-def get_prompt_chatgpt_turbo(prompt,n):
-    completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
+def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
+    print("<--------------------------Inside------------------------------------->")
+    print("Max tokens------------>",max_token)
+    if max_token:
+        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n,max_tokens=int(max_token))
+    else:
+        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
 async def generate_text(prompt):

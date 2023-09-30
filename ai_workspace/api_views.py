@@ -65,7 +65,7 @@ from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
-from ai_workspace_okapi.utils import get_translation
+from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
@@ -73,14 +73,14 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
 from .models import Task
 from cacheops import cached
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
                           TaskSerializer, FileSerializerv2, TmxFileSerializer, \
                           PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
                           VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
-                          TbxTemplateSerializer, \
+                          TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
@@ -97,6 +97,7 @@ from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
+from ai_canvas.serializers import CanvasDesignSerializer
 
 class IsCustomer(permissions.BasePermission):
 
@@ -494,7 +495,7 @@ class Files_Jobs_List(APIView):
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
         return Response({"files":files.data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
-                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
+                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
 
@@ -704,7 +705,9 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
         elif value == "translation":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id = 6)#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+        elif value == "designer":
+            queryset = queryset.filter(project_type_id=6)
         print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
@@ -810,7 +813,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             #project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
-                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)),queue='high-priority' )
             return Response(serlzr.data, status=201)
         return Response(serlzr.errors, status=409)
 
@@ -1420,7 +1423,7 @@ class ProjectAnalysisProperty(APIView):
                         #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
-                        write_doc_json_file.apply_async((task_write_data, task.id))
+                        write_doc_json_file.apply_async((task_write_data, task.id),queue='high-priority')
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),
@@ -1539,7 +1542,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             serializer.save()
             if request.POST.get('account_raw_count'):
                 print("##################RAw")
-                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),)
+                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),queue='medium-priority')
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # except:
@@ -1661,7 +1664,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             
         task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
         if task_assgn_objs.count() >0 :
-            weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
+            weighted_count_update.apply_async((receiver,sender.id,assignment_id),queue='medium-priority')
             # task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
             # print("task_assgn_objs assignment_id workspace --->>",assignment_id)
             # print("task_assgn_objs workspace --->>",task_assgn_objs)
@@ -2355,7 +2358,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
     destination_blob_name = filename
-
+    
     upload_blob(bucket_name, source_file_name, destination_blob_name)
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
@@ -2438,8 +2441,8 @@ def transcribe_file(request):
                 print("State----------------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
-                elif (not ins) or state == 'FAILURE':#need to revert credits
-                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
+                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':#need to revert credits
+                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),queue='high-priority')
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)
                 elif state == 'SUCCESS':
@@ -2618,12 +2621,12 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             print("State--------------->",state)
             if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
-            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
                 if state == "FAILURE":
                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
                     user_credit.credits_left = user_credit.credits_left + consumable_credits
                     user_credit.save()
-                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
+                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
         else:
@@ -2733,6 +2736,19 @@ def download_speech_to_text_source(request):
         # res = download_file('out.txt')
         # os.remove('out.txt')
         # return res
+    except BaseException as e:
+        print(f"Error : {str(e)}")
+        return Response({'msg':'something went wrong'})
+
+@api_view(["GET"])
+#@permission_classes([IsAuthenticated])
+def download_task_target_file(request):
+    task = request.GET.get('task')
+    obj = Task.objects.get(id = task)
+    authorize(request,resource=obj,action="download",actor=request.user)
+    try:
+        output_file =  obj.task_file_detail.first().target_file
+        return download_file(output_file.path)
     except BaseException as e:
         print(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
@@ -3482,10 +3498,11 @@ def task_segments_save(request):
 #@permission_classes([IsAuthenticated])
 def express_task_download(request,task_id):###############permission need to be added and checked##########################
     obj = Task.objects.get(id = task_id)
+    proj_name = obj.job.project.project_name
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     authorize(request,resource=express_obj,actor=request.user,action="download")
     file_name,ext = os.path.splitext(obj.file.filename)
-    target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
+    target_filename = proj_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
         f.write("Source:" + "\n")
         f.write(express_obj.source_text) 
@@ -4217,8 +4234,8 @@ def project_word_char_count(request):
         print("State-------->",state)
         if state == 'STARTED' or state == 'PENDING':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-        elif state =='None' or state == 'FAILURE':
-            celery_task = project_analysis_property.apply_async((pr_obj.id,), )
+        elif state =='None' or state == 'FAILURE' or state == 'REVOKED':
+            celery_task = project_analysis_property.apply_async((pr_obj.id,), queue='high-priority')
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
@@ -4243,7 +4260,7 @@ def project_word_char_count(request):
         else:
             #from .api_views import ProjectAnalysisProperty
             try:
-                celery_task = project_analysis_property.apply_async((pr_obj_id,), )
+                celery_task = project_analysis_property.apply_async((pr_obj_id,), queue='high-priority')
                 res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(pr_obj_id)
 
@@ -4262,21 +4279,27 @@ def project_word_char_count(request):
 from celery.result import AsyncResult
 from django.http import HttpResponse
 from celery import Celery
-app = Celery('ai_tms')
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
+    app = Celery('ai_tms')
     task_id = request.GET.get('task_id')
     task = AsyncResult(task_id)
     print("TT---------->",task.state)
     if task.state == 'STARTED':
-        app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+        app.control.revoke(task_id, terminate=True, signal='SIGKILL')
+        #task.set(status="FAILURE")
+        print("TT After---------->",task.state)
         return HttpResponse('Task has been stopped.') 
     elif task.state == 'PENDING':
         app.control.revoke(task_id)
+        #task.set(status="FAILURE")
         return HttpResponse('Task has been revoked.')
     else:
         return HttpResponse('Task is already running or has completed.')
+
+
 
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
@@ -4328,6 +4351,146 @@ def msg_to_extend_deadline(request):
     )
     print("vendor requested expiry date extension  mailsent to vendor>>")	
     return Response({"msg":"Notification sent"})   
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def translate_file(request):
+    tasks = request.GET.getlist('task')
+    project  = request.GET.get('project')
+    user = request.user
+    task_list = []
+    if project or tasks:
+        if project:
+            pr = Project.objects.get(id=project)
+            task_objs = pr.get_tasks
+        if tasks:
+            task_objs = Task.objects.filter(id__in=tasks)
+        for obj in task_objs:
+            if obj.task_file_detail.first() == None: #need to change for different mt_engines
+                conversion = translate_file_task(obj.id)
+                if conversion.get('status') == 200:
+                    task_list.append({'task':obj.id,'msg':True,'status':200})
+                elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
+                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+            else:
+                task_list.append({'task':obj.id,'msg':True,'status':200})
+        return JsonResponse({"results":task_list}, safe=False)   
+    else:
+        return Response({'msg':'task_id or project_id must'})    
+    
+    #     if tasks:
+    #         for obj in tasks:
+    #             print("Obj-------------->",obj)
+    #             conversion = translate_file_task(obj.id)
+    #             print("Conv----------->",conversion)
+    #             print("Msg------------>",conversion.get('msg'))
+    #             if conversion.get('status') == 200:
+    #                 task_list.append({'task':obj.id,'msg':True,'status':200})
+    #             elif conversion.get('status') == 400 or conversion.get('status') == 402:
+    #                 task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+    #         return JsonResponse({"results":task_list}, safe=False)
+    #                 #return conversion#Response({'msg':'Insufficient Credits'},status=400)
+    #     queryset = TaskTranslatedFile.objects.filter(task__in = pr.get_tasks)
+    #     ser = TaskTranslatedFileSerializer(queryset,many=True)
+    #     return Response(ser.data)
+    # else:
+    #     return Response({'msg':'task_id or project_id must'})
+
+def translate_file_process(task_id):
+    tsk = Task.objects.get(id=task_id)
+    file,name = file_translate(tsk.file.get_source_file_path,tsk.job.target_language_code)
+    ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
+    if ser.is_valid():
+        ser.save()
+    print(ser.errors)
+
+
+def translate_file_task(task_id):
+    from .models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import translate_file_task_cel
+    from ai_workspace_okapi.utils import get_consumption_of_file_translate
+
+    tsk = Task.objects.get(id=task_id)
+    user = tsk.job.project.ai_user
+    consumable_credits = get_consumption_of_file_translate(tsk)#200  #get_consumable_credits_for_file_translate()
+    print("Consumable--------------->",consumable_credits)
+    if consumable_credits == None:
+        return {'msg':'something went wrong in calculating page count','status':404}
+    initial_credit = user.credit_balance.get("total_left")
+    print("Initial------------->",initial_credit)
+    if initial_credit>consumable_credits:
+        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tsk.id) & Q(task_name='translate_file_task_cel')).last()
+        state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
+        print("State--------------->",state)
+        if state == 'PENDING' or state == 'STARTED':
+            return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
+        elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
+            if state == "FAILURE":
+                user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+                user_credit.credits_left = user_credit.credits_left + consumable_credits
+                user_credit.save()
+            celery_task = translate_file_task_cel.apply_async((tsk.id,),queue='high-priority' )
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            return {'msg':'Translation ongoing. Please wait','celery_id':celery_task.id,'task_id':tsk.id,'status':400}
+    else:
+        return {'msg':'Insufficient Credits','status':402}
+
+
+
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def get_translate_file_detail(request,project_id):
+#     pr = Project.objects.get(id=project_id)
+#     if pr.file_translate == True:
+#         data = []
+#         for i in pr.get_tasks:
+#             translated = True if i.task_file_detail.exists() else False
+#             data.append({'task_id':i.id,'Translated':translated})
+#         return Response(data,status=200)
+#     else:
+#         return Response({'msg':'Not a file translate project'},status=400) 
+    # print(ser.errors)
+    # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
+    # ser = TaskTranslatedFileSerializer(queryset,many=True)
+    # return Response(ser.data)
+# ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
+#             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
+#             print("State--------------->",state)
+#             if state == 'PENDING' or state == 'STARTED':
+#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
+#             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
+#                 if state == "FAILURE":
+#                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+#                     user_credit.credits_left = user_credit.credits_left + consumable_credits
+#                     user_credit.save()
+#                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
+#                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def translate_file_process(task_id):
+#     pr_id = request.GET.get(project_id)
+#     tsk_id = request.GET.get(task_id)
+#     pr = Project.objects.get(id=pr_id)
+#     tsk = Task.objects.filter(id=tsk_id)
+#     user = pr.ai_user
+#     tasks = pr.get_tasks if pr_id else tsk
+#     for i in tasks:
+#         file,name = file_translate(i.file.get_source_file_path,i.job.target_language_code)
+#         ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":i.id})
+#         if ser.is_valid():
+#             ser.save()
+#         print(ser.errors)
+#     queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
+#     ser = TaskTranslatedFileSerializer(queryset,many=True)
+#     return Response(ser.data)
+
+
+
+
     # @integrity_error
     # def create(self,request):
     #     step = request.POST.get('step')
@@ -4397,7 +4560,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
-        owner = request.user.team.owner if request.user.team  else request.user
+        owner = request.user.team.owner if (request.user.team and request.user in project_managers) else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                             .filter(task_id=None).order_by('-id')
          
@@ -4523,7 +4686,8 @@ class AssertList(viewsets.ModelViewSet):
         queryset = view_instance_1.get_queryset()
 
         queryset1 = queryset.filter(glossary_project__isnull=False)
-        queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
+        queryset2 = ChoiceLists.objects.none()  #commenting for now
+        #queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user

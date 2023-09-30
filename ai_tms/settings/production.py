@@ -319,7 +319,7 @@ LOGGING = {
             'style' : '{',
         },
         'newrelic_formatter': {
-            '()': NewRelicContextFormatter,
+           '()': NewRelicContextFormatter,
         },
 
         # 'fluent_fmt':{
@@ -385,10 +385,10 @@ LOGGING = {
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
-        'newrelic': {
-            'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
-            'class': 'logging.StreamHandler',
-            'formatter' : 'newrelic_formatter',
+       'newrelic': {
+           'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
+           'class': 'logging.StreamHandler',
+           'formatter' : 'newrelic_formatter',
         },
     #     'fluentinfo':{
     #         'level':'INFO',
@@ -423,17 +423,17 @@ LOGGING = {
 
 
 sentry_sdk.init(
-    dsn = os.getenv("dsn"),
-    integrations=[DjangoIntegration()],
+   dsn = os.getenv("dsn"),
+   integrations=[DjangoIntegration()],#
 
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    traces_sample_rate = os.getenv("traces_sample_rate"),
+   traces_sample_rate = os.getenv("traces_sample_rate"),#
 
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
-    send_default_pii = os.getenv("send_default_pii")
+   send_default_pii = os.getenv("send_default_pii")
 )
 
 

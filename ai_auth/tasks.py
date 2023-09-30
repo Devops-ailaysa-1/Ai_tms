@@ -91,7 +91,7 @@ def striphtml(data):
 #     for r in range(0,10):
 #         tomorrow = datetime.utcnow() + timedelta(minutes=1+r)
 #         add.apply_async((r, r+2), eta=tomorrow)
-@task
+@task(queue='low-priority')
 def sync_invoices_and_charges(days):
     queryset = Invoice.objects.annotate(
             diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
@@ -102,7 +102,7 @@ def sync_invoices_and_charges(days):
             ).filter(diff__gt=timedelta(days))
     resync_instances(queryset)
     
-@task
+@task(queue='default')
 def renewal_list():
     today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
@@ -116,12 +116,12 @@ def renewal_list():
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
 
-@task
+@task(queue='default')
 def renew_user_credits(sub_id):
     sub =Subscription.objects.get(djstripe_id=sub_id)
     renew_user_credits_yearly(subscription=sub)
 
-@task
+@task(queue='low-priority')
 def delete_inactive_user_account():
     # AiUser.objects.filter(deactivation_date__date = date.today()).delete()
     users_list = AiUser.objects.filter(deactivation_date__lte = timezone.now())
@@ -133,7 +133,7 @@ def delete_inactive_user_account():
         # i.delete()
     logger.info("Delete Inactive User")
 
-@task
+@task(queue='low-priority')
 def delete_express_task_history(): #30days
     queryset = ExpressTaskHistory.objects.annotate(
             diff=ExpressionWrapper(timezone.now() - F('created_at'), output_field=DurationField())
@@ -144,14 +144,14 @@ def delete_express_task_history(): #30days
 
 # @task
 # def find_renewals():
-@task
+@task(queue='low-priority')
 def delete_hired_editors():
     HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()
     print("deleted")
     logger.info("Delete Hired Editor")
 
 
-@task
+@task(queue='low-priority')
 def send_notification_email_for_unread_messages():
     query = Notification.objects.filter(Q(unread = True) & Q(emailed = False) & Q(verb= "Message"))
     try:
@@ -177,7 +177,7 @@ def send_notification_email_for_unread_messages():
 
 
 
-@task
+@task(queue='default')
 def email_send_subscription_extension():
     from .user_email_list import extend_list_1
     try:
@@ -192,7 +192,7 @@ def email_send_subscription_extension():
 
 
 
-@task
+@task(queue='low-priority')
 def existing_vendor_onboard_check():
     obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
     if obj:
@@ -211,7 +211,7 @@ def existing_vendor_onboard_check():
 
 
 
-@task
+@task(queue='low-priority')
 def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
@@ -241,13 +241,13 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
     print("mailsent")
 
 
-@task
+@task(queue='default')
 def check_dict(dict):
     print("dct------->",dict)
     dict1 = json.loads(dict)
     logger.info("RRRR",dict)
 
-@task
+@task(queue='high-priority')
 def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
@@ -368,7 +368,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
     logger.info("mt_raw wrriting completed")
 
 
-@task
+@task(queue='high-priority')
 def mt_only(project_id,token,task_id=None):
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
@@ -462,7 +462,7 @@ def mt_only(project_id,token,task_id=None):
 #
 #     return "Finished Pre-translation"
 
-@task
+@task(queue='high-priority')
 def write_doc_json_file(doc_data, task_id):
 
     from ai_workspace.serializers import TaskSerializer
@@ -483,7 +483,7 @@ def write_doc_json_file(doc_data, task_id):
     logger.info("Document json data written as a file")
 
 
-@task
+@task(queue='high-priority')
 def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,language,voice_gender,voice_name):
     from ai_workspace.api_views import text_to_speech_task,long_text_source_process
     obj = Task.objects.get(id=task_id)
@@ -499,7 +499,7 @@ def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,lang
 
 
 
-@task
+@task(queue='high-priority')
 def google_long_text_file_process_cel(consumable_credits,document_user_id,file_path,task_id,target_language,voice_gender,voice_name):
     from ai_workspace_okapi.api_views import long_text_process
     document_user = AiUser.objects.get(id = document_user_id)
@@ -510,7 +510,7 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
     logger.info("Text to speech document called")
 
 
-@task
+@task(queue='high-priority')
 def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
     from ai_workspace.api_views import transcribe_long_file
     obj = Task.objects.get(id = task_id)
@@ -519,10 +519,14 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
 
+@task(queue='high-priority')
+def translate_file_task_cel(task_id):
+    from ai_workspace.api_views import translate_file_process
+    translate_file_process(task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id,status=1,task_name='translate_file_task_cel',celery_task_id=translate_file_task_cel.request.id)
+    logger.info('File Translate called')
 
-
-
-@task
+@task(queue='high-priority')
 def pre_translate_update(task_id):
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
@@ -610,22 +614,23 @@ def pre_translate_update(task_id):
     logger.info("pre_translate_update")
 
 
-@task
+@task(queue='low-priority')
 def update_untranslatable_words(untranslatable_file_id):
     from ai_qa.models import Untranslatable,UntranslatableWords
     file = Untranslatable.objects.get(id=untranslatable_file_id)
     UntranslatableWords.objects.filter(file_id = untranslatable_file_id).update(job=file.job)
     logger.info("untranslatable words updated")
 
-@task
+@task(queue='low-priority')
 def update_forbidden_words(forbidden_file_id):
     from ai_qa.models import Forbidden,ForbiddenWords
     file = Forbidden.objects.get(id=forbidden_file_id)
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
 
-@task
+@task(queue='high-priority')
 def project_analysis_property(project_id, retries=0, max_retries=3):
+    logger.info("Executing high-priority task")
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
     proj = Project.objects.get(id=project_id)
@@ -646,7 +651,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
 
 
 
-@task
+@task(queue='medium-priority')
 def analysis(tasks,project_id):
     from ai_workspace.models import Project,Task
     from ai_tm.models import WordCountGeneral,WordCountTmxDetail,CharCountGeneral
@@ -661,7 +666,7 @@ def analysis(tasks,project_id):
             doc_data = json.loads(doc_data)
         raw_total = doc_data.get('total_word_count')
         tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-        print("Tm Analysis----------->",tm_analysis)
+        #print("Tm Analysis----------->",tm_analysis)
         if tm_analysis:
             word_count = get_word_count(tm_analysis,proj,task)
             print("WordCount------------>",word_count)
@@ -675,7 +680,7 @@ def analysis(tasks,project_id):
     logger.info("Analysis completed")
 
 
-@task
+@task(queue='medium-priority')
 def count_update(job_id):
     from ai_workspace.models import Task
     from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
@@ -710,8 +715,8 @@ def count_update(job_id):
 
 
 
-@task
-def mt_raw_update(task_id):
+@task(queue='high-priority')
+def mt_raw_update(task_id,segments):
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -726,12 +731,15 @@ def mt_raw_update(task_id):
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-    segments = task.document.segments_for_find_and_replace
-    merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
-    split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+    if segments == None:
+        segments = task.document.segments_for_find_and_replace
+        merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
+        split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+        final_segments = list(chain(segments, merge_segments, split_segments))
+    else:
+        final_segments = segments
 
-    final_segments = list(chain(segments, merge_segments, split_segments))
-
+    print("SEGS--------------------->",final_segments)
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
@@ -831,7 +839,7 @@ def mt_raw_update(task_id):
 
 
 
-@task
+@task(queue='medium-priority')
 def weighted_count_update(receiver,sender,assignment_id):
     from ai_workspace import forms as ws_forms
     from ai_workspace.models import TaskAssignInfo
@@ -898,27 +906,27 @@ def check_test():
 #     logger.info("Analysis completed")
 
 
-@task
+@task(queue='low-priority')
 def backup_media():
     if os.getenv('MEDIA_BACKUP')=='True':   
         call_command('mediabackup','--clean')
     logger.info("backeup of mediafiles successfull.")
     
-@task
+@task(queue='default')
 def mail_report():
     from ai_auth.reports import AilaysaReport
     report = AilaysaReport()
     report.report_generate()
     report.send_report()
 
-@task
+@task(queue='low-priority')
 def record_api_usage(provider,service,uid,email,usage):
     from ai_auth.utils import record_usage
     record_usage(provider,service,uid,email,usage)
 
 from ai_glex import models as glex_model
 from tablib import Dataset
-@task
+@task(queue='high-priority')
 def update_words_from_template_task(file_ids):
     print("File Ids--->",file_ids)
     for i in file_ids:
@@ -969,7 +977,7 @@ def update_words_from_template_task(file_ids):
 def diff_month(d1, d2):
     return (d1.year - d2.year) * 12 + d1.month - d2.month
 
-@task
+@task(queue='low-priority')
 def sync_user_details_bi(test=False,is_vendor=False):
     from ai_auth.reports import AilaysaReport
     from ai_bi.models import AiUserDetails,UsedLangPairs
@@ -1053,3 +1061,41 @@ def sync_user_details_bi(test=False,is_vendor=False):
                 user_lang = UsedLangPairs(**data2)
                 user_lang.save(using="bi")
 
+
+def proz_list_send_email(projectpost_id):
+    instance = ProjectboardDetails.objects.get(id=projectpost_id)
+    jobs = instance.get_postedjobs
+    steps = instance.get_services
+    services = ', '.join(steps)
+    headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+    limit = 25
+    for obj in jobs:
+        source_lang = obj.source_language_id
+        target_lang = obj.target_language_id
+        lang_pair = get_proz_lang_pair(source_lang,target_lang)
+        offset = (int(page) - 1) * int(limit)
+        params = {
+            'language_service_id':1,
+            'language_pair':lang_pair,
+            'limit':limit,
+            'offset':offset
+            }
+        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+        response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        if response and response.get('success') == 1:
+            uuids = []
+            for vendor in response.get('data'):
+                uuids.append(vendor.get('freelancer').get('uuid'))
+        user = instance.customer
+        message = 'Customer Posted project with this language pair. project_title '+instance.proj_name+ ' with biddeadline '+instance.bid_deadline.date().strftime('%d-%m-%Y')+ '. You can bid the project and win. Visit Ailaysa for more details.'
+        subject = request.POST.get('subject', 'Message from Ailaysa Test' )
+        headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
+        url = "https://api.proz.com/v2/messages"
+        payload = {'recipient_uuids': uuids,
+                    'sender_email': user.email ,
+                    'body': message,
+                    'subject': subject,
+                    'sender_name': user.fullname}
+        print("Payload------------->",payload)
+        #response = requests.request("POST", url, headers=headers, data=payload)
+    return Response({'msg':'email sent'})

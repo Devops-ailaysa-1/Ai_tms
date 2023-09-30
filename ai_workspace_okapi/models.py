@@ -15,6 +15,7 @@ from django.core.cache import cache
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 
 
+
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
 
@@ -34,6 +35,24 @@ class TextUnit(models.Model):
     @property
     def task_obj(self):
         return self.document.task_obj
+
+# class TextUnitDetail(models.Model):
+#     source = models.TextField(blank=True)
+#     target = models.TextField(null=True, blank=True)
+#     temp_target = models.TextField(null=True, blank=True)
+#     coded_source = models.TextField(null=True, blank=True)
+#     tagged_source = models.TextField(null=True, blank=True)
+#     coded_brace_pattern = models.TextField(null=True, blank=True)
+#     coded_ids_sequence = models.TextField(null=True, blank=True)
+#     random_tag_ids = models.TextField(null=True, blank=True)
+#     target_tags = models.TextField(null=True, blank=True)
+#     okapi_ref_segment_id = models.CharField(max_length=50)
+#     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
+#         models.SET_NULL)
+#     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
+#         "text_unit_detail")
+#     updated_at = models.DateTimeField(auto_now=True)
+#     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
@@ -78,10 +97,8 @@ class BaseSegment(models.Model):
     random_tag_ids = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
-    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
-        models.SET_NULL)
-    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
-        "text_unit_segment_set")
+    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
 
@@ -131,7 +148,7 @@ class BaseSegment(models.Model):
 
     @property
     def coded_target(self):
-        return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
+        return  set_runs_to_ref_tags( self.coded_source, self.temp_target, get_runs_and_ref_ids(\
                 self.coded_brace_pattern, self.coded_ids_aslist ) )
     @property
     def owner_pk(self):
@@ -166,15 +183,15 @@ class Segment(BaseSegment):
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
-            print(self)
-            print("tt------>",self.get_active_object().coded_target)
+            #print(self)
+            #print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
-                if split_seg.target != None:
-                    target_joined += split_seg.target
+                if split_seg.temp_target != None:
+                    target_joined += split_seg.temp_target
                 else:
                     target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
@@ -183,19 +200,19 @@ class Segment(BaseSegment):
     @property
     def get_mt_raw_target_if_have(self):
         if self.is_split in [False, None]:
-            print('self------>',self)
+            #print('self------>',self)
             seg = self.get_active_object().id
-            print("seg------->",seg)
+            #print("seg------->",seg)
             try:
                 mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
             except:
                 mt_raw = ''
-            print("RR---------------->",mt_raw)
+            #print("RR---------------->",mt_raw)
             #return mt_raw
             return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
         else:
-            print("Inside else------->",self)
+            #print("Inside else------->",self)
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
@@ -203,7 +220,7 @@ class Segment(BaseSegment):
                     target_joined += split_seg.mt_raw_split_segment.first().mt_raw
                 else:
                     target_joined += split_seg.source
-            print("RR----------------->",target_joined)
+            #print("RR----------------->",target_joined)
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
 
@@ -733,12 +750,9 @@ class ChoiceListSelected(models.Model):
 
 
 class SegmentDiff(models.Model):
-    # segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
     seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
-    sentense_diff_result=models.CharField(max_length=3000,null=True,blank=True)
+    sentense_diff_result=models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
-    # edited_at=models.DateTimeField(auto_now=True)
-    # status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,related_name="segmentdiff_status")
     save_type=models.CharField(max_length=100,blank=True,null=True)
 
     def __str__(self) -> str:
