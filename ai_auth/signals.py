@@ -359,7 +359,7 @@ def populate_user_details(user, sociallogin=None,**kwargs):
             if user_data['contact_info']['first_name'] == None:
                 full_name = user_data['site_name']
             else:
-                full_name = user_data['contact_info']['first_name'] + user_data['contact_info']['last_name']
+                full_name = f"{user_data['contact_info']['first_name']} {user_data['contact_info']['last_name']}"
         user.fullname = full_name
         user.first_login = True
         user.save()

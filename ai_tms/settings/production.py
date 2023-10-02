@@ -6,7 +6,7 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 import newrelic.agent
 from newrelic.agent import NewRelicContextFormatter
-#newrelic.agent.initialize('newrelic.ini')
+newrelic.agent.initialize('newrelic.ini')
 # from fluent import sender
 # from fluent import event
 # sender.setup('django', host='fluentd', port=24224)
@@ -317,10 +317,10 @@ LOGGING = {
         'dev_formatter' : {
             'format' : '{levelname} {asctime} {pathname} {message}',
             'style' : '{',
-        }
-        #'newrelic_formatter': {
-        #    '()': NewRelicContextFormatter,
-        #},
+        },
+        'newrelic_formatter': {
+           '()': NewRelicContextFormatter,
+        },
 
         # 'fluent_fmt':{
         # '()': 'fluent.handler.FluentRecordFormatter',
@@ -339,7 +339,7 @@ LOGGING = {
         # },
 
         'django' : {
-            'handlers' : ['file_prod'],
+            'handlers' : ['file_prod','newrelic'],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         },
@@ -385,11 +385,11 @@ LOGGING = {
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
-       # 'newrelic': {
-       #     'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
-       #     'class': 'logging.StreamHandler',
-       #     'formatter' : 'newrelic_formatter',
-        #},
+       'newrelic': {
+           'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
+           'class': 'logging.StreamHandler',
+           'formatter' : 'newrelic_formatter',
+        },
     #     'fluentinfo':{
     #         'level':'INFO',
     #         'class':'fluent.handler.FluentHandler',
@@ -422,19 +422,19 @@ LOGGING = {
 }
 
 
-#sentry_sdk.init(
-#    dsn = os.getenv("dsn"),
-#    integrations=[DjangoIntegration()],#
+sentry_sdk.init(
+   dsn = os.getenv("dsn"),
+   integrations=[DjangoIntegration()],#
 
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-#    traces_sample_rate = os.getenv("traces_sample_rate"),#
+   traces_sample_rate = os.getenv("traces_sample_rate"),#
 
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
-#    send_default_pii = os.getenv("send_default_pii")
-#)
+   send_default_pii = os.getenv("send_default_pii")
+)
 
 
 

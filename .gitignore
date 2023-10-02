@@ -75,7 +75,6 @@ api_automation
 .idea/
 logs
 *.log
-*.lock
 .env.staging.proxy-companion
 .server_dev.log.swp
 Dockerfile.bak1
@@ -124,7 +123,7 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
-
+ai_workspace/html2docx_custom.py
 *.xlsx
 *.sh
 *.zip
@@ -137,4 +136,3 @@ express_try.py
 mydoc-project-try.py
 nupedia_small(en-ta).tmx
 price
-okapi_resources/tamil.srx
