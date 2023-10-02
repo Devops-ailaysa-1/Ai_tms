@@ -89,9 +89,20 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         except PdffileUpload.DoesNotExist:
             raise Http404
 
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        #project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
+
     def create(self,request):
+        user,pr_managers = self.get_user() 
         file=request.FILES.get('file',None)
-        serializer = PdffileUploadSerializer(data=request.data)
+         
+        data = {'user':user.id,'managers':pr_managers,'file':file}
+        serializer = PdffileUploadSerializer(data={**data})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -109,6 +120,7 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         serializer = PdffileShowDetailsSerializer(obj)
         return Response(serializer.data)
     
+
     def destroy(self,request,pk):
         try:
             obj =self.get_object(pk)

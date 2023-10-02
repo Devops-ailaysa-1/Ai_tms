@@ -161,6 +161,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         if image:
             serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
         
+
+        
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
             

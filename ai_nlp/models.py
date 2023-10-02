@@ -3,11 +3,18 @@ from django.db import models
 # Create your models here.
 
 from ai_auth.models import AiUser
+
+def user_directory_path_pdf_upload(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_chat_doc/semantic_search_file",filename)
+
+def user_directory_path_pdf_thumbnail(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_chat_doc/thumbnail",filename)
+
 class PdffileUpload(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
-    file = models.FileField(upload_to='semantic_search_file',null=False )
+    file = models.FileField(upload_to=user_directory_path_pdf_upload,null=False,blank=True)
     file_name = models.CharField(max_length=200,null=True,blank=True)
-    pdf_thumbnail = models.FileField(upload_to='pdf_thumbnail',blank=True ,null=True)
+    pdf_thumbnail = models.FileField(upload_to=user_directory_path_pdf_thumbnail,blank=True ,null=True)
     vector_embedding_path = models.CharField(max_length=200,null=True,blank=True)
     is_train=models.BooleanField(default=False)
     vector_id= models.CharField(max_length=200,null=True,blank=True)
