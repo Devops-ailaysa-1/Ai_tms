@@ -163,7 +163,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page=int(pdf_len)
         doc=docx.Document()
-        progress_recorder=ProgressRecorder(self)
+        progress_recorder=ProgressRecorder(ai_export_pdf)
         print("inst try")
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
