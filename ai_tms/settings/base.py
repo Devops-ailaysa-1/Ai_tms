@@ -547,6 +547,7 @@ CONVERTIO_API = os.getenv("convertio_api")
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
