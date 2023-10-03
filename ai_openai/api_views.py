@@ -1,5 +1,5 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
-                     BlogKeywordGenerate,Blogtitle,BlogOutline,
+                     BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse)
 import logging ,os         
 from django.core import serializers
@@ -13,7 +13,8 @@ from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
                         ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
                         BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
                         BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,
-                        CustomizationSettingsSerializer)
+                        CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
+                        BookBodySerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -690,196 +691,123 @@ class BlogArticleViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
-    # def list(self, request):
-    #     query_set=BlogOutlineSession.objects.all()
-    #     serializer=BlogOutlineSessionSerializer(query_set,many=True)
-    #     return Response(serializer.data)
+class BookTitleViewset(viewsets.ViewSet):
 
-    # def retrieve(self, request,pk=None):
-    #     query_set = BlogOutlineSession.objects.get(id=pk)
-    #     serializer=BlogOutlineSessionSerializer(query_set )
-    #     return Response(serializer.data)
+    def list(self, request):
+        query_set=BookTitle.objects.all()
+        serializer=BookTitleSerializer(query_set,many=True)
+        return Response(serializer.data)
 
-    # def update(self,request,pk):
-    #     select_session_list = request.POST.get('select_session_list')
-    #     unselect_session_list = request.POST.get('unselect_session_list')
-    #     query_set = BlogOutlineSession.objects.get(id = pk)
-    #     serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #     else:
-    #         return Response(serializer.errors)
-        
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def instant_translation_custom(request):
-#     task = request.POST.get('task')
-#     option = request.POST.get('option')#Shorten#Simplify
-#     exp_obj = ExpressProjectDetail.objects.get(task_id = task)
-#     user = exp_obj.task.job.project.ai_user
-#     instant_text = exp_obj.source_text
-#     target_lang_code = exp_obj.task.job.target_language_code
-#     customize = AiCustomize.objects.get(customize = option)
-#     total_tokens = 0
-#     if target_lang_code != 'en':
-#         initial_credit = user.credit_balance.get("total_left")
-#         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
-#         if initial_credit > consumable_credits_user_text:
-#             user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
-#                             source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
-            
-#             total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
-#             tone=1
-#             response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
-#             result_txt = response['choices'][0]['text']
-#             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
-#                               source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
-#             total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
-            
-#         else:
-#             return  Response({'msg':'Insufficient Credits'},status=400)
+    def retrieve(self, request,pk=None):
+        query_set = BookTitle.objects.get(id=pk)
+        serializer=BookTitleSerializer(query_set )
+        return Response(serializer.data)
+
+    def create(self,request):
+        book_inst = request.POST.get('book_creation',None)
+        sub_categories = 66
+        serializer = BookTitleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories})  
+        if serializer.is_valid():
+            serializer.save()
+            book_creation=BookCreation.objects.filter(id=book_inst).last()
+            book_title_ins=BookTitle.objects.filter(book_creation=book_creation)
+            ser = BookTitleSerializer(book_title_ins,many=True)
+            return Response(ser.data)
+        return Response(serializer.errors)
     
-#     else:##english
-#         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-#         result_txt = response['choices'][0]['text']
-#     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
-#     inst_data = {'express_id':express_obj.id,'source':instant_text, 'customize':customize,
-#                  'api_result':result_txt,'mt_engine_id':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else None}
-#     print("inst_data--->",inst_data)
-#     serializer = ExpressProjectAIMTSerializer(data=inst_data)
-#     if serializer.is_valid():
-#         serializer.save()
-#         return Response(serializer.data)
-#     return Response(serializer.errors)
-        
-        # initial_credit = user.credit_balance.get("total_left")
-        # consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
-        # if initial_credit > consumable_credits_user_text:
-        #     user_insta_text_mt_en = get_translation(mt_engine_id=1 , source_string = instant_text,
-        #                     source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id)
-            
-        #     total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=source_lang_code,target_lang='en')
-        #     tone=1
-        #     response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
-        #     result_txt = response['choices'][0]['text']
-        #     txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
-        #                                 source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
-            
-        #     total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=target_lang_code)
-            
-        # else:
-        #     return  Response({'msg':'Insufficient Credits'},status=400)
-         
+    def update(self,request,pk):
+        query_set = BookTitle.objects.get(id = pk)
+        serializer = BookTitleSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 
-# class InstantTranslationViewset(viewsets.ViewSet):
-#     model = InstantTranslation
+    def delete(self,request,pk):
+        obj = BookTitle.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+class BookCreationViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        query_set=BookCreation.objects.all()
+        serializer=BookCreationSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = BookCreation.objects.get(id=pk)
+        serializer=BookCreationSerializer(query_set )
+        return Response(serializer.data)
+
+    def create(self,request):
+        categories = 11
+        #sub_categories = 61
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BookCreationSerializer(data={**request.POST.dict(),'categories':categories,'created_by':request.user.id,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
     
-#     def create(self,request):
-#         serializer = InstantTranslationSerializer(data=request.POST.dict(),context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
-        
+    def update(self,request,pk):
+        query_set = BookCreation.objects.get(id = pk)
+        serializer = BookCreationSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        obj = BookCreation.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
 
 
-@api_view(["GET"])
-def credit_check_blog(request):
-    blog_id=request.GET.get('blog_id')
-    blog_creation=BlogCreation.objects.get(id=blog_id)
-    initial_credit = blog_creation.user.credit_balance.get("total_left")
-    #initial_credit = user.credit_balance.get("total_left")
-    if blog_creation.user_language_code != 'en':
-        credits_required = 2000
-    else:
-        credits_required = 200
-    if initial_credit < credits_required:
-        return Response({'msg':'Insufficient Credits'}, status=400)
-    else:
-        return Response({'msg':'Credits to generate articles are available'},status=200)
+class BookBodyViewset(viewsets.ViewSet):
 
+    def list(self, request):
+        group = request.GET.get('group',None)
+        title = request.GET.get('book_title',None)
+        if title and group:
+            query_set = BookBody.objects.filter(book_title_id = title,group=group).order_by('custom_order')
+        else:
+            query_set=BookBody.objects.all()
+        serializer=BookBodySerializer(query_set,many=True)
+        return Response(serializer.data)
 
+    def retrieve(self, request,pk=None):
+        query_set = BookBody.objects.get(id=pk)
+        serializer=BookBodySerializer(query_set)
+        return Response(serializer.data)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def customize_response(customize ,user_text,tone,request):
-#     if customize.prompt or customize.customize == "Text completion":
-#         initial_credit = request.user.credit_balance.get("total_left")
-#         if customize.customize == "Text completion":
-#             tone_ = PromptTones.objects.get(id=tone).tone
-#             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
-#             print("Prompt Created-------->",prompt)
-#             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
-#         else:
-#             if customize.grouping == "Ask":
-#                 prompt = customize.prompt+" "+user_text+"?"
-#             else:
-#                 prompt = customize.prompt+" "+user_text+"."
-#             print("Prompt Created-------->",prompt)
-#             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
-#         total_tokens = response['usage']['total_tokens']
-#         total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
-#         AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
-#     else:
-#         try:response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
-#         except:return None
-#     return response 
+    def create(self,request):
+        categories = 11
+        sub_categories = 67
+        body_matter = request.POST.get('body_matter',1)
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BookBodySerializer(data={**request.POST.dict(),'body_matter':body_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
     
+    def update(self,request,pk):
+        query_set = BookBody.objects.get(id = pk)
+        serializer = BookBodySerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 
-# @api_view(['POST',])###########rework
-# @permission_classes([IsAuthenticated])
-# def customize_text_openai(request):
-#     user = request.user
-#     customize_id = request.POST.get('customize_id')
-#     user_text = request.POST.get('user_text')
-#     tone = request.POST.get('tone',1)
-#     customize = AiCustomize.objects.get(id =customize_id)
-#     detector = Translator()
-#     lang = detector.detect(user_text).lang
-#     if lang!= 'en':
-#         initial_credit = user.credit_balance.get("total_left")
-#         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
-#         #print("credits for input text----------->",consumable_credits_user_text)
-#         if initial_credit > consumable_credits_user_text:
-#             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-#                                         source_lang_code=lang , target_lang_code='en')
-#             consumable_credits_txt_generated = get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
-#             #print("credits for mt------------>",consumable_credits_txt_generated)
-#             response = customize_response(customize,user_text_mt_en,tone,request)
-#             result_txt = response['choices'][0]['text']
-#             #print("openai_result--------->",result_txt)
-#             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
-#                                         source_lang_code='en' , target_lang_code=lang)
-#             #print("credits for result mt---------> ",get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang))
-#             consumable_credits_txt_generated += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
-#             #print("Tot----------->",consumable_credits_txt_generated)
-#             AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= consumable_credits_txt_generated)
-            
-#         else:
-#             return  Response({'msg':'Insufficient Credits'},status=400)
-        
-#     else:##english
-#         response = customize_response(customize,user_text,tone,request)
-#         if response:txt_generated = response['choices'][0]['text']
-#         else:txt_generated = 'Something Went Wrong.Try Again'
-#         #print("Txt------>",txt_generated.strip())
-#     #total_tokens = response['usage']['total_tokens']
- 
-#     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
- 
-#     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
+    def delete(self,request,pk):
+        obj = BookBody.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
  
 from django.http import StreamingHttpResponse,JsonResponse
 import openai  #blog_cre_id list
