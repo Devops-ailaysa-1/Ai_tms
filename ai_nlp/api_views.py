@@ -8,6 +8,21 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from django.http import HttpResponse
+from ai_nlp.models import  PdffileUpload,PdffileChatHistory
+import django_filters
+from django.http import JsonResponse, Http404, HttpResponse
+from django.shortcuts import get_object_or_404
+from ai_nlp.utils import load_embedding_vector
+from rest_framework.response import Response
+from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,PdffileShowDetailsSerializer)
+from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view,permission_classes
+ 
+
+
 
 @api_view(['POST', ])
 def named_entity(request):
@@ -61,6 +76,74 @@ def wordapi_synonyms(request):
 
     return Response({"result": output}, status=status.HTTP_200_OK)
 
+
+from rest_framework.permissions import IsAuthenticated
+
+class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+
+    def get_object(self, pk):
+        try:
+            return PdffileUpload.objects.get(id=pk)
+        except PdffileUpload.DoesNotExist:
+            raise Http404
+
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        #project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
+
+    def create(self,request):
+        user,pr_managers = self.get_user() 
+        file=request.FILES.get('file',None)
+         
+        data = {'user':user.id,'managers':pr_managers,'file':file}
+        serializer = PdffileUploadSerializer(data={**data})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def list(self, request):
+        queryset = PdffileUpload.objects.all().order_by("-id")
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = PdffileUploadSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = PdffileShowDetailsSerializer(obj)
+        return Response(serializer.data)
+    
+
+    def destroy(self,request,pk):
+        try:
+            obj =self.get_object(pk)
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pdf_chat(request):
+    file_id=request.query_params.get('file_id',None)
+    chat_text=request.query_params.get('chat_text',None)
+    pdf_file=PdffileUpload.objects.get(id=int(file_id))
+    if chat_text:
+        chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
+        pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
+        pdf_chat_instance.answer=chat_QA_res
+        pdf_chat_instance.save()
+        serializer = PdffileChatHistorySerializer(pdf_chat_instance)
+        return Response(serializer.data)
+    serializer = PdffileShowDetailsSerializer(pdf_file)
+    return Response(serializer.data)
 ############ wiktionary quick lookup ##################
 # @api_view(['GET', 'POST',])
 # def WiktionaryParse(request):
