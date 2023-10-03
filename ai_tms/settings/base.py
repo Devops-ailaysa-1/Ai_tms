@@ -195,7 +195,9 @@ TEMPLATES = [
         },
     },
 ]
-
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
