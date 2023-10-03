@@ -7,7 +7,7 @@ from langchain.schema import retriever
 from langchain.llms import OpenAI
 from langchain.chains import RetrievalQA
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY
-from langchain.document_loaders import UnstructuredPDFLoader
+from langchain.document_loaders import UnstructuredPDFLoader ,PDFMinerLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -33,7 +33,7 @@ def loader(instance) -> None:
     if instance.file.name.endswith(".docx"):
         loader = Docx2txtLoader(instance.file.path)
     else:
-        loader = UnstructuredPDFLoader(instance.file.path)
+        loader = PDFMinerLoader(instance.file.path)
     # else:
     #     raise ValueError("text file not supported")
     data = loader.load()
