@@ -255,6 +255,7 @@ class BookCreation(models.Model):
 class BookTitle(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_title_create')
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_title_sub_categories')
+    html_data = models.TextField(null=True,blank=True)
     book_title = models.TextField(null=True,blank=True) 
     book_title_mt =  models.TextField(null=True,blank=True)  
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='booktitle_used_tokens',null=True, blank=True)
@@ -267,7 +268,8 @@ class BookFrontMatter(models.Model):
     book_title = models.ForeignKey(BookTitle,on_delete=models.CASCADE,related_name='book_title_fm',null=True,blank=True)
     front_matter = models.ForeignKey(FrontMatter,on_delete=models.CASCADE,related_name='book_front_matter')
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_fm_sub_categories')
-    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_fm_doc')
+    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_fm_doc')
+    html_data = models.TextField(null=True,blank=True)
     name = models.CharField(max_length = 250, null=True, blank=True)
     generated_content = models.TextField(null=True,blank=True) 
     generated_content_mt = models.TextField(null=True,blank=True) 
@@ -283,6 +285,7 @@ class BookBody(models.Model):
     generated_content = models.TextField(null=True,blank=True) 
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='bookbdy_tokens',null=True, blank=True)
     name = models.CharField(max_length = 250, null=True, blank=True)
+    html_data = models.TextField(null=True,blank=True)
     generated_content_mt = models.TextField(null=True,blank=True) 
     selected_field = models.BooleanField(null=True,blank=True)
     response_copies = models.IntegerField(null=True, blank=True,default=1)
@@ -293,7 +296,8 @@ class BookBody(models.Model):
 
 class BookBodyDetails(models.Model):
     book_bm = models.ForeignKey(BookBody,on_delete=models.CASCADE,related_name='book_bdy_det_create')
-    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_bm_det_doc')
+    html_data = models.TextField(null=True,blank=True)
+    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_bm_det_doc')
     generated_chapter = models.TextField(null=True,blank=True)
     generated_chapter_mt = models.TextField(null=True,blank=True)
     chapter_summary = models.TextField(null=True,blank=True)
@@ -307,6 +311,7 @@ class BookBackMatter(models.Model):
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_bm_sub_categories')
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_bm_doc')
     name = models.CharField(max_length = 250, null=True, blank=True)
+    html_data = models.TextField(null=True,blank=True)
     generated_content = models.TextField(null=True,blank=True) 
     generated_content_mt = models.TextField(null=True,blank=True) 
     selected_field = models.BooleanField(null=True,blank=True)

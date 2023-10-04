@@ -732,7 +732,8 @@ class BookTitleViewset(viewsets.ViewSet):
 class BookCreationViewset(viewsets.ViewSet):
 
     def list(self, request):
-        query_set=BookCreation.objects.all()
+        user = request.user.team.owner if request.user.team else request.user 
+        query_set=BookCreation.objects.filter(user=user).order_by('-id')
         serializer=BookCreationSerializer(query_set,many=True)
         return Response(serializer.data)
 

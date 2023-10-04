@@ -570,7 +570,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         prompt+='use a {} tone.'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
         print("PR------------->",prompt)
         # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
-        prompt_response_gpt = outline_gen(prompt=prompt)
+        prompt_response_gpt = outline_gen(prompt=prompt,n=2)
 
         prompt_response = prompt_response_gpt.choices
         total_token = prompt_response_gpt['usage']['total_tokens']
@@ -940,7 +940,7 @@ class BookTitleSerializer(serializers.ModelSerializer):
                 if (book_creation.book_language_id not in blog_available_langs):
                     print("book title create not in en")
                     initial_credit = book_creation.user.credit_balance.get("total_left")
-                    consumable_credits_to_translate_title = get_consumable_credits_for_text(blog_title,blog_create_instance.book_language_code,'en')
+                    consumable_credits_to_translate_title = get_consumable_credits_for_text(book_title,book_creation.book_language_code,'en')
                     if initial_credit > consumable_credits_to_translate_title:
                         book_title_in_other_lang=get_translation(1,book_title,"en",book_creation.book_language_code,
                                                              user_id=book_creation.user.id,from_open_ai=True) 
@@ -972,11 +972,11 @@ class BookTitleSerializer(serializers.ModelSerializer):
                 instance.book_title_mt = None 
             instance.save()    
 
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         titles = instance.blogoutline_title.order_by('-id')
-#         representation['blogoutline_title'] = BlogOutlineSerializer(titles, many=True).data
-#         return representation
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        bdy = instance.book_title_bdy.order_by('custom_order')
+        representation['book_body_matter'] = BookBodySerializer(bdy, many=True).data
+        return representation
 
 
  
@@ -1033,13 +1033,13 @@ class BookCreationSerializer(serializers.ModelSerializer):
         
         return super().update(instance, validated_data)
 
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         keywords = instance.blog_key_create.order_by('-id')
-#         representation['blog_key_create'] = BlogKeywordGenerateSerializer(keywords, many=True).data
-#         titles = instance.blog_title_create.order_by('-id')
-#         representation['blog_title_create'] = BlogtitleSerializer(titles, many=True).data
-#         return representation
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        titles = instance.book_title_create.order_by('-id')
+        representation['blog_title_create'] = BookTitleSerializer(titles, many=True).data
+        # keywords = instance.book_create.order_by('-id')
+        # representation['blog_key_create'] = BlogKeywordGenerateSerializer(keywords, many=True).data
+        return representation
 
 class BookBodySerializer(serializers.ModelSerializer):
     select_group = serializers.BooleanField(required=False)
@@ -1061,8 +1061,6 @@ class BookBodySerializer(serializers.ModelSerializer):
             sub_categories = validated_data.get('sub_categories',67)
             book_tit = BookTitle.objects.filter(id=book_title_inst.id).update(selected_field = True)
             BookTitle.objects.filter(book_creation=book_title_inst.book_creation).exclude(id = book_title_inst.id).update(selected_field=False)
-            # instance,created = BookBody.objects.get_or_create(**validated_data)
-            # print("Ins---------->",instance)
             initial_credit = book_title_inst.book_creation.user.credit_balance.get("total_left")
             if initial_credit <150:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
@@ -1078,7 +1076,7 @@ class BookBodySerializer(serializers.ModelSerializer):
             if body_matter.id == 1:
                 print("-------------------------------------------")
             # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
-                prompt_response_gpt = outline_gen(prompt=prompt)
+                prompt_response_gpt = outline_gen(prompt=prompt,n=1)
 
                 prompt_response = prompt_response_gpt.choices
                 print('PRS--------------->',prompt_response)
@@ -1101,10 +1099,10 @@ class BookBodySerializer(serializers.ModelSerializer):
                                 initial_credit = book_title_inst.book_creation.user.credit_balance.get("total_left")
                                 consumable_credits_to_translate_section = get_consumable_credits_for_text(chapter,book_title_inst.book_creation.book_language_code,'en')
                                 if initial_credit > consumable_credits_to_translate_section:
-                                    book_chapter=get_translation(1,chapter,'en',book_title_inst.book_creation.blog_language_code,
+                                    book_chapter=get_translation(1,chapter,'en',book_title_inst.book_creation.book_language_code,
                                                                 user_id=book_title_inst.book_creation.user.id) 
                                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_title_inst.book_creation,
-                                                            generated_content_mt=chapter,group=group,book_title =instance.book_title)
+                                                            generated_content_mt=chapter,group=group,book_title =book_title_inst)
                                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                                 else:
                                     raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
@@ -1200,7 +1198,6 @@ class BookBodySerializer(serializers.ModelSerializer):
   
         if validated_data.get('selected',None):
             session_ids = validated_data.get('selected')
-            print("ss--------->",session_ids)
             for session_id in session_ids:
                 session_id.selected_field = True
                 session_id.save()
@@ -1216,7 +1213,6 @@ class BookBodySerializer(serializers.ModelSerializer):
             group = validated_data.get('group')
             order_list = list(map(int, order_list.split(',')))
             for index, order in enumerate(order_list, 1):
-                print("^^^^^^^^^^^^^^^^^")
                 BookBody.objects.filter(temp_order=order).filter(book_title=instance.book_title).filter(group=group).update(custom_order=index)
 
         return instance
