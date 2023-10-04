@@ -100,7 +100,6 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         user,pr_managers = self.get_user() 
         file=request.FILES.get('file',None)
-         
         data = {'user':user.id,'managers':pr_managers,'file':file}
         serializer = PdffileUploadSerializer(data={**data})
         if serializer.is_valid():
