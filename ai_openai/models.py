@@ -241,6 +241,7 @@ class BookCreation(models.Model):
     description = models.TextField(null=True,blank=True)
     description_mt = models.TextField(null=True,blank=True)
     author_info = models.TextField(null=True,blank=True)
+    author_info_mt = models.TextField(null=True,blank=True)
     genre = models.ForeignKey(Genre, on_delete = models.CASCADE,related_name='book_genre',null=True, blank=True)
     level = models.ForeignKey(Levels, on_delete = models.CASCADE,related_name='book_level',null=True, blank=True) 
     title = models.TextField(null=True,blank=True)
