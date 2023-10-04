@@ -94,7 +94,8 @@ pdfminer = "20191125"
 pdfminer-six = "20221105"
 langchain = "^0.0.306"
 pydantic = "1.10.12"
-chromadb = "0.4.9"
+chromadb = "0.3.29"
+pysqlite3-binary = "^0.5.2"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
