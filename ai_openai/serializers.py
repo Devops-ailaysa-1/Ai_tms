@@ -972,11 +972,11 @@ class BookTitleSerializer(serializers.ModelSerializer):
                 instance.book_title_mt = None 
             instance.save()    
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        bdy = instance.book_title_bdy.order_by('custom_order')
-        representation['book_body_matter'] = BookBodySerializer(bdy, many=True).data
-        return representation
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     bdy = instance.book_title_bdy.order_by('custom_order')
+    #     representation['book_body_matter'] = BookBodySerializer(bdy, many=True).data
+    #     return representation
 
 
  
@@ -1019,6 +1019,16 @@ class BookCreationSerializer(serializers.ModelSerializer):
             
             instance.author_info_mt=get_translation(1,instance.author_info,lang_detect_author_info,"en",user_id=instance.user.id) if instance.author_info else None
             instance.save()
+
+        lang_detect_title = lang_detector(instance.title) 
+        if lang_detect_author_info !='en':
+            consumable_credits = get_consumable_credits_for_text(instance.title,instance.book_language,'en')
+
+            if initial_credit < consumable_credits:
+                raise serializers.ValidationError({'msg':'Insufficient Credits','book_id':instance.id}, code=400)
+            
+            instance.author_info_mt=get_translation(1,instance.title,lang_detect_author_info,"en",user_id=instance.user.id) if instance.title else None
+            instance.save()
         return instance
     
     def update(self, instance, validated_data):
@@ -1057,9 +1067,13 @@ class BookCreationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         titles = instance.book_title_create.order_by('-id')
-        representation['blog_title_create'] = BookTitleSerializer(titles, many=True).data
-        # keywords = instance.book_create.order_by('-id')
-        # representation['blog_key_create'] = BlogKeywordGenerateSerializer(keywords, many=True).data
+        representation['book_title_create'] = BookTitleSerializer(titles, many=True).data
+        front_matter = instance.book_fm_create.order_by('custom_order')
+        representation['front_matter'] = BookFrontMatterSerializer(front_matter, many=True).data
+        body_matter = instance.book_bdy_create.order_by('custom_order')
+        representation['body_matter'] = BookBodySerializer(body_matter, many=True).data
+        back_matter = instance.book_bm_create.order_by('custom_order')
+        representation['back_matter'] = BookBackMatterSerializer(back_matter, many=True).data
         return representation
 
 class BookBodySerializer(serializers.ModelSerializer):
@@ -1079,40 +1093,44 @@ class BookBodySerializer(serializers.ModelSerializer):
         print("ValiData----------->",validated_data)
         blog_available_langs =[17]
         book_title_inst = validated_data.get('book_title')
+        book_creation = validated_data.get('book_creation')
         generated_content = validated_data.get('generated_content',None)
-        if book_title_inst and generated_content==None:
+        body_matter = validated_data.get('body_matter',1)
+        sub_categories = validated_data.get('sub_categories')
+        book_obj = book_title_inst.book_creation if book_title_inst else book_creation
+        if book_title_inst or book_creation and generated_content==None:
             print("Inside If")
-            body_matter = validated_data.get('body_matter',1)
-            sub_categories = validated_data.get('sub_categories',67)
-            book_tit = BookTitle.objects.filter(id=book_title_inst.id).update(selected_field = True)
-            BookTitle.objects.filter(book_creation=book_title_inst.book_creation).exclude(id = book_title_inst.id).update(selected_field=False)
-            initial_credit = book_title_inst.book_creation.user.credit_balance.get("total_left")
+            if book_title_inst:
+                book_tit = BookTitle.objects.filter(id=book_title_inst.id).update(selected_field = True)
+                BookTitle.objects.filter(book_creation=book_title_inst.book_creation).exclude(id = book_title_inst.id).update(selected_field=False)
+            initial_credit = book_obj.user.credit_balance.get("total_left")
             if initial_credit <150:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             book_body_start_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
             print("sSR-------->",book_body_start_phrase)
-            book_obj = book_title_inst.book_creation
-            print("BookObj------------>",book_obj)
-            book_obj.title = book_title_inst.book_title
-            book_obj.title_mt = book_title_inst.book_title_mt
-            book_obj.save()
+            if book_title_inst:
+                print("BookObj------------>",book_obj)
+                book_obj.title = book_title_inst.book_title
+                book_obj.title_mt = book_title_inst.book_title_mt
+                book_obj.save()
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-            prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
-            print("PR------------->",prompt)
+
 
             if body_matter.id == 1:
                 print("-------------------------------------------")
-            # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+                prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
+                print("PR------------->",prompt)
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
 
                 prompt_response = prompt_response_gpt.choices
                 print('PRS--------------->',prompt_response)
                 total_token = prompt_response_gpt['usage']['total_tokens']
+                token_usage = openai_token_usage(prompt_response_gpt)
                 total_token = get_consumable_credits_for_openai_text_generator(total_token)
-                AiPromptSerializer().customize_token_deduction(book_title_inst.book_creation,total_token)
+                AiPromptSerializer().customize_token_deduction(book_obj,total_token)
                 print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-                queryset = BookBody.objects.filter(book_title=book_title_inst,body_matter_id=body_matter.id).distinct('group')
+                queryset = BookBody.objects.filter(book_creation=book_obj,body_matter_id=body_matter.id).distinct('group')
                 print("QR----------------->",queryset)
                 if queryset: start = queryset.count()
                 else: start = 0
@@ -1123,50 +1141,65 @@ class BookBodySerializer(serializers.ModelSerializer):
                         if chapter:
                             chapter = re.sub(r'\d+.','',chapter).strip()
                             print("chap========>",chapter)
-                            if (book_title_inst.book_creation.book_language_id not in blog_available_langs):
-                                initial_credit = book_title_inst.book_creation.user.credit_balance.get("total_left")
+                            if (book_obj.book_language_id not in blog_available_langs):
+                                initial_credit = book_obj.user.credit_balance.get("total_left")
                                 consumable_credits_to_translate_section = get_consumable_credits_for_text(chapter,book_title_inst.book_creation.book_language_code,'en')
                                 if initial_credit > consumable_credits_to_translate_section:
-                                    book_chapter=get_translation(1,chapter,'en',book_title_inst.book_creation.book_language_code,
-                                                                user_id=book_title_inst.book_creation.user.id) 
-                                    BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_title_inst.book_creation,
-                                                            generated_content_mt=chapter,group=group,book_title =book_title_inst)
+                                    book_chapter=get_translation(1,chapter,'en',book_obj.book_language_code,
+                                                                user_id=book_obj.user.id) 
+                                    BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_obj,
+                                                            generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage)
                                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                                 else:
                                     raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                             else:
-                                rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, generated_content=chapter,group=group,temp_order=order,custom_order=order,book_title =book_title_inst,book_creation=book_title_inst.book_creation) 
+                                rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, 
+                                generated_content=chapter,group=group,temp_order=order,custom_order=order,
+                                book_title =book_title_inst,book_creation=book_obj,
+                                name=body_matter.name,token_usage=token_usage) 
                                 print(rr)
             else:
-                prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
-                generated_content = prompt_response_gpt['content']
-                if (book_title_inst.book_creation.book_language_id not in blog_available_langs):
-                    initial_credit = instance.book_title.book_creation.user.credit_balance.get("total_left")
-                    consumable_credits_to_translate_section = get_consumable_credits_for_text(chapter,instance.book_title.book_creation.book_language_code,'en')
+                prompt = book_body_start_phrase.start_phrase.format(body_matter.name,title,description,book_obj.genre.genre,book_obj.level.level)
+                print("PR------------->",prompt)
+                openai_response = get_prompt_chatgpt_turbo(prompt,1)
+                token_usage = openai_token_usage(openai_response)
+                token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+                AiPromptSerializer().customize_token_deduction(book_obj,token_usage_to_reduce)
+                count = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).count()
+                generated_content = openai_response["choices"][0]["message"]["content"]
+                if (book_obj.book_language_id not in blog_available_langs):
+                    initial_credit = book_obj.user.credit_balance.get("total_left")
+                    consumable_credits_to_translate_section = get_consumable_credits_for_text(chapter,book_obj.book_language_code,'en')
                     if initial_credit > consumable_credits_to_translate_section:
-                        content=get_translation(1,generated_content,'en',book_title_inst.book_creation.blog_language_code,
-                                                    user_id=book_title_inst.book_creation.user.id) 
-                        BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=content,custom_order=order,temp_order=order,book_creation=book_title_inst.book_creation,
-                                                generated_content_mt=generated_content,group=group,book_title =instance.book_title)
+                        content=get_translation(1,generated_content,'en',book_obj.blog_language_code,
+                                                    user_id=book_obj.user.id) 
+                        BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=content,custom_order=count+1,temp_order=count+1,book_creation=book_obj,
+                                                generated_content_mt=generated_content,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage)
                         # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                     else:
                         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 else:
-                    BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=content,book_title =instance.book_title) 
-            token_usage = openai_token_usage(prompt_response_gpt)
-            ins = BookBody.objects.filter(book_title=book_title_inst).first()
-            ins.token_usage = token_usage
-            ins.save()
-            return ins
+                    BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=generated_content,
+                    book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,temp_order=count+1,token_usage=token_usage) 
+            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter_id=1,sub_categories_id=69,temp_order=1,custom_order=1)
+            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter_id=1,sub_categories_id=68,temp_order=1,custom_order=1)
+            print("RRRRRRR-------------------->",bm,fm)
+            instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
+            # if token_usage:
+            #     ins = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
+            #     ins.token_usage = token_usage
+            #     ins.save()
+            return instance
         
         else:
             print("Inside Else")
             blog_available_langs =[17]
-            count = BookBody.objects.filter(group=validated_data.get('group'),book_title=validated_data.get('book_title')).count()
+            count = BookBody.objects.filter(group=validated_data.get('group',0),book_creation=validated_data.get('book_creation'),body_matter=validated_data.get('body_matter')).count()
             print("Count------->",count)
             instance = BookBody.objects.create(**validated_data)
-            instance.book_creation = instance.book_title.book_creation
-            instance.save()
+            if instance.book_title:
+                instance.book_creation = instance.book_title.book_creation
+                instance.save()
             instance.custom_order = count+1
             instance.temp_order = count+1
             initial_credit = instance.book_creation.user.credit_balance.get("total_left")
@@ -1261,6 +1294,8 @@ class BookBodySerializer(serializers.ModelSerializer):
 
 class BookFrontMatterSerializer(serializers.ModelSerializer):
     order_list = serializers.CharField(required=False)
+    obj=serializers.PrimaryKeyRelatedField(queryset=BookFrontMatter.objects.all(),
+                                        many=False,required=False)
     class Meta:
         model = BookFrontMatter
         fields = "__all__"
@@ -1270,11 +1305,15 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         blog_available_langs =[17]
         front_matter = validated_data.get('front_matter',1)
         sub_categories = validated_data.get('sub_categories',68)
+        obj = validated_data.get('obj')
         count = BookFrontMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
-        instance = BookFrontMatter.objects.create(**validated_data)
-        instance.custom_order = count+1
-        instance.temp_order = count+1
+        if not obj:
+            instance = BookFrontMatter.objects.create(**validated_data)
+            instance.custom_order = count+1
+            instance.temp_order = count+1
+            instance.save()
+        else: instance=obj
         instance.name = front_matter.book_front_matter.name
         instance.save()
         initial_credit = instance.book_creation.user.credit_balance.get("total_left")
@@ -1359,6 +1398,8 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
 
 class BookBackMatterSerializer(serializers.ModelSerializer):
     order_list = serializers.CharField(required=False)
+    obj=serializers.PrimaryKeyRelatedField(queryset=BookFrontMatter.objects.all(),
+                                        many=False,required=False)
     class Meta:
         model = BookBackMatter
         fields = "__all__"
@@ -1370,9 +1411,12 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         sub_categories = validated_data.get('sub_categories',68)
         count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
-        instance = BookBackMatter.objects.create(**validated_data)
-        instance.custom_order = count+1
-        instance.temp_order = count+1
+        if not obj:
+            instance = BookBackMatter.objects.create(**validated_data)
+            instance.custom_order = count+1
+            instance.temp_order = count+1
+            instance.save()
+        else: instance = obj
         instance.name = back_matter.BookBackMatter.name
         instance.save()
         initial_credit = instance.book_creation.user.credit_balance.get("total_left")
