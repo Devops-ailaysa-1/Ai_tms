@@ -15,7 +15,8 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
-                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,FontCatagoryList,DesignerOrientation)
+                    FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,
+                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -26,7 +27,8 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,DesignerOrientationSerializer,
-                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer)
+                         ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer,
+                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -1287,4 +1289,73 @@ class DesignerOrientationViewset(viewsets.ViewSet):
         # queryset = self.filter_queryset(queryset)
         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = DesignerOrientationSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class FrontMatterView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = FrontMatter.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = FrontMatterSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class BackMatterView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = BackMatter.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = BackMatterSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class BodyMatterView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = BodyMatter.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = BodyMatterSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class GenreView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = Genre.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = GenreSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class LevelView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = Levels.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = LevelSerializer(queryset,many=True)
         return Response(serializer.data)

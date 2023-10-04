@@ -7,7 +7,7 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle)
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
-                            PromptStartPhrases ,PromptTones ,Languages,Levels,Genre)
+                            PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
                     get_prompt_freestyle ,get_prompt_image_generations ,get_prompt_gpt_4,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
@@ -1181,8 +1181,10 @@ class BookBodySerializer(serializers.ModelSerializer):
                 else:
                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=generated_content,
                     book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,temp_order=count+1,token_usage=token_usage) 
-            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter_id=1,sub_categories_id=69,temp_order=1,custom_order=1)
-            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter_id=1,sub_categories_id=68,temp_order=1,custom_order=1)
+            default_bm = BackMatter.objects.get(name='Afterword')
+            default_fm = FrontMatter.objects.get(name='Preface')
+            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1)
+            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter=default_fm,sub_categories_id=68,temp_order=1,custom_order=1)
             print("RRRRRRR-------------------->",bm,fm)
             instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
             # if token_usage:
@@ -1347,11 +1349,10 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         else:
             BookFrontMatter.objects.filter(id=instance.id).update(book_creation=book_obj,sub_categories=sub_categories,
                                         generated_content=front_matter,token_usage=token_usage,selected_field=True)
-
-        return instance
+        ins = BookFrontMatter.objects.get(id=instance.id)
+        return ins
     
     def update(self, instance, validated_data):
-        print("ValiData----------->",validated_data)
         lang_code =instance.book_creation.book_language_code
         user_id = instance.book_creation.user.id
 
@@ -1450,8 +1451,8 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         else:
             BookBackMatter.objects.filter(id=instance.id).update(book_creation=book_obj,sub_categories=sub_categories,
                                         generated_content=back_matter,token_usage=token_usage,selected_field=True)
-
-        return instance
+        ins = BookBackMatter.objects.get(id=instance.id)
+        return ins
     
     def update(self, instance, validated_data):
         print("ValiData----------->",validated_data)
