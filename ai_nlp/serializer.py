@@ -27,9 +27,10 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         instance = PdffileUpload.objects.create(**validated_data)
         instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
-        celery_id = loader(instance.id)#loader.apply_async(args=(instance.id,),)
-        print("vector chromadb created")
         instance.status="PENDING"
+        celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
+        print(celery_id)
+        print("vector chromadb created")
         instance.celery_id=celery_id
         instance.is_train=False
         # if instance.file.name.endswith(".pdf"):
