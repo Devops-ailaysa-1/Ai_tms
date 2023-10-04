@@ -1096,6 +1096,7 @@ class BookBodySerializer(serializers.ModelSerializer):
         book_creation = validated_data.get('book_creation')
         generated_content = validated_data.get('generated_content',None)
         body_matter = validated_data.get('body_matter',1)
+        group = validated_data.get('group',0)
         sub_categories = validated_data.get('sub_categories')
         book_obj = book_title_inst.book_creation if book_title_inst else book_creation
         if book_title_inst or book_creation and generated_content==None:
@@ -1196,7 +1197,7 @@ class BookBodySerializer(serializers.ModelSerializer):
         else:
             print("Inside Else")
             blog_available_langs =[17]
-            count = BookBody.objects.filter(group=validated_data.get('group',0),book_creation=validated_data.get('book_creation'),body_matter=validated_data.get('body_matter')).count()
+            count = BookBody.objects.filter(group=group,book_creation=book_creation,body_matter=body_matter).count()
             print("Count------->",count)
             instance = BookBody.objects.create(**validated_data)
             if instance.book_title:
@@ -1224,6 +1225,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                     instance.generated_content_mt = get_translation(1,instance.generated_content,lang_detect_chapter_create,"en",user_id=user_id)  
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user_id,consumable_credit)
                 instance.selected_field =True
+            instance.group = group
             instance.save()
         return instance
 
@@ -1308,6 +1310,7 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         front_matter = validated_data.get('front_matter',1)
         sub_categories = validated_data.get('sub_categories',68)
         obj = validated_data.get('obj')
+        name = validated_data.get('name')
         count = BookFrontMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
         if not obj:
@@ -1316,7 +1319,7 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
             instance.temp_order = count+1
             instance.save()
         else: instance=obj
-        instance.name = front_matter.book_front_matter.name
+        instance.name = name if name else front_matter.book_front_matter.name
         instance.save()
         initial_credit = instance.book_creation.user.credit_balance.get("total_left")
         if initial_credit <150:
@@ -1410,6 +1413,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         blog_available_langs =[17]
         back_matter = validated_data.get('back_matter',1)
         sub_categories = validated_data.get('sub_categories',68)
+        name = validated_data.get('name')
         count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
         if not obj:
@@ -1418,7 +1422,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
             instance.temp_order = count+1
             instance.save()
         else: instance = obj
-        instance.name = back_matter.BookBackMatter.name
+        instance.name = name if name else back_matter.BookBackMatter.name
         instance.save()
         initial_credit = instance.book_creation.user.credit_balance.get("total_left")
         if initial_credit <150:
