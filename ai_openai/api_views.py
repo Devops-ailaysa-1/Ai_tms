@@ -1,7 +1,7 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
                      BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
-                     BookBackMatter,BookFrontMatter)
+                     BookBackMatter,BookFrontMatter,)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -37,6 +37,7 @@ openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
+from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
 
 
@@ -772,7 +773,7 @@ class BookCreationViewset(viewsets.ViewSet):
 class BookBodyViewset(viewsets.ViewSet):
 
     def list(self, request):
-        group = request.GET.get('group',None)
+        group = request.GET.get('group',0)
         title = request.GET.get('book_title',None)
         if title and group:
             query_set = BookBody.objects.filter(book_title_id = title,group=group).order_by('custom_order')
@@ -790,11 +791,14 @@ class BookBodyViewset(viewsets.ViewSet):
         categories = 11
         sub_categories = 67
         body_matter = request.POST.get('body_matter',1)
+        book_title = request.POST.get('book_title',None)
         user = request.user.team.owner if request.user.team else request.user
         serializer = BookBodySerializer(data={**request.POST.dict(),'body_matter':body_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            qr = BookBody.objects.filter(book_title_id=book_title,body_matter_id=body_matter).order_by('custom_order')
+            ser = BookBodySerializer(qr,many=True)
+            return Response(ser.data)
         return Response(serializer.errors)
     
     def update(self,request,pk):
