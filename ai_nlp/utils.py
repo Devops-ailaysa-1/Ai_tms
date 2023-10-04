@@ -53,10 +53,6 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
- 
-        # for i in tqdm.tqdm(range(10)):
-        #     print(i)
-        #     time.sleep(1)
         path_split=instance.file.path.split(".")
         persistent_dir=path_split[0]+"/"
         os.makedirs(persistent_dir,mode=0o777)
