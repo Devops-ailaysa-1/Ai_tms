@@ -18,6 +18,7 @@ from ai_canvas.models import CanvasUserImageAssets
 from ai_canvas.serializers import create_design_jobs_and_tasks
 from django.db.models import Q
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
+from ai_workspace.api_views import  get_consumable_credits_for_text
 HOST_NAME=os.getenv('HOST_NAME')
 
 
@@ -243,8 +244,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
-                    translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
+                    
+                    initial_credit = instance.user.credit_balance.get("total_left")
+                    consumed_credit =    get_consumable_credits_for_text(i['text'],instance.source_language.locale_code,tar_lang.locale.first().locale_code)
+                    if initial_credit > consumed_credit:
+                        translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)
+                    else:
+                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     i['text']=translate_bbox
                     i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -404,8 +411,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     for text_box in text_box_list:
                         txt_box=copy.deepcopy(text_box)
                         if 'text' in txt_box:
-                            translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+                            initial_credit =instance.user.credit_balance.get("total_left")
+                            consumed_credit = get_consumable_credits_for_text(txt_box['text'],"en",tar_ins.target_language.locale.first().locale_code)
+                            if initial_credit >consumed_credit:
+                                translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
                                                            target_lang_code=tar_ins.target_language.locale_code,user_id=instance.user.id)
+                            else:
+                                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                             txt_box['text']=translate_bbox
                             txt_box['mt_text']=translate_bbox
                         text_box_list_new.append(txt_box)
