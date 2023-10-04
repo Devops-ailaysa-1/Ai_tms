@@ -923,7 +923,8 @@ class BookTitleSerializer(serializers.ModelSerializer):
         description = book_creation.description_mt if book_creation.description_mt else book_creation.description
         genre = book_creation.genre.genre
         level = book_creation.level.level
-        prompt = title_start_phrase.start_phrase.format(description,genre,level)
+        author_info = book_creation.author_info_mt if book_creation.author_info_mt else book_creation.author_info
+        prompt = title_start_phrase.start_phrase.format(author_info,description,level,genre)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
@@ -986,7 +987,7 @@ class BookCreationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BookCreation
-        fields = ('id','user', 'document', 'description','description_mt','author_info',
+        fields = ('id','user', 'document', 'description','description_mt','author_info','author_info_mt',
                 'genre','level','title','title_mt','categories','sub_categories',
                 'book_language','book_title_create',)
         
@@ -1008,6 +1009,16 @@ class BookCreationSerializer(serializers.ModelSerializer):
             
             instance.description_mt=get_translation(1,instance.description,lang_detect_description,"en",user_id=instance.user.id) if instance.description else None
             instance.save()
+
+        lang_detect_author_info = lang_detector(instance.author_info) 
+        if lang_detect_author_info !='en':
+            consumable_credits = get_consumable_credits_for_text(instance.author_info,instance.book_language,'en')
+
+            if initial_credit < consumable_credits:
+                raise serializers.ValidationError({'msg':'Insufficient Credits','book_id':instance.id}, code=400)
+            
+            instance.author_info_mt=get_translation(1,instance.author_info,lang_detect_author_info,"en",user_id=instance.user.id) if instance.author_info else None
+            instance.save()
         return instance
     
     def update(self, instance, validated_data):
@@ -1025,6 +1036,20 @@ class BookCreationSerializer(serializers.ModelSerializer):
                 instance.description_mt = get_translation(1,instance.description,lang,"en",user_id=instance.user.id)  
             else:
                 instance.description_mt = None
+            instance.save()
+        
+        #return super().update(instance, validated_data)
+
+        if validated_data.get('author_info',None):
+            instance.author_info = validated_data.get('author_info',instance.author_info)
+            lang_detect_author_info = lang_detector(instance.author_info) 
+            if lang_detect_author_info !='en':
+                consumable_credits = get_consumable_credits_for_text(instance.author_info,instance.blog_language_code,'en')
+                if initial_credit < consumable_credits:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                instance.author_info_mt = get_translation(1,instance.author_info,lang,"en",user_id=instance.user.id)  
+            else:
+                instance.author_info_mt = None
             instance.save()
         
         return super().update(instance, validated_data)
@@ -1073,7 +1098,7 @@ class BookBodySerializer(serializers.ModelSerializer):
             book_obj.save()
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-            prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.genre.genre,book_obj.level.level)
+            prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
             print("PR------------->",prompt)
 
             if body_matter.id == 1:
