@@ -9,7 +9,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
                     PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
                     ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType,FontCatagoryList,DesignShapeCategory,
-                    DesignerOrientation)
+                    DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -526,3 +526,28 @@ class DesignShapeCategoryserializer(serializers.ModelSerializer):
     class Meta:
         model=DesignShapeCategory
         fields="__all__"
+
+class FrontMatterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FrontMatter
+        fields = "__all__"
+
+class BackMatterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BackMatter
+        fields = "__all__"
+
+class LevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Levels
+        fields = "__all__"
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = "__all__"
+
+class BodyMatterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BodyMatter
+        fields = "__all__"

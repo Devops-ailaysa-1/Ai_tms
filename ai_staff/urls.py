@@ -30,7 +30,11 @@ router.register(r'font-category',api_views.FontCatagoryListViewset,basename='fon
 router.register(r'design-shape',api_views.DesignShapeViewset,basename='design_shape')
 router.register(r'image-cat',api_views.ImageCategoriesViewset,basename='imag-cat')
 router.register(r'design-orientation-size',api_views.DesignerOrientationViewset,basename='design-orientation')
-
+router.register(r'front-matter',api_views.FrontMatterView,basename='front_matter')
+router.register(r'back-matter',api_views.BackMatterView,basename='back_matter')
+router.register(r'body-matter',api_views.BodyMatterView,basename='body_matter')
+router.register(r'level',api_views.LevelView,basename='level')
+router.register(r'genre',api_views.GenreView,basename='genre')
  
 urlpatterns = router.urls
 
