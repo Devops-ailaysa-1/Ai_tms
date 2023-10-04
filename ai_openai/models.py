@@ -240,6 +240,7 @@ class BookCreation(models.Model):
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
     description = models.TextField(null=True,blank=True)
     description_mt = models.TextField(null=True,blank=True)
+    author_info = models.TextField(null=True,blank=True)
     genre = models.ForeignKey(Genre, on_delete = models.CASCADE,related_name='book_genre',null=True, blank=True)
     level = models.ForeignKey(Levels, on_delete = models.CASCADE,related_name='book_level',null=True, blank=True) 
     title = models.TextField(null=True,blank=True)
@@ -265,17 +266,16 @@ class BookTitle(models.Model):
 
 class BookFrontMatter(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_fm_create')
-    book_title = models.ForeignKey(BookTitle,on_delete=models.CASCADE,related_name='book_title_fm',null=True,blank=True)
     front_matter = models.ForeignKey(FrontMatter,on_delete=models.CASCADE,related_name='book_front_matter')
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_fm_sub_categories')
-    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_fm_doc')
     html_data = models.TextField(null=True,blank=True)
     name = models.CharField(max_length = 250, null=True, blank=True)
     generated_content = models.TextField(null=True,blank=True) 
     generated_content_mt = models.TextField(null=True,blank=True) 
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='book_fm_tokens',null=True, blank=True)
     selected_field = models.BooleanField(null=True,blank=True)
-    response_copies = models.IntegerField(null=True, blank=True,default=1)
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
 
 class BookBody(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_bdy_create',null=True,blank=True)
@@ -292,12 +292,10 @@ class BookBody(models.Model):
     custom_order = models.IntegerField(null=True,blank=True) 
     temp_order = models.IntegerField(null=True,blank=True) 
     group = models.IntegerField(null=True,blank=True)
-    #selected_group = models.IntegerField(null=True,blank=True)
 
 class BookBodyDetails(models.Model):
     book_bm = models.ForeignKey(BookBody,on_delete=models.CASCADE,related_name='book_bdy_det_create')
     html_data = models.TextField(null=True,blank=True)
-    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_bm_det_doc')
     generated_chapter = models.TextField(null=True,blank=True)
     generated_chapter_mt = models.TextField(null=True,blank=True)
     chapter_summary = models.TextField(null=True,blank=True)
@@ -306,16 +304,15 @@ class BookBodyDetails(models.Model):
 
 class BookBackMatter(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_bm_create')
-    book_title = models.ForeignKey(BookTitle,on_delete=models.CASCADE,related_name='book_title_bm',null=True,blank=True)
     back_matter = models.ForeignKey(BackMatter,on_delete=models.CASCADE,related_name='book_back_matter')
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_bm_sub_categories')
-    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_bm_doc')
     name = models.CharField(max_length = 250, null=True, blank=True)
     html_data = models.TextField(null=True,blank=True)
     generated_content = models.TextField(null=True,blank=True) 
     generated_content_mt = models.TextField(null=True,blank=True) 
     selected_field = models.BooleanField(null=True,blank=True)
-    response_copies = models.IntegerField(null=True, blank=True,default=1)  
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='book_bm_tokens',null=True, blank=True)
 
 

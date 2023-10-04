@@ -13,6 +13,8 @@ router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_articl
 router.register(r'bookcreation',api_views.BookCreationViewset ,basename='ai_book')
 router.register(r'booktitle',api_views.BookTitleViewset ,basename='ai_book_title')
 router.register(r'bookbodymatter',api_views.BookBodyViewset ,basename='ai_book_body')
+router.register(r'bookfrontmatter',api_views.BookFMViewset ,basename='ai_book_fm')
+router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm')
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
 urlpatterns = router.urls
 

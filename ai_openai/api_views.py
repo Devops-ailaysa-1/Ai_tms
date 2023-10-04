@@ -1,6 +1,7 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
                      BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse)
+                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
+                     BookBackMatter,BookFrontMatter)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -9,12 +10,12 @@ from rest_framework import status
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
-                          AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                        AiPromptGetSerializer,AiPromptCustomizeSerializer,
                         ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
                         BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
                         BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,
                         CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
-                        BookBodySerializer)
+                        BookBodySerializer,)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -36,6 +37,7 @@ openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
+from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -809,7 +811,86 @@ class BookBodyViewset(viewsets.ViewSet):
         obj.delete()
         return Response(status=204)
 
- 
+
+
+class BookFMViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        query_set=BookFrontMatter.objects.filter(book_creation__user=request.user).order_by('custom_order')
+        serializer=BookFrontMatterSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = BookFrontMatter.objects.get(id=pk)
+        serializer=BookFrontMatterSerializer(query_set)
+        return Response(serializer.data)
+
+    def create(self,request):
+        categories = 11
+        sub_categories = 68
+        front_matter = request.POST.get('front_matter',1)
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BookFrontMatterSerializer(data={**request.POST.dict(),'front_matter':front_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def update(self,request,pk):
+        query_set = BookFrontMatter.objects.get(id = pk)
+        serializer = BookFrontMatterSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        obj = BookFrontMatter.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
+class BookBMViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        query_set=BookBackMatter.objects.all()
+        serializer=BookBackMatterSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = BookBackMatter.objects.get(id=pk)
+        serializer=BookBackMatterSerializer(query_set)
+        return Response(serializer.data)
+
+    def create(self,request):
+        categories = 11
+        sub_categories = 69
+        back_matter = request.POST.get('back_matter',1)
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BookBackMatterSerializer(data={**request.POST.dict(),'back_matter':back_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def update(self,request,pk):
+        query_set = BookBackMatter.objects.get(id = pk)
+        serializer = BookBackMatterSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        obj = BookBackMatter.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
+
 from django.http import StreamingHttpResponse,JsonResponse
 import openai  #blog_cre_id list
 from ai_staff.models import PromptSubCategories
