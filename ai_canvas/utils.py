@@ -79,17 +79,25 @@ def calculate_font_size(box_width, box_height, text,font_size):
         font_size -= 1
     return font_size+15
 
-
+from ai_auth.models import AiUser
+from rest_framework import serializers
 
 def dict_rec(canvas_json_copy,languages,src_lang,user_id):
- 
+    from ai_workspace.api_views import  get_consumable_credits_for_text
+    user = AiUser.objects.get(id=user_id)
     if 'template_json' in  canvas_json_copy.keys():
         for count, i in enumerate(canvas_json_copy['template_json']['objects']):
             if 'objects' in i.keys():
                 dict_rec(i,languages,src_lang,user_id)
             if i['type']== 'textbox':
                 fontSize=canvas_json_copy['objects'][count]['fontSize']
-                tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code=languages.strip(),user_id=user_id)
+                
+                initial_credit = user.credit_balance.get("total_left")
+                consumed_credit = get_consumable_credits_for_text(text,src_lang,languages.strip())
+                if initial_credit > consumed_credit:
+                    tar_word=get_translation(1,source_string=text,source_lang_code=src_lang,target_lang_code=languages.strip(),user_id=user_id)
+                else:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
                 canvas_json_copy['objects'][count]['text']=tar_word
                 canvas_json_copy['objects'][count]['rawMT']=tar_word
                 canvas_json_copy['objects'][count]['mtText']=tar_word
@@ -107,7 +115,12 @@ def dict_rec(canvas_json_copy,languages,src_lang,user_id):
             if i['type']== 'textbox':
                 text = i['text']
                 fontSize=canvas_json_copy['objects'][count]['fontSize']
-                tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = languages.strip(),user_id=user_id)
+                initial_credit = user.credit_balance.get("total_left")
+                consumed_credit = get_consumable_credits_for_text(text,src_lang,languages.strip())
+                if initial_credit > consumed_credit:
+                    tar_word=get_translation(1,source_string = text,source_lang_code=src_lang,target_lang_code = languages.strip(),user_id=user_id)
+                else:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
                 canvas_json_copy['objects'][count]['text']=tar_word
                 canvas_json_copy['objects'][count]['rawMT']=tar_word
                 canvas_json_copy['objects'][count]['mt_text']=tar_word

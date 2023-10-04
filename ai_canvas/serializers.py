@@ -19,6 +19,7 @@ from django.db.models import Q
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
+
 HOST_NAME=os.getenv("HOST_NAME")
 
 
@@ -388,8 +389,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
         return instance
               
-          
+    
     def update_text_box_target(self,instance,text_box,is_append):
+        from ai_workspace.api_views import  get_consumable_credits_for_text
         text=text_box['text']
         text_id=text_box['name']
         canvas_tar_lang=instance.canvas_translate.all()
@@ -400,7 +402,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 json=j.json
                 if is_append:
                     copy_txt_box=copy.copy(text_box)
-                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                    initial_credit =instance.user.credit_balance.get("total_left") 
+                    consumed_credit =get_consumable_credits_for_text(text,src,tar)
+
+                    if initial_credit > consumed_credit:
+                        trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                    else:
+                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     copy_txt_box['text']=trans_text 
                     copy_txt_box['mt_text']=trans_text  ####appended new text_box
                     obj_list=json['objects']
@@ -409,7 +417,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 else:
                     for tar_jsn in json['objects']:
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
-                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                            initial_credit =instance.user.credit_balance.get("total_left") 
+                            consumed_credit =get_consumable_credits_for_text(text,src,tar)
+                            if initial_credit > consumed_credit:
+                                tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                            else:
+                                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):

@@ -18,22 +18,20 @@ class PdffileShowDetailsSerializer(serializers.ModelSerializer):
 
 
 class PdffileUploadSerializer(serializers.ModelSerializer):
+    # website = serializers.CharField(required=False)
     class Meta:
         model = PdffileUpload
         fields ='__all__'
 
 
     def create(self, validated_data):
-        print("validated_data",validated_data)
-        # request = self.context['request']
-        # user = request.user.team.owner  if request.user.team  else request.user
-        # created_by = request.user
-        print("this is instance to create")
         instance = PdffileUpload.objects.create(**validated_data)
-        instance.file_name = instance.file.name.split("/")[-1].split(".")[0]
-        loader(instance)
+        instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
+        celery_id = loader(instance.id)#loader.apply_async(args=(instance.id,),)
         print("vector chromadb created")
-        instance.is_train=True
+        instance.status="PENDING"
+        instance.celery_id=celery_id
+        instance.is_train=False
         # if instance.file.name.endswith(".pdf"):
         #     instance.pdf_thumbnail = thumbnail_create(instance.file.path)
         instance.save()

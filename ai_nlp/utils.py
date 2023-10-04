@@ -1,46 +1,74 @@
 from django import core
-import io
-import pdf2image
-import openai
-import os
-from langchain.schema import retriever
+import openai ,os,pdf2image,io
 from langchain.llms import OpenAI
-from langchain.chains import RetrievalQA
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY
 from langchain.document_loaders import UnstructuredPDFLoader ,PDFMinerLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.document_loaders import Docx2txtLoader
-
+from langchain.chat_models import ChatOpenAI
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.chains import RetrievalQA 
+from langchain.document_loaders import WebBaseLoader
+from langchain.document_loaders import BSHTMLLoader
+from celery.decorators import task
 # from tensorflow.python.platform import gfile
 # import tensorflow as tf
+from ai_nlp.models import PdffileUpload 
+from langchain.chains.question_answering import load_qa_chain
+from langchain.callbacks import get_openai_callback
 
 
 openai.api_key = OPENAI_API_KEY
+# llm = ChatOpenAI(model_name='gpt-4')
+emb_model = "sentence-transformers/all-MiniLM-L6-v2"
+embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+# chat_params = {
+#         "model": "gpt-3.5-turbo-16k", # Bigger context window
+#         "openai_api_key": OPENAI_API_KEY ,
+#         "temperature": 0.5, # To avoid pure copy-pasting from docs lookup
+#         "max_tokens": 8192
+#     }
+# llm = ChatOpenAI(**chat_params)
 
 def text_splitter_create_vector(data,persistent_dir) -> Chroma:
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-    text_splitter = CharacterTextSplitter(separator="\n",chunk_size=2000,chunk_overlap=200,length_function = len)
+    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
     texts = text_splitter.split_documents(data)
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+    print(type(embeddings))
     return vector_db
 
 def loader(instance) -> None:
-    path_split=instance.file.path.split(".")
-    persistent_dir=path_split[0]+"/"
-    print(instance.file.name)
-    if instance.file.name.endswith(".docx"):
-        loader = Docx2txtLoader(instance.file.path)
+    instance = PdffileUpload.objects.get(id=instance)
+    website = instance.website
+    if website:
+        loader = BSHTMLLoader(instance.website)
     else:
-        loader = PDFMinerLoader(instance.file.path)
-    # else:
-    #     raise ValueError("text file not supported")
-    data = loader.load()
-    vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
-    vector_db.persist()
-    instance.vector_embedding_path = persistent_dir
-    instance.save() 
+        try:
+            path_split=instance.file.path.split(".")
+            persistent_dir=path_split[0]+"/"
+            print(persistent_dir)
+            if instance.file.name.endswith(".docx"):
+                loader = Docx2txtLoader(instance.file.path)
+            else:
+                loader = PDFMinerLoader(instance.file.path)
+            data = loader.load()
+            text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+            texts = text_splitter.split_documents(data)
+            print("to_embedd")
+            # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
+            vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+            print("done_embedd")
+            vector_db.persist()
+            instance.vector_embedding_path = persistent_dir
+            instance.status = "SUCCESS"
+            
+            instance.save() 
+        except:
+            instance.status ="ERROR"
+            instance.save()
 
 def thumbnail_create(path) -> core :
     img_io = io.BytesIO()
@@ -51,9 +79,23 @@ def thumbnail_create(path) -> core :
 
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    llm =OpenAI()
+    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
-    # doc = vector_db.similarity_search(query=query)
+    # retriever = vector_db.as_retriever()
+    v = vector_db.similarity_search(query=query,)
+    with get_openai_callback() as cb:
+        chain = load_qa_chain(llm, chain_type="stuff")
+        res = chain({"input_documents": v, "question": query})
+        print(cb)
+        
     # vector_db=Chroma.from_documents(documents=doc,embedding=embeddings )
-    chain = RetrievalQA.from_chain_type(llm=OpenAI(),retriever =vector_db.as_retriever(search_type="similarity", search_kwargs={"k":1}),chain_type="stuff")
-    return chain.run(query).strip()
+    # chain = RetrievalQA.from_chain_type(llm=llm,retriever =vector_db.as_retriever(search_type="similarity", search_kwargs={"k":4}),chain_type="stuff")
+  
+    # qa_chain = RetrievalQA.from_chain_type(llm=OpenAI(),
+    #                               chain_type="stuff",
+    #                               retriever=retriever,
+    #                               return_source_documents=True)
+    print("-------------------")
+    # print(qa_chain(query) ) #chain.run(query).strip()
+    return res["output_text"] 
