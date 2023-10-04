@@ -710,8 +710,29 @@ class ProzExpertize(models.Model):
     subject_field = models.ForeignKey(SubjectFields, related_name='sub_field', on_delete=models.CASCADE)    
     expertize_ids = models.TextField(blank=True, null=True)
 
+class FrontMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class BodyMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
 
+class BackMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
 
+class Levels(models.Model):
+    level = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
+
+class Genre(models.Model):
+    genre = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
  
     

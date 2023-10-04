@@ -32,7 +32,6 @@ from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
-from ai_workspace_okapi.utils import get_translation 
 from ai_canvas.utils import convert_image_url_to_file,paginate_items ,export_download
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
@@ -526,17 +525,7 @@ def pixabay_api(request):
 
 #################################################################
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def instant_canvas_translation(request):
-#     text_list = request.POST.getlist('text')
-#     src_lang_id = request.POST.get('src_lang_id',None)
-#     tar_lang_id = request.POST.get('tar_lang_id')
-#     if src_lang_id:
-#         src_lang_code = Languages.objects.get(id=src_lang_id).locale.first().locale_code
-#     tar_lang_code = Languages.objects.get(id=tar_lang_id).locale.first().locale_code
-#     text_translation = get_translation(1,text_list,'en',tar_lang_code)
-#     return Response({'translated_text_list':text_translation})
+ 
 
 ##################################
 #######view for all user#########
