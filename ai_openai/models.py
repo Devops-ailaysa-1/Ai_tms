@@ -1,7 +1,7 @@
 from django.db import models
 from ai_auth.models import AiUser
 import os
-from ai_workspace.models import MyDocuments,Task
+from ai_workspace.models import MyDocuments,Task,Project
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution,
                               BackMatter,FrontMatter,BodyMatter,Levels,Genre,)
@@ -86,6 +86,7 @@ def user_directory_path_image_gen_result(instance, filename):
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    #project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="blog_create_project")
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
@@ -238,7 +239,8 @@ class CustomizationSettings(models.Model):
 class BookCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     author_name = models.CharField(max_length=250,blank=True,null=True)
-    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
+    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="book_create_project")
+    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
     description = models.TextField(null=True,blank=True)
     description_mt = models.TextField(null=True,blank=True)
     author_info = models.TextField(null=True,blank=True)
