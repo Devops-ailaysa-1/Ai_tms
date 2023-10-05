@@ -1520,4 +1520,3 @@ class BookBodyDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookBodyDetails
         fields = "__all__"
- 
