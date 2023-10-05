@@ -1,7 +1,7 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
                      BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
-                     BookBackMatter,BookFrontMatter,)
+                     BookBackMatter,BookFrontMatter,BookBodyDetails,)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
