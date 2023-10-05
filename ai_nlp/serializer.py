@@ -21,7 +21,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     class Meta:
         model = PdffileUpload
-        fields ='__all__'
+        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file')
 
 
     def create(self, validated_data):
