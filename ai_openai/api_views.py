@@ -1121,7 +1121,6 @@ def generate_chapter(request):
         print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
-        initial_credit = 2000 ########################################### should remove ##########################
         if book_body_instance.book_creation.book_language_code != 'en':
             credits_required = 2000
         else:
@@ -1129,7 +1128,6 @@ def generate_chapter(request):
         if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         # language_code = book_body_instance.book_creation.book_language_code
-        language_code = "ta"
         if language_code == 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
