@@ -2,19 +2,15 @@ from django import core
 import openai ,os,pdf2image,io
 from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY
-from langchain.document_loaders import UnstructuredPDFLoader ,PDFMinerLoader
+from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
+                                        WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
-from langchain.document_loaders import Docx2txtLoader
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
-from langchain.document_loaders import WebBaseLoader
-from langchain.document_loaders import BSHTMLLoader
 from celery.decorators import task
-# from tensorflow.python.platform import gfile
-# import tensorflow as tf
 from ai_nlp.models import PdffileUpload 
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
@@ -43,7 +39,6 @@ def text_splitter_create_vector(data,persistent_dir) -> Chroma:
 
 
 from celery.decorators import task
-import time ,tqdm
 
 @task(queue='default')
 def loader(file_id) -> None:
@@ -53,32 +48,35 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        path_split=instance.file.path.split(".")
-        persistent_dir=path_split[0]+"/"
-        os.makedirs(persistent_dir,mode=0o777)
-        print(persistent_dir)
-        if instance.file.name.endswith(".docx"):
-            loader = Docx2txtLoader(instance.file.path)
-        else:
-            loader = PDFMinerLoader(instance.file.path)
-        data = loader.load()
-        text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
-        texts = text_splitter.split_documents(data)
-        print(texts)
-        print("to_embedd")
-        print(persistent_dir)
-        save_prest( texts, embeddings, persistent_dir)
-        # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
-        # vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
-        # print(vector_db)
-        # print("done_embedd")
-        # vector_db.persist()
-        instance.vector_embedding_path = persistent_dir
-        instance.status = "SUCCESS"
-        instance.save() 
-        # except:
-        #     instance.status ="ERROR"
-        #     instance.save()
+        try:
+            path_split=instance.file.path.split(".")
+            persistent_dir=path_split[0]+"/"
+            os.makedirs(persistent_dir,mode=0o777)
+            print(persistent_dir)
+            if instance.file.name.endswith(".docx"):
+                loader = Docx2txtLoader(instance.file.path)
+            elif instance.file.name.endswith(".txt"):
+                loader = TextLoader(instance.file.path)
+            # elif instance.file.name.endswith(".epub"):
+            #     loader = UnstructuredEPubLoader(instance.file.path)
+            else:
+                print("pdf_processing")
+                loader = PDFMinerLoader(instance.file.path)
+            data = loader.load()
+            text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+            texts = text_splitter.split_documents(data)
+            save_prest( texts, embeddings, persistent_dir)
+            # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
+            # vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+            # print(vector_db)
+            # print("done_embedd")
+            # vector_db.persist()
+            instance.vector_embedding_path = persistent_dir
+            instance.status = "SUCCESS"
+            instance.save() 
+        except:
+            instance.status ="ERROR"
+            instance.save()
 
 def save_prest(texts,embeddings,persistent_dir):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)

@@ -1096,6 +1096,22 @@ def generate_article(request):
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
+from ai_openai.models import BookBody
+@api_view(["GET"])
+def generate_chapter(request):
+    if request.method=='GET':
+        blog_available_langs=[17]
+        bookbody_id=request.query_params.get('bookbody_id')
+        bookbody_instance = BookBody.objects.get(id=bookbody_id)
+        sub_categories=64
+        start_phrase="Create chapter for this title"
+        PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+        
+        blog_creation=request.query_params.get('blog_creation')
+
+
+
+
 
 #####for testing streaming #############
 
