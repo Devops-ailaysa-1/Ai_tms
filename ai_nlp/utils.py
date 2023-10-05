@@ -36,13 +36,13 @@ def text_splitter_create_vector(data,persistent_dir) -> Chroma:
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
     print(type(embeddings))
     return vector_db
-
+embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
 
 from celery.decorators import task
 
 @task(queue='default')
 def loader(file_id) -> None:
-    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    
     instance = PdffileUpload.objects.get(id=file_id)
     website = instance.website
     if website:
@@ -94,7 +94,7 @@ def thumbnail_create(path) -> core :
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    # embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()

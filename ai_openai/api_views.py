@@ -1097,17 +1097,62 @@ def generate_article(request):
 
 
 from ai_openai.models import BookBody
+from ai_staff.models import PromptStartPhrases
 @api_view(["GET"])
 def generate_chapter(request):
     if request.method=='GET':
-        blog_available_langs=[17]
         bookbody_id=request.query_params.get('bookbody_id')
-        bookbody_instance = BookBody.objects.get(id=bookbody_id)
-        sub_categories=64
-        start_phrase="Create chapter for this title"
-        PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+        book_body_instance = BookBody.objects.get(id=bookbody_id)
+        # book_phrase = PromptStartPhrases.objects.get(sub_category=book_body_instance.sub_categories)
+        book_title =book_body_instance.book_title.book_title_mt if book_body_instance.book_title.book_title_mt else book_body_instance.book_title.book_title
+        generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
+        book_level = book_body_instance.book_creation.level.level
+        book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
+        author_info =book_body_instance.book_creation.author_info_mt if book_body_instance.book_creation.author_info_mt else book_body_instance.book_creation.author_info
+        print("-------",book_title)
+        print(generated_content)
+        print(book_level)
+        print(book_description)
+        print(author_info)
+
+
+        prompt = "Create a chapter for a title {} with gener {} in level {} with description {} and create based \
+        on author info {} ".format(book_title,generated_content,book_level,book_description,author_info)
+        print(prompt)
+
+        initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
+        initial_credit = 2000 ########################################### should remove ##########################
+        if book_body_instance.book_creation.book_language_code != 'en':
+            credits_required = 2000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         
-        blog_creation=request.query_params.get('blog_creation')
+        if  book_body_instance.book_creation.book_language_code== 'en':
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_en(title):
+                str_con=""
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            word=content+' '
+                            str_con+=content
+                            yield '\ndata: {}\n\n'.format(content)
+                    else:
+                        token_usage=num_tokens_from_string(str_con+" "+prompt)
+                        print("Token Usage----------->",token_usage)
+                        AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+                        print("token_usage---------->>",token_usage)
+ 
+            return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
+
+        return JsonResponse({'ok':"error"},status=405)
+
+
 
 
 
