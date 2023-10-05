@@ -1240,8 +1240,8 @@ class BookBodySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         print("ValiData----------->",validated_data)
-        lang_code =instance.book_title.book_creation.book_language_code
-        user_id = instance.book_title.book_creation.user.id
+        lang_code =instance.book_creation.book_language_code
+        user_id = instance.book_creation.user.id
 
         if validated_data.get('select_group',None):
             BookBody.objects.filter(group=validated_data.get('select_group'),book_title_id=instance.book_title_id).update(selected_field=True)
