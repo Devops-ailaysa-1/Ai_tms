@@ -1139,7 +1139,7 @@ def generate_chapter(request):
                             content=delta['content']
                             word=content+' '
                             str_con+=content
-                            yield '\ndata: {}\n\n'.format(content)
+                            yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con+" "+prompt)
                         print("Token Usage----------->",token_usage)
@@ -1177,7 +1177,7 @@ def generate_chapter(request):
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
                                         #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
-                                    yield '\ndata: {}\n\n'.format(blog_article_trans)                                    
+                                    yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' #####
                                     arr.append(new_line_split[-1])
@@ -1194,10 +1194,10 @@ def generate_chapter(request):
                                             print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
                                             #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                                     str_cont='' ######
                             else:
