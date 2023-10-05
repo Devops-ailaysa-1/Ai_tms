@@ -705,7 +705,7 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
         elif value == "translation":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id = 6)#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         print("QRF-->",queryset)
@@ -3674,7 +3674,9 @@ class MyDocumentsView(viewsets.ModelViewSet):
         q1 = q1.filter(doc_name__icontains =query) if query else q1
         q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
         q2 = q2.filter(user_title__icontains = query) if query else q2
-        q3 = q1.union(q2)
+        q4 = Project.objects.filter(project_type_id=7).filter(Q(ai_user = user)|Q(created_by__in = project_managers)|Q(ai_user=owner)).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value('Book',output_field=CharField()),open_as=Value('Document', output_field=CharField())).values('id','created_at','project_name','word_count','open_as','document_type__type')
+        q4 = q4.filter(project_name__icontains=query) if query else q4
+        q3 = q1.union(q2,q4)
         final_queryset = q3.order_by('-created_at')
         if ordering:
             field_name = ordering.lstrip('-')

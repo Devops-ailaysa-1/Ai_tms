@@ -341,6 +341,9 @@ class Project(models.Model):
             rr = voice_project_progress(self,tasks)
             return rr
 
+        elif self.project_type_id == 7 or self.project_type_id == 6:
+            return None
+
         else:
             assigned_jobs = [i.job.id for i in tasks]
             docs = Document.objects.filter(job__in=assigned_jobs).all()
@@ -436,7 +439,7 @@ class Project(models.Model):
 
     @property
     def get_analysis_tasks(self):
-        if self.project_type_id == 3:
+        if self.project_type_id in [3,6,7]: #[glossary,designer,book]
             return Task.objects.none()
         if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
             return self.get_tasks
@@ -666,7 +669,7 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks or self.project_type_id == 6 or self.file_translate == True:
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
