@@ -1218,24 +1218,17 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
     def get_object(self, pk):
         try:
             user = self.request.user.team.owner if self.request.user.team else self.request.user
-            return BookBodyDetails.objects.get(book_creation__user=user,id=pk)
+            return BookBodyDetails.objects.get(book_bm__book_creation__user=user,id=pk)
         except BookBodyDetails.DoesNotExist:
             raise Http404
     
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user
-        queryset = BookBodyDetails.objects.filter(book_creation__user=user).order_by('-id')
-        queryset = self.filter_queryset(queryset)
+        queryset = BookBodyDetails.objects.filter(book_bm__book_creation__user=user).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = BookBodyDetailSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
-    
-    def filter_queryset(self, queryset):
-        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
-        for backend in list(filter_backends):
-            queryset = backend().filter_queryset(self.request, queryset, view=self)
-        return queryset
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
@@ -1253,7 +1246,7 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
     def destroy(self,request,pk):
         try:
             user = request.user.team.owner if request.user.team else request.user
-            obj = BookBodyDetailSerializer.objects.get(user=user,id=pk)
+            obj = BookBodyDetails.objects.get(book_bm__book_creation__user=user,id=pk)
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
         except:
