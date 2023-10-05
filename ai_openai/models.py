@@ -237,6 +237,7 @@ class CustomizationSettings(models.Model):
 
 class BookCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    author_name = models.CharField(max_length=250,blank=True,null=True)
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
     description = models.TextField(null=True,blank=True)
     description_mt = models.TextField(null=True,blank=True)
