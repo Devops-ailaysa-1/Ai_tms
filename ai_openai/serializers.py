@@ -1183,8 +1183,8 @@ class BookBodySerializer(serializers.ModelSerializer):
                     book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,temp_order=count+1,token_usage=token_usage) 
             default_bm = BackMatter.objects.get(name='Afterword')
             default_fm = FrontMatter.objects.get(name='Preface')
-            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1)
-            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter=default_fm,sub_categories_id=68,temp_order=1,custom_order=1)
+            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1,name=default_bm.name)
+            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter=default_fm,sub_categories_id=68,temp_order=1,custom_order=1,name=default_fm.name)
             print("RRRRRRR-------------------->",bm,fm)
             instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
             # if token_usage:
