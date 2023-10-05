@@ -1279,30 +1279,30 @@ class BookBodyViewsetV2(viewsets.ViewSet,PageNumberPagination):
 #####for testing streaming #############
 
 
-# @api_view(["GET"])
-# def generate(request):
-#     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
+@api_view(["GET"])
+def generate(request):
+    title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
 
-# The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
+The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
 
-# Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
+Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
 
-# Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
+Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
 
-# However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
+However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
 
-#             """ 
-#     if request.method=='GET':
-#         title=title.split(" ")
-#         def stream():
-#             for chunk in title:
-#                 if chunk:
-#                     yield '\ndata: {}\n\n'.format({"t":chunk})
-#                 else:
-#                     print("stream is finished")
-#         return StreamingHttpResponse(stream(),content_type='text/event-stream')
+            """ 
+    if request.method=='GET':
+        title=title.split(" ")
+        def stream():
+            for chunk in title:
+                if chunk:
+                    yield '\ndata: {}\n\n'.format(chunk)
+                else:
+                    print("stream is finished")
+        return StreamingHttpResponse(stream(),content_type='text/event-stream')
     
-#     return JsonResponse({'error':'Method not allowed.'},status=405)
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])
 # def generate_article(request):
