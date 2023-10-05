@@ -1514,10 +1514,10 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         return instance#super().update(instance, validated_data)
     
 
-from ai_openai.models import BookBody
-class BookBodySerializerV2(serializers.ModelSerializer):
+from ai_openai.models import BookBodyDetails
+class BookBodyDetailSerializer(serializers.ModelSerializer):
  
     class Meta:
-        model = BookBody
+        model = BookBodyDetails
         fields = "__all__"
  
