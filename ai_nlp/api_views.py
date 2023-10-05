@@ -78,14 +78,20 @@ def wordapi_synonyms(request):
 
 
 from rest_framework.permissions import IsAuthenticated
-
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['file_name','status']
+    search_fields =['file_name','status']
     page_size=20
+
 
     def get_object(self, pk):
         try:
-            return PdffileUpload.objects.get(id=pk)
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return PdffileUpload.objects.get(user=user,id=pk)
         except PdffileUpload.DoesNotExist:
             raise Http404
 
@@ -98,8 +104,11 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
 
 
     def create(self,request):
-        user,pr_managers = self.get_user() 
+        
         file=request.FILES.get('file',None)
+        if not file:
+            return Response({'msg':'no file attached'})
+        user,pr_managers = self.get_user() 
         data = {'user':user.id,'managers':pr_managers,'file':file}
         serializer = PdffileUploadSerializer(data={**data})
         if serializer.is_valid():
@@ -108,7 +117,9 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = PdffileUpload.objects.all().order_by("-id")
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = PdffileUpload.objects.filter(user=user).order_by("-id")
+        queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = PdffileUploadSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -119,6 +130,11 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         serializer = PdffileShowDetailsSerializer(obj)
         return Response(serializer.data)
     
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
 
     def destroy(self,request,pk):
         try:
