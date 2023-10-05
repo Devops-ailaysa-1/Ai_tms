@@ -28,6 +28,7 @@ from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
 from django.db import IntegrityError
 from django.db import models, transaction
+from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
 
 def replace_punctuation(text):
     for punctuation_mark in string.punctuation:
@@ -984,12 +985,12 @@ class BookCreationSerializer(serializers.ModelSerializer):
     book_title_create=BookTitleSerializer(many=True,required=False)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
-    
+    project_name = serializers.ReadOnlyField(source='project.project_name')
     class Meta:
         model = BookCreation
-        fields = ('id','user', 'document', 'description','description_mt','author_info','author_info_mt',
+        fields = ('id','user', 'description','description_mt','author_info','author_info_mt',
                 'author_name','genre','level','title','title_mt','categories','sub_categories',
-                'book_language','book_title_create',)
+                'book_language','book_title_create','project','project_name')
         
 
     def create(self,validated_data):  
@@ -1026,6 +1027,15 @@ class BookCreationSerializer(serializers.ModelSerializer):
             
             instance.author_info_mt=get_translation(1,instance.title,lang_detect_author_info,"en",user_id=instance.user.id) if instance.title else None
             instance.save()
+
+        project_type = ProjectType.objects.get(id=7) #Writer Project creation
+        default_step = Steps.objects.get(id=1)
+        team = instance.user.team if instance.user.team else None
+        project_instance =  Project.objects.create(project_type =project_type, ai_user=instance.user,created_by=instance.user,team=team)
+        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
+        print("prIns--------------->",project_instance)
+        instance.project = project_instance
+        instance.save()
         return instance
     
     def update(self, instance, validated_data):
@@ -1412,6 +1422,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         blog_available_langs =[17]
         back_matter = validated_data.get('back_matter',1)
         sub_categories = validated_data.get('sub_categories',68)
+        obj = validated_data.get('obj')
         name = validated_data.get('name',None)
         obj = validated_data.get('obj')
         count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
@@ -1503,10 +1514,10 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         return instance#super().update(instance, validated_data)
     
 
-from ai_openai.models import BookBody
-class BookBodySerializerV2(serializers.ModelSerializer):
+from ai_openai.models import BookBodyDetails
+class BookBodyDetailSerializer(serializers.ModelSerializer):
  
     class Meta:
-        model = BookBody
+        model = BookBodyDetails
         fields = "__all__"
  
