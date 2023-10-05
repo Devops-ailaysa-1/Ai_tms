@@ -788,17 +788,17 @@ class BookBodyViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        categories = 11
-        sub_categories = 67
+        categories = 11   
         body_matter = request.POST.get('body_matter',1)
         book_title = request.POST.get('book_title',None)
+        sub_categories = 67 if int(body_matter) == 1 else 68
         user = request.user.team.owner if request.user.team else request.user
         serializer = BookBodySerializer(data={**request.POST.dict(),'body_matter':body_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
-            qr = BookBody.objects.filter(book_title_id=book_title,body_matter_id=body_matter).order_by('custom_order')
-            ser = BookBodySerializer(qr,many=True)
-            return Response(ser.data)
+            # qr = BookBody.objects.filter(book_title_id=book_title,body_matter_id=body_matter).order_by('custom_order')
+            # ser = BookBodySerializer(qr,many=True)
+            return Response(serializer.data)
         return Response(serializer.errors)
     
     def update(self,request,pk):
