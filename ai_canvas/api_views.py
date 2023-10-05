@@ -609,6 +609,10 @@ class FontFileViewset(viewsets.ViewSet):
         
     def create(self,request):
         font_file=request.FILES.get('font_file',None)
+
+        if str(font_file).split('.')[-1] not in ['ttf','otf','woff','woff2']:
+            return Response({'msg':'only ttf ,woff,woff2, otf suppported file'},status=400)
+
         user = request.user.team.owner if request.user.team else request.user
         print({**request.POST.dict(),'font_family':font_file})
         serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':user.id,'created_by':request.user.id})
