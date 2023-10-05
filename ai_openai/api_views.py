@@ -1127,7 +1127,7 @@ def generate_chapter(request):
             credits_required = 200
         if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-        # language_code = book_body_instance.book_creation.book_language_code
+        language_code = book_body_instance.book_creation.book_language_code
         if language_code == 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
