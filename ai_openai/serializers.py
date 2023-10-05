@@ -988,7 +988,7 @@ class BookCreationSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCreation
         fields = ('id','user', 'document', 'description','description_mt','author_info','author_info_mt',
-                'genre','level','title','title_mt','categories','sub_categories',
+                'author_name','genre','level','title','title_mt','categories','sub_categories',
                 'book_language','book_title_create',)
         
 
@@ -997,8 +997,6 @@ class BookCreationSerializer(serializers.ModelSerializer):
         instance = BookCreation.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
         total_usage = 0
-        # if initial_credit < 1400:
-        #     raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
 
         lang_detect_description = lang_detector(instance.description) 
         if lang_detect_description !='en':
@@ -1032,6 +1030,7 @@ class BookCreationSerializer(serializers.ModelSerializer):
         return instance
     
     def update(self, instance, validated_data):
+        #print("VD------------->",validated_data)
         blog_available_langs = [17]
         lang = instance.book_language_code
         initial_credit = instance.user.credit_balance.get("total_left")
