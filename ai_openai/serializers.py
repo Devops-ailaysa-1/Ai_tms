@@ -996,12 +996,12 @@ class BookCreationSerializer(serializers.ModelSerializer):
         blog_available_langs = [17]
         instance = BookCreation.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
+
         total_usage = 0
 
         lang_detect_description = lang_detector(instance.description) 
         if lang_detect_description !='en':
             consumable_credits = get_consumable_credits_for_text(instance.description,instance.book_language_code,'en')
-
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits','book_id':instance.id}, code=400)
             
@@ -1011,7 +1011,6 @@ class BookCreationSerializer(serializers.ModelSerializer):
         lang_detect_author_info = lang_detector(instance.author_info) 
         if lang_detect_author_info !='en':
             consumable_credits = get_consumable_credits_for_text(instance.author_info,instance.book_language_code,'en')
-
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits','book_id':instance.id}, code=400)
             
@@ -1119,6 +1118,7 @@ class BookBodySerializer(serializers.ModelSerializer):
 
             if body_matter.id == 1:
                 print("-------------------------------------------")
+                print(book_body_start_phrase.start_phrase)
                 prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
                 print("PR------------->",prompt)
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
@@ -1183,8 +1183,8 @@ class BookBodySerializer(serializers.ModelSerializer):
                     book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,temp_order=count+1,token_usage=token_usage) 
             default_bm = BackMatter.objects.get(name='Afterword')
             default_fm = FrontMatter.objects.get(name='Preface')
-            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1)
-            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter=default_fm,sub_categories_id=68,temp_order=1,custom_order=1)
+            bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1,name=default_bm.name)
+            fm = BookFrontMatter.objects.create(book_creation=book_obj,front_matter=default_fm,sub_categories_id=68,temp_order=1,custom_order=1,name=default_fm.name)
             print("RRRRRRR-------------------->",bm,fm)
             instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
             # if token_usage:
