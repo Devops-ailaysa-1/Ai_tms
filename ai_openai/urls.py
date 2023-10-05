@@ -16,6 +16,7 @@ router.register(r'bookbodymatter',api_views.BookBodyViewset ,basename='ai_book_b
 router.register(r'bookfrontmatter',api_views.BookFMViewset ,basename='ai_book_fm')
 router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm')
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
+router.register(r'bookbody',api_views.BookBodyViewsetV2 ,basename='ai_openai_bookbody')
 urlpatterns = router.urls
 
  
