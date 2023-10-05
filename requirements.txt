@@ -235,7 +235,6 @@ python-pptx
 unstructured==0.10.12
 Pydantic==1.10.12
 pdf2image==1.16.3
-pdfminer==20191125 ##should remove
 pdfminer.six==20221105
 chromadb==0.3.29 
 docx2txt==0.8

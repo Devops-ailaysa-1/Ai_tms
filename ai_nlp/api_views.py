@@ -7,9 +7,8 @@ from nltk.util import ngrams
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
 from django.http import HttpResponse
-from ai_nlp.models import  PdffileUpload,PdffileChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory
 import django_filters
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -104,7 +103,7 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
 
 
     def create(self,request):
-        
+
         file=request.FILES.get('file',None)
         if not file:
             return Response({'msg':'no file attached'})

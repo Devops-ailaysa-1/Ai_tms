@@ -1274,7 +1274,7 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         
         if validated_data.get('html_data',None):
-            instance.html_data = html_data
+            instance.html_data = validated_data.get('html_data')
             instance.save()
 
         if validated_data.get('order_list',None):
@@ -1378,15 +1378,15 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         instance.save() 
 
         if validated_data.get('name',None):
-            instance.name = name
+            instance.name = validated_data.get('name')
             instance.save()
 
-        if validated_data.get('selected_field',None):
-            instance.selected_field = selected_field
-            instance.save()
+        # if validated_data.get('selected_field',None):
+        #     instance.selected_field = selected_field
+        #     instance.save()
 
         if validated_data.get('html_data',None):
-            instance.html_data = html_data
+            instance.html_data = validated_data.get('html_data')
             instance.save()
 
         if validated_data.get('order_list',None):
@@ -1413,6 +1413,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         back_matter = validated_data.get('back_matter',1)
         sub_categories = validated_data.get('sub_categories',68)
         name = validated_data.get('name',None)
+        obj = validated_data.get('obj')
         count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
         if not obj:
@@ -1441,7 +1442,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         if (book_obj.book_language_id not in blog_available_langs):
                 print("book title create not in en")
                 initial_credit = book_obj.user.credit_balance.get("total_left")
-                consumable_credits_to_translate_title = get_consumable_credits_for_text(front_matter,book_obj.book_language_code,'en')
+                consumable_credits_to_translate_title = get_consumable_credits_for_text(back_matter,book_obj.book_language_code,'en')
                 if initial_credit > consumable_credits_to_translate_title:
                     bm_in_other_lang=get_translation(1,back_matter,"en",book_obj.book_language_code,
                                                             user_id=book_obj.user.id,from_open_ai=True) 
@@ -1482,15 +1483,15 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         instance.save() 
 
         if validated_data.get('name',None):
-            instance.name = name
+            instance.name = validated_data.get('name')
             instance.save()
 
-        if validated_data.get('selected_field',None):
-            instance.selected_field = selected_field
-            instance.save()
+        # if validated_data.get('selected_field',None):
+        #     instance.selected_field = selected_field
+        #     instance.save()
 
         if validated_data.get('html_data',None):
-            instance.html_data = html_data
+            instance.html_data = validated_data.get('html_data')
             instance.save()
 
         if validated_data.get('order_list',None):
@@ -1500,3 +1501,12 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
                 BookBackMatter.objects.filter(temp_order=order).filter(book_creation=instance.book_creation).update(custom_order=index)
 
         return instance#super().update(instance, validated_data)
+    
+
+from ai_openai.models import BookBody
+class BookBodySerializerV2(serializers.ModelSerializer):
+ 
+    class Meta:
+        model = BookBody
+        fields = "__all__"
+ 
