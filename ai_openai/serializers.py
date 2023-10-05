@@ -1388,7 +1388,7 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         instance.save() 
 
         if validated_data.get('name',None):
-            instance.name = name
+            instance.name = validated_data.get('name')
             instance.save()
 
         # if validated_data.get('selected_field',None):
@@ -1424,6 +1424,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         sub_categories = validated_data.get('sub_categories',68)
         obj = validated_data.get('obj')
         name = validated_data.get('name',None)
+        obj = validated_data.get('obj')
         count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
         print("Count------->",count)
         if not obj:
@@ -1511,3 +1512,12 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
                 BookBackMatter.objects.filter(temp_order=order).filter(book_creation=instance.book_creation).update(custom_order=index)
 
         return instance#super().update(instance, validated_data)
+    
+
+from ai_openai.models import BookBody
+class BookBodySerializerV2(serializers.ModelSerializer):
+ 
+    class Meta:
+        model = BookBody
+        fields = "__all__"
+ 

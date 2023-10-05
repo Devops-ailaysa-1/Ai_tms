@@ -16,6 +16,7 @@ router.register(r'bookbodymatter',api_views.BookBodyViewset ,basename='ai_book_b
 router.register(r'bookfrontmatter',api_views.BookFMViewset ,basename='ai_book_fm')
 router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm')
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
+router.register(r'bookbody',api_views.BookBodyViewsetV2 ,basename='ai_openai_bookbody')
 urlpatterns = router.urls
 
  
@@ -35,7 +36,7 @@ urlpatterns += [
  
     # path('stream_article/',api_views.PostStreamView.as_view()),
     path('credit_blog_check/',api_views.credit_check_blog),
-    # path('article_generate_test/',api_views.generate),
+    path('article_generate_test/',api_views.generate),
     path('book_chapter_generate/',api_views.generate_chapter)
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]

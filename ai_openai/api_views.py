@@ -1114,10 +1114,9 @@ def generate_chapter(request):
         print(book_level)
         print(book_description)
         print(author_info)
-
-
-        prompt = "Create a chapter for a title {} with gener {} in level {} with description {} and create based \
-        on author info {} ".format(book_title,generated_content,book_level,book_description,author_info)
+        sub_cat = 71
+        prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
+        prompt = prompt.format(book_title,generated_content,book_level,book_description,author_info)
         print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
@@ -1211,37 +1210,98 @@ def generate_chapter(request):
 
 
 
+from ai_openai.models import BookBody 
+from django.http import Http404 
+from ai_openai.serializers import BookBodySerializerV2
+from rest_framework import filters ,serializers
+class BookBodyViewsetV2(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+    search_fields =['image_name']
 
+    def get_object(self, pk):
+        try:
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return BookBody.objects.get(book_creation__user=user,id=pk)
+        except BookBody.DoesNotExist:
+            raise Http404
 
+    # def create(self,request):
+    #     image = request.FILES.get('image')
+    #     user = request.user.team.owner if request.user.team else request.user
+    #     if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif','JPEG','PNG','SVG','JPG']:
+    #         return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+    #     serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request,'user':user,'created_by':request.user})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors)
+    
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = BookBody.objects.filter(book_creation__user=user).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = BookBodySerializerV2(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = BookBodySerializerV2(obj)
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = BookBodySerializerV2(obj,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+        
+    def destroy(self,request,pk):
+        try:
+            user = request.user.team.owner if request.user.team else request.user
+            obj = BookBodySerializerV2.objects.get(user=user,id=pk)
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
 
 
 #####for testing streaming #############
 
 
-# @api_view(["GET"])
-# def generate(request):
-#     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
+@api_view(["GET"])
+def generate(request):
+    title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
 
-# The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
+The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
 
-# Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
+Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
 
-# Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
+Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
 
-# However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
+However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
 
-#             """ 
-#     if request.method=='GET':
-#         title=title.split(" ")
-#         def stream():
-#             for chunk in title:
-#                 if chunk:
-#                     yield '\ndata: {}\n\n'.format({"t":chunk})
-#                 else:
-#                     print("stream is finished")
-#         return StreamingHttpResponse(stream(),content_type='text/event-stream')
+            """ 
+    if request.method=='GET':
+        title=title.split(" ")
+        def stream():
+            for chunk in title:
+                if chunk:
+                    yield '\ndata: {}\n\n'.format(chunk)
+                else:
+                    print("stream is finished")
+        return StreamingHttpResponse(stream(),content_type='text/event-stream')
     
-#     return JsonResponse({'error':'Method not allowed.'},status=405)
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])
 # def generate_article(request):
