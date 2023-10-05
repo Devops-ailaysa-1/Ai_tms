@@ -23,7 +23,7 @@ from langchain.callbacks import get_openai_callback
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
-# embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+
 # chat_params = {
 #         "model": "gpt-3.5-turbo-16k", # Bigger context window
 #         "openai_api_key": OPENAI_API_KEY ,
@@ -33,42 +33,58 @@ emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 # llm = ChatOpenAI(**chat_params)
 
 def text_splitter_create_vector(data,persistent_dir) -> Chroma:
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
     texts = text_splitter.split_documents(data)
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
     print(type(embeddings))
     return vector_db
 
-def loader(instance) -> None:
-    instance = PdffileUpload.objects.get(id=instance)
+
+from celery.decorators import task
+import time ,tqdm
+
+@task(queue='default')
+def loader(file_id) -> None:
+    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    instance = PdffileUpload.objects.get(id=file_id)
     website = instance.website
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        try:
-            path_split=instance.file.path.split(".")
-            persistent_dir=path_split[0]+"/"
-            print(persistent_dir)
-            if instance.file.name.endswith(".docx"):
-                loader = Docx2txtLoader(instance.file.path)
-            else:
-                loader = PDFMinerLoader(instance.file.path)
-            data = loader.load()
-            text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
-            texts = text_splitter.split_documents(data)
-            print("to_embedd")
-            # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
-            vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
-            print("done_embedd")
-            vector_db.persist()
-            instance.vector_embedding_path = persistent_dir
-            instance.status = "SUCCESS"
-            
-            instance.save() 
-        except:
-            instance.status ="ERROR"
-            instance.save()
+        path_split=instance.file.path.split(".")
+        persistent_dir=path_split[0]+"/"
+        os.makedirs(persistent_dir,mode=0o777)
+        print(persistent_dir)
+        if instance.file.name.endswith(".docx"):
+            loader = Docx2txtLoader(instance.file.path)
+        else:
+            loader = PDFMinerLoader(instance.file.path)
+        data = loader.load()
+        text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+        texts = text_splitter.split_documents(data)
+        print(texts)
+        print("to_embedd")
+        print(persistent_dir)
+        save_prest( texts, embeddings, persistent_dir)
+        # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
+        # vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+        # print(vector_db)
+        # print("done_embedd")
+        # vector_db.persist()
+        instance.vector_embedding_path = persistent_dir
+        instance.status = "SUCCESS"
+        instance.save() 
+        # except:
+        #     instance.status ="ERROR"
+        #     instance.save()
+
+def save_prest(texts,embeddings,persistent_dir):
+    vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+    vector_db.persist()
+    print("--------",vector_db)
+    vector_db = None
 
 def thumbnail_create(path) -> core :
     img_io = io.BytesIO()
@@ -80,7 +96,8 @@ def thumbnail_create(path) -> core :
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()
     v = vector_db.similarity_search(query=query,)
