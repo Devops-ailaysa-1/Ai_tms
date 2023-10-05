@@ -1104,7 +1104,7 @@ def generate_chapter(request):
         bookbody_id=request.query_params.get('bookbody_id')
         book_body_instance = BookBody.objects.get(id=bookbody_id)
         # book_phrase = PromptStartPhrases.objects.get(sub_category=book_body_instance.sub_categories)
-        book_title =book_body_instance.book_title.book_title_mt if book_body_instance.book_title.book_title_mt else book_body_instance.book_title.book_title
+        book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
         book_level = book_body_instance.book_creation.level.level
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
@@ -1235,6 +1235,14 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
         serializer = BookBodyDetailSerializer(obj)
         return Response(serializer.data)
     
+    def create(self,request):
+        serializer = BookBodyDetailSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
     def update(self,request,pk):
         obj =self.get_object(pk)
         serializer = BookBodyDetailSerializer(obj,data=request.data,partial=True)
