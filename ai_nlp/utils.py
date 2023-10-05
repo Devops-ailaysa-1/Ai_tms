@@ -19,7 +19,7 @@ from langchain.callbacks import get_openai_callback
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
-embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+
 # chat_params = {
 #         "model": "gpt-3.5-turbo-16k", # Bigger context window
 #         "openai_api_key": OPENAI_API_KEY ,
@@ -90,7 +90,7 @@ def thumbnail_create(path) -> core :
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-    # embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()
