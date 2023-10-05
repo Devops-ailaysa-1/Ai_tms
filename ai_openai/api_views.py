@@ -1211,8 +1211,69 @@ def generate_chapter(request):
 
 
 
+from ai_openai.models import BookBody 
+from django.http import Http404 
+from ai_openai.serializers import BookBodySerializerV2
+from rest_framework import filters ,serializers
+class BookBodyViewsetV2(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+    search_fields =['image_name']
 
+    def get_object(self, pk):
+        try:
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return BookBody.objects.get(book_creation__user=user,id=pk)
+        except BookBody.DoesNotExist:
+            raise Http404
 
+    # def create(self,request):
+    #     image = request.FILES.get('image')
+    #     user = request.user.team.owner if request.user.team else request.user
+    #     if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif','JPEG','PNG','SVG','JPG']:
+    #         return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
+    #     serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request,'user':user,'created_by':request.user})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors)
+    
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = BookBody.objects.filter(book_creation__user=user).order_by('-id')
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = BookBodySerializerV2(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = BookBodySerializerV2(obj)
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = BookBodySerializerV2(obj,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+        
+    def destroy(self,request,pk):
+        try:
+            user = request.user.team.owner if request.user.team else request.user
+            obj = BookBodySerializerV2.objects.get(user=user,id=pk)
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
 
 
 #####for testing streaming #############
