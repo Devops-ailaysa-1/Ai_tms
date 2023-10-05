@@ -1128,8 +1128,9 @@ def generate_chapter(request):
             credits_required = 200
         if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-        
-        if  book_body_instance.book_creation.book_language_code== 'en':
+        # language_code = book_body_instance.book_creation.book_language_code
+        language_code = "ta"
+        if language_code == 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
                 str_con=""
@@ -1147,10 +1148,68 @@ def generate_chapter(request):
                         print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
                         print("token_usage---------->>",token_usage)
- 
             return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
-
-        return JsonResponse({'ok':"error"},status=405)
+        else:
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_other_lang(title):
+                arr=[]
+                str_cont=''
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            word=content
+                            str_cont+=content########
+                            print(str_cont)
+                            if "." in word or "\n" in word:
+                                if "\n" in word:
+                                    new_line_split=word.split("\n")
+                                    arr.append(new_line_split[0]+'\n')
+                                    str_cont+='\n' #####
+                                    text=" ".join(arr)
+                                    consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,language_code,'en')
+                                    consumable = max(round(consumable_credits_for_article_gen/3),1) 
+                                    print("Consumable--------->",consumable)
+                                    print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
+                                    token_usage=num_tokens_from_string(str_cont)
+                                    AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+                                    print("StrContent------------->",str_cont) 
+                                    if initial_credit >= consumable:
+                                        print("Str----------->",str_cont)
+                                        blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
+                                        #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                    yield '\ndata: {}\n\n'.format(blog_article_trans)                                    
+                                    arr=[]
+                                    str_cont='' #####
+                                    arr.append(new_line_split[-1])
+                                elif "." in word:
+                                    sente=" ".join(arr)
+                                    if sente[-1]!='.':
+                                        sente=sente+'.'
+                                        consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,language_code,'en')
+                                        consumable = max(round(consumable_credits_for_article_gen/3),1) 
+                                        token_usage=num_tokens_from_string(str_cont)
+                                        AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+                                        print("StrContent------------->",str_cont) 
+                                        if initial_credit >= consumable:
+                                            print("StrContent------------->",str_cont)
+                                            blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
+                                            #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                    else:
+                                    # blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                    arr=[]
+                                    str_cont='' ######
+                            else:
+                                arr.append(word)
+                    else:
+                        token_usage=num_tokens_from_string(prompt)
+                        AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+            return StreamingHttpResponse(stream_article_response_other_lang(book_title),content_type='text/event-stream')
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
 
@@ -1161,30 +1220,30 @@ def generate_chapter(request):
 #####for testing streaming #############
 
 
-@api_view(["GET"])
-def generate(request):
-    title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
+# @api_view(["GET"])
+# def generate(request):
+#     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
 
-The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
+# The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
 
-Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
+# Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
 
-Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
+# Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
 
-However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
+# However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
 
-            """ 
-    if request.method=='GET':
-        title=title.split(" ")
-        def stream():
-            for chunk in title:
-                if chunk:
-                    yield '\ndata: {}\n\n'.format({"t":chunk})
-                else:
-                    print("stream is finished")
-        return StreamingHttpResponse(stream(),content_type='text/event-stream')
+#             """ 
+#     if request.method=='GET':
+#         title=title.split(" ")
+#         def stream():
+#             for chunk in title:
+#                 if chunk:
+#                     yield '\ndata: {}\n\n'.format({"t":chunk})
+#                 else:
+#                     print("stream is finished")
+#         return StreamingHttpResponse(stream(),content_type='text/event-stream')
     
-    return JsonResponse({'error':'Method not allowed.'},status=405)
+#     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])
 # def generate_article(request):
