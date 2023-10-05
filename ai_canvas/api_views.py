@@ -169,7 +169,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     def get_object(self, pk):
         try:
             user = self.request.user.team.owner if self.request.user.team else self.request.user
-            return CanvasUserImageAssets.objects.get(user,id=pk)
+            return CanvasUserImageAssets.objects.get(user=user,id=pk)
         except CanvasUserImageAssets.DoesNotExist:
             raise Http404
 

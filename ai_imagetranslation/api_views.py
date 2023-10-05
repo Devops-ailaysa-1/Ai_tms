@@ -50,7 +50,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         image = request.FILES.get('image',None)
         if image:
-            if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg' , 'JPEG','PNG','JPG','SVG']:
                 return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
  
         serializer = ImageloadSerializer(data=request.data ,context={'request':request})

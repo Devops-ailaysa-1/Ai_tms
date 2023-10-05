@@ -19,7 +19,7 @@ from langchain.callbacks import get_openai_callback
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
-
+embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
 # chat_params = {
 #         "model": "gpt-3.5-turbo-16k", # Bigger context window
 #         "openai_api_key": OPENAI_API_KEY ,
@@ -28,15 +28,15 @@ emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 #     }
 # llm = ChatOpenAI(**chat_params)
 
-def text_splitter_create_vector(data,persistent_dir) -> Chroma:
-    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-    text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
-    texts = text_splitter.split_documents(data)
-    vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
-    print(type(embeddings))
-    return vector_db
-embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+# def text_splitter_create_vector(data,persistent_dir) -> Chroma:
+#     embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+#     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+#     text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+#     texts = text_splitter.split_documents(data)
+#     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+#     print(type(embeddings))
+#     return vector_db
+
 
 from celery.decorators import task
 
@@ -65,12 +65,8 @@ def loader(file_id) -> None:
             data = loader.load()
             text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
             texts = text_splitter.split_documents(data)
+            embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
             save_prest( texts, embeddings, persistent_dir)
-            # vector_db=text_splitter_create_vector(data=data,persistent_dir=persistent_dir)
-            # vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
-            # print(vector_db)
-            # print("done_embedd")
-            # vector_db.persist()
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
             instance.save() 
