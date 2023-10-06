@@ -252,6 +252,8 @@ class BookCreation(models.Model):
     categories = models.ForeignKey(PromptCategories, on_delete = models.CASCADE,related_name = 'book_categories' ,blank=True,null=True )
     sub_categories = models.ForeignKey(PromptSubCategories, on_delete = models.CASCADE,related_name = 'book_sub_categories',blank=True,null=True)
     book_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='book_lang_src',null=True, blank=True)  
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='book_created_by')
     
     @property
     def book_language_code(self):
