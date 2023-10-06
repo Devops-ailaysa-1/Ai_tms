@@ -1339,6 +1339,8 @@ class Task(models.Model):
                     cached_value = "ExpressEditor"
                 elif self.job.project.project_type_id == 6:
                     cached_value = "Designer"
+                elif self.job.project.project_type_id == 7:
+                    cached_value = "Book"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:

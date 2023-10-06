@@ -991,7 +991,7 @@ class BookCreationSerializer(serializers.ModelSerializer):
         model = BookCreation
         fields = ('id','user', 'description','description_mt','author_info','author_info_mt',
                 'author_name','genre','level','title','title_mt','categories','sub_categories',
-                'book_language','book_title_create','project','name','project_name',)
+                'book_language','book_title_create','project','name','project_name','created_by','created_at',)
         
 
     def create(self,validated_data):  

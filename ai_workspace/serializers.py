@@ -483,7 +483,7 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 											.get("processor_name", None)
 # 		return representation
 #  {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt', 'source_language': 'af', 'target_language': 'hy', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
-######################################## nandha ##########################################
+#############################################################################################
 class ProjectFilesCreateTypeSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = ProjectFilesCreateType
