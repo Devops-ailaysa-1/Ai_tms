@@ -1,7 +1,7 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
                      BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
                      BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
-                     BookBackMatter,BookFrontMatter,)
+                     BookBackMatter,BookFrontMatter,BookBodyDetails,)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -1104,7 +1104,7 @@ def generate_chapter(request):
         bookbody_id=request.query_params.get('bookbody_id')
         book_body_instance = BookBody.objects.get(id=bookbody_id)
         # book_phrase = PromptStartPhrases.objects.get(sub_category=book_body_instance.sub_categories)
-        book_title =book_body_instance.book_title.book_title_mt if book_body_instance.book_title.book_title_mt else book_body_instance.book_title.book_title
+        book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
         book_level = book_body_instance.book_creation.level.level
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
@@ -1116,7 +1116,7 @@ def generate_chapter(request):
         print(author_info)
         sub_cat = 71
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
-        prompt = prompt.format(book_title,generated_content,book_level,book_description,author_info)
+        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info)
         print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
@@ -1218,30 +1218,31 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
     def get_object(self, pk):
         try:
             user = self.request.user.team.owner if self.request.user.team else self.request.user
-            return BookBodyDetails.objects.get(book_creation__user=user,id=pk)
+            return BookBodyDetails.objects.get(book_bm__book_creation__user=user,id=pk)
         except BookBodyDetails.DoesNotExist:
             raise Http404
     
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user
-        queryset = BookBodyDetails.objects.filter(book_creation__user=user).order_by('-id')
-        queryset = self.filter_queryset(queryset)
+        queryset = BookBodyDetails.objects.filter(book_bm__book_creation__user=user).order_by('-id')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = BookBodyDetailSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
-    
-    def filter_queryset(self, queryset):
-        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
-        for backend in list(filter_backends):
-            queryset = backend().filter_queryset(self.request, queryset, view=self)
-        return queryset
     
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         serializer = BookBodyDetailSerializer(obj)
         return Response(serializer.data)
     
+    def create(self,request):
+        serializer = BookBodyDetailSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
     def update(self,request,pk):
         obj =self.get_object(pk)
         serializer = BookBodyDetailSerializer(obj,data=request.data,partial=True)
@@ -1253,7 +1254,7 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
     def destroy(self,request,pk):
         try:
             user = request.user.team.owner if request.user.team else request.user
-            obj = BookBodyDetailSerializer.objects.get(user=user,id=pk)
+            obj = BookBodyDetails.objects.get(book_bm__book_creation__user=user,id=pk)
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
         except:

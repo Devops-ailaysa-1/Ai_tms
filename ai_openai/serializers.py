@@ -985,12 +985,13 @@ class BookCreationSerializer(serializers.ModelSerializer):
     book_title_create=BookTitleSerializer(many=True,required=False)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
-    project_name = serializers.ReadOnlyField(source='project.project_name')
+    project_name = serializers.CharField(required=False,write_only=True)
+    name = serializers.ReadOnlyField(source='project.project_name'  )
     class Meta:
         model = BookCreation
         fields = ('id','user', 'description','description_mt','author_info','author_info_mt',
                 'author_name','genre','level','title','title_mt','categories','sub_categories',
-                'book_language','book_title_create','project','project_name')
+                'book_language','book_title_create','project','name','project_name',)
         
 
     def create(self,validated_data):  
@@ -1056,7 +1057,9 @@ class BookCreationSerializer(serializers.ModelSerializer):
                 instance.description_mt = None
             instance.save()
         
-        #return super().update(instance, validated_data)
+        if validated_data.get('project_name'):
+            instance.project.project_name = validated_data.get('project_name')
+            instance.project.save()
 
         if validated_data.get('author_info',None):
             instance.author_info = validated_data.get('author_info',instance.author_info)
@@ -1240,8 +1243,8 @@ class BookBodySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         print("ValiData----------->",validated_data)
-        lang_code =instance.book_title.book_creation.book_language_code
-        user_id = instance.book_title.book_creation.user.id
+        lang_code =instance.book_creation.book_language_code
+        user_id = instance.book_creation.user.id
 
         if validated_data.get('select_group',None):
             BookBody.objects.filter(group=validated_data.get('select_group'),book_title_id=instance.book_title_id).update(selected_field=True)
@@ -1520,4 +1523,3 @@ class BookBodyDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookBodyDetails
         fields = "__all__"
- 
