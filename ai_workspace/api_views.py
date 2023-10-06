@@ -3645,7 +3645,7 @@ class MyDocFilter(django_filters.FilterSet):
         fields = ['doc_name']#proj_name
 
 from django.db.models import Value, CharField, IntegerField
-from ai_openai.models import BlogCreation
+from ai_openai.models import BlogCreation,BookCreation
 from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
@@ -3674,8 +3674,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
         q1 = q1.filter(doc_name__icontains =query) if query else q1
         q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
         q2 = q2.filter(user_title__icontains = query) if query else q2
-        q4 = Project.objects.filter(project_type_id=7).filter(Q(ai_user = user)|Q(created_by__in = project_managers)|Q(ai_user=owner)).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value('Book',output_field=CharField()),open_as=Value('Document', output_field=CharField())).values('id','created_at','project_name','word_count','open_as','document_type__type')
-        q4 = q4.filter(project_name__icontains=query) if query else q4
+        q4 = BookCreation.objects.filter(Q(user = user)|Q(user=owner)).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value('Book',output_field=CharField()),open_as=Value('Book', output_field=CharField())).values('id','created_at','project__project_name','word_count','open_as','document_type__type')
+        q4 = q4.filter(project__project_name__icontains=query) if query else q4
         q3 = q1.union(q2,q4)
         final_queryset = q3.order_by('-created_at')
         if ordering:
