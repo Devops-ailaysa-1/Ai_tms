@@ -270,7 +270,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 image_color_change=image_color_change[:, :, :3]
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details,text_box_list,sentence=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
-                return dst_final,image_text_details,text_box_list
+                return dst_final,image_text_details,text_box_list,sentence
             else:
                 raise serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
         else:
