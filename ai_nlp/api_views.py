@@ -150,12 +150,16 @@ def pdf_chat(request):
     chat_text=request.query_params.get('chat_text',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     if chat_text:
-        chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
-        pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
-        pdf_chat_instance.answer=chat_QA_res
-        pdf_chat_instance.save()
-        serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-        return Response(serializer.data)
+        if pdf_file.used_question <= pdf_file.question_threshold:
+            chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
+            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
+            pdf_chat_instance.answer=chat_QA_res
+            pdf_chat_instance.save()
+            pdf_file.used_question = pdf_file.used_question+1
+            serializer = PdffileChatHistorySerializer(pdf_chat_instance)
+            return Response(serializer.data)
+        else:
+            return Response({'msg':'Used chat question limit buy addon'},status=401)
     serializer = PdffileShowDetailsSerializer(pdf_file)
     return Response(serializer.data)
 ############ wiktionary quick lookup ##################

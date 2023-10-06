@@ -23,6 +23,8 @@ class PdffileUpload(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     celery_id = models.CharField(max_length=200,null=True,blank=True)
     status = models.CharField(max_length=200,null=True,blank=True)
+    question_threshold = models.PositiveIntegerField(null=True,blank=True,default=0)
+    used_question= models.PositiveIntegerField(null=True,blank=True,default=0)
     website = models.TextField(null=True,blank=True)
 
 class PdffileChatHistory(models.Model):
