@@ -766,6 +766,7 @@ class BookCreationViewset(viewsets.ViewSet):
 
     def delete(self,request,pk):
         obj = BookCreation.objects.get(id=pk)
+        obj.project.delete()
         obj.delete()
         return Response(status=204)
 
