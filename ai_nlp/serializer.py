@@ -33,6 +33,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         print("vector chromadb created")
         instance.celery_id=celery_id
         instance.is_train=False
+         
         # if instance.file.name.endswith(".pdf"):
         #     instance.pdf_thumbnail = thumbnail_create(instance.file.path)
         instance.save()
