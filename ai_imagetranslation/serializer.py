@@ -241,7 +241,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             initial_credit = instance.user.credit_balance.get("total_left")
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                obj_inst = ImageTranslateSerializer(instance)
+                raise serializers.ValidationError({'translation_result':obj_inst.data ,'msg':'Insufficient Credits'}, code=400)
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
             img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
@@ -423,7 +424,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     print("total_word", total_sentence)
                     consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
                     if initial_credit < consumed_credit:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                        obj_inst = ImageTranslateSerializer(instance)
+                        raise serializers.ValidationError({'translation_result':obj_inst.data ,'msg':'Insufficient Credits'}, code=400)
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
@@ -609,10 +611,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if initial_credit>=consumble_credits:
             instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
                                                     height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
-
             image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
-            
-
             instance.celery_id=image
             instance.status="PENDING"
             instance.save()
