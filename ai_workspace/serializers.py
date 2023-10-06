@@ -509,6 +509,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	get_mt_by_page = serializers.BooleanField(required=False,allow_null=True)
+	book_project_id = serializers.ReadOnlyField(source='book_create_project.id')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
@@ -522,7 +523,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned", "jobs","clone_available","assign_enable","files",
+		fields = ("id","book_project_id", "project_name","assigned", "jobs","clone_available","assign_enable","files",
 		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\

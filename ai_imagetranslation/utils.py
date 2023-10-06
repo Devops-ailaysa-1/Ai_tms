@@ -130,7 +130,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 no_of_segments+=1
                 text_list=[]
                 text_box_list.append(textbox_)
-    return text_and_bounding_results,text_box_list
+    sentence = ""
+    for i in text_and_bounding_results.items():
+        sentence =sentence+ i[1]['text']
+        sentence = sentence+ " "
+    print("----------------",sentence)
+    return text_and_bounding_results,text_box_list ,sentence
  
 
  
@@ -220,6 +225,9 @@ def resize_data_remove(resize_instance):
 # @shared_task(serializer='json')
 
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
+    initial_credit =image_details.user.credit_balance.get("total_left") 
+    if initial_credit <1:
+        raise serializers.ValidationError({'msg':'no credit'}, code=400)
     IMG_RESIZE_SHAPE=(256,256)
     if inpaintparallel:
         img_path=image_details.inpaint_image.path
@@ -261,7 +269,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 black_and_white=black_and_white[:, :, :3]
                 image_color_change=image_color_change[:, :, :3]
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
-                image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
+                image_text_details,text_box_list,sentence=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 return dst_final,image_text_details,text_box_list
             else:
                 raise serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
@@ -322,6 +330,11 @@ def naive_cutout(im , msk ) :
 def get_consumable_credits_for_image_generation_sd(number_of_image):
     return number_of_image * 10
 
+
+def get_consumable_credits_for_image_trans_inpaint():
+    #for inpaint 1
+    #for ocr 1
+    return 2
 
 
 # def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
