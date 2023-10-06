@@ -69,7 +69,7 @@ def loader(file_id) -> None:
             save_prest( texts, embeddings, persistent_dir)
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
-            instance.question_threshold=2
+            # instance.question_threshold=20
             instance.save() 
         except:
             instance.status ="ERROR"

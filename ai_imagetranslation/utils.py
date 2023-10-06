@@ -227,7 +227,7 @@ def resize_data_remove(resize_instance):
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
     initial_credit =image_details.user.credit_balance.get("total_left") 
     if initial_credit <1:
-        raise serializers.ValidationError({'msg':'no credit'}, code=400)
+        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
     IMG_RESIZE_SHAPE=(256,256)
     if inpaintparallel:
         img_path=image_details.inpaint_image.path
@@ -328,7 +328,7 @@ def naive_cutout(im , msk ) :
     return img_byte_arr
 
 def get_consumable_credits_for_image_generation_sd(number_of_image):
-    return number_of_image * 10
+    return number_of_image * 20
 
 
 def get_consumable_credits_for_image_trans_inpaint():

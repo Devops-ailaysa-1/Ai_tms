@@ -491,8 +491,10 @@ def ImageTranslatewordcount(request):
 
 
 
- 
- 
+def call_back_rasie(instance_id):
+    instance = ImageTranslate.objects.get(id=instance_id)
+    serializer = ImageTranslateSerializer(instance)
+    print(serializer.data)
  
     
 
