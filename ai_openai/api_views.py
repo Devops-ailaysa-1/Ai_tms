@@ -213,6 +213,7 @@ def customize_text_openai(request):
     document = request.POST.get('document_id')
     task = request.POST.get('task',None)
     pdf = request.POST.get('pdf',None)
+    book = request.POST.get('book',None)
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
@@ -227,6 +228,9 @@ def customize_text_openai(request):
         user = obj.job.project.ai_user
     elif pdf != None:
         obj = Ai_PdfUpload.objects.get(id=pdf)
+        user = obj.user
+    elif book != None:
+        obj = BookCreation.objects.get(id=book)
         user = obj.user
     else:    
         user = request.user.team.owner if request.user.team else request.user
@@ -248,7 +252,7 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
            return  Response({'msg':'Insufficient Credits'},status=400) 
-        data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+        data = {'document':document,'book':book,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_lang':language}
         try:mt_engine = user.custom_setting.mt_engine_id 
         except:mt_engine = 1
@@ -289,7 +293,7 @@ def customize_text_openai(request):
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
-    data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+    data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
             'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
