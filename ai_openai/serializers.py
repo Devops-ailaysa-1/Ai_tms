@@ -1294,7 +1294,7 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         if validated_data.get('order_list',None):
             order_list = validated_data.get('order_list')
-            group = validated_data.get('group')
+            group = validated_data.get('group',0)
             order_list = list(map(int, order_list.split(',')))
             for index, order in enumerate(order_list, 1):
                 BookBody.objects.filter(temp_order=order).filter(book_title=instance.book_title).filter(group=group).update(custom_order=index)
