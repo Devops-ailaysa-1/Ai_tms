@@ -160,7 +160,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
                                                 |Q(job__project__ai_user=user))
-         
+        print(queryset)
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
 
 
@@ -246,8 +246,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             print("----------",initial_credit)
             
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
-            if initial_credit < consumed_credit:
-                obj_inst = ImageTranslateSerializer([instance],context = {"user":user , "manager":pr_managers},many =False)
+            if initial_credit < consumed_credit: 
+                obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
                 # print(obj_inst.data)
                 raise serializers.ValidationError({'translation_result':obj_inst.data,'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
@@ -292,7 +292,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         image_id=validated_data.get('image_id',None)
         image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
         user = self.context.get('user')
-        pr_managers = self.context.get('managers')  
+        pr_managers = self.context.get('managers') 
+        print("pr_managers--------->",pr_managers) 
         if magic_erase and mask_json:
             instance.mask_json=mask_json
             instance.save()
@@ -343,9 +344,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
-            # consumble_credit_for_trans =  get_consumable_credits_for_text(total_sentence,src_lang.locale.first(),inpaint_creation_target_lang[0].locale.first() )
-            consumble_credit_for_inpaint = get_consumable_credits_for_image_trans_inpaint()
-            consumble_credit = consumble_credit_for_inpaint #+ consumble_credit_for_trans
+            initial_credit=6
+            consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             self.target_check(instance,inpaint_creation_target_lang,src_lang.locale.first())
@@ -432,8 +432,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     print("total_word", total_sentence)
                     consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
                     if initial_credit < consumed_credit:
-                        # obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
+                        obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
+                        raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
