@@ -1153,6 +1153,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                 for group,chapter_res in enumerate(prompt_response,start=start):
                     chapters = chapter_res.message['content'].split('\n')
                     for order,chapter in enumerate(chapters,start=1):
+                        print("Order----------->",order)
                         if chapter:
                             chapter = re.sub(r'\d+.','',chapter).strip()
                             print("chap========>",chapter)
@@ -1181,6 +1182,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                 token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
                 AiPromptSerializer().customize_token_deduction(book_obj,token_usage_to_reduce)
                 count = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).count()
+                print("Count--------->",count)
                 generated_content = openai_response["choices"][0]["message"]["content"]
                 if (book_obj.book_language_id not in blog_available_langs):
                     initial_credit = book_obj.user.credit_balance.get("total_left")
@@ -1195,7 +1197,8 @@ class BookBodySerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 else:
                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=generated_content,
-                    book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,temp_order=count+1,token_usage=token_usage) 
+                                            book_title =book_title_inst,book_creation=book_obj,name=body_matter.name,custom_order=count+1,
+                                            temp_order=count+1,token_usage=token_usage) 
             default_bm = BackMatter.objects.get(name='Afterword')
             default_fm = FrontMatter.objects.get(name='Preface')
             bm = BookBackMatter.objects.create(book_creation=book_obj,back_matter=default_bm,sub_categories_id=69,temp_order=1,custom_order=1,name=default_bm.name)
@@ -1375,22 +1378,26 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
 
         if validated_data.get('generated_content',None):
             instance.generated_content = validated_data.get('generated_content',instance.generated_content)
-            initial_credit = instance.book_creation.user.credit_balance.get("total_left")
-            consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
-            if initial_credit < consumable_credit_section:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
+            instance.save() 
+        # if validated_data.get('generated_content',None):
+        #     instance.generated_content = validated_data.get('generated_content',instance.generated_content)
+            
+        #     initial_credit = instance.book_creation.user.credit_balance.get("total_left")
+        #     consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
+        #     if initial_credit < consumable_credit_section:
+        #         raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
 
-            if instance.generated_content_mt:
-                instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
-                                           user_id=user_id) if instance.generated_content else None
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
+        #     if instance.generated_content_mt:
+        #         instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
+        #                                    user_id=user_id) if instance.generated_content else None
+        #         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
              
-            lang_detect_user_gc =  lang_detector(instance.generated_content) 
+        #     lang_detect_user_gc =  lang_detector(instance.generated_content) 
 
-            if lang_detect_user_gc !='en':
-                instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
-        instance.save() 
+        #     if lang_detect_user_gc !='en':
+        #         instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
+        #         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
+       
 
         if validated_data.get('name',None):
             instance.name = validated_data.get('name')
@@ -1481,22 +1488,26 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
 
         if validated_data.get('generated_content',None):
             instance.generated_content = validated_data.get('generated_content',instance.generated_content)
-            initial_credit = instance.book_creation.user.credit_balance.get("total_left")
-            consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
-            if initial_credit < consumable_credit_section:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
+            instance.save() 
 
-            if instance.generated_content_mt:
-                instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
-                                           user_id=user_id) if instance.generated_content else None
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
+        # if validated_data.get('generated_content',None):
+        #     instance.generated_content = validated_data.get('generated_content',instance.generated_content)
+        #     initial_credit = instance.book_creation.user.credit_balance.get("total_left")
+        #     consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
+        #     if initial_credit < consumable_credit_section:
+        #         raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
+
+        #     if instance.generated_content_mt:
+        #         instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
+        #                                    user_id=user_id) if instance.generated_content else None
+        #         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
              
-            lang_detect_user_gc =  lang_detector(instance.generated_content) 
+        #     lang_detect_user_gc =  lang_detector(instance.generated_content) 
 
-            if lang_detect_user_gc !='en':
-                instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
-        instance.save() 
+        #     if lang_detect_user_gc !='en':
+        #         instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
+        #         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
+        # instance.save() 
 
         if validated_data.get('name',None):
             instance.name = validated_data.get('name')
