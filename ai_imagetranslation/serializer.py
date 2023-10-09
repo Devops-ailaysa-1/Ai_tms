@@ -344,7 +344,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
-            initial_credit=6
             consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
@@ -582,8 +581,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
     image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
+    custom_prompt = serializers.BooleanField(required=True,write_only=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','celery_id','status')   #image_resolution step
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail',
+                  'image_resolution','celery_id','status','custom_prompt')   #image_resolution step
         model=StableDiffusionAPI
 
 
@@ -603,15 +604,23 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         image_resolution=validated_data.pop('image_resolution',None)
-
+        custom_prompt =validated_data.pop('custom_prompt',None) 
         if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
-            if sdstylecategoty.negative_prompt:
-                negative_prompt=str(negative_prompt)+" "+sdstylecategoty.negative_prompt
-                print("negative_prompt",negative_prompt)
+            if custom_prompt:
+                if not negative_prompt:
+                     raise serializers.ValidationError({'msg':'no negative_prompt'}) 
+                negative_prompt = str(negative_prompt)
+            else:
+                if sdstylecategoty.negative_prompt:
+                    negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
+                    print("negative_prompt",negative_prompt)
             prompt = default_prompt.format(prompt)
+        print(prompt)
+        print("===")
+        print(negative_prompt)
         if not image_resolution:
-            raise serializers.ValidationError({'no image resolution'}) 
+            raise serializers.ValidationError({'msg':'no image resolution'}) 
         
         #prompt,steps,height,width,negative_prompt
         initial_credit = user.credit_balance.get("total_left")

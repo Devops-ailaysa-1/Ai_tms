@@ -390,7 +390,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         return instance
               
     
-    def update_text_box_target(self,instance,text_box,is_append):
+    def update_text_box_target(self,instance,text_box,is_append): #####for single text__box update   and check written in get_translation
         from ai_workspace.api_views import  get_consumable_credits_for_text
         text=text_box['text']
         text_id=text_box['name']
@@ -426,6 +426,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
+        from ai_workspace.api_views import  get_consumable_credits_for_text
+        from ai_canvas.api_views import dict_rec_json
+        src_words_all = ''
+        for i in source_json_files_all:
+            total_sentence =" ".join(dict_rec_json(i.json))
+            src_words_all= src_words_all+" "+total_sentence
+        print('src_words_all',"------",src_words_all)
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             if CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()).exists():
@@ -433,6 +440,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':pairs})
             if src_lang.locale.first() == tar_lang.locale.first():
                 raise serializers.ValidationError({'msg':'looks like same language pair {} '.format(tar_lang.locale.first().locale_code)})
+            ### to write check here
+            initial_credit =instance.user.credit_balance.get("total_left")
+            consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+            if initial_credit < consumed_credit:
+                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
             trans_json.job=canvas_jobs[0][0]
@@ -442,7 +454,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             for count,src_json_file in enumerate(source_json_files_all):
                 src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                 src_json_file.save()
-                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code,instance.user.id)
+                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,
+                                             tar_lang.locale.first().locale_code,
+                                             instance.user.id)
                 if res[tar_lang.locale.first().locale_code]:
                     tar_json_form=res[tar_lang.locale.first().locale_code]             
                     tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1)
