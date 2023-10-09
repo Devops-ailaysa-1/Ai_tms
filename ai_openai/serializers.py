@@ -1261,22 +1261,23 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         if validated_data.get('generated_content',None):
             instance.generated_content = validated_data.get('generated_content',instance.generated_content)
-            initial_credit = instance.book_creation.user.credit_balance.get("total_left")
-            consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
-            if initial_credit < consumable_credit_section:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
+            instance.save()
+            # initial_credit = instance.book_creation.user.credit_balance.get("total_left")
+            # consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
+            # if initial_credit < consumable_credit_section:
+            #     raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
 
-            if instance.generated_content_mt:
-                instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
-                                           user_id=user_id) if instance.generated_content else None
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
+            # if instance.generated_content_mt:
+            #     instance.generated_content_mt = get_translation(1,instance.generated_content,lang_code,"en",
+            #                                user_id=user_id) if instance.generated_content else None
+            #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user,consumable_credit_section)
              
-            lang_detect_user_gc =  lang_detector(instance.generated_content) 
+            # lang_detect_user_gc =  lang_detector(instance.generated_content) 
 
-            if lang_detect_user_gc !='en':
-                instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
-        instance.save() 
+            # if lang_detect_user_gc !='en':
+            #     instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
+            #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
+        #instance.save() 
 
 
         if validated_data.get('group',None):
