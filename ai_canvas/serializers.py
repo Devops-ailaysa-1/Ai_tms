@@ -447,6 +447,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit:
                  obj = CanvasDesignSerializer(instance,context = {'user':user,'managers':pr_managers})
+                 print("insuff",obj)
                  raise serializers.ValidationError({'translation_result':obj.data ,'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)

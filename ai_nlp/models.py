@@ -40,6 +40,7 @@ class PdffileChatHistory(models.Model):
     answer = models.CharField(max_length=2000,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    token_usage = models.CharField(max_length=2000,null=True,blank=True)
 
 # class ChatTokenUsage(models.Model):
 #     chat_his = models.OneToOneField(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
