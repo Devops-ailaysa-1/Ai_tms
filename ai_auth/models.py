@@ -374,6 +374,15 @@ class UserCredits(models.Model):
 
 post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
+
+# class PurchasedUnits(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     unit_type = models.CharField(max_length=200)
+#     product = models.ForeignKey(Product,on_delete=models.CASCADE)
+#     units_buyed = models.IntegerField()
+#     buyed_credits = models.IntegerField()
+    
+
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)

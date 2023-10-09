@@ -142,7 +142,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages,user_id):
         canvas_result[lang] = canvas_json_copy
     return canvas_result
     
-         
+        
 def thumbnail_create(json_str,formats):
     all_format=['png','jpeg','jpg','svg']
     width=json_str['backgroundImage']['width']
