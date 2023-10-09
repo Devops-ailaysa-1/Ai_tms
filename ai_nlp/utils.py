@@ -63,7 +63,7 @@ def loader(file_id) -> None:
                 print("pdf_processing")
                 loader = PDFMinerLoader(instance.file.path)
             data = loader.load()
-            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=200,chunk_overlap=0)  
+            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
             texts = text_splitter.split_documents(data)
             embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
             save_prest( texts, embeddings, persistent_dir)
@@ -88,14 +88,13 @@ def thumbnail_create(path) -> core :
     img_byte_arr = img_io.getvalue()
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
 
-
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
     embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query, k=2)
+    v = vector_db.similarity_search(query=query,k=2)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="stuff")
         res = chain({"input_documents": v, "question": query})
