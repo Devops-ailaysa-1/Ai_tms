@@ -458,9 +458,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             for count,src_json_file in enumerate(source_json_files_all):
                 src_json_file.json=json_src_change(src_json_file.json,req_host,instance,text_box_save=True)
                 src_json_file.save()
-                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,
-                                             tar_lang.locale.first().locale_code,
-                                             instance.user.id)
+                res=canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code,instance.user.id)
                 if res[tar_lang.locale.first().locale_code]:
                     tar_json_form=res[tar_lang.locale.first().locale_code]             
                     tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1)
@@ -471,7 +469,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     can_tar_ins.json=tar_json_pro
                     can_tar_ins.save()
 
-        
 
     def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
         scale_multiplier_x=width/canvas_width
