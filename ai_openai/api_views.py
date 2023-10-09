@@ -1,7 +1,6 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
-                     BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
-                     BookBackMatter,BookFrontMatter,BookBodyDetails,)
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,BlogKeywordGenerate,Blogtitle,
+                     BlogOutline,BookCreation,BookTitle,BookBody,BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,
+                     ImageGenerationPromptResponse, BookBackMatter,BookFrontMatter,BookBodyDetails,)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -9,12 +8,9 @@ from rest_framework import status
  
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
-                        AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
-                        BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
-                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,
-                        CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
+from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, AiPromptGetSerializer,AiPromptCustomizeSerializer,ImageGeneratorPromptSerializer,
+                          TranslateCustomizeDetailSerializer ,BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
+                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
                         BookBodySerializer,BookBodyDetailSerializer,)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
