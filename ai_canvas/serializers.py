@@ -426,6 +426,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
+        user = self.context.get('user')
+        pr_managers = self.context.get('managers')
         from ai_workspace.api_views import  get_consumable_credits_for_text
         from ai_canvas.api_views import dict_rec_json
         src_words_all = ''
@@ -444,7 +446,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             initial_credit =instance.user.credit_balance.get("total_left")
             consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit:
-                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                 obj = CanvasDesignSerializer(instance,context = {'user':user,'managers':pr_managers})
+                 raise serializers.ValidationError({'translation_result':obj.data ,'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
             trans_json.job=canvas_jobs[0][0]

@@ -63,7 +63,7 @@ def loader(file_id) -> None:
                 print("pdf_processing")
                 loader = PDFMinerLoader(instance.file.path)
             data = loader.load()
-            text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=200,chunk_overlap=0)  
             texts = text_splitter.split_documents(data)
             embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
             save_prest( texts, embeddings, persistent_dir)
