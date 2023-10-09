@@ -1181,7 +1181,11 @@ class BookBodySerializer(serializers.ModelSerializer):
                 token_usage = openai_token_usage(openai_response)
                 token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
                 AiPromptSerializer().customize_token_deduction(book_obj,token_usage_to_reduce)
-                count = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).count()
+                qr = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).order_by('custom_order')
+                print("QR-------------------->",qr)
+                if qr:
+                    count = qr.last().custom_order
+                else: count = 1
                 print("Count--------->",count)
                 generated_content = openai_response["choices"][0]["message"]["content"]
                 if (book_obj.book_language_id not in blog_available_langs):
@@ -1328,7 +1332,9 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
         sub_categories = validated_data.get('sub_categories',68)
         obj = validated_data.get('obj')
         name = validated_data.get('name',None)
-        count = BookFrontMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
+        qr = BookFrontMatter.objects.filter(book_creation=validated_data.get('book_creation')).order_by('custom_order')
+        if qr:count = qr.last().custom_order
+        else: count = 0
         print("Count------->",count)
         if not obj:
             instance = BookFrontMatter.objects.create(**validated_data)
@@ -1437,7 +1443,9 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         obj = validated_data.get('obj')
         name = validated_data.get('name',None)
         obj = validated_data.get('obj')
-        count = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).count()
+        qr = BookBackMatter.objects.filter(book_creation=validated_data.get('book_creation')).order_by('custom_order')
+        if qr:count = qr.last().custom_order
+        else: count = 0
         print("Count------->",count)
         if not obj:
             instance = BookBackMatter.objects.create(**validated_data)
