@@ -581,10 +581,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
     image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
-    custom_prompt = serializers.BooleanField(required=True,write_only=True)
+    # custom_prompt = serializers.BooleanField(required=True,write_only=True)
     class Meta:
         fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail',
-                  'image_resolution','celery_id','status','custom_prompt')   #image_resolution step
+                  'image_resolution','celery_id','status')   #image_resolution step #custom_prompt
         model=StableDiffusionAPI
 
 
@@ -600,21 +600,21 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         user=self.context.get('user')
         created_by = self.context.get('created_by')
         prompt=validated_data.get('prompt',None)
-        step=validated_data.pop('step',None)
+        # step=validated_data.pop('step',None)
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         image_resolution=validated_data.pop('image_resolution',None)
-        custom_prompt =validated_data.pop('custom_prompt',None) 
+        # custom_prompt =validated_data.pop('custom_prompt',None) 
         if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
-            if custom_prompt:
-                if not negative_prompt:
-                     raise serializers.ValidationError({'msg':'no negative_prompt'}) 
-                negative_prompt = str(negative_prompt)
-            else:
-                if sdstylecategoty.negative_prompt:
-                    negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
-                    print("negative_prompt",negative_prompt)
+            # if custom_prompt:
+            #     if not negative_prompt:
+            #          raise serializers.ValidationError({'msg':'no negative_prompt'}) 
+            #     negative_prompt = str(negative_prompt)
+            # else:
+            #     if sdstylecategoty.negative_prompt:
+            #         negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
+            #         print("negative_prompt",negative_prompt)
             prompt = default_prompt.format(prompt)
         print(prompt)
         print("===")
