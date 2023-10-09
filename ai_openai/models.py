@@ -18,6 +18,32 @@ class TokenUsage(models.Model):
         return str(self.user_input_token)+"--"+str(self.completion_tokens)
 
 
+
+class BookCreation(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    author_name = models.CharField(max_length=250,blank=True,null=True)
+    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="book_create_project")
+    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
+    description = models.TextField(null=True,blank=True)
+    description_mt = models.TextField(null=True,blank=True)
+    author_info = models.TextField(null=True,blank=True)
+    author_info_mt = models.TextField(null=True,blank=True)
+    genre = models.ForeignKey(Genre, on_delete = models.CASCADE,related_name='book_genre',null=True, blank=True)
+    level = models.ForeignKey(Levels, on_delete = models.CASCADE,related_name='book_level',null=True, blank=True) 
+    title = models.TextField(null=True,blank=True)
+    title_mt = models.TextField(null=True,blank=True)
+    categories = models.ForeignKey(PromptCategories, on_delete = models.CASCADE,related_name = 'book_categories' ,blank=True,null=True )
+    sub_categories = models.ForeignKey(PromptSubCategories, on_delete = models.CASCADE,related_name = 'book_sub_categories',blank=True,null=True)
+    book_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='book_lang_src',null=True, blank=True)  
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='book_created_by')
+    
+    @property
+    def book_language_code(self):
+        return self.book_language.locale.first().locale_code
+
+
+
 class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     prompt_string = models.TextField(null=True, blank=True)
@@ -25,6 +51,7 @@ class AiPrompt(models.Model):
     document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_task')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_pdf')
+    book = models.ForeignKey(BookCreation,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'book_prompt')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.SET_NULL ,blank=True,null=True )
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.SET_NULL,blank=True,null=True)
@@ -183,6 +210,7 @@ class TextgeneratedCreditDeduction(models.Model):
     
 class AiPromptCustomize(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    book = models.ForeignKey(BookCreation,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_book')
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_task')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_pdf')
@@ -235,29 +263,6 @@ class CustomizationSettings(models.Model):
     append = models.BooleanField(default=True)
     new_line = models.BooleanField(default=True)
     
-
-class BookCreation(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    author_name = models.CharField(max_length=250,blank=True,null=True)
-    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="book_create_project")
-    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
-    description = models.TextField(null=True,blank=True)
-    description_mt = models.TextField(null=True,blank=True)
-    author_info = models.TextField(null=True,blank=True)
-    author_info_mt = models.TextField(null=True,blank=True)
-    genre = models.ForeignKey(Genre, on_delete = models.CASCADE,related_name='book_genre',null=True, blank=True)
-    level = models.ForeignKey(Levels, on_delete = models.CASCADE,related_name='book_level',null=True, blank=True) 
-    title = models.TextField(null=True,blank=True)
-    title_mt = models.TextField(null=True,blank=True)
-    categories = models.ForeignKey(PromptCategories, on_delete = models.CASCADE,related_name = 'book_categories' ,blank=True,null=True )
-    sub_categories = models.ForeignKey(PromptSubCategories, on_delete = models.CASCADE,related_name = 'book_sub_categories',blank=True,null=True)
-    book_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='book_lang_src',null=True, blank=True)  
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='book_created_by')
-    
-    @property
-    def book_language_code(self):
-        return self.book_language.locale.first().locale_code
 
 class BookTitle(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_title_create')

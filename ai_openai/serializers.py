@@ -62,7 +62,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','description','document','task','pdf','model_gpt_name','catagories','sub_catagories',
+        fields = ('id','user','prompt_string','description','book','document','task','pdf','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets','created_by',)
 
@@ -233,11 +233,12 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
     prompt_results = serializers.SerializerMethodField()
     target_langs = serializers.SerializerMethodField()
     doc_name = serializers.ReadOnlyField(source='document.doc_name')
+    book_name = serializers.ReadOnlyField(source='book.project.project_name')
     #ai_prompt = AiPromptResultSerializer(many=True)
 
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','doc_name','document','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
+        fields = ('id','user','prompt_string','doc_name','book','book_name','document','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
                     'product_name','keywords','created_at','prompt_results','created_by',)#,'ai_prompt'
         
         extra_kwargs = {
@@ -276,13 +277,14 @@ class TranslateCustomizeDetailSerializer(serializers.ModelSerializer):
 class AiPromptCustomizeSerializer(serializers.ModelSerializer):
     customize_name = serializers.ReadOnlyField(source='customize.customize')
     doc_name =  serializers.ReadOnlyField(source='document.doc_name')
+    book_name = serializers.ReadOnlyField(source='book.project.project_name')
     customization = TranslateCustomizeDetailSerializer(required=False,many=True)
     class Meta:
         model = AiPromptCustomize
         fields = ('id','document','task','pdf','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
                     'credits_used','prompt_generated','user_text_mt','created_at',\
-                    'customization','created_by')
+                    'customization','created_by','book_name','book',)
 
         extra_kwargs = {
             "user":{"write_only": True},
@@ -1292,7 +1294,7 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         if validated_data.get('order_list',None):
             order_list = validated_data.get('order_list')
-            group = validated_data.get('group')
+            group = validated_data.get('group',0)
             order_list = list(map(int, order_list.split(',')))
             for index, order in enumerate(order_list, 1):
                 BookBody.objects.filter(temp_order=order).filter(book_title=instance.book_title).filter(group=group).update(custom_order=index)
@@ -1414,7 +1416,7 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
 
 class BookBackMatterSerializer(serializers.ModelSerializer):
     order_list = serializers.CharField(required=False)
-    obj=serializers.PrimaryKeyRelatedField(queryset=BookFrontMatter.objects.all(),
+    obj=serializers.PrimaryKeyRelatedField(queryset=BookBackMatter.objects.all(),
                                         many=False,required=False)
     class Meta:
         model = BookBackMatter
