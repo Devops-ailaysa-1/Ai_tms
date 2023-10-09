@@ -1151,7 +1151,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                 else: start = 0
                 print("Start---------------------->",start)
                 for group,chapter_res in enumerate(prompt_response,start=start):
-                    chapters = chapter_res.message['content'].split('\n\n')
+                    chapters = chapter_res.message['content'].split('\n')
                     for order,chapter in enumerate(chapters,start=1):
                         print("Order----------->",order)
                         if chapter:
