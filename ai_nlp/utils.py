@@ -98,8 +98,8 @@ def loader(file_id) -> None:
             data = loader.load()
             text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
             texts = text_splitter.split_documents(data)
-            # embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-            embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+            embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+            # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
             save_prest( texts, embeddings, persistent_dir)
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
@@ -124,8 +124,8 @@ def thumbnail_create(path) -> core :
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-    # embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()
     v = vector_db.similarity_search(query=query,k=2)
