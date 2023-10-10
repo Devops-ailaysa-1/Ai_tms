@@ -320,6 +320,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.image =image
             instance.height=image_id.height
             instance.width=image_id.width
+            instance.image_load.id =  image_id.id
             instance.save()
 
         if validated_data.get('image'):
