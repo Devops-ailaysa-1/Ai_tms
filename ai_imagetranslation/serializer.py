@@ -261,7 +261,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
-
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
                     i['text']=translate_bbox
@@ -316,7 +315,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
         
         if image_id:
-            instance.image
+            im = Image.open(image_id.image.path)
+            image = convert_image_url_to_file(im,no_pil_object=False) 
+            instance.image =image
+            instance.height=image_id.height
+            instance.width=image_id.width
+            instance.save()
 
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
