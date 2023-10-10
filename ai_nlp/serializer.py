@@ -15,8 +15,6 @@ class PdffileShowDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-
-from ai_nlp.utils import epub_processing
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     class Meta:
