@@ -941,6 +941,11 @@ class BookTitleSerializer(serializers.ModelSerializer):
         author_info = book_creation.author_info_mt if book_creation.author_info_mt else book_creation.author_info
         prompt = title_start_phrase.start_phrase.format(author_info,description,level,genre)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
+        consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
+
+        if initial_credit < consumable_credits:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
         token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
