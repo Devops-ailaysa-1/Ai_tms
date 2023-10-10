@@ -538,7 +538,7 @@ class BlogtitleViewset(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
-            blog_title_ins=Blogtitle.objects.filter(blog_creation_gen=blog_creation)
+            blog_title_ins=Blogtitle.objects.filter(blog_creation_gen=blog_creation).order_by('-id')
             ser = BlogtitleSerializer(blog_title_ins,many=True)
             return Response(ser.data)
         return Response(serializer.errors)
