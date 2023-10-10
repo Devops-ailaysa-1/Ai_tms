@@ -354,7 +354,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
 
         if social_media_create and width and height:
-             
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(width)
             basic_jsn['backgroundImage']['height']=int(height)
@@ -362,7 +361,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
-
             instance.height=int(width)
             instance.width=int(height)
             instance.file_name=social_media_create.social_media_name
