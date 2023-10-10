@@ -1391,3 +1391,30 @@ def translate_html_file(request, input_file, target_language):
 
     return Response({"translated_html":translated_html})
 
+
+from docx import Document
+from docxcompose.composer import Composer
+@api_view(["POST"])
+def docx_merger(request):
+    name = request.POST.get('book_name')
+    files = request.FILES.getlist('docx_files')
+    composed = name + ".docx"
+    #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
+    result = Document(files[0])
+    result.add_page_break()
+    composer = Composer(result)
+
+    for i in range(1, len(files)):
+        doc = Document(files[i])
+
+        if i != len(files) - 1:
+            doc.add_page_break()
+
+        composer.append(doc)
+
+    composer.save(composed)
+    res = download_file(composed)
+    os.remove(composed)
+    return res
+
+    
