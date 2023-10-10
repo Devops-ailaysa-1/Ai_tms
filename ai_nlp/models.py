@@ -32,6 +32,7 @@ class PdffileUpload(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     celery_id = models.CharField(max_length=200,null=True,blank=True)
     status = models.CharField(max_length=200,null=True,blank=True)
+    text_file =  models.FileField(upload_to=user_directory_path_pdf_upload,null=True,blank=True)
     website = models.TextField(null=True,blank=True)
 
 class PdffileChatHistory(models.Model):
