@@ -59,6 +59,7 @@ def openai_token_usage(openai_response ):
 
 class AiPromptSerializer(serializers.ModelSerializer):
     targets = serializers.ListField(allow_null=True,required=False)
+    source_prompt_lang = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     class Meta:
         model = AiPrompt
@@ -186,6 +187,15 @@ class AiPromptSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
+        source_prompt_lang = validated_data.get('source_prompt_lang',None)
+        if source_prompt_lang == None and targets == []:
+            lng = lang_detector(validated_data.get('description'))
+            try:
+                lang_ins = LanguagesLocale.objects.filter(locale_code = lng).first().language 
+            except:
+                lang_ins = LanguagesLocale.objects.filter(locale_code = 'en').first().language
+            validated_data['source_prompt_lang'] = lang_ins
+            targets = [lang_ins.id]
         instance = AiPrompt.objects.create(**validated_data)
         if instance.task != None:
             user = instance.task.job.project.ai_user
