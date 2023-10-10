@@ -59,6 +59,7 @@ def openai_token_usage(openai_response ):
 
 class AiPromptSerializer(serializers.ModelSerializer):
     targets = serializers.ListField(allow_null=True,required=False)
+    source_prompt_lang = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     class Meta:
         model = AiPrompt
@@ -186,6 +187,15 @@ class AiPromptSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
+        source_prompt_lang = validated_data.get('source_prompt_lang',None)
+        if source_prompt_lang == None and targets == []:
+            lng = lang_detector(validated_data.get('description'))
+            try:
+                lang_ins = LanguagesLocale.objects.filter(locale_code = lng).first().language 
+            except:
+                lang_ins = LanguagesLocale.objects.filter(locale_code = 'en').first().language
+            validated_data['source_prompt_lang'] = lang_ins
+            targets = [lang_ins.id]
         instance = AiPrompt.objects.create(**validated_data)
         if instance.task != None:
             user = instance.task.job.project.ai_user
@@ -931,6 +941,11 @@ class BookTitleSerializer(serializers.ModelSerializer):
         author_info = book_creation.author_info_mt if book_creation.author_info_mt else book_creation.author_info
         prompt = title_start_phrase.start_phrase.format(author_info,description,level,genre)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
+        consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
+
+        if initial_credit < consumable_credits:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
         token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
