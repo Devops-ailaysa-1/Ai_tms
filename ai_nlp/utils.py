@@ -95,7 +95,7 @@ def loader(file_id) -> None:
             loader = PDFMinerLoader(instance.file.path)
         data = loader.load()
         print("embedding model loaded")
-        text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=0)   #.from_tiktoken_encoder
+        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=200)   #. from_tiktoken_encoder  ,chunk_overlap=0
         texts = text_splitter.split_documents(data)
         embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
         # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
@@ -129,7 +129,7 @@ def load_embedding_vector(vector_path,query)->RetrievalQA:
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query,k=2)
+    v = vector_db.similarity_search(query=query,k=3)
     print("docum",v)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="map_reduce") #map_reduce stuff
