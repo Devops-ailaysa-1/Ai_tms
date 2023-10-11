@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ai_nlp.models import PdffileUpload,PdffileChatHistory
-from ai_nlp.utils import loader,thumbnail_create
+from ai_nlp.utils import loader #,thumbnail_create
 
 
 class PdffileChatHistorySerializer(serializers.ModelSerializer):
@@ -14,6 +14,11 @@ class PdffileShowDetailsSerializer(serializers.ModelSerializer):
         model = PdffileUpload
         fields = '__all__'
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        pdf_file_chat = instance.pdf_file_chat.order_by('-id')
+        representation['pdf_file_chat'] = PdffileChatHistorySerializer(pdf_file_chat, many=True).data
+        return representation
 
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)

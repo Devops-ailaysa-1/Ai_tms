@@ -461,7 +461,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "width": str(sd_instance.width),"height":str(sd_instance.height),
             "samples": "1","num_inference_steps":sd_instance.steps,   
             "seed": random.randint(0,99999999999),
-            "guidance_scale": 7,
+            "guidance_scale": 8,
             "safety_checker": "yes","multi_lingual": "no",
             "panorama": "no","self_attention": "yes","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
