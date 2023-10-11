@@ -125,12 +125,11 @@ def save_prest(texts,embeddings,persistent_dir):
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-     
     embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query,k=3)
+    v = vector_db.similarity_search(query=query,k=2)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="stuff")
         res = chain({"input_documents": v, "question": query})
