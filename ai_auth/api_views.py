@@ -2787,7 +2787,8 @@ class AilaysaPurchasedUnits:
         units_objs= self.get_units_objs(service_name=service_name)
         units_left = units_objs.aggregate(Sum('units_left'))['units_left__sum']
         units_buyed = units_objs.aggregate(Sum('intial_units'))['intial_units__sum']
-        return {"total_intial_units":units_buyed,"total_units_left":units_left}
+        return {"total_intial_units":units_buyed if units_buyed!=None else 0  ,
+                "total_units_left":units_left if units_left!=None else 0 }
 
     def deduct_units(self,service_name,to_deduct_units):
         units_objs= self.get_units_objs(service_name)
