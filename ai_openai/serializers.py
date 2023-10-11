@@ -1478,7 +1478,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
             instance.custom_order = count+1
             instance.temp_order = count+1
             instance.save()
-            instance.name = name if name else front_matter.name
+            instance.name = name if name else back_matter.name
             instance.save()
         else: instance = obj
         # instance.name = name if name else back_matter.name
