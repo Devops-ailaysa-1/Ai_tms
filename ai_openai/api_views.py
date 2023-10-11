@@ -1399,7 +1399,8 @@ def docx_merger(request):
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
     print("Files------------>",files)
-    composed = name + ".docx"
+    #composed = name + ".docx"
+    composed =  name + ".docx" if len(name.split()[0])<=5 else ' '.join(name.split()[:3])+ ".docx"
     #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
     result = Document()
     composer = Composer(result)
