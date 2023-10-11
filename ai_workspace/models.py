@@ -1574,6 +1574,7 @@ class DocumentImages(models.Model):
     document = models.ForeignKey(MyDocuments,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_image')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_img')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.CASCADE,related_name = 'retd_img')
+    book = models.ForeignKey("ai_openai.BookCreation",null=True, blank=True,on_delete=models.CASCADE,related_name = 'book_img')
     image = models.FileField(upload_to=my_doc_image_upload_path,blank=True, null=True)
 
 
