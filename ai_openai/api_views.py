@@ -1401,8 +1401,7 @@ def docx_merger(request):
     print("Files------------>",files)
     composed = name + ".docx"
     #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
-    result = Document(files[0])
-    result.add_page_break()
+    result = Document()
     composer = Composer(result)
 
     for i in range(0, len(files)):
