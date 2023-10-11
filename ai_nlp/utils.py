@@ -76,39 +76,39 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        try:
-            path_split=instance.file.path.split(".")
-            persistent_dir=path_split[0]+"/"
-            os.makedirs(persistent_dir,mode=0o777)
-            print(persistent_dir)
-            if instance.file.name.endswith(".docx"):
-                loader = Docx2txtLoader(instance.file.path)
-            elif instance.file.name.endswith(".txt"):
-                loader = TextLoader(instance.file.path)
-            elif instance.file.name.endswith(".epub"):
-                text = epub_processing(instance.file.path)
-                instance.text_file = text
-                instance.save()
-                loader = TextLoader(instance.text_file.path)
-            else:
-                print("pdf_processing")
-                loader = PDFMinerLoader(instance.file.path)
-            data = loader.load()
-            print(data)
-            print("embedding model loaded")
-            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
-            texts = text_splitter.split_documents(data)
-            embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-            print(embeddings)
-            # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-            save_prest( texts, embeddings, persistent_dir)
-            instance.vector_embedding_path = persistent_dir
-            instance.status = "SUCCESS"
-            # instance.question_threshold=20
-            instance.save() 
-        except:
-            instance.status ="ERROR"
+        # try:
+        path_split=instance.file.path.split(".")
+        persistent_dir=path_split[0]+"/"
+        os.makedirs(persistent_dir,mode=0o777)
+        print(persistent_dir)
+        if instance.file.name.endswith(".docx"):
+            loader = Docx2txtLoader(instance.file.path)
+        elif instance.file.name.endswith(".txt"):
+            loader = TextLoader(instance.file.path)
+        elif instance.file.name.endswith(".epub"):
+            text = epub_processing(instance.file.path)
+            instance.text_file = text
             instance.save()
+            loader = TextLoader(instance.text_file.path)
+        else:
+            print("pdf_processing")
+            loader = PDFMinerLoader(instance.file.path)
+        data = loader.load()
+        print(data)
+        print("embedding model loaded")
+        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
+        texts = text_splitter.split_documents(data)
+        embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+        print(embeddings)
+        # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+        save_prest( texts, embeddings, persistent_dir)
+        instance.vector_embedding_path = persistent_dir
+        instance.status = "SUCCESS"
+        # instance.question_threshold=20
+        instance.save() 
+        # except:
+        #     instance.status ="ERROR"
+        #     instance.save()
 
 def save_prest(texts,embeddings,persistent_dir):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
