@@ -1398,6 +1398,7 @@ from docxcompose.composer import Composer
 def docx_merger(request):
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
+    print("Files------------>",files)
     composed = name + ".docx"
     #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
     result = Document(files[0])
