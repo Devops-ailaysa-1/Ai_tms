@@ -192,13 +192,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user = request.user.team.owner  if request.user.team  else request.user
         created_by = request.user
         magic_erase=validated_data.pop('magic_erase')
-
+        project_name=validated_data.pop('project_name' ,None)
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
         team = created_by.team if created_by.team else None
         project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
-
+        file_name = validated_data.pop('file_name')
+        if file_name:
+            project_instance.project_name = file_name
+            project_instance.save()
 
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
@@ -211,7 +214,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             instance.project = project_instance
+            if project_name:
+                instance.file_name = project_name
+                project_instance.project_name = project_name
+                instance.save()
+                project_instance.save()
             instance.file_name = project_instance.project_name
+
             # if not instance.project_name:
             #     img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
             #     if img_obj:
@@ -612,6 +621,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         # custom_prompt =validated_data.pop('custom_prompt',None) 
         if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
+            negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
+             
             # if custom_prompt:
             #     if not negative_prompt:
             #          raise serializers.ValidationError({'msg':'no negative_prompt'}) 

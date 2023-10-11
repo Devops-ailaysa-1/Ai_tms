@@ -389,7 +389,7 @@ def background_remove(instance):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
-    mask = Image.fromarray(post_process(np.array(mask)))
+    # mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
     instance.mask=mask_store
     instance.save()
@@ -468,7 +468,8 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
-   
+    print("------")
+    print(data)
     if sd_instance.negative_prompt:
         data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 

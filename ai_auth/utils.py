@@ -11,6 +11,7 @@ import copy
 from django.contrib.auth.hashers import check_password,make_password
 from allauth.account.models import EmailAddress
 from django.db import IntegrityError
+import calendar
 
 # from ai_auth.api_views import resync_instances
 
@@ -199,3 +200,12 @@ def create_user(email,country,name=''):
         logger.error(f"Intergrity error {email}: ",str(e))
         return None
     return user,password
+
+
+def add_months(sourcedate, months):
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
+    sourcedate=sourcedate.replace(year=year,month=month,day=day)
+    return sourcedate
