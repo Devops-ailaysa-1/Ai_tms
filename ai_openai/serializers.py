@@ -944,7 +944,7 @@ class BookTitleSerializer(serializers.ModelSerializer):
         prompt = title_start_phrase.start_phrase.format(author_info,description,level,genre)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
-
+        print("Consumable for book title creation---------->",consumable_credits)
         if initial_credit < consumable_credits:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         
@@ -1280,7 +1280,7 @@ class BookBodySerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        print("ValiData----------->",validated_data)
+        #print("ValiData----------->",validated_data)
         lang_code =instance.book_creation.book_language_code
         user_id = instance.book_creation.user.id
 
@@ -1525,7 +1525,7 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         return ins
     
     def update(self, instance, validated_data):
-        print("ValiData----------->",validated_data)
+        #print("ValiData----------->",validated_data)
         lang_code =instance.book_creation.book_language_code
         user_id = instance.book_creation.user.id
 
