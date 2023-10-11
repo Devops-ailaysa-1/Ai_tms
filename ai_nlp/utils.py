@@ -94,9 +94,12 @@ def loader(file_id) -> None:
                 print("pdf_processing")
                 loader = PDFMinerLoader(instance.file.path)
             data = loader.load()
+            print(data)
+            print("embedding model loaded")
             text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
             texts = text_splitter.split_documents(data)
             embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+            print(embeddings)
             # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
             save_prest( texts, embeddings, persistent_dir)
             instance.vector_embedding_path = persistent_dir
