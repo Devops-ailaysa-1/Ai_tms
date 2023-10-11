@@ -18,6 +18,9 @@ from django.db import IntegrityError
 import logging
 logger = logging.getLogger('django')
 import requests
+from datetime import datetime, timedelta
+from django.utils import timezone
+from ai_auth.utils import add_months
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -400,3 +403,47 @@ def taskrole_update(instance,user):
     obj=TaskRoles.objects.filter(task_pk=instance.task_assign.task.id,user=user,role__role=tsk_role).last()
     if obj:
         obj.delete()
+
+
+def get_expiry(duration,billing_date,pack_expiry):
+    if duration=='daily':
+        expiry_cur = billing_date+timedelta(1)
+    elif duration=='monthly':
+        expiry_cur = expiry_yearly_sub(billing_date)
+
+    else:
+        raise ValueError('unknown duration')
+    
+    return expiry_cur
+
+def expiry_yearly_sub(billing_date):
+    '''Montly renewal of Credits for Yearly Subscription'''
+    start=billing_date
+    end=timezone.now()
+    if start.day != end.day:
+        print("This is Not bill date")
+
+    print("no of months",abs(((start.year - end.year)*12)+start.month-end.month)+1)
+    expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
+    return expiry
+
+
+
+def create_purchased_units_count(sender, instance,created, *args, **kwargs):
+    if created:
+        try:
+            ## ailaysa service to dynamic key
+            kwarg = {
+            'user':instance.user,
+            'ailaysa_service':"pdf-chat",
+            'purchase_units':instance,
+            'intial_units':instance.units_buyed,
+            'units_left':instance.units_buyed,
+            'unit_type':instance.purchase_pack.unit_type,
+            'expires_at': get_expiry(instance.purchase_pack.recurring,instance.buyed_at,instance.expiry),
+            }
+            auth_model.PurchasedUnitsCount.objects.create(**kwarg)
+        except BaseException as e :
+            logger.error(f"error while creating purchase units : error {str(e)}")
+
+
