@@ -146,15 +146,20 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     print(us)
     return 'created'
 
-def update_purchaseunits(user,cust,price,quants,invoice,payment,pack):
+def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=True):
 
     buyed_units = pack.credits   
     expiry = calculate_addon_expiry(timezone.now(),pack)
+    if payment != None:
+        if payment.amount_received > 0:
+            purchased = True
+    else:
+        purchased = False
 
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
-    'dj_stripe_price_id':price.id,
+    'dj_stripe_price_id':price.id if price!=None else None,
     'purchase_pack_type':pack.type,
     'purchase_pack':pack,
     'units_buyed':buyed_units,
@@ -162,8 +167,8 @@ def update_purchaseunits(user,cust,price,quants,invoice,payment,pack):
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
-    'purchased': True if payment.amount_received > 0 else False,
-    'buyed_at':payment.created,
+    'purchased': purchased,
+    'buyed_at':payment.created if payment!=None else timezone.now(),
     'ended_at': None
     }
 
