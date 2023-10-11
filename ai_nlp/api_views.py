@@ -143,27 +143,41 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
 
+
+from ai_auth.api_views import AilaysaPurchasedUnits
+from rest_framework import serializers
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
-    from rest_framework import serializers
+    # user = request.user
     file_id=request.query_params.get('file_id',None)
     chat_text=request.query_params.get('chat_text',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
+    chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
+    unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
     if chat_text:
-        total_message_unit_bal = 300 ##dummy
-        if total_message_unit_bal !=0:
+        if unit_chk['total_units_left']>0: 
             chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-            total_message_unit_bal = total_message_unit_bal-1 ## credit detection
+            # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
+            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
-            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+            raise serializers.ValidationError({'msg':'Need to buy add-on pack'}, code=400) #Insufficient Credits
+ 
     serializer = PdffileShowDetailsSerializer(pdf_file)
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pdf_chat_remaining_units(request):
+    chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
+    unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
+    return Response(unit_chk)
+
 ############ wiktionary quick lookup ##################
 # @api_view(['GET', 'POST',])
 # def WiktionaryParse(request):

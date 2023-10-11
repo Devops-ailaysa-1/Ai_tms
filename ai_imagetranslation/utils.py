@@ -507,6 +507,8 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
  
 
 #########stabilityai
+# @task(queue='default')
+
 # def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
 #     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
 #     body = {

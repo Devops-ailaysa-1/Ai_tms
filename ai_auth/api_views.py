@@ -2783,7 +2783,7 @@ class AilaysaPurchasedUnits:
         units_objs = PurchasedUnitsCount.objects.filter(user=self.user).filter(expires_at__gte=current_time).order_by('created_at')
         return units_objs
 
-    def get_units(self,service_name):
+    def get_units(self,service_name): #total_units_left
         units_objs= self.get_units_objs(service_name=service_name)
         units_left = units_objs.aggregate(Sum('units_left'))['units_left__sum']
         units_buyed = units_objs.aggregate(Sum('intial_units'))['intial_units__sum']

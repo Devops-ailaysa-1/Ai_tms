@@ -11,4 +11,5 @@ urlpatterns += [
     path('ner', api_views.named_entity, name='ner'),
     path('synonyms', api_views.wordapi_synonyms, name='synonyms'),
     path('chat-with-pdf', api_views.pdf_chat,name='chat-pdf'), 
+    path('chat-unit-remaining',api_views.pdf_chat_remaining_units,name='chat-unit-rem')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
