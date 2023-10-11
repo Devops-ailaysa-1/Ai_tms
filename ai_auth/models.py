@@ -9,7 +9,10 @@ from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFi
                             TaskRoleLevel,Timezones,SupportType,JobPositions,\
                             SupportTopics,Role,Currencies,ApiServiceList,SuggestionType,Suggestion
 from django.db.models.signals import post_save, pre_save, pre_delete
-from ai_auth.signals import proz_connect, create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
+from ai_auth.signals import proz_connect, create_allocated_dirs, updated_user_taxid, \
+                            update_internal_member_status, vendor_status_send_email, \
+                            get_currency_based_on_country,\
+                            create_purchased_units_count
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -374,14 +377,75 @@ class UserCredits(models.Model):
 
 post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
+
+
 class CreditPack(models.Model):
+    DAILY = 'daily'
+    MONTHLY = 'monthly'
+    RECURRING_STATUS = [
+        (DAILY, _('Renew Daily')),
+        (MONTHLY, _('Renew Monthly')),
+    ]
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)
     #price = models.OneToOneField(Price, on_delete=models.CASCADE)
     product =models.ForeignKey(Product,on_delete=models.CASCADE)
+    unit_type = models.CharField(max_length=200)
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
+    recurring = models.CharField(max_length=70,choices=RECURRING_STATUS,default=MONTHLY)
     expires_at = models.IntegerField(null=True,blank=True,help_text = "no of months")
+
+
+class PurchasedUnits(models.Model):
+    DAILY = 'daily'
+    MONTHLY = 'monthly'
+    RECURRING_STATUS = [
+        (DAILY, _('Renew Daily')),
+        (MONTHLY, _('Renew Monthly')),
+    ]
+
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE,null=True,blank=True)
+    dj_stripe_price_id = models.CharField(max_length=200)
+    purchase_pack_type = models.CharField(max_length=200, blank=True, null=True)
+    purchase_pack = models.ForeignKey(CreditPack,related_name="purchased_units_cp",blank=True,null=True,on_delete=models.CASCADE)
+    units_buyed = models.IntegerField()
+    # units_left = models.IntegerField()
+    # carried_units =models.IntegerField(blank=True, null=True)
+    expiry = models.DateTimeField(blank=True, null=True)
+    invoice = models.CharField(max_length=200,blank=True, null=True)
+    paymentintent = models.CharField(max_length=200,blank=True, null=True)
+    recurring = models.CharField(max_length=100,blank=True, null=True,choices=RECURRING_STATUS)
+    purchased = models.BooleanField(default=False)
+    buyed_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    ## need to remove old records
+post_save.connect(create_purchased_units_count, sender=PurchasedUnits)
+
+class PurchasedUnitsCount(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    ailaysa_service = models.CharField(max_length=150)
+    purchase_units = models.ForeignKey(PurchasedUnits,related_name="user_purchased_units",on_delete=models.CASCADE)
+    intial_units = models.IntegerField(default=0)
+    units_left = models.IntegerField(default=0)
+    unit_type = models.CharField(max_length=100)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
+class PdfChatUsageQuota(models.Model):
+    user = models.OneToOneField(AiUser,on_delete=models.CASCADE)
+    question_threshold = models.IntegerField(default=0)
+    no_of_question_remaining= models.IntegerField(default=0)
+    add_on_subscribed =  models.BooleanField(null=True,blank=True,default=False)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
 
 class BillingAddress(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='billing_addr_user')
