@@ -668,6 +668,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
         token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+        print("Tokens for openai------------>",token_usage_to_reduce)
         AiPromptSerializer().customize_token_deduction(blog_create_instance,token_usage_to_reduce)
         
         #blog_titles = openai_response['choices'][0]['text']
@@ -681,6 +682,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
                     print("blog title create not in en")
                     initial_credit = blog_create_instance.user.credit_balance.get("total_left")
                     consumable_credits_to_translate_title = get_consumable_credits_for_text(blog_title,blog_create_instance.user_language_code,'en')
+                    print("Credits for translation----------->",consumable_credits_to_translate_title)
                     if initial_credit > consumable_credits_to_translate_title:
                         blog_title_in_other_lang=get_translation(1,blog_title,"en",blog_create_instance.user_language_code,
                                                              user_id=blog_create_instance.user.id,from_open_ai=True) 
@@ -949,6 +951,7 @@ class BookTitleSerializer(serializers.ModelSerializer):
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
         token_usage = openai_token_usage(openai_response)
         token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+        print("OpenAi Usage for book title------------->",token_usage_to_reduce)
         AiPromptSerializer().customize_token_deduction(book_creation,token_usage_to_reduce)
         
         book_titles = openai_response["choices"][0]["message"]["content"]
@@ -961,6 +964,7 @@ class BookTitleSerializer(serializers.ModelSerializer):
                     print("book title create not in en")
                     initial_credit = book_creation.user.credit_balance.get("total_left")
                     consumable_credits_to_translate_title = get_consumable_credits_for_text(book_title,book_creation.book_language_code,'en')
+                    print("For Title Translation--------------->",consumable_credits_to_translate_title)
                     if initial_credit > consumable_credits_to_translate_title:
                         book_title_in_other_lang=get_translation(1,book_title,"en",book_creation.book_language_code,
                                                              user_id=book_creation.user.id,from_open_ai=True) 
@@ -1166,6 +1170,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                 total_token = prompt_response_gpt['usage']['total_tokens']
                 token_usage = openai_token_usage(prompt_response_gpt)
                 total_token = get_consumable_credits_for_openai_text_generator(total_token)
+                print("Token Usage in chapter-------------->",total_token)
                 AiPromptSerializer().customize_token_deduction(book_obj,total_token)
                 print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
                 queryset = BookBody.objects.filter(book_creation=book_obj,body_matter_id=body_matter.id).distinct('group')
@@ -1188,6 +1193,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                             if (book_obj.book_language_id not in blog_available_langs):
                                 initial_credit = book_obj.user.credit_balance.get("total_left")
                                 consumable_credits_to_translate_section = get_consumable_credits_for_text(chapter,book_obj.book_language_code,'en')
+                                print("Translate chapter credits---------------->",consumable_credits_to_translate_section)
                                 if initial_credit > consumable_credits_to_translate_section:
                                     book_chapter=get_translation(1,chapter,'en',book_obj.book_language_code,
                                                                 user_id=book_obj.user.id) 
