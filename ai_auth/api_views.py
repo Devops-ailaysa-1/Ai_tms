@@ -33,7 +33,8 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
+                            PurchasedUnits,PurchasedUnitsCount)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -2770,3 +2771,52 @@ def user_info_update(request):
             ser.save()
             return Response(ser.data)
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from django.db.models import Sum
+
+class AilaysaPurchasedUnits:
+    def __init__(self,user):
+        self.user = user
+
+    def get_units_objs(self,service_name):
+        current_time = timezone.now()
+        units_objs = PurchasedUnitsCount.objects.filter(user=self.user).filter(expires_at__gte=current_time).order_by('created_at')
+        return units_objs
+
+    def get_units(self,service_name):
+        units_objs= self.get_units_objs(service_name=service_name)
+        units_left = units_objs.aggregate(Sum('units_left'))['units_left__sum']
+        units_buyed = units_objs.aggregate(Sum('intial_units'))['intial_units__sum']
+        return {"total_intial_units":units_buyed,"total_units_left":units_left}
+
+    def deduct_units(self,service_name,to_deduct_units):
+        units_objs= self.get_units_objs(service_name)
+        if to_deduct_units > self.get_units(service_name)['total_units_left']:
+             raise ValueError ('deducting more than available credits')
+        carry_units = 0
+        print("objs" , units_objs)
+        print("to_deduct_units-->out" , to_deduct_units)
+        with transaction.atomic():
+            for i in units_objs:
+                if to_deduct_units <= i.units_left:
+                    units = i.units_left - to_deduct_units
+                    i.units_left = units
+                    i.save()
+                    to_deduct_units = 0
+                    print("inside detect")
+                elif to_deduct_units > i.units_left:
+                    carry_units = to_deduct_units - i.units_left
+                    i.units_left = 0
+                    i.save()
+                    print("carry units",carry_units)
+                    print("inside non detect")
+                if carry_units == 0:
+                    print("inside carry")
+                    print("to_de",to_deduct_units)
+                    to_deduct_units = 0
+                    break
+                else:
+                    to_deduct_units = carry_units
+                    carry_units = 0
+            if to_deduct_units != 0:
+                raise ValueError ('deducting more than available credits')
