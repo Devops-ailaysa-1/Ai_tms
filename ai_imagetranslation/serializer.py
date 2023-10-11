@@ -191,14 +191,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user.team.owner  if request.user.team  else request.user
         created_by = request.user
-        magic_erase=validated_data.pop('magic_erase')
+        magic_erase=validated_data.pop('magic_erase',None)
         project_name=validated_data.pop('project_name' ,None)
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
         team = created_by.team if created_by.team else None
         project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
-        file_name = validated_data.pop('file_name')
+        file_name = validated_data.pop('file_name',None)
         if file_name:
             project_instance.project_name = file_name
             project_instance.save()

@@ -94,12 +94,10 @@ def loader(file_id) -> None:
             print("pdf_processing")
             loader = PDFMinerLoader(instance.file.path)
         data = loader.load()
-        print(data)
         print("embedding model loaded")
-        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
+        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=200)   #. from_tiktoken_encoder  ,chunk_overlap=0
         texts = text_splitter.split_documents(data)
         embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-        print(embeddings)
         # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
         save_prest( texts, embeddings, persistent_dir)
         instance.vector_embedding_path = persistent_dir
@@ -122,17 +120,19 @@ def save_prest(texts,embeddings,persistent_dir):
 #     images.save(img_io, format='PNG')
 #     img_byte_arr = img_io.getvalue()
 #     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
+from langchain.chat_models import ChatOpenAI
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
-    llm =OpenAI()
-     
+    # llm =OpenAI()
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0,max_tokens=300)
     embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
     v = vector_db.similarity_search(query=query,k=3)
+    print("docum",v)
     with get_openai_callback() as cb:
-        chain = load_qa_chain(llm, chain_type="stuff")
+        chain = load_qa_chain(llm, chain_type="map_reduce") #map_reduce stuff
         res = chain({"input_documents": v, "question": query})
         print(cb)
         
