@@ -18,7 +18,6 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from celery.decorators import task
 openai.api_key = OPENAI_API_KEY
-print(openai.api_key)
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 
