@@ -149,7 +149,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 def update_purchaseunits(user,cust,price,quants,invoice,payment,pack):
 
     buyed_units = pack.credits   
-    expiry = None
+    expiry = calculate_addon_expiry(timezone.now(),pack)
 
     kwarg = {
     'user':user,
@@ -170,6 +170,9 @@ def update_purchaseunits(user,cust,price,quants,invoice,payment,pack):
     PC = models.PurchasedUnits.objects.create(**kwarg)
     logger.info(f"user:{user.uid}, buyed:{buyed_units}, credits_pack:{pack.credits}, quantity :{quants}, carry:{0}")
     print(PC)
+    # if pack.secondary_unit_type =! None:
+
+
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):

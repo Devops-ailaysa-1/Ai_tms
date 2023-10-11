@@ -250,7 +250,8 @@ class Project(models.Model):
 
             if not self.project_name:
                 count = queryset.count()
-                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                prefix = self.get_prefix()
+                self.project_name = prefix +str(count+1).zfill(3)+'('+str(date.today()) +')'
 
             if self.id:
                 project_count = queryset.filter(project_name=self.project_name).exclude(id=self.id).count()
@@ -278,6 +279,15 @@ class Project(models.Model):
     #         get_pr_list_cache_key(self.ai_user_id)
     #     ]
     #     return cache_keys
+
+    def get_prefix(self):
+        if self.project_type_id == 7:
+            prefix = 'Book Project-'
+        elif self.project_type_id == 6:
+            prefix = 'Designer Project-'
+        else:
+            prefix = 'Project-'
+        return prefix
 
     @property
     def designer_project_detail(self):
