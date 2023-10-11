@@ -1396,11 +1396,12 @@ from docx import Document
 from docxcompose.composer import Composer
 @api_view(["POST"])
 def docx_merger(request):
+    punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
     print("Files------------>",files)
     #composed = name + ".docx"
-    composed =  name + ".docx" if len(name.split()[0])<=5 else ' '.join(name.split()[:3])+ ".docx"
+    composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
     #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
     result = Document()
     composer = Composer(result)
