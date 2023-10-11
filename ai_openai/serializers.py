@@ -1364,10 +1364,9 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
             instance = BookFrontMatter.objects.create(**validated_data)
             instance.custom_order = count+1
             instance.temp_order = count+1
+            instance.name = name if name else front_matter.name
             instance.save()
         else: instance=obj
-        instance.name = name if name else front_matter.name
-        instance.save()
         if obj:
             initial_credit = instance.book_creation.user.credit_balance.get("total_left")
             if initial_credit <150:
@@ -1477,9 +1476,11 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
             instance.custom_order = count+1
             instance.temp_order = count+1
             instance.save()
+            instance.name = name if name else front_matter.name
+            instance.save()
         else: instance = obj
-        instance.name = name if name else back_matter.name
-        instance.save()
+        # instance.name = name if name else back_matter.name
+        # instance.save()
         if obj:
             initial_credit = instance.book_creation.user.credit_balance.get("total_left")
             if initial_credit <150:
