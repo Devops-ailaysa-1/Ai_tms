@@ -279,7 +279,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user,team=team)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
-
+        file_name = validated_data.get('file_name',None)
+        if file_name:
+            project_instance.project_name =file_name
+            project_instance.save()
         # if not social_media_create:
         #     raise serializers.ValidationError('no social_media_resolution')
 
@@ -363,6 +366,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             instance.height=int(width)
             instance.width=int(height)
+            
             instance.file_name=social_media_create.social_media_name
             project_instance.project_name = social_media_create.social_media_name
             project_instance.save()

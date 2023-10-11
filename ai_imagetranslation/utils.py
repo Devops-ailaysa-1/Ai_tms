@@ -468,7 +468,8 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
-   
+    print("------")
+    print(data)
     if sd_instance.negative_prompt:
         data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 
