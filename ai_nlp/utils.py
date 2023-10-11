@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from celery.decorators import task
 openai.api_key = OPENAI_API_KEY
+print(openai.api_key)
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -80,9 +81,6 @@ def loader(file_id) -> None:
             persistent_dir=path_split[0]+"/"
             os.makedirs(persistent_dir,mode=0o777)
             print(persistent_dir)
-            # if instance.text_file:
-            #     loader = TextLoader(instance.text_file.path)
-            # else:
             if instance.file.name.endswith(".docx"):
                 loader = Docx2txtLoader(instance.file.path)
             elif instance.file.name.endswith(".txt"):
@@ -115,20 +113,21 @@ def save_prest(texts,embeddings,persistent_dir):
     print("--------",vector_db)
     vector_db = None
 
-def thumbnail_create(path) -> core :
-    img_io = io.BytesIO()
-    images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]
-    images.save(img_io, format='PNG')
-    img_byte_arr = img_io.getvalue()
-    return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
+# def thumbnail_create(path) -> core :
+#     img_io = io.BytesIO()
+#     images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]
+#     images.save(img_io, format='PNG')
+#     img_byte_arr = img_io.getvalue()
+#     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
-    embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+     
+    embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-    vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
+    vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query,k=2)
+    v = vector_db.similarity_search(query=query,k=3)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="stuff")
         res = chain({"input_documents": v, "question": query})
