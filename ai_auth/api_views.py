@@ -2780,7 +2780,8 @@ class AilaysaPurchasedUnits:
 
     def get_units_objs(self,service_name):
         current_time = timezone.now()
-        units_objs = PurchasedUnitsCount.objects.filter(user=self.user).filter(expires_at__gte=current_time).order_by('created_at')
+        units_objs = PurchasedUnitsCount.objects.filter(user=self.user).filter(Q(expires_at__gte=current_time)|Q(expires_at=None)).filter(
+            ailaysa_service=service_name).order_by('created_at')
         return units_objs
 
     def get_units(self,service_name): #total_units_left

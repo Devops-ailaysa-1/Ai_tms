@@ -109,7 +109,7 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
             return Response({'msg':'no file attached'})
         user,pr_managers = self.get_user() 
         data = {'user':user.id,'managers':pr_managers,'file':file}
-        serializer = PdffileUploadSerializer(data={**data})
+        serializer = PdffileUploadSerializer(data={**data},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
