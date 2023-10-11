@@ -410,7 +410,8 @@ def get_expiry(duration,billing_date,pack_expiry):
         expiry_cur = billing_date+timedelta(1)
     elif duration=='monthly':
         expiry_cur = expiry_yearly_sub(billing_date)
-
+    elif duration==None:
+        expiry_cur = pack_expiry
     else:
         raise ValueError('unknown duration')
     
@@ -428,6 +429,22 @@ def expiry_yearly_sub(billing_date):
     return expiry
 
 
+def purchase_unit_renewal(pu_instance):
+        try:
+            ## ailaysa service to dynamic key
+            kwarg = {
+            'user':pu_instance.user,
+            'ailaysa_service':"pdf-chat",
+            'purchase_units':pu_instance,
+            'intial_units':pu_instance.units_buyed,
+            'units_left':pu_instance.units_buyed,
+            'unit_type':pu_instance.purchase_pack.unit_type,
+            'expires_at': get_expiry(pu_instance.purchase_pack.recurring,pu_instance.buyed_at,pu_instance.expiry),
+            }
+            auth_model.PurchasedUnitsCount.objects.create(**kwarg)
+            ### need to update for secondary units
+        except BaseException as e :
+            logger.error(f"error while creating purchase units : error {str(e)}")
 
 def create_purchased_units_count(sender, instance,created, *args, **kwargs):
     if created:
@@ -437,12 +454,24 @@ def create_purchased_units_count(sender, instance,created, *args, **kwargs):
             'user':instance.user,
             'ailaysa_service':"pdf-chat",
             'purchase_units':instance,
-            'intial_units':instance.units_buyed,
-            'units_left':instance.units_buyed,
+            'intial_units':instance.purchase_pack.credits,
+            'units_left':instance.purchase_pack.credits,
             'unit_type':instance.purchase_pack.unit_type,
             'expires_at': get_expiry(instance.purchase_pack.recurring,instance.buyed_at,instance.expiry),
             }
             auth_model.PurchasedUnitsCount.objects.create(**kwarg)
+
+            if instance.purchase_pack.secondary_unit_type!=None:
+                kwarg2 = {
+                'user':instance.user,
+                'ailaysa_service':"pdf-chat-files",
+                'purchase_units':instance,
+                'intial_units':instance.purchase_pack.secondary_credits,
+                'units_left':instance.purchase_pack.secondary_credits,
+                'unit_type':instance.purchase_pack.secondary_unit_type,
+                'expires_at': get_expiry(instance.purchase_pack.secondary_recurring,instance.buyed_at,instance.expiry),
+                }
+                auth_model.PurchasedUnitsCount.objects.create(**kwarg2)
         except BaseException as e :
             logger.error(f"error while creating purchase units : error {str(e)}")
 

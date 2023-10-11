@@ -9,7 +9,7 @@ from celery.decorators import task
 from celery import shared_task
 from datetime import date
 from django.utils import timezone
-from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
+from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits
 import datetime,os,json, collections
 from djstripe.models import Subscription,Invoice,Charge
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
@@ -35,6 +35,7 @@ from django.core.management import call_command
 import calendar
 from ai_workspace.models import ExpressTaskHistory
 from celery.exceptions import MaxRetriesExceededError
+from ai_auth.signals import purchase_unit_renewal
 
 extend_mail_sent= 0
 
@@ -110,8 +111,9 @@ def renewal_list():
         cycle_dates = [x for x in range(today.day,32)]
     else:
         cycle_dates = [today.day]
-    subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
-                    current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
+    subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(
+                                ~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year,
+                                current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
     logger.info(f"renewal list count {subs.count}")
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
@@ -120,6 +122,30 @@ def renewal_list():
 def renew_user_credits(sub_id):
     sub =Subscription.objects.get(djstripe_id=sub_id)
     renew_user_credits_yearly(subscription=sub)
+
+@task(queue='default')
+def renewal_list_daily_renewal():
+    today = timezone.now() + timedelta(1)  
+    last_day = calendar.monthrange(today.year,today.month)[1]
+    if last_day == today.day:
+        cycle_dates = [x for x in range(today.day,32)]
+    else:
+        cycle_dates = [today.day]
+    print("cycle dates",cycle_dates)
+    # subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
+    #                 current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
+    pu_list =PurchasedUnits.objects.filter(recurring='daily').filter(~Q(expiry__year=today.year,
+                    expiry__month=today.month,expiry__day__in=cycle_dates))
+    # print("pu_list",pu_list)
+    logger.info(f"renewal list count {pu_list.count}")
+    for pu in pu_list:
+        renew_purchase_units.apply_async((pu.id,),eta=pu.buyed_at)
+
+
+@task(queue='default')
+def renew_purchase_units(pu_id):
+    sub =PurchasedUnits.objects.get(id=pu_id)
+    purchase_unit_renewal(pu_instance=sub)
 
 @task(queue='low-priority')
 def delete_inactive_user_account():
