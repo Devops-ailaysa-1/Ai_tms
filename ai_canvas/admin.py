@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from ai_canvas.models import AssetCategory,AssetImage,CanvasUserImageAssets , AiAsserts,AiAssertscategory
+from ai_canvas.models import AssetCategory,AssetImage,CanvasUserImageAssets , AiAsserts,AiAssertscategory ,ImageCategories
 
 
 admin.site.register(AssetCategory)
@@ -13,4 +13,4 @@ admin.site.register(AssetImage)
 admin.site.register(CanvasUserImageAssets)
 admin.site.register(AiAsserts)
 admin.site.register(AiAssertscategory)
-# admin.site.register(TemplateJson)
+admin.site.register(ImageCategories)
