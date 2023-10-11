@@ -5,7 +5,7 @@ from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -68,7 +68,7 @@ def epub_processing(file_path):
     # print("---->",text_str)
     return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
 
-
+ 
 @task(queue='default')
 def loader(file_id) -> None:
     instance = PdffileUpload.objects.get(id=file_id)
@@ -95,7 +95,8 @@ def loader(file_id) -> None:
             loader = PDFMinerLoader(instance.file.path)
         data = loader.load()
         print("embedding model loaded")
-        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=200)   #. from_tiktoken_encoder  ,chunk_overlap=0
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
+        # text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100)   #. from_tiktoken_encoder  ,chunk_overlap=0
         texts = text_splitter.split_documents(data)
         embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
         # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
@@ -129,8 +130,8 @@ def load_embedding_vector(vector_path,query)->RetrievalQA:
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query,k=3)
-    print("docum",v)
+    v = vector_db.similarity_search(query=query,k=2)
+    print("docum-------------------------------------------->>>>>>>>>",v)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="map_reduce") #map_reduce stuff
         res = chain({"input_documents": v, "question": query})
