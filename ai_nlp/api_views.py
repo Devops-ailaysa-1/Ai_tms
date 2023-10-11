@@ -146,20 +146,22 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
+    from rest_framework import serializers
     file_id=request.query_params.get('file_id',None)
     chat_text=request.query_params.get('chat_text',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     if chat_text:
-        if pdf_file.used_question <= pdf_file.question_threshold:
+        total_message_unit_bal = 300 ##dummy
+        if total_message_unit_bal !=0:
             chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
-            pdf_file.used_question = pdf_file.used_question+1
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
+            total_message_unit_bal = total_message_unit_bal-1 ## credit detection
             return Response(serializer.data)
         else:
-            return Response({'msg':'Used chat question limit buy addon'},status=401)
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
     serializer = PdffileShowDetailsSerializer(pdf_file)
     return Response(serializer.data)
 ############ wiktionary quick lookup ##################

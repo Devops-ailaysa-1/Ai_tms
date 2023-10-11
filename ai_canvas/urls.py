@@ -49,7 +49,8 @@ urlpatterns += [
     path('canvas-user-images-list',api_views.CanvasUserImageAssetsViewsetList.as_view({'get':'list'}),name='image-translate-list'),
 
     path('design-assert',api_views.designer_asset_create,name='designer-asset-create'),
-    path('design_word_count',api_views.Designerwordcount,name='designer-wordcount-create')
+    path('design_word_count',api_views.Designerwordcount,name='designer-wordcount-create'),
+    path('lang_detect',api_views.lang_detection,name='lang_det')
 
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

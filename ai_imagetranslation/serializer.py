@@ -22,6 +22,7 @@ from ai_workspace.api_views import  get_consumable_credits_for_text
 
 
 
+
 HOST_NAME=os.getenv('HOST_NAME')
 
 
@@ -155,10 +156,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
         queryset = obj.s_im.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
-                                                & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
-                                                & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
+                                                &Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
+                                                &Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
                                                 |Q(job__project__ai_user=user))
+        print(queryset)
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
 
 
@@ -190,13 +192,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         user = request.user.team.owner  if request.user.team  else request.user
         created_by = request.user
         magic_erase=validated_data.pop('magic_erase')
-
+        project_name=validated_data.pop('project_name' ,None)
         project_type = ProjectType.objects.get(id=6)
         default_step = Steps.objects.get(id=1)
         team = created_by.team if created_by.team else None
         project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
-
+        file_name = validated_data.pop('file_name')
+        if file_name:
+            project_instance.project_name = file_name
+            project_instance.save()
 
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
@@ -209,7 +214,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.thumbnail=thumb_nail
             instance.types=str(validated_data.get('image')).split('.')[-1]
             instance.project = project_instance
+            if project_name:
+                instance.file_name = project_name
+                project_instance.project_name = project_name
+                instance.save()
+                project_instance.save()
             instance.file_name = project_instance.project_name
+
             # if not instance.project_name:
             #     img_obj=ImageTranslate.objects.filter(user=instance.user.id,project_name__icontains='Untitled project')
             #     if img_obj:
@@ -225,12 +236,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                    source_image__source_language=src_lang).exists():
                 raise serializers.ValidationError({"msg":"language pair already exists"})
     
-    def img_trans(self,instance,inpaint_creation_target_lang,src_lang):
+    def img_trans(self,instance,inpaint_creation_target_lang,src_lang,user,pr_managers ):
         from ai_canvas.api_views import dict_rec_json
+        from ai_imagetranslation.api_views import call_back_rasie
         if not instance.source_canvas_json:
             raise serializers.ValidationError({'msg':'source json is not sent'})
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         tar_json_copy['background']="rgba(231,232,234,0)"
+        # initial_credit = 2
         for tar_lang in inpaint_creation_target_lang:
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             print(src_lang , type(src_lang))
@@ -239,10 +252,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             total_sentence =" ".join(dict_rec_json(tar_json_copy))
             print("total_credit",total_sentence)
             initial_credit = instance.user.credit_balance.get("total_left")
+            print("----------",initial_credit)
+            
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
-            if initial_credit < consumed_credit:
-                obj_inst = ImageTranslateSerializer(instance)
-                raise serializers.ValidationError({'translation_result':obj_inst.data ,'msg':'Insufficient Credits'}, code=400)
+            if initial_credit < consumed_credit: 
+                obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
+                # print(obj_inst.data)
+                raise serializers.ValidationError({'translation_result':obj_inst.data,'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
             img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
@@ -254,7 +270,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
-
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
                                                     target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
                     i['text']=translate_bbox
@@ -284,7 +299,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         export=validated_data.get('export',None)
         image_id=validated_data.get('image_id',None)
         image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
-
+        user = self.context.get('user')
+        pr_managers = self.context.get('managers') 
+        print("pr_managers--------->",pr_managers) 
         if magic_erase and mask_json:
             instance.mask_json=mask_json
             instance.save()
@@ -307,7 +324,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
         
         if image_id:
-            instance.image
+            im = Image.open(image_id.image.path)
+            image = convert_image_url_to_file(im,no_pil_object=False) 
+            instance.image =image
+            instance.height=image_id.height
+            instance.width=image_id.width
+            instance.image_load.id =  image_id.id
+            instance.save()
 
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
@@ -335,10 +358,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
-             
-            # consumble_credit_for_trans =  get_consumable_credits_for_text(total_sentence,src_lang.locale.first(),inpaint_creation_target_lang[0].locale.first() )
-            consumble_credit_for_inpaint = get_consumable_credits_for_image_trans_inpaint()
-            consumble_credit = consumble_credit_for_inpaint #+ consumble_credit_for_trans
+            consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             self.target_check(instance,inpaint_creation_target_lang,src_lang.locale.first())
@@ -370,7 +390,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
             inpaint_creation_target_lang.append(src_lang)
-            self.img_trans(instance,inpaint_creation_target_lang,src_lang)
+
+            self.img_trans(instance,inpaint_creation_target_lang,src_lang, user,pr_managers)
            
             # thumb_image=thumbnail_create(image_inpaint_create.target_canvas_json,formats='png')
             # thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
@@ -386,7 +407,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             src_lang=instance.source_language.language #instance.source_language_for_translate is languagelocale obj inside img_trans fun again convert to language locale
             print(src_lang) #source_language_for_translate.language is language obj
             self.target_check(instance,inpaint_creation_target_lang,lang_locale)
-            self.img_trans(instance,inpaint_creation_target_lang,src_lang)
+            self.img_trans(instance,inpaint_creation_target_lang,src_lang ,user,pr_managers)
             instance.save()
             return instance
 
@@ -424,8 +445,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     print("total_word", total_sentence)
                     consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
                     if initial_credit < consumed_credit:
-                        obj_inst = ImageTranslateSerializer(instance)
-                        raise serializers.ValidationError({'translation_result':obj_inst.data ,'msg':'Insufficient Credits'}, code=400)
+                        obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
+                        raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
@@ -574,8 +595,10 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
     negative_prompt=serializers.CharField(allow_null=True,required=False,write_only=True)
     image_resolution=serializers.PrimaryKeyRelatedField(queryset=SDImageResolution.objects.all(),required=True,write_only=True)
     # step = serializers.IntegerField(required=True)
+    # custom_prompt = serializers.BooleanField(required=True,write_only=True)
     class Meta:
-        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail','image_resolution','celery_id','status')   #image_resolution step
+        fields = ("id",'prompt','image','negative_prompt','sdstylecategoty','thumbnail',
+                  'image_resolution','celery_id','status')   #image_resolution step #custom_prompt
         model=StableDiffusionAPI
 
 
@@ -591,19 +614,29 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         user=self.context.get('user')
         created_by = self.context.get('created_by')
         prompt=validated_data.get('prompt',None)
-        step=validated_data.pop('step',None)
+        # step=validated_data.pop('step',None)
         sdstylecategoty=validated_data.pop('sdstylecategoty',None)
         negative_prompt = validated_data.pop('negative_prompt',None)
         image_resolution=validated_data.pop('image_resolution',None)
-
+        # custom_prompt =validated_data.pop('custom_prompt',None) 
         if sdstylecategoty.style_name not in ["None"]:
             default_prompt = sdstylecategoty.default_prompt
-            if sdstylecategoty.negative_prompt:
-                negative_prompt=str(negative_prompt)+" "+sdstylecategoty.negative_prompt
-                print("negative_prompt",negative_prompt)
+            negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
+             
+            # if custom_prompt:
+            #     if not negative_prompt:
+            #          raise serializers.ValidationError({'msg':'no negative_prompt'}) 
+            #     negative_prompt = str(negative_prompt)
+            # else:
+            #     if sdstylecategoty.negative_prompt:
+            #         negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
+            #         print("negative_prompt",negative_prompt)
             prompt = default_prompt.format(prompt)
+        print(prompt)
+        print("===")
+        print(negative_prompt)
         if not image_resolution:
-            raise serializers.ValidationError({'no image resolution'}) 
+            raise serializers.ValidationError({'msg':'no image resolution'}) 
         
         #prompt,steps,height,width,negative_prompt
         initial_credit = user.credit_balance.get("total_left")

@@ -14,8 +14,9 @@ from celery.decorators import task
 from ai_nlp.models import PdffileUpload 
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
-
-
+from bs4 import BeautifulSoup
+from bs4.element import Comment
+from celery.decorators import task
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
@@ -36,13 +37,39 @@ emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 #     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
 #     print(type(embeddings))
 #     return vector_db
+from zipfile import ZipFile 
 
+def tag_visible(element):
+    if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
+        return False
+    if isinstance(element, Comment):
+        return False
+    return True
 
-from celery.decorators import task
+def text_from_html(body):
+    soup = BeautifulSoup(body, 'html.parser')
+    texts = soup.findAll(string=True)
+    visible_texts = filter(tag_visible, texts)  
+    return u" ".join(t.strip() for t in visible_texts)
+
+def epub_processing(file_path):
+    file_name= file_path.split("/")[-1].split(".")[0]
+    text_str = ""
+    with ZipFile(file_path) as zf:
+        for i in zf.filelist:
+            print(i.filename)
+            if i.filename.endswith("xhtml") or i.filename.endswith("html"):
+                html_content = zf.read(i)
+                # print(html_content)
+                text = text_from_html(html_content.decode("utf-8"))
+                # with open(i.filename , 'rb') as fp:  
+                text_str = text_str+text+"\n"
+    # print("---->",text_str)
+    return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
+
 
 @task(queue='default')
 def loader(file_id) -> None:
-    
     instance = PdffileUpload.objects.get(id=file_id)
     website = instance.website
     if website:
@@ -53,23 +80,30 @@ def loader(file_id) -> None:
             persistent_dir=path_split[0]+"/"
             os.makedirs(persistent_dir,mode=0o777)
             print(persistent_dir)
+            # if instance.text_file:
+            #     loader = TextLoader(instance.text_file.path)
+            # else:
             if instance.file.name.endswith(".docx"):
                 loader = Docx2txtLoader(instance.file.path)
             elif instance.file.name.endswith(".txt"):
                 loader = TextLoader(instance.file.path)
-            # elif instance.file.name.endswith(".epub"):
-            #     loader = UnstructuredEPubLoader(instance.file.path)
+            elif instance.file.name.endswith(".epub"):
+                text = epub_processing(instance.file.path)
+                instance.text_file = text
+                instance.save()
+                loader = TextLoader(instance.text_file.path)
             else:
                 print("pdf_processing")
                 loader = PDFMinerLoader(instance.file.path)
             data = loader.load()
-            text_splitter = CharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100,chunk_overlap=0)  
             texts = text_splitter.split_documents(data)
             embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+            # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
             save_prest( texts, embeddings, persistent_dir)
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
-            instance.question_threshold=2
+            # instance.question_threshold=20
             instance.save() 
         except:
             instance.status ="ERROR"
@@ -88,14 +122,13 @@ def thumbnail_create(path) -> core :
     img_byte_arr = img_io.getvalue()
     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
 
-
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     llm =OpenAI()
     embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embeddings)
     # retriever = vector_db.as_retriever()
-    v = vector_db.similarity_search(query=query, k=2)
+    v = vector_db.similarity_search(query=query,k=2)
     with get_openai_callback() as cb:
         chain = load_qa_chain(llm, chain_type="stuff")
         res = chain({"input_documents": v, "question": query})

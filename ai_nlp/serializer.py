@@ -15,8 +15,6 @@ class PdffileShowDetailsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-
-
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     class Meta:
@@ -28,6 +26,10 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         instance = PdffileUpload.objects.create(**validated_data)
         instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
         instance.status="PENDING"
+        # if instance.file.name.endswith(".epub"):
+        #     text_scrap = epub_processing(instance.file.path)
+        #     instance.text_file =text_scrap
+        #     instance.save()
         celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
         print(celery_id)
         print("vector chromadb created")

@@ -1,7 +1,6 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,
-                     BlogKeywordGenerate,Blogtitle,BlogOutline,BookCreation,BookTitle,BookBody,
-                     BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,ImageGenerationPromptResponse,
-                     BookBackMatter,BookFrontMatter,BookBodyDetails,)
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,BlogKeywordGenerate,Blogtitle,
+                     BlogOutline,BookCreation,BookTitle,BookBody,BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,
+                     ImageGenerationPromptResponse, BookBackMatter,BookFrontMatter,BookBodyDetails,)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -9,12 +8,9 @@ from rest_framework import status
  
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
-                        AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
-                        BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
-                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,
-                        CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
+from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, AiPromptGetSerializer,AiPromptCustomizeSerializer,ImageGeneratorPromptSerializer,
+                          TranslateCustomizeDetailSerializer ,BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
+                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
                         BookBodySerializer,BookBodyDetailSerializer,)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
@@ -213,6 +209,7 @@ def customize_text_openai(request):
     document = request.POST.get('document_id')
     task = request.POST.get('task',None)
     pdf = request.POST.get('pdf',None)
+    book = request.POST.get('book',None)
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
@@ -227,6 +224,9 @@ def customize_text_openai(request):
         user = obj.job.project.ai_user
     elif pdf != None:
         obj = Ai_PdfUpload.objects.get(id=pdf)
+        user = obj.user
+    elif book != None:
+        obj = BookCreation.objects.get(id=book)
         user = obj.user
     else:    
         user = request.user.team.owner if request.user.team else request.user
@@ -248,7 +248,7 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
            return  Response({'msg':'Insufficient Credits'},status=400) 
-        data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+        data = {'document':document,'book':book,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_lang':language}
         try:mt_engine = user.custom_setting.mt_engine_id 
         except:mt_engine = 1
@@ -289,7 +289,7 @@ def customize_text_openai(request):
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
-    data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+    data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
             'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
@@ -538,7 +538,7 @@ class BlogtitleViewset(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
-            blog_title_ins=Blogtitle.objects.filter(blog_creation_gen=blog_creation)
+            blog_title_ins=Blogtitle.objects.filter(blog_creation_gen=blog_creation).order_by('-id')
             ser = BlogtitleSerializer(blog_title_ins,many=True)
             return Response(ser.data)
         return Response(serializer.errors)
@@ -1391,3 +1391,30 @@ def translate_html_file(request, input_file, target_language):
 
     return Response({"translated_html":translated_html})
 
+
+from docx import Document
+from docxcompose.composer import Composer
+@api_view(["POST"])
+def docx_merger(request):
+    name = request.POST.get('book_name')
+    files = request.FILES.getlist('docx_files')
+    composed = name + ".docx"
+    #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
+    result = Document(files[0])
+    result.add_page_break()
+    composer = Composer(result)
+
+    for i in range(1, len(files)):
+        doc = Document(files[i])
+
+        if i != len(files) - 1:
+            doc.add_page_break()
+
+        composer.append(doc)
+
+    composer.save(composed)
+    res = download_file(composed)
+    os.remove(composed)
+    return res
+
+    

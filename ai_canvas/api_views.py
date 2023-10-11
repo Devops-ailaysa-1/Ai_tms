@@ -1157,6 +1157,38 @@ def dict_rec_json(json_copy):
                 total_sent.append(text)
     return total_sent
 
+from googletrans import Translator
+@permission_classes([IsAuthenticated])
+@api_view(['GET'])
+def lang_detection(request):
+    from ai_staff.models import Languages
+    from ai_imagetranslation.models import ImageTranslate
+    from ai_auth.api_views import get_lang_code
+    detector = Translator()
+    canvas_design_id=request.query_params.get('canvas_design_id',None)
+    image_translation_id = request.query_params.get('image_translation_id',None)
+    src_words_all = ''
+    if canvas_design_id:
+        instance = CanvasDesign.objects.get(id=canvas_design_id)
+        source_json_files_all=instance.canvas_json_src.all()
+        for i in source_json_files_all:
+            total_sentence =" ".join(dict_rec_json(i.json))
+            src_words_all= src_words_all+" "+total_sentence
+    if image_translation_id:
+        instance = ImageTranslate.objects.get(id=image_translation_id)
+        tar_json=instance.source_canvas_json
+        src_words_all =" ".join(dict_rec_json(tar_json))
+    lang = detector.detect(src_words_all).lang
+    if isinstance(lang,list):
+        lang = lang[0]
+    lang_code = get_lang_code(lang)
+    try:
+        lang_obj = Languages.objects.get(locale__locale_code = lang_code)
+    except:lang_obj = Languages.objects.get(locale__locale_code = 'en')
+    return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):

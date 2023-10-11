@@ -51,7 +51,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file
+from ai_auth.tasks import write_doc_json_file,record_api_usage
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
@@ -2306,6 +2306,7 @@ class ShowMTChoices(APIView):
 ###########################Transcribe Short File############################## #######
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
+    ai_user = obj.job.project.ai_user
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -2324,6 +2325,7 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
             transcript += result.alternatives[0].transcript
         file_length = int(response.total_billed_time.seconds)
         print("Length return from api--------->",file_length)
+        record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -2354,6 +2356,7 @@ def delete_blob(bucket_name, blob_name):
 
 
 def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz):
+    ai_user = obj.job.project.ai_user
     print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
@@ -2380,7 +2383,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
-
+    record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
     ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
@@ -2592,6 +2595,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     
     from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
+    ai_user = project.ai_user
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
@@ -2615,6 +2619,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     print("Consumable Credits--------------->",consumable_credits)
     print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
+        record_api_usage.apply_async(("GCP","Text to Speech",ai_user.uid,ai_user.email,consumable_credits), queue='low-priority')
         if len(data.encode("utf8"))>4500:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
@@ -4401,7 +4406,7 @@ def translate_file(request):
 
 def translate_file_process(task_id):
     tsk = Task.objects.get(id=task_id)
-    file,name = file_translate(tsk.file.get_source_file_path,tsk.job.target_language_code)
+    file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
         ser.save()
