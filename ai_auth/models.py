@@ -400,8 +400,12 @@ class CreditPack(models.Model):
     unit_type = models.CharField(max_length=200)
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
-    recurring = models.CharField(max_length=70,choices=RECURRING_STATUS,default=MONTHLY)
+    recurring = models.CharField(max_length=70,choices=RECURRING_STATUS,null=True,  blank=True)
     expires_at = models.IntegerField(null=True,blank=True,help_text = "no of months")
+    secondary_unit_type = models.CharField(max_length=200,null=True,blank=True)
+    secondary_credits = models.IntegerField(default=0,null=True,blank=True)
+    secondary_recurring = models.CharField(max_length=70,choices=RECURRING_STATUS,null=True,blank=True)
+
 
 
 class PurchasedUnits(models.Model):
