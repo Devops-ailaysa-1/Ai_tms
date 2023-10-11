@@ -4138,9 +4138,11 @@ class DocumentImageView(viewsets.ViewSet):
         doc = request.GET.get('document')
         pdf = request.GET.get('pdf')
         task = request.GET.get('task')
+        book = request.GET.get('book')
         if doc:queryset = DocumentImages.objects.filter(document_id=doc).all()
         if pdf:queryset = DocumentImages.objects.filter(pdf_id=pdf).all()
         if task:queryset = DocumentImages.objects.filter(task_id=task).all()
+        if book:queryset = DocumentImages.objects.filter(book_id=book).all()
         for i in queryset:
             if i.image.url == image_url:
                 i.delete()
