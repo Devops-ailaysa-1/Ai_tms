@@ -16,7 +16,7 @@ class PdffileShowDetailsSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        pdf_file_chat = instance.pdf_file_chat.order_by('-id')
+        pdf_file_chat = instance.pdf_file_chat.order_by('id')
         representation['pdf_file_chat'] = PdffileChatHistorySerializer(pdf_file_chat, many=True).data
         return representation
 
