@@ -13,6 +13,7 @@ from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, AiPrompt
                         BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
                         BookBodySerializer,BookBodyDetailSerializer,)
 from rest_framework.views import  Response
+from django.http import JsonResponse, Http404, HttpResponse
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
 import django_filters
@@ -935,7 +936,7 @@ def credit_check_blog(request):
         blog_creation=BlogCreation.objects.get(id=blog_id)
         initial_credit = request.user.credit_balance.get("total_left")
         if blog_creation.user_language_code != 'en':
-            credits_required = 2000
+            credits_required = 2500
         else:
             credits_required = 200
         if initial_credit < credits_required:
@@ -962,7 +963,7 @@ def generate_article(request):
 
         initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
         if instance.blog_creation.user_language_code != 'en':
-            credits_required = 2000
+            credits_required = 2500
         else:
             credits_required = 200
         if initial_credit < credits_required:
