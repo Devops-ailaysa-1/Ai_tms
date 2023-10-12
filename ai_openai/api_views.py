@@ -1052,7 +1052,7 @@ def generate_article(request):
                                     print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                     token_usage=num_tokens_from_string(str_cont)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                                    print("StrContent------------->",str_cont) 
+                                    #print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable:
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id,cc=consumable)
@@ -1071,9 +1071,9 @@ def generate_article(request):
                                         print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                         token_usage=num_tokens_from_string(str_cont)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                                        print("StrContent------------->",str_cont) 
+                                        #print("StrContent------------->",str_cont) 
                                         if initial_credit >= consumable:
-                                            print("StrContent------------->",str_cont)
+                                            #print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id,cc=consumable)
                                             #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
@@ -1161,7 +1161,7 @@ def generate_chapter(request):
                             content=delta['content']
                             word=content
                             str_cont+=content########
-                            print(str_cont)
+                            #print(str_cont)
                             if "." in word or "\n" in word:
                                 if "\n" in word:
                                     new_line_split=word.split("\n")
@@ -1174,7 +1174,7 @@ def generate_chapter(request):
                                     print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                     token_usage=num_tokens_from_string(str_cont)
                                     AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-                                    print("StrContent------------->",str_cont) 
+                                    #print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable:
                                         print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
@@ -1191,9 +1191,9 @@ def generate_chapter(request):
                                         consumable = max(round(consumable_credits_for_article_gen/3),1) 
                                         token_usage=num_tokens_from_string(str_cont)
                                         AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-                                        print("StrContent------------->",str_cont) 
+                                        #print("StrContent------------->",str_cont) 
                                         if initial_credit >= consumable:
-                                            print("StrContent------------->",str_cont)
+                                            #print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
                                             #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
