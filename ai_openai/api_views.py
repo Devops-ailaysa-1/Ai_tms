@@ -1123,7 +1123,7 @@ def generate_chapter(request):
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
         if book_body_instance.book_creation.book_language_code != 'en':
-            credits_required = 2000
+            credits_required = 2500
         else:
             credits_required = 200
         if initial_credit < credits_required:
