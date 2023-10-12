@@ -4381,7 +4381,7 @@ def translate_file(request):
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
-                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status'),'celery':conversion.get('celery_id')})
             else:
                 task_list.append({'task':obj.id,'msg':True,'status':200})
         return JsonResponse({"results":task_list}, safe=False)   
@@ -4432,6 +4432,7 @@ def translate_file_task(task_id):
     print("Initial------------->",initial_credit)
     if initial_credit>consumable_credits:
         ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tsk.id) & Q(task_name='translate_file_task_cel')).last()
+        print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
         if state == 'PENDING' or state == 'STARTED':
