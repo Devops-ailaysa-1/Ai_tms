@@ -431,7 +431,7 @@ def expiry_yearly_sub(billing_date):
 def add_purchase_units(sender, instance,created, *args, **kwargs):
     from ai_auth.Aiwebhooks import update_purchaseunits
     if created:
-        pack = auth_model.CreditPack.objects.get(name='Pdf Chat Free')
+        pack = auth_model.CreditPack.objects.get(name=os.getenv("CHATBOOK_FREE_PLAN"))
         update_purchaseunits(instance,None,None,1,None,None,pack,purchased=False)
 
 def purchase_unit_renewal(pu_instance):
