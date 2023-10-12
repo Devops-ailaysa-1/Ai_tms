@@ -340,7 +340,7 @@ class CreditsAddons(ParanoidModel):
 
 class CreditAddonPrice(ParanoidModel):
     pack = models.ForeignKey(CreditsAddons,on_delete = models.CASCADE,related_name='credit_addon_price')
-    price =  models.IntegerField(blank=True, null=True)
+    price =  models.FloatField(default=0)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
 

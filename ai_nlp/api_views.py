@@ -175,8 +175,9 @@ def pdf_chat(request):
 @permission_classes([IsAuthenticated])
 def pdf_chat_remaining_units(request):
     chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
-    unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
-    return Response(unit_chk)
+    unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
+    unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
+    return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
 
 ############ wiktionary quick lookup ##################
 # @api_view(['GET', 'POST',])
