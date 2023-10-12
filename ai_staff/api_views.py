@@ -1123,7 +1123,7 @@ class PromptCategoriesViewset(viewsets.ViewSet):
 
     @cached
     def get_queryset(self):
-        queryset = PromptCategories.objects.all().exclude(id = 9) 
+        queryset = PromptCategories.objects.all().exclude(id__in = [9,11]) 
         return queryset
 
 
