@@ -340,7 +340,7 @@ class CreditsAddons(ParanoidModel):
 
 class CreditAddonPrice(ParanoidModel):
     pack = models.ForeignKey(CreditsAddons,on_delete = models.CASCADE,related_name='credit_addon_price')
-    price =  models.IntegerField(blank=True, null=True)
+    price =  models.FloatField(default=0)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
 
@@ -710,8 +710,29 @@ class ProzExpertize(models.Model):
     subject_field = models.ForeignKey(SubjectFields, related_name='sub_field', on_delete=models.CASCADE)    
     expertize_ids = models.TextField(blank=True, null=True)
 
+class FrontMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class BodyMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
 
+class BackMatter(models.Model):
+    name = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
 
+class Levels(models.Model):
+    level = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
+
+class Genre(models.Model):
+    genre = models.CharField(max_length = 250,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
  
     

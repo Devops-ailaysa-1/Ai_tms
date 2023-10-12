@@ -32,7 +32,6 @@ from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
 import os ,zipfile,requests
 from django.http import Http404,JsonResponse
-from ai_workspace_okapi.utils import get_translation 
 from ai_canvas.utils import convert_image_url_to_file,paginate_items ,export_download
 from ai_staff.models import ImageCategories
 from concurrent.futures import ThreadPoolExecutor
@@ -170,7 +169,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     def get_object(self, pk):
         try:
             user = self.request.user.team.owner if self.request.user.team else self.request.user
-            return CanvasUserImageAssets.objects.get(user,id=pk)
+            return CanvasUserImageAssets.objects.get(user=user,id=pk)
         except CanvasUserImageAssets.DoesNotExist:
             raise Http404
 
@@ -526,17 +525,7 @@ def pixabay_api(request):
 
 #################################################################
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def instant_canvas_translation(request):
-#     text_list = request.POST.getlist('text')
-#     src_lang_id = request.POST.get('src_lang_id',None)
-#     tar_lang_id = request.POST.get('tar_lang_id')
-#     if src_lang_id:
-#         src_lang_code = Languages.objects.get(id=src_lang_id).locale.first().locale_code
-#     tar_lang_code = Languages.objects.get(id=tar_lang_id).locale.first().locale_code
-#     text_translation = get_translation(1,text_list,'en',tar_lang_code)
-#     return Response({'translated_text_list':text_translation})
+ 
 
 ##################################
 #######view for all user#########
@@ -620,6 +609,10 @@ class FontFileViewset(viewsets.ViewSet):
         
     def create(self,request):
         font_file=request.FILES.get('font_file',None)
+
+        if str(font_file).split('.')[-1] not in ['ttf','otf','woff','woff2']:
+            return Response({'msg':'only ttf ,woff,woff2, otf suppported file'},status=400)
+
         user = request.user.team.owner if request.user.team else request.user
         print({**request.POST.dict(),'font_family':font_file})
         serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':user.id,'created_by':request.user.id})
@@ -1163,6 +1156,38 @@ def dict_rec_json(json_copy):
                 text = i['text']
                 total_sent.append(text)
     return total_sent
+
+from googletrans import Translator
+@permission_classes([IsAuthenticated])
+@api_view(['GET'])
+def lang_detection(request):
+    from ai_staff.models import Languages
+    from ai_imagetranslation.models import ImageTranslate
+    from ai_auth.api_views import get_lang_code
+    detector = Translator()
+    canvas_design_id=request.query_params.get('canvas_design_id',None)
+    image_translation_id = request.query_params.get('image_translation_id',None)
+    src_words_all = ''
+    if canvas_design_id:
+        instance = CanvasDesign.objects.get(id=canvas_design_id)
+        source_json_files_all=instance.canvas_json_src.all()
+        for i in source_json_files_all:
+            total_sentence =" ".join(dict_rec_json(i.json))
+            src_words_all= src_words_all+" "+total_sentence
+    if image_translation_id:
+        instance = ImageTranslate.objects.get(id=image_translation_id)
+        tar_json=instance.source_canvas_json
+        src_words_all =" ".join(dict_rec_json(tar_json))
+    lang = detector.detect(src_words_all).lang
+    if isinstance(lang,list):
+        lang = lang[0]
+    lang_code = get_lang_code(lang)
+    try:
+        lang_obj = Languages.objects.get(locale__locale_code = lang_code)
+    except:lang_obj = Languages.objects.get(locale__locale_code = 'en')
+    return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

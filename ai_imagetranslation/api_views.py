@@ -50,7 +50,7 @@ class ImageloadViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         image = request.FILES.get('image',None)
         if image:
-            if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg']:
+            if str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg' , 'JPEG','PNG','JPG','SVG']:
                 return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
  
         serializer = ImageloadSerializer(data=request.data ,context={'request':request})
@@ -491,11 +491,12 @@ def ImageTranslatewordcount(request):
 
 
 
- 
- 
+def call_back_rasie(instance_id):
+    instance = ImageTranslate.objects.get(id=instance_id)
+    serializer = ImageTranslateSerializer(instance)
+    print(serializer.data)
  
     
-
 
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:

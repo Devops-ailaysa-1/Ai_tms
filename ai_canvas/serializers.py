@@ -19,6 +19,7 @@ from django.db.models import Q
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
+
 HOST_NAME=os.getenv("HOST_NAME")
 
 
@@ -278,7 +279,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user,team=team)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         print("prIns--------------->",project_instance)
-
+        file_name = validated_data.get('file_name',None)
+        if file_name:
+            project_instance.project_name =file_name
+            project_instance.save()
         # if not social_media_create:
         #     raise serializers.ValidationError('no social_media_resolution')
 
@@ -353,7 +357,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
 
         if social_media_create and width and height:
-             
             basic_jsn=copy.copy(basic_json)
             basic_jsn['backgroundImage']['width']=int(width)
             basic_jsn['backgroundImage']['height']=int(height)
@@ -361,9 +364,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             basic_jsn['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design",
                                     "project_category_label":social_media_create.social_media_name,"project_category_id":social_media_create.id}
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = basic_jsn,page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
-
             instance.height=int(width)
             instance.width=int(height)
+            
             instance.file_name=social_media_create.social_media_name
             project_instance.project_name = social_media_create.social_media_name
             project_instance.save()
@@ -388,8 +391,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return instance
         return instance
               
-          
-    def update_text_box_target(self,instance,text_box,is_append):
+    
+    def update_text_box_target(self,instance,text_box,is_append): #####for single text__box update   and check written in get_translation
+        from ai_workspace.api_views import  get_consumable_credits_for_text
         text=text_box['text']
         text_id=text_box['name']
         canvas_tar_lang=instance.canvas_translate.all()
@@ -400,7 +404,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 json=j.json
                 if is_append:
                     copy_txt_box=copy.copy(text_box)
-                    trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                    initial_credit =instance.user.credit_balance.get("total_left") 
+                    consumed_credit =get_consumable_credits_for_text(text,src,tar)
+
+                    if initial_credit > consumed_credit:
+                        trans_text=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                    else:
+                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     copy_txt_box['text']=trans_text 
                     copy_txt_box['mt_text']=trans_text  ####appended new text_box
                     obj_list=json['objects']
@@ -409,10 +419,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 else:
                     for tar_jsn in json['objects']:
                         if 'textbox' == tar_jsn['type'] and text_id == tar_jsn['name']:
-                            tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                            initial_credit =instance.user.credit_balance.get("total_left") 
+                            consumed_credit =get_consumable_credits_for_text(text,src,tar)
+                            if initial_credit > consumed_credit:
+                                tar_jsn['text']=get_translation(1,source_string=text,source_lang_code=src,target_lang_code=tar,user_id=instance.user.id)
+                            else:
+                                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     j.save()
 
     def lang_translate(self,instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang):
+        user = self.context.get('user')
+        pr_managers = self.context.get('managers')
+        from ai_workspace.api_views import  get_consumable_credits_for_text
+        from ai_canvas.api_views import dict_rec_json
+        src_words_all = ''
+        for i in source_json_files_all:
+            total_sentence =" ".join(dict_rec_json(i.json))
+            src_words_all= src_words_all+" "+total_sentence
+        print('src_words_all',"------",src_words_all)
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             if CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()).exists():
@@ -420,6 +444,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':pairs})
             if src_lang.locale.first() == tar_lang.locale.first():
                 raise serializers.ValidationError({'msg':'looks like same language pair {} '.format(tar_lang.locale.first().locale_code)})
+            ### to write check here
+            initial_credit =instance.user.credit_balance.get("total_left")
+            consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+            if initial_credit < consumed_credit:
+                 obj = CanvasDesignSerializer(instance,context = {'user':user,'managers':pr_managers})
+                 print("insuff",obj)
+                 raise serializers.ValidationError({'translation_result':obj.data ,'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
             trans_json.job=canvas_jobs[0][0]
@@ -440,7 +471,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     can_tar_ins.json=tar_json_pro
                     can_tar_ins.save()
 
-        
 
     def resize_scale(self,source_json_file,width,height,canvas_width,canvas_height):
         scale_multiplier_x=width/canvas_width

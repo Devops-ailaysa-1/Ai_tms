@@ -88,6 +88,12 @@ app.conf.beat_schedule = {
         'args': (),
         'options': {'queue': 'low-priority'},
     },
+    'renew-daily-purchase-units': {
+        'task': 'ai_auth.tasks.renewal_list_daily_renewal',
+        'schedule': crontab(hour=21, minute=30),#crontab(hour=1, minute=15),
+        'args': (),
+    },
+
    # 'send-mail-30-minutes': {
    #  'task': 'ai_auth.tasks.email_send_subscription_extension',
    #  'schedule': crontab(minute='*/30'),

@@ -7,6 +7,20 @@ from nltk.util import ngrams
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.http import HttpResponse
+from ai_nlp.models import PdffileUpload,PdffileChatHistory
+import django_filters
+from django.http import JsonResponse, Http404, HttpResponse
+from django.shortcuts import get_object_or_404
+from ai_nlp.utils import load_embedding_vector
+from rest_framework.response import Response
+from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,PdffileShowDetailsSerializer)
+from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view,permission_classes
+ 
+
 
 
 @api_view(['POST', ])
@@ -60,6 +74,110 @@ def wordapi_synonyms(request):
     find_synonyms(double_words)
 
     return Response({"result": output}, status=status.HTTP_200_OK)
+
+
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['file_name','status']
+    search_fields =['file_name','status']
+    page_size=20
+
+
+    def get_object(self, pk):
+        try:
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+            return PdffileUpload.objects.get(user=user,id=pk)
+        except PdffileUpload.DoesNotExist:
+            raise Http404
+
+    def get_user(self):
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        #project_managers.append(user)
+        print("Pms----------->",project_managers)
+        return user,project_managers
+
+
+    def create(self,request):
+
+        file=request.FILES.get('file',None)
+        if not file:
+            return Response({'msg':'no file attached'})
+        user,pr_managers = self.get_user() 
+        data = {'user':user.id,'managers':pr_managers,'file':file}
+        serializer = PdffileUploadSerializer(data={**data},context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = PdffileUpload.objects.filter(user=user).order_by("-id")
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = PdffileUploadSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = PdffileShowDetailsSerializer(obj)
+        return Response(serializer.data)
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
+    def destroy(self,request,pk):
+        try:
+            obj =self.get_object(pk)
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
+
+
+from ai_auth.api_views import AilaysaPurchasedUnits
+from rest_framework import serializers
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pdf_chat(request):
+    # user = request.user
+    file_id=request.query_params.get('file_id',None)
+    chat_text=request.query_params.get('chat_text',None)
+    pdf_file=PdffileUpload.objects.get(id=int(file_id))
+    chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
+    unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
+    if chat_text:
+        if unit_chk['total_units_left']>0: 
+            chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
+            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
+            pdf_chat_instance.answer=chat_QA_res
+            pdf_chat_instance.save()
+            serializer = PdffileChatHistorySerializer(pdf_chat_instance)
+            # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
+            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
+            return Response(serializer.data)
+        else:
+            raise serializers.ValidationError({'msg':'Need to buy add-on pack reached question limit'}, code=400) #Insufficient Credits
+ 
+    serializer = PdffileShowDetailsSerializer(pdf_file)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pdf_chat_remaining_units(request):
+    chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
+    unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
+    unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
+    return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
 
 ############ wiktionary quick lookup ##################
 # @api_view(['GET', 'POST',])

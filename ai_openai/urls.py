@@ -10,7 +10,13 @@ router.register(r'blogtitle',api_views.BlogtitleViewset ,basename='ai_title_gen'
 router.register(r'blogoutline',api_views.BlogOutlineViewset ,basename='ai_outline_gen')
 router.register(r'blogoutlinesession',api_views.BlogOutlineSessionViewset ,basename='ai_outline_session_gen')
 router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_article_gen')
+router.register(r'bookcreation',api_views.BookCreationViewset ,basename='ai_book')
+router.register(r'booktitle',api_views.BookTitleViewset ,basename='ai_book_title')
+router.register(r'bookbodymatter',api_views.BookBodyViewset ,basename='ai_book_body')
+router.register(r'bookfrontmatter',api_views.BookFMViewset ,basename='ai_book_fm')
+router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm')
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
+router.register(r'bookbodydetail',api_views.BookBodyDetailsViewset ,basename='ai_bookbody_det')
 urlpatterns = router.urls
 
  
@@ -24,13 +30,15 @@ urlpatterns += [
     path('image/',api_views.image_gen),
     path('default_langs/',api_views.user_preffered_langs),
     path('stream_article/',api_views.generate_article),
-    path('article_generate_test/',api_views.generate),
+    # path('article_generate_test/',api_views.generate),
     path('image_history/<pk>/',api_views.ImageGeneratorPromptDelete.as_view()),
     path('download_ai_image_generated_file/<int:id>/',api_views.download_ai_image_generated_file),
  
     # path('stream_article/',api_views.PostStreamView.as_view()),
     path('credit_blog_check/',api_views.credit_check_blog),
     path('article_generate_test/',api_views.generate),
+    path('book_chapter_generate/',api_views.generate_chapter),
+    path('docx_merger/',api_views.docx_merger),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

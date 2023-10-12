@@ -130,7 +130,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                 no_of_segments+=1
                 text_list=[]
                 text_box_list.append(textbox_)
-    return text_and_bounding_results,text_box_list
+    sentence = ""
+    for i in text_and_bounding_results.items():
+        sentence =sentence+ i[1]['text']
+        sentence = sentence+ " "
+    print("----------------",sentence)
+    return text_and_bounding_results,text_box_list ,sentence
  
 
  
@@ -220,6 +225,9 @@ def resize_data_remove(resize_instance):
 # @shared_task(serializer='json')
 
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
+    initial_credit =image_details.user.credit_balance.get("total_left") 
+    if initial_credit <1:
+        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
     IMG_RESIZE_SHAPE=(256,256)
     if inpaintparallel:
         img_path=image_details.inpaint_image.path
@@ -261,8 +269,8 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 black_and_white=black_and_white[:, :, :3]
                 image_color_change=image_color_change[:, :, :3]
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
-                image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
-                return dst_final,image_text_details,text_box_list
+                image_text_details,text_box_list,sentence=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
+                return dst_final,image_text_details,text_box_list,sentence
             else:
                 raise serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
         else:
@@ -320,8 +328,13 @@ def naive_cutout(im , msk ) :
     return img_byte_arr
 
 def get_consumable_credits_for_image_generation_sd(number_of_image):
-    return number_of_image * 10
+    return number_of_image * 20
 
+
+def get_consumable_credits_for_image_trans_inpaint():
+    #for inpaint 1
+    #for ocr 1
+    return 2
 
 
 # def normalize(img ,mean ,std ,size ,*args,**kwargs)  :
@@ -376,7 +389,7 @@ def background_remove(instance):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
-    mask = Image.fromarray(post_process(np.array(mask)))
+    # mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
     instance.mask=mask_store
     instance.save()
@@ -448,14 +461,15 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "width": str(sd_instance.width),"height":str(sd_instance.height),
             "samples": "1","num_inference_steps":sd_instance.steps,   
             "seed": random.randint(0,99999999999),
-            "guidance_scale": 7,
+            "guidance_scale": 8,
             "safety_checker": "yes","multi_lingual": "no",
             "panorama": "no","self_attention": "yes","upscale": "no",
             "embeddings_model": None,"webhook": None,"track_id": None,
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
-   
+    print("------")
+    print(data)
     if sd_instance.negative_prompt:
         data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 
@@ -493,6 +507,8 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
  
 
 #########stabilityai
+# @task(queue='default')
+
 # def stable_diffusion_api(prompt,weight,steps,height,width,style_preset,sampler,negative_prompt,version_name):
 #     url = "https://api.stability.ai/v1/generation/{}/text-to-image".format(version_name)
 #     body = {

@@ -8,6 +8,7 @@ from json import JSONDecodeError
 from django.urls import reverse
 import requests
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update
+from ai_auth.tasks import record_api_usage
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
 import json
@@ -214,7 +215,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-
+        print("Doc------------->",doc_data)
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}
@@ -2847,6 +2848,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print("Init------>",initial_credit)
     print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
+        record_api_usage.apply_async(("GCP","Text to Speech",document_user.uid,document_user.email,consumable_credits), queue='low-priority')
         if len(data.encode("utf8"))>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name),queue='high-priority' )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)

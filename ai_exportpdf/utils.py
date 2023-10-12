@@ -11,7 +11,6 @@ from rest_framework.response import Response
 from google.cloud import vision_v1, vision
 from google.oauth2 import service_account
 from pdf2image import convert_from_path
-from tqdm import tqdm
 from ai_auth.models import UserCredits
 from ai_exportpdf.models import Ai_PdfUpload
 from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,OPENAI_API_KEY ,OPENAI_MODEL
@@ -163,9 +162,9 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page=int(pdf_len)
         doc=docx.Document()
-        progress_recorder=ProgressRecorder(self)
+        progress_recorder=ProgressRecorder(ai_export_pdf)
         print("inst try")
-        for i in tqdm(range(1,pdf_len+1)):
+        for i in range(1,pdf_len+1):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
@@ -235,7 +234,7 @@ def file_pdf_check(file_path,pdf_id):
         pdfdoc = PyPDF2.PdfReader(file_path)
         pdf_check = {0:'ocr',1:'text'}
         pdf_check_list = []
-        for i in tqdm(range(len(pdfdoc.pages))):
+        for i in range(len(pdfdoc.pages)):
             current_page = pdfdoc.pages[i]
             if current_page.extract_text():
                 if len(current_page.extract_text()) >=700:
