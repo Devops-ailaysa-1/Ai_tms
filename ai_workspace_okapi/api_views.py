@@ -376,8 +376,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # if task.document == None and doc:
         #     print("Inside TRTRT")
         #     doc.delete()
-        if task.job.project.is_proj_analysed == False:
-            return Response({'msg':'analysis is still running'}, status = 400)
+        # if task.job.project.is_proj_analysed == False:
+            # return Response({'msg':'analysis is still running'}, status = 400)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
