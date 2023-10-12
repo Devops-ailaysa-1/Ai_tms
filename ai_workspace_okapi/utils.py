@@ -616,7 +616,7 @@ def file_translate(task,file_path,target_language_code):
     response = client.translate_document(request={
             "parent": parent,
             "target_language_code": target_language_code,
-            "document_input_config": document_input_config})
+            "document_input_config": document_input_config ,"is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
@@ -701,6 +701,8 @@ def get_consumption_of_file_translate(task):
     if ext == '.pdf':
         pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
         pages = pdf.getNumPages()
+        if pages >=300:
+            return "exceeded"
         return consumption_of_credits_for_page(pages)
 
     if ext == '.docx' or ext == '.doc':
