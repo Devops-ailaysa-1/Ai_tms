@@ -166,7 +166,7 @@ def pdf_chat(request):
             chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
-            raise serializers.ValidationError({'msg':'Need to buy add-on pack'}, code=400) #Insufficient Credits
+            raise serializers.ValidationError({'msg':'Need to buy add-on pack reached question limit'}, code=400) #Insufficient Credits
  
     serializer = PdffileShowDetailsSerializer(pdf_file)
     return Response(serializer.data)
