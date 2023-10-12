@@ -136,7 +136,7 @@ def load_embedding_vector(vector_path,query)->RetrievalQA:
     v = vector_db.similarity_search(query=query,k=2)
     print("docum-------------------------------------------->>>>>>>>>",v)
     with get_openai_callback() as cb:
-        chain = load_qa_chain(llm, chain_type="map_reduce") #map_reduce stuff
+        chain = load_qa_chain(llm, chain_type="stuff") #map_reduce stuff refine
         res = chain({"input_documents": v, "question": query})
         print(cb)
         
