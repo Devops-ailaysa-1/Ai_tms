@@ -616,7 +616,8 @@ def file_translate(task,file_path,target_language_code):
     response = client.translate_document(request={
             "parent": parent,
             "target_language_code": target_language_code,
-            "document_input_config": document_input_config ,"is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
+            "document_input_config": document_input_config,
+            "is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
