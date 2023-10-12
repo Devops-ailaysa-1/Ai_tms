@@ -1411,7 +1411,7 @@ def docx_merger(request):
         print("File---------------->",files[i])
         doc = Document(files[i])
 
-        if i != len(files) - 1:
+        if i != 0:
             doc.add_page_break()
 
         composer.append(doc)
