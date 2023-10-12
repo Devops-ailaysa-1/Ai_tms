@@ -943,9 +943,10 @@ class BookTitleSerializer(serializers.ModelSerializer):
         author_info = book_creation.author_info_mt if book_creation.author_info_mt else book_creation.author_info
         prompt = title_start_phrase.start_phrase.format(author_info,description,level,genre)
         print("prompt----->>>>>>>>>>>>>>>>>>>>>>>>>>>",prompt)
-        consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
-        print("Consumable for book title creation---------->",consumable_credits)
-        if initial_credit < consumable_credits:
+        credits_needed = credits_to_check(book_creation)
+        #consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
+        print("Consumable for book title creation---------->",credits_needed)
+        if initial_credit < credits_needed:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         
         openai_response = get_prompt_chatgpt_turbo(prompt,1,title_start_phrase.max_token)
@@ -970,7 +971,8 @@ class BookTitleSerializer(serializers.ModelSerializer):
                                                              user_id=book_creation.user.id,from_open_ai=True) 
                         debit_status, status_code = UpdateTaskCreditStatus.update_credits(book_creation.user,consumable_credits_to_translate_title)
                     else:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                        AiPromptSerializer().customize_token_deduction(book_creation,book_title_in_other_lang)
+                        #raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     BookTitle.objects.create(book_creation=book_creation,sub_categories=sub_categories,
                                          book_title=book_title_in_other_lang,book_title_mt=book_title,
                                          token_usage=token_usage,selected_field=False)
