@@ -12,7 +12,7 @@ from django.db.models.signals import post_save, pre_save, pre_delete
 from ai_auth.signals import proz_connect, create_allocated_dirs, updated_user_taxid, \
                             update_internal_member_status, vendor_status_send_email, \
                             get_currency_based_on_country,\
-                            create_purchased_units_count
+                            create_purchased_units_count,add_purchase_units
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -219,6 +219,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
 post_save.connect(update_internal_member_status, sender=AiUser)
 post_save.connect(get_currency_based_on_country, sender=AiUser)
+post_save.connect(add_purchase_units, sender=AiUser)
 #post_save.connect(proz_connect, sender=AiUser)
 
 
@@ -359,7 +360,7 @@ class TempPricingPreference(models.Model):
 class UserCredits(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE)
-    price_id = models.CharField(max_length=200)
+    price_id = models.CharField(max_length=200,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     buyed_credits = models.IntegerField()
     credits_left =models.IntegerField()
@@ -418,7 +419,7 @@ class PurchasedUnits(models.Model):
 
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE,null=True,blank=True)
-    dj_stripe_price_id = models.CharField(max_length=200)
+    dj_stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
     purchase_pack_type = models.CharField(max_length=200, blank=True, null=True)
     purchase_pack = models.ForeignKey(CreditPack,related_name="purchased_units_cp",blank=True,null=True,on_delete=models.CASCADE)
     units_buyed = models.IntegerField()
