@@ -53,4 +53,4 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             # chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             return instance
         else:
-            raise serializers.ValidationError({'msg':'Need to buy add-on pack'}, code=400)
+            raise serializers.ValidationError({'msg':'Need to buy add-on pack reached your file upload limit'}, code=400)
