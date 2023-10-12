@@ -131,21 +131,24 @@ def renewal_list_daily_renewal():
         cycle_dates = [x for x in range(today.day,32)]
     else:
         cycle_dates = [today.day]
-    print("cycle dates",cycle_dates)
+    # print("cycle dates",cycle_dates)
     # subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
     #                 current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
-    pu_list =PurchasedUnits.objects.filter(recurring='daily').filter(~Q(expiry__year=today.year,
-                    expiry__month=today.month,expiry__day__in=cycle_dates))
-    # print("pu_list",pu_list)
+    pu_list =PurchasedUnits.objects.filter(~Q(expiry__year=today.year,
+                    expiry__month=today.month,expiry__day__in=cycle_dates)).filter(purchase_pack__recurring='daily')
+    # print("pu_list",pu_list)  
     logger.info(f"renewal list count {pu_list.count}")
     for pu in pu_list:
-        renew_purchase_units.apply_async((pu.id,),eta=pu.buyed_at)
+        created_at_time =  pu.buyed_at.time()
+        execute_at = datetime.combine(today.date(), created_at_time, tzinfo=pu.buyed_at.tzinfo)
+        # print("new_datetime",new_datetime)
+        renew_purchase_units.apply_async((pu.id,),eta=execute_at)
 
 
 @task(queue='default')
 def renew_purchase_units(pu_id):
-    sub =PurchasedUnits.objects.get(id=pu_id)
-    purchase_unit_renewal(pu_instance=sub)
+    pu =PurchasedUnits.objects.get(id=pu_id)
+    purchase_unit_renewal(pu_instance=pu)
 
 @task(queue='low-priority')
 def delete_inactive_user_account():
