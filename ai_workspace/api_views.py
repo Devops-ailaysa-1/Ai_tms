@@ -51,7 +51,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file
+from ai_auth.tasks import write_doc_json_file,record_api_usage
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
@@ -705,7 +705,7 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
         elif value == "translation":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id = 6)#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         print("QRF-->",queryset)
@@ -2306,6 +2306,7 @@ class ShowMTChoices(APIView):
 ###########################Transcribe Short File############################## #######
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
+    ai_user = obj.job.project.ai_user
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -2324,6 +2325,7 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
             transcript += result.alternatives[0].transcript
         file_length = int(response.total_billed_time.seconds)
         print("Length return from api--------->",file_length)
+        record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -2354,6 +2356,7 @@ def delete_blob(bucket_name, blob_name):
 
 
 def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz):
+    ai_user = obj.job.project.ai_user
     print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
@@ -2380,7 +2383,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
-
+    record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
     ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
@@ -2592,6 +2595,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     
     from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
+    ai_user = project.ai_user
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
@@ -2615,6 +2619,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     print("Consumable Credits--------------->",consumable_credits)
     print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
+        record_api_usage.apply_async(("GCP","Text to Speech",ai_user.uid,ai_user.email,consumable_credits), queue='low-priority')
         if len(data.encode("utf8"))>4500:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
@@ -3645,7 +3650,7 @@ class MyDocFilter(django_filters.FilterSet):
         fields = ['doc_name']#proj_name
 
 from django.db.models import Value, CharField, IntegerField
-from ai_openai.models import BlogCreation
+from ai_openai.models import BlogCreation,BookCreation
 from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
@@ -3674,7 +3679,9 @@ class MyDocumentsView(viewsets.ModelViewSet):
         q1 = q1.filter(doc_name__icontains =query) if query else q1
         q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
         q2 = q2.filter(user_title__icontains = query) if query else q2
-        q3 = q1.union(q2)
+        q4 = BookCreation.objects.filter(Q(user = user)|Q(user=owner)).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value('Book',output_field=CharField()),open_as=Value('Book', output_field=CharField())).values('id','created_at','project__project_name','word_count','open_as','document_type__type')
+        q4 = q4.filter(project__project_name__icontains=query) if query else q4
+        q3 = q1.union(q2,q4)
         final_queryset = q3.order_by('-created_at')
         if ordering:
             field_name = ordering.lstrip('-')
@@ -4131,9 +4138,11 @@ class DocumentImageView(viewsets.ViewSet):
         doc = request.GET.get('document')
         pdf = request.GET.get('pdf')
         task = request.GET.get('task')
+        book = request.GET.get('book')
         if doc:queryset = DocumentImages.objects.filter(document_id=doc).all()
         if pdf:queryset = DocumentImages.objects.filter(pdf_id=pdf).all()
         if task:queryset = DocumentImages.objects.filter(task_id=task).all()
+        if book:queryset = DocumentImages.objects.filter(book_id=book).all()
         for i in queryset:
             if i.image.url == image_url:
                 i.delete()
@@ -4372,7 +4381,7 @@ def translate_file(request):
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
-                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status')})
+                    task_list.append({'task':obj.id,'msg':conversion.get('msg'),'status':conversion.get('status'),'celery':conversion.get('celery_id')})
             else:
                 task_list.append({'task':obj.id,'msg':True,'status':200})
         return JsonResponse({"results":task_list}, safe=False)   
@@ -4399,7 +4408,7 @@ def translate_file(request):
 
 def translate_file_process(task_id):
     tsk = Task.objects.get(id=task_id)
-    file,name = file_translate(tsk.file.get_source_file_path,tsk.job.target_language_code)
+    file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
         ser.save()
@@ -4417,10 +4426,13 @@ def translate_file_task(task_id):
     print("Consumable--------------->",consumable_credits)
     if consumable_credits == None:
         return {'msg':'something went wrong in calculating page count','status':404}
+    if consumable_credits == "exceeded":
+        return {'msg':'PDF file page limit should less then 300','status':404}
     initial_credit = user.credit_balance.get("total_left")
     print("Initial------------->",initial_credit)
     if initial_credit>consumable_credits:
         ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tsk.id) & Q(task_name='translate_file_task_cel')).last()
+        print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
         if state == 'PENDING' or state == 'STARTED':

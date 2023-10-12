@@ -1,9 +1,10 @@
 from django.db import models
 from ai_auth.models import AiUser
 import os
-from ai_workspace.models import MyDocuments,Task
+from ai_workspace.models import MyDocuments,Task,Project
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
-                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
+                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution,
+                              BackMatter,FrontMatter,BodyMatter,Levels,Genre,)
 from django.contrib.postgres.fields import ArrayField
 
 class TokenUsage(models.Model):
@@ -17,6 +18,32 @@ class TokenUsage(models.Model):
         return str(self.user_input_token)+"--"+str(self.completion_tokens)
 
 
+
+class BookCreation(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    author_name = models.CharField(max_length=250,blank=True,null=True)
+    project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="book_create_project")
+    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
+    description = models.TextField(null=True,blank=True)
+    description_mt = models.TextField(null=True,blank=True)
+    author_info = models.TextField(null=True,blank=True)
+    author_info_mt = models.TextField(null=True,blank=True)
+    genre = models.ForeignKey(Genre, on_delete = models.CASCADE,related_name='book_genre',null=True, blank=True)
+    level = models.ForeignKey(Levels, on_delete = models.CASCADE,related_name='book_level',null=True, blank=True) 
+    title = models.TextField(null=True,blank=True)
+    title_mt = models.TextField(null=True,blank=True)
+    categories = models.ForeignKey(PromptCategories, on_delete = models.CASCADE,related_name = 'book_categories' ,blank=True,null=True )
+    sub_categories = models.ForeignKey(PromptSubCategories, on_delete = models.CASCADE,related_name = 'book_sub_categories',blank=True,null=True)
+    book_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='book_lang_src',null=True, blank=True)  
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='book_created_by')
+    
+    @property
+    def book_language_code(self):
+        return self.book_language.locale.first().locale_code
+
+
+
 class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     prompt_string = models.TextField(null=True, blank=True)
@@ -24,6 +51,7 @@ class AiPrompt(models.Model):
     document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_task')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_pdf')
+    book = models.ForeignKey(BookCreation,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'book_prompt')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.SET_NULL ,blank=True,null=True )
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.SET_NULL,blank=True,null=True)
@@ -85,6 +113,7 @@ def user_directory_path_image_gen_result(instance, filename):
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    #project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="blog_create_project")
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
@@ -181,6 +210,7 @@ class TextgeneratedCreditDeduction(models.Model):
     
 class AiPromptCustomize(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    book = models.ForeignKey(BookCreation,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_book')
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_task')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_pdf')
@@ -233,6 +263,68 @@ class CustomizationSettings(models.Model):
     append = models.BooleanField(default=True)
     new_line = models.BooleanField(default=True)
     
+
+class BookTitle(models.Model):
+    book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_title_create')
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_title_sub_categories')
+    html_data = models.TextField(null=True,blank=True)
+    book_title = models.TextField(null=True,blank=True) 
+    book_title_mt =  models.TextField(null=True,blank=True)  
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='booktitle_used_tokens',null=True, blank=True)
+    selected_field = models.BooleanField(null=True,blank=True)
+    response_copies = models.IntegerField(null=True, blank=True,default=3) 
+
+
+class BookFrontMatter(models.Model):
+    book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_fm_create')
+    front_matter = models.ForeignKey(FrontMatter,on_delete=models.CASCADE,related_name='book_front_matter')
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_fm_sub_categories')
+    html_data = models.TextField(null=True,blank=True)
+    name = models.CharField(max_length = 250, null=True, blank=True)
+    generated_content = models.TextField(null=True,blank=True) 
+    generated_content_mt = models.TextField(null=True,blank=True) 
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='book_fm_tokens',null=True, blank=True)
+    selected_field = models.BooleanField(null=True,blank=True)
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
+
+class BookBody(models.Model):
+    book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_bdy_create',null=True,blank=True)
+    book_title = models.ForeignKey(BookTitle,on_delete=models.CASCADE,related_name='book_title_bdy',null=True,blank=True)
+    body_matter = models.ForeignKey(BodyMatter,on_delete=models.CASCADE,related_name='book_body_matter')
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_bdy_sub_categories')
+    generated_content = models.TextField(null=True,blank=True) 
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='bookbdy_tokens',null=True, blank=True)
+    name = models.CharField(max_length = 250, null=True, blank=True)
+    html_data = models.TextField(null=True,blank=True)
+    generated_content_mt = models.TextField(null=True,blank=True) 
+    selected_field = models.BooleanField(null=True,blank=True)
+    response_copies = models.IntegerField(null=True, blank=True,default=1)
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
+    group = models.IntegerField(null=True,blank=True)
+
+class BookBodyDetails(models.Model):
+    book_bm = models.ForeignKey(BookBody,on_delete=models.CASCADE,related_name='book_bdy_det_create')
+    html_data = models.TextField(null=True,blank=True)
+    generated_chapter = models.TextField(null=True,blank=True)
+    generated_chapter_mt = models.TextField(null=True,blank=True)
+    chapter_summary = models.TextField(null=True,blank=True)
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='bookbdy_det_tokens',null=True, blank=True)
+
+
+class BookBackMatter(models.Model):
+    book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_bm_create')
+    back_matter = models.ForeignKey(BackMatter,on_delete=models.CASCADE,related_name='book_back_matter')
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_bm_sub_categories')
+    name = models.CharField(max_length = 250, null=True, blank=True)
+    html_data = models.TextField(null=True,blank=True)
+    generated_content = models.TextField(null=True,blank=True) 
+    generated_content_mt = models.TextField(null=True,blank=True) 
+    selected_field = models.BooleanField(null=True,blank=True)
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='book_bm_tokens',null=True, blank=True)
 
 
 # class InstantTranslation(models.Model):

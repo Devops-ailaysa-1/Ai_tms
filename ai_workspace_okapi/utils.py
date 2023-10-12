@@ -592,9 +592,11 @@ google_mime_type = {'doc':'application/msword',
 from google.cloud import translate_v3beta1 as translate
 from django import core
 import requests, os
-from pptx import Presentation
+#from pptx import Presentation
 
-def file_translate(file_path,target_language_code):
+def file_translate(task,file_path,target_language_code):
+    from ai_auth.tasks import record_api_usage
+    user = task.job.project.ai_user
     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
     file_type = file_path.split("/")[-1].split(".")
     file_format=file_type[-1]
@@ -606,10 +608,16 @@ def file_translate(file_path,target_language_code):
     with open(file_path, "rb") as document:
         document_content = document.read()
         document_input_config = {"content": document_content,"mime_type": mime_type,}
+
+    usage = get_consumption_of_file_translate(task)
+
+    record_api_usage.apply_async(("GCP","Document Translation",user.uid,user.email,usage), queue='low-priority')
+
     response = client.translate_document(request={
             "parent": parent,
             "target_language_code": target_language_code,
-            "document_input_config": document_input_config})
+            "document_input_config": document_input_config,
+            "is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
@@ -686,11 +694,16 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
+
+
+
 def get_consumption_of_file_translate(task):
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
         pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
         pages = pdf.getNumPages()
+        if pages >=300:
+            return "exceeded"
         return consumption_of_credits_for_page(pages)
 
     if ext == '.docx' or ext == '.doc':

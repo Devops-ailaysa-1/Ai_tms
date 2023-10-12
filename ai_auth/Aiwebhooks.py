@@ -7,11 +7,11 @@ from djstripe.models import Customer,Price,Invoice,PaymentIntent,Account
 from djstripe.models.billing import Plan, Subscription, TaxRate
 from ai_auth import models
 from ai_auth import forms as auth_forms
+from ai_auth.utils import add_months
 from django.db.models import Q
 from django.utils import timezone
 from django.db import transaction
 import logging
-import calendar
 from ai_auth.signals import send_campaign_email
 import os
 
@@ -47,14 +47,6 @@ def check_campaign(user):
     else:
         return None
 
-def add_months(sourcedate, months):
-    month = sourcedate.month - 1 + months
-    year = sourcedate.year + month // 12
-    month = month % 12 + 1
-    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
-    sourcedate=sourcedate.replace(year=year,month=month,day=day)
-    return sourcedate
-
 
 def calculate_addon_expiry(start_date,pack):
     if pack.expires_at == None:
@@ -66,6 +58,12 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     carry = 0
     referral_credits = 0
     payg_credits = 0
+
+    if pack.unit_type != "credits":
+        update_purchaseunits(user,cust,price,quants,invoice,payment,pack)
+        return 'created'
+
+
     if pack.type=="Subscription" and pack.name != os.environ.get("PLAN_PAYG"):
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
@@ -146,6 +144,41 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
+    return 'created'
+
+def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=True):
+
+    buyed_units = pack.credits   
+    expiry = calculate_addon_expiry(timezone.now(),pack)
+    if payment != None:
+        if payment.amount_received > 0:
+            purchased = True
+    else:
+        purchased = False
+
+    kwarg = {
+    'user':user,
+    'stripe_cust_id':cust,
+    'dj_stripe_price_id':price.id if price!=None else None,
+    'purchase_pack_type':pack.type,
+    'purchase_pack':pack,
+    'units_buyed':buyed_units,
+    # 'units_left':buyed_units,
+    'expiry': expiry,
+    'paymentintent':payment.id if payment else None,
+    'invoice':invoice.id if invoice else None,
+    'purchased': purchased,
+    'buyed_at':payment.created if payment!=None else timezone.now(),
+    'ended_at': None
+    }
+
+    PC = models.PurchasedUnits.objects.create(**kwarg)
+    logger.info(f"user:{user.uid}, buyed:{buyed_units}, credits_pack:{pack.credits}, quantity :{quants}, carry:{0}")
+    print(PC)
+    # if pack.secondary_unit_type =! None:
+
+
+
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
     print(event)

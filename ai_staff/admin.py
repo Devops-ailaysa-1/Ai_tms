@@ -7,7 +7,8 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
                     TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
                     ApiProvider,ApiService ,ImageGeneratorResolution,DocumentType,ImageCategories,FontData,FontFamily,FontLanguage,
-                    SocialMediaSize,DesignShape,Suggestion,SuggestionType,DesignShapeCategory ,DesignerOrientation)
+                    SocialMediaSize,DesignShape,Suggestion,SuggestionType,DesignShapeCategory ,DesignerOrientation,
+                    Levels,Genre,BodyMatter,FrontMatter,BackMatter,)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -85,7 +86,11 @@ admin.site.register(JobPositions)
 # admin.site.register(LanguagesLocale)
 admin.site.register(LanguageScripts)
 admin.site.register(LanguageMetaDetails)
-
+admin.site.register(Levels)
+admin.site.register(Genre)
+admin.site.register(BodyMatter)
+admin.site.register(FrontMatter)
+admin.site.register(BackMatter)
 # admin.site.register(Countries)
 admin.site.register(Role)
 

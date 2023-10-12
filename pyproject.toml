@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ai_tms"
-version = "1.1.0"
+version = "1.9.0"
 description = "Ailaysa Translation Managment System"
 authors = ["Ailaysa"]
 
@@ -21,7 +21,7 @@ gevent = "^22.10.2"
 google-cloud = "0.34.0"
 python-dotenv = "0.17.1"
 sentry-sdk = "1.5.12"
-spacy = "3.2.3"
+spacy = "^3.7.0"
 weasyprint = "59.0"
 django-cors-headers = "3.7.0"
 django-allauth = "0.44.0"
@@ -37,7 +37,7 @@ google-cloud-core = "1.7.2"
 google-cloud-speech = "2.14.0"
 google-cloud-storage = "1.44.0"
 google-cloud-texttospeech = "2.11.0"
-google-cloud-translate = "3.2.0"
+google-cloud-translate = "3.12.0"
 google-cloud-vision = "3.1.4"
 tablib = "^3.3.0"
 djangorestframework-simplejwt = "5.1.0"
@@ -57,8 +57,7 @@ rapidfuzz = "2.13.2"
 wiktionaryparser = "0.0.97"
 pdftotext = "2.2.2"
 pypdf2 = "2.11.1"
-tqdm = "4.62.0"
-pdf2image = "1.16.0"
+pdf2image = "1.16.3"
 pypandoc = "1.10"
 bcrypt = "^4.0.1"
 django-guardian = "2.4.0"
@@ -90,6 +89,15 @@ img2pdf = "^0.4.4"
 pandas = "1.5.2"
 python-pptx = "^0.6.22"
 onnxruntime = "1.16.0"
+unstructured = "0.10.12"
+langchain = "^0.0.306"
+pydantic = "1.10.12"
+chromadb = "0.3.29"
+pysqlite3-binary = "^0.5.2"
+torchvision = {version = "^0.16.0+cpu", source = "torch"}
+sentence-transformers = "^2.2.2"
+docxcompose = "^1.4.0"
+pdfminer-six = "^20221105"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
@@ -97,6 +105,13 @@ pytest-django = "^4.5.2"
 ipython = "^8.7.0"
 django-debug-toolbar = "^3.8.1"
 ptvsd = "^4.3.2"
+
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cpu"
+default = false
+secondary = false
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

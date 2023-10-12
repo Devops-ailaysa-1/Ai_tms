@@ -250,7 +250,8 @@ class Project(models.Model):
 
             if not self.project_name:
                 count = queryset.count()
-                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                prefix = self.get_prefix()
+                self.project_name = prefix +str(count+1).zfill(3)+'('+str(date.today()) +')'
 
             if self.id:
                 project_count = queryset.filter(project_name=self.project_name).exclude(id=self.id).count()
@@ -278,6 +279,15 @@ class Project(models.Model):
     #         get_pr_list_cache_key(self.ai_user_id)
     #     ]
     #     return cache_keys
+
+    def get_prefix(self):
+        if self.project_type_id == 7:
+            prefix = 'Book Project-'
+        elif self.project_type_id == 6:
+            prefix = 'Designer Project-'
+        else:
+            prefix = 'Project-'
+        return prefix
 
     @property
     def designer_project_detail(self):
@@ -340,6 +350,9 @@ class Project(models.Model):
         elif self.project_type_id == 4:
             rr = voice_project_progress(self,tasks)
             return rr
+
+        elif self.project_type_id == 7 or self.project_type_id == 6:
+            return None
 
         else:
             assigned_jobs = [i.job.id for i in tasks]
@@ -436,7 +449,7 @@ class Project(models.Model):
 
     @property
     def get_analysis_tasks(self):
-        if self.project_type_id == 3:
+        if self.project_type_id in [3,6,7]: #[glossary,designer,book]
             return Task.objects.none()
         if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
             return self.get_tasks
@@ -666,7 +679,7 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true
-        if not tasks or self.project_type_id == 6 or self.file_translate == True:
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
@@ -1336,6 +1349,8 @@ class Task(models.Model):
                     cached_value = "ExpressEditor"
                 elif self.job.project.project_type_id == 6:
                     cached_value = "Designer"
+                elif self.job.project.project_type_id == 7:
+                    cached_value = "Book"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:
@@ -1569,6 +1584,7 @@ class DocumentImages(models.Model):
     document = models.ForeignKey(MyDocuments,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_image')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_img')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.CASCADE,related_name = 'retd_img')
+    book = models.ForeignKey("ai_openai.BookCreation",null=True, blank=True,on_delete=models.CASCADE,related_name = 'book_img')
     image = models.FileField(upload_to=my_doc_image_upload_path,blank=True, null=True)
 
 
