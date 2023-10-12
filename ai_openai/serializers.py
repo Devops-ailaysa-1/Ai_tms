@@ -1138,14 +1138,17 @@ class BookBodySerializer(serializers.ModelSerializer):
         group = validated_data.get('group',0)
         sub_categories = validated_data.get('sub_categories')
         book_obj = book_title_inst.book_creation if book_title_inst else book_creation
+        credits_needed = credits_to_check(book_obj)
+        print("Credits Needed--------->",credits_needed)
         if book_title_inst or book_creation and generated_content==None:
             print("Inside If")
             if book_title_inst:
                 book_tit = BookTitle.objects.filter(id=book_title_inst.id).update(selected_field = True)
                 BookTitle.objects.filter(book_creation=book_title_inst.book_creation).exclude(id = book_title_inst.id).update(selected_field=False)
             initial_credit = book_obj.user.credit_balance.get("total_left")
+            
             print("InitialCredit----------------->",initial_credit)
-            if initial_credit < 150:
+            if initial_credit < credits_needed:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             book_body_start_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
             print("sSR-------->",book_body_start_phrase)
@@ -1201,7 +1204,8 @@ class BookBodySerializer(serializers.ModelSerializer):
                                                             generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage)
                                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                                 else:
-                                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                                    AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_section)
+                                    #raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                             else:
                                 rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, 
                                 generated_content=chapter,group=group,temp_order=order,custom_order=order,
@@ -1232,6 +1236,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                                 generated_content_mt=generated_content,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage)
                         # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                     else:
+                        #AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_section)
                         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 else:
                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=generated_content,
@@ -1268,6 +1273,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                                         lang_code,"en",user_id=user_id) if instance.generated_content else None
                     instance.selected_field =True
                 else:
+                    #AiPromptSerializer().customize_token_deduction(book_obj,consumable_credit)
                     raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             else:
                 lang_detect_chapter_create =  lang_detector(instance.generated_content) 
@@ -1376,15 +1382,18 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
             instance.save()
         else: instance=obj
         if obj:
+            book_obj = instance.book_creation
+            credits_needed = credits_to_check(book_obj)
+            print("Credits Needed--------->",credits_needed)
             initial_credit = instance.book_creation.user.credit_balance.get("total_left")
-            if initial_credit <150:
+            if initial_credit < credits_needed:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             book_fm_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
-            book_obj = instance.book_creation
+            #book_obj = instance.book_creation
             print("BookObj------------>",book_obj)
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-            prompt = book_fm_phrase.start_phrase.format(instance.name,title,description,book_obj.genre.genre,book_obj.level.level)
+            prompt = book_fm_phrase.start_phrase.format(instance.name,title,description,book_obj.genre.genre,book_obj.level.level,instance.name)
             openai_response = get_prompt_chatgpt_turbo(prompt,1,book_fm_phrase.max_token)
             token_usage = openai_token_usage(openai_response)
             token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
@@ -1400,7 +1409,8 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
                                                                 user_id=book_obj.user.id,from_open_ai=True) 
                         debit_status, status_code = UpdateTaskCreditStatus.update_credits(book_obj.user,consumable_credits_to_translate_title)
                     else:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                        AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_title)
+                        #raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     BookFrontMatter.objects.filter(id=instance.id).update(book_creation=book_obj,sub_categories=sub_categories,
                                             generated_content=fm_in_other_lang,generated_content_mt=front_matter,
                                             token_usage=token_usage,selected_field=True)
@@ -1490,15 +1500,18 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
         # instance.name = name if name else back_matter.name
         # instance.save()
         if obj:
+            book_obj = instance.book_creation
+            credits_needed = credits_to_check(book_obj)
+            print("Credits Needed--------->",credits_needed)
             initial_credit = instance.book_creation.user.credit_balance.get("total_left")
-            if initial_credit <150:
-                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+            if initial_credit < credits_needed:
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             book_bm_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
             book_obj = instance.book_creation
             print("BookObj------------>",book_obj)
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-            prompt = book_bm_phrase.start_phrase.format(instance.name,title,description,book_obj.genre.genre,book_obj.level.level)
+            prompt = book_bm_phrase.start_phrase.format(instance.name,title,description,book_obj.genre.genre,book_obj.level.level,instance.name)
             openai_response = get_prompt_chatgpt_turbo(prompt,1,book_bm_phrase.max_token)
             token_usage = openai_token_usage(openai_response)
             token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
@@ -1514,7 +1527,8 @@ class BookBackMatterSerializer(serializers.ModelSerializer):
                                                                 user_id=book_obj.user.id,from_open_ai=True) 
                         debit_status, status_code = UpdateTaskCreditStatus.update_credits(book_obj.user,consumable_credits_to_translate_title)
                     else:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                        AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_title)
+                        #raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     BookBackMatter.objects.filter(id=instance.id).update(book_creation=book_obj,sub_categories=sub_categories,
                                             generated_content=bm_in_other_lang,generated_content_mt=back_matter,
                                             token_usage=token_usage,selected_field=True)
@@ -1579,3 +1593,14 @@ class BookBodyDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookBodyDetails
         fields = "__all__"
+
+
+
+
+def credits_to_check(book_ins):
+    lang = book_ins.book_language_code
+    print("Lang---------->",lang)
+    if lang == 'en':
+        return 50
+    else:
+        return 550
