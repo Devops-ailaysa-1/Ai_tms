@@ -104,12 +104,12 @@ def loader(file_id) -> None:
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
             ###reduce no of files after success
-            chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
-            chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
+            # chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
+            # chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             # instance.question_threshold=20
             instance.save() 
         except:
-            instance.status ="ERROR"
+            instance.status ="ERROR"  #####need to add if error 
             instance.save()
 
 def save_prest(texts,embeddings,persistent_dir):
