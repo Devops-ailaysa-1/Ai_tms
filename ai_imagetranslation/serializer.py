@@ -270,8 +270,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
+
+                    # if instance.source_language.locale_code == tar_lang.locale.first().locale_code:
+                    #     i['text']=i['text']
+                    #     i['mt_text']=i['text']
+                    # else:
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                    target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
+                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
                     i['text']=translate_bbox
                     i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -443,7 +448,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError({'msg':'target json not present'})
                     total_sentence =" ".join(dict_rec_json(tar_ins.target_canvas_json))
                     print("total_word", total_sentence)
-                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
+                    print("to cal con cred")
+                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale_code) #.locale.first().
                     if initial_credit < consumed_credit:
                         obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
                         raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,

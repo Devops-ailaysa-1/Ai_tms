@@ -237,6 +237,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
     if image_details.mask:
+
         image_to_extract_text=np.bitwise_and(mask,img)
         content=image_content(image_to_extract_text)
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
@@ -270,6 +271,8 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 image_color_change=image_color_change[:, :, :3]
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details,text_box_list,sentence=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
+                from ai_workspace.api_views import UpdateTaskCreditStatus
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(image_details.user, 1)
                 return dst_final,image_text_details,text_box_list,sentence
             else:
                 raise serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
@@ -503,6 +506,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         # return 
     else:
         sd_instance.status="ERROR"
+        sd_instance.save()
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
