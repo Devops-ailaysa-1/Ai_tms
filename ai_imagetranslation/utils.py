@@ -443,10 +443,10 @@ from celery.decorators import task
 
 @task(queue='default')
 def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
-    from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
+    # from ai_workspace.api_views import UpdateTaskCreditStatus  ###for avoiding circular error
     sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
     model="sdxl"
-    consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
+    # consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
     if sd_instance.width==sd_instance.height==512:
         print("512")
         model="sdv1"
@@ -502,7 +502,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         sd_instance.status="DONE"
         sd_instance.save()
         print("finished_generate")
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(sd_instance.user,consumble_credits_to_image_generate)
+        
         # return 
     else:
         sd_instance.status="ERROR"
