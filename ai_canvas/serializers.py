@@ -448,9 +448,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             initial_credit =instance.user.credit_balance.get("total_left")
             consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit:
-                 obj = CanvasDesignSerializer(instance,context = {'user':user,'managers':pr_managers})
-                 print("insuff",obj)
-                 raise serializers.ValidationError({'translation_result':obj.data ,'msg':'Insufficient Credits'}, code=400)
+                #  obj = CanvasDesignSerializer(instance)
+                #  print("insuff",obj.data) 'translation_result':obj.data ,
+                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
             trans_json.job=canvas_jobs[0][0]
@@ -521,11 +521,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if change_source_lang:
             CanvasTranslatedJson.objects.filter(canvas_design=instance).update(source_language=change_source_lang.locale.first())
 
-        if delete_target_design_lang:
-            for i in delete_target_design_lang:
-                try: i.job.delete()
-                except: pass
-                i.delete()
+
 
         if social_media_create and width and height: ##########################this one same fun below  ####custome resize
             # can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
@@ -630,12 +626,21 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canvas_trans.save()
             return instance
 
-        if canvas_translation_tar_lang:
-            src_lang=instance.canvas_translate.last().source_language.language
+        if canvas_translation_tar_lang: 
+            src_lang=instance.canvas_translate.last().source_language.language ###### returning none 
             source_json_files_all=instance.canvas_json_src.all()
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
-            return instance
- 
+            # return instance
+        
+        if delete_target_design_lang:
+            if len(delete_target_design_lang) == len(instance.canvas_translate.all()):
+                raise serializers.ValidationError("Atleast one language to be selected")
+
+            for i in delete_target_design_lang:
+                try: i.job.delete()
+                except: pass
+                i.delete()
+
         if source_json_file and src_page: ########################## source__update
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
             # if '' not in source_json_file:

@@ -16,6 +16,7 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
 from bs4 import BeautifulSoup
 from bs4.element import Comment
+from langchain.chat_models import ChatOpenAI
 from celery.decorators import task
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
@@ -52,7 +53,7 @@ def text_from_html(body):
     visible_texts = filter(tag_visible, texts)  
     return u" ".join(t.strip() for t in visible_texts)
 
-def epub_processing(file_path):
+def epub_processing(file_path,text_word_count_check=False):
     file_name= file_path.split("/")[-1].split(".")[0]
     text_str = ""
     with ZipFile(file_path) as zf:
@@ -65,12 +66,15 @@ def epub_processing(file_path):
                 # with open(i.filename , 'rb') as fp:  
                 text_str = text_str+text+"\n"
     # print("---->",text_str)
-    return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
+    if text_word_count_check:
+        return text_str
+    else:
+        return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
+
 
  
 @task(queue='default')
 def loader(file_id) -> None:
-    from ai_auth.api_views import AilaysaPurchasedUnits
     instance = PdffileUpload.objects.get(id=file_id)
     website = instance.website
     if website:
@@ -84,32 +88,35 @@ def loader(file_id) -> None:
             if instance.file.name.endswith(".docx"):
                 loader = Docx2txtLoader(instance.file.path)
             elif instance.file.name.endswith(".txt"):
+
                 loader = TextLoader(instance.file.path)
             elif instance.file.name.endswith(".epub"):
-                text = epub_processing(instance.file.path)
+                text = epub_processing(instance.file.path,text_word_count_check=False)
                 instance.text_file = text
                 instance.save()
                 loader = TextLoader(instance.text_file.path)
             else:
                 print("pdf_processing")
+
                 loader = PDFMinerLoader(instance.file.path)
             data = loader.load()
             print("embedding model loaded")
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
             # text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100)   #. from_tiktoken_encoder  ,chunk_overlap=0
             texts = text_splitter.split_documents(data)
-            embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+            # embeddings = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+            embeddings = OpenAIEmbeddings()
             # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
             save_prest( texts, embeddings, persistent_dir)
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
             ###reduce no of files after success
-            chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
-            chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
+            # chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
+            # chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             # instance.question_threshold=20
             instance.save() 
         except:
-            instance.status ="ERROR"
+            instance.status ="ERROR"  #####need to add if error 
             instance.save()
 
 def save_prest(texts,embeddings,persistent_dir):
@@ -124,13 +131,13 @@ def save_prest(texts,embeddings,persistent_dir):
 #     images.save(img_io, format='PNG')
 #     img_byte_arr = img_io.getvalue()
 #     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
-from langchain.chat_models import ChatOpenAI
+
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     # llm =OpenAI()
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0,max_tokens=300)
-    embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
-    # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
+    # embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
+    embed = OpenAIEmbeddings()
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
     # retriever = vector_db.as_retriever()
     v = vector_db.similarity_search(query=query,k=2)

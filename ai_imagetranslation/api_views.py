@@ -449,7 +449,7 @@ class ImageModificationTechniqueV2ViewSet(generics.ListCreateAPIView):
     # queryset = list(chain([stock_photo],queryset))
     queryset = ImageStyleSD.objects.all().annotate(
     custom_order=Case(
-        When(id=1, then=Value(0)),
+        When(id=79, then=Value(0)),
         When(id=78, then=Value(1)),
         default=F('id'),
         output_field=IntegerField(),
