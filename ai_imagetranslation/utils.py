@@ -503,6 +503,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         # return 
     else:
         sd_instance.status="ERROR"
+        sd_instance.save()
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
 
