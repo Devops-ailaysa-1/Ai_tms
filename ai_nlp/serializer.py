@@ -49,8 +49,10 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             
             # if instance.file.name.endswith(".pdf"):
             #     instance.pdf_thumbnail = thumbnail_create(instance.file.path)
+            chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
+            chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             instance.save()
-            # chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
+
             return instance
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached your file upload limit'}, code=400)
