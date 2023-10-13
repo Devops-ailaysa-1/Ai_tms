@@ -630,7 +630,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_lang=instance.canvas_translate.last().source_language.language ###### returning none 
             source_json_files_all=instance.canvas_json_src.all()
             self.lang_translate(instance,src_lang,source_json_files_all,req_host,canvas_translation_tar_lang)
-            return instance
+            # return instance
         
         if delete_target_design_lang:
             for i in delete_target_design_lang:
