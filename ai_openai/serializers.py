@@ -1399,6 +1399,7 @@ class BookFrontMatterSerializer(serializers.ModelSerializer):
             openai_response = get_prompt_chatgpt_turbo(prompt,1,book_fm_phrase.max_token)
             token_usage = openai_token_usage(openai_response)
             token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+            print("TUR--------------->",token_usage_to_reduce)
             AiPromptSerializer().customize_token_deduction(book_obj,token_usage_to_reduce)
             
             front_matter = openai_response["choices"][0]["message"]["content"]
