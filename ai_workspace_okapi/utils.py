@@ -627,6 +627,19 @@ def file_translate(task,file_path,target_language_code):
 import subprocess
 import io
 
+def count_pdf_pages(pdf_file):
+    # Count the pages in the PDF using pdfinfo
+    command = [
+        'pdfinfo',
+        pdf_file
+    ]
+    result = subprocess.run(command, stdout=subprocess.PIPE, text=True, check=True)
+    info = result.stdout
+    for line in info.split('\n'):
+        if line.startswith("Pages:"):
+            return int(line.split(':')[1])
+
+
 def page_count_in_docx(docx_path):
 
     command = [
@@ -642,8 +655,9 @@ def page_count_in_docx(docx_path):
     filename = os.path.basename(docx_path)
     file_path = '/tmp/'+filename.split('.')[0]+'.pdf'
     # Read the generated PDF into memory
-    pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
-    pages = pdf.getNumPages()
+    pages = count_pdf_pages(file_path)
+    # pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
+    # pages = pdf.getNumPages()
     return pages,file_path
 
 # def page_count_in_docx(docx_path):
