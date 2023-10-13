@@ -75,7 +75,6 @@ def epub_processing(file_path,text_word_count_check=False):
  
 @task(queue='default')
 def loader(file_id) -> None:
-    from ai_auth.api_views import AilaysaPurchasedUnits
     instance = PdffileUpload.objects.get(id=file_id)
     website = instance.website
     if website:
@@ -136,7 +135,7 @@ def save_prest(texts,embeddings,persistent_dir):
 
 def load_embedding_vector(vector_path,query)->RetrievalQA:
     # llm =OpenAI()
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0,max_tokens=300)
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
     # embed = HuggingFaceEmbeddings(model_name=emb_model,cache_folder= "embedding")
     embed = OpenAIEmbeddings()
     vector_db = Chroma(persist_directory=vector_path ,embedding_function=embed)
