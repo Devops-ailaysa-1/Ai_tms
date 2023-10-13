@@ -443,7 +443,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError({'msg':'target json not present'})
                     total_sentence =" ".join(dict_rec_json(tar_ins.target_canvas_json))
                     print("total_word", total_sentence)
-                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
+                    print("to cal con cred")
+                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale_code) #.locale.first().
                     if initial_credit < consumed_credit:
                         obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
                         raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
