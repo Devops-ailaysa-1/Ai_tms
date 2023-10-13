@@ -71,9 +71,11 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             instance = PdffileUpload.objects.create(**validated_data)
             page_count,file_format = chat_page_chk(instance)
             if file_format in ["pdf","docx"] and page_count > 300:
+                instance.delete()
                 raise serializers.ValidationError({'msg':'file size limit exceed' }, code=400)
             
             elif file_format in ["epub","txt"] and page_count > 200_000:
+                instance.delete()
                 raise serializers.ValidationError({'msg':'file size limit exceed' }, code=400)
             
             instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file

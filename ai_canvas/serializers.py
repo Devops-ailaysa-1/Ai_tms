@@ -633,6 +633,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             # return instance
         
         if delete_target_design_lang:
+            if len(delete_target_design_lang) == len(instance.canvas_translate.all()):
+                raise serializers.ValidationError("Atleast one language to be selected")
+
             for i in delete_target_design_lang:
                 try: i.job.delete()
                 except: pass
