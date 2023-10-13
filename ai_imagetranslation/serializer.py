@@ -257,8 +257,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
                 obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
-                # print(obj_inst.data)
-                raise serializers.ValidationError({'translation_result':obj_inst.data,'msg':'Insufficient Credits'}, code=400) 
+                # print(obj_inst.data) 'translation_result':obj_inst.data,   
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
             img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
@@ -270,8 +270,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                             "page":1,'projId':instance.id,'projectType':'image-translate'}
             for i in tar_json_copy['objects']:
                 if 'text' in i.keys():
+
+                    # if instance.source_language.locale_code == tar_lang.locale.first().locale_code:
+                    #     i['text']=i['text']
+                    #     i['mt_text']=i['text']
+                    # else:
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                    target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
+                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
                     i['text']=translate_bbox
                     i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -443,10 +448,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError({'msg':'target json not present'})
                     total_sentence =" ".join(dict_rec_json(tar_ins.target_canvas_json))
                     print("total_word", total_sentence)
-                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale.first().locale_code)
+                    print("to cal con cred")
+                    consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale_code) #.locale.first().
                     if initial_credit < consumed_credit:
                         obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
-                        raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
+                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) #'translation_result':instance , 'translation_result':obj_inst,
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
@@ -647,6 +653,9 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
             instance.celery_id=image
             instance.status="PENDING"
+            from ai_workspace.api_views import UpdateTaskCreditStatus
+            consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user,consumble_credits_to_image_generate)
             instance.save()
             return instance
         else:
