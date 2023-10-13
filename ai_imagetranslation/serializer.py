@@ -653,6 +653,9 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
             instance.celery_id=image
             instance.status="PENDING"
+            from ai_workspace.api_views import UpdateTaskCreditStatus
+            consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user,consumble_credits_to_image_generate)
             instance.save()
             return instance
         else:
