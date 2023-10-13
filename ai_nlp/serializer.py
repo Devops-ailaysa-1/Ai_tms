@@ -44,7 +44,7 @@ def chat_page_chk(instance):
         page_count = pdf.getNumPages()
         file_format='pdf'
     elif instance.file.name.endswith(".epub"):
-        text = epub_processing(instance.file.path)
+        text = epub_processing(instance.file.path,text_word_count_check=True)
         page_count = num_tokens(text)
         file_format='epub'
     elif instance.file.name.endswith(".txt"):
