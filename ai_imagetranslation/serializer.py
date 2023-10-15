@@ -257,8 +257,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
                 obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
-                # print(obj_inst.data)
-                raise serializers.ValidationError({'translation_result':obj_inst.data,'msg':'Insufficient Credits'}, code=400) 
+                # print(obj_inst.data) 'translation_result':obj_inst.data,   
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
             img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
@@ -363,6 +363,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
+            # initial_credit=100
             consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
@@ -452,7 +453,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     consumed_credit = get_consumable_credits_for_text(total_sentence,"en",tar_ins.target_language.locale_code) #.locale.first().
                     if initial_credit < consumed_credit:
                         obj_inst = ImageTranslateSerializer(instance,context = {"user":user,'managers':pr_managers}).data
-                        raise serializers.ValidationError({'translation_result':obj_inst,'msg':'Insufficient Credits'}, code=400) #'translation_result':instance ,
+                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) #'translation_result':instance , 'translation_result':obj_inst,
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
                     for text_box in text_box_list:
