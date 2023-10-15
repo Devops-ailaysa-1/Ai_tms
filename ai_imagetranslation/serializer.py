@@ -243,7 +243,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'msg':'source json is not sent'})
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         tar_json_copy['background']="rgba(231,232,234,0)"
-        # initial_credit = 2
+        
         for tar_lang in inpaint_creation_target_lang:
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             print(src_lang , type(src_lang))
@@ -253,7 +253,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             print("total_credit",total_sentence)
             initial_credit = instance.user.credit_balance.get("total_left")
             print("----------",initial_credit)
-            
+            initial_credit = 200
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
                 obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
@@ -276,7 +276,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     #     i['mt_text']=i['text']
                     # else:
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
+                                                target_lang_code=tar_lang.locale.first().locale_code)    #,user_id=instance.user.id                  
                     i['text']=translate_bbox
                     i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -363,7 +363,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
-            # initial_credit=100
+            initial_credit=100
             consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
