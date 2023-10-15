@@ -192,12 +192,15 @@ def background_merge_for_lama(u2net_result,original_img,user_image):
     u2net_result = u2net_result[:, :, :3]
     original_img = np.asarray(original_img)
     newdata=[]
-    original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
+    # original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
     u2net_result=cv2.subtract(u2net_result,original_img)
     # cv2.imwrite("u2net_result.png",u2net_result)
     u2net_result=Image.fromarray(u2net_result).convert('RGBA')
+    # u2net_result.save("u2net_result.png")
     u2net_result= u2net_result.filter(ImageFilter.GaussianBlur(radius=1))
+    # u2net_result.save("u2net_result_1.png")
     original_img=Image.fromarray(original_img).convert("RGBA")
+    # original_img.save("original_img_1.png")
     u2net_data=u2net_result.getdata()
     original_img=original_img.getdata()
     for i in range(u2net_data.size[0]*u2net_data.size[1]):
@@ -226,20 +229,27 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
  
     black_and_white=black_and_white.resize(image_diff.size)
+    # black_and_white.save("13.png")
     img_arr=np.asarray(black_and_white)
  
     img_arr_copy=np.copy(img_arr)
     img_arr_copy[img_arr_copy!= 0]=255
- 
+    # cv2.imwrite("14.png",img_arr_copy)
     ###morphing
     SE=cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
     res=cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
     img_transparent=Image.fromarray(res)
+    # img_transparent.save("15.png")
     layer_b = background_merge_for_lama(img_transparent,lama_result,original)
+    # layer_b.save("layer_b.png")
     img_transparent_2=convert_transparent(img_transparent,255)
+    # img_transparent_2.save("img_transparent_2.png")
     lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent_2)
+    # lama_transparent.save("lama_transparent.png")
     lama_convert_transparent=convert_transparent(lama_transparent,0)
+    # lama_convert_transparent.save("lama_convert_transparent.png")
     result=layer_blend(original,lama_convert_transparent)
+    # result.save("result.png")
     return layer_b,black_and_white #result,black_and_white
 
 
@@ -271,7 +281,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
     if image_details.mask:
 
         image_to_extract_text=np.bitwise_and(mask,img)
-        cv2.imwrite("3.png",image_to_extract_text) #--------------------> 
+        # cv2.imwrite("3.png",image_to_extract_text) #--------------------> 
         content=image_content(image_to_extract_text) ####### byte content 
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
@@ -308,7 +318,7 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
                 # cv2.imwrite("19.png",dst)#-------------------->
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
-                cv2.imwrite("20.png",dst_final)#-------------------->
+                # cv2.imwrite("20.png",dst_final)#-------------------->
                 image_color_change=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
                 # cv2.imwrite("21.png",image_color_change)#-------------------->
                 black_and_white=np.asarray(black_and_white)
