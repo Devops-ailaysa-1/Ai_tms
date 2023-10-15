@@ -265,7 +265,7 @@ def resize_data_remove(resize_instance):
 
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
     initial_credit =image_details.user.credit_balance.get("total_left") 
-    initial_credit=10
+    # initial_credit=10
     if initial_credit <1:
         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
     IMG_RESIZE_SHAPE=(256,256)
