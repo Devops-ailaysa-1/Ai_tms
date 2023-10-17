@@ -54,15 +54,38 @@ class CanvasTargetJsonFilesSerializer(serializers.ModelSerializer):
             data['thumbnail'] = None
         return data
 
+
+from ai_workspace.serializers import VendorDashBoardSerializer
 class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
     tranlated_json = CanvasTargetJsonFilesSerializer(source = 'canvas_json_tar',many=True,required=False)
+    task_assign_info = serializers.SerializerMethodField()
+    task_reassign_info = serializers.SerializerMethodField()
+    bid_job_detail_info = serializers.SerializerMethodField()
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = ("id",'tranlated_json',"canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar')
+        fields = ("id",'tranlated_json',"canvas_design",'source_language','target_language','created_at',
+                  'updated_at','undo_hide_tar','task_assign_info','task_reassign_info','bid_job_detail_info',)
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
                 }
+
+    def get_task_assign_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result
+
+    def get_task_reassign_info(self,obj):  
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result 
+
+    def get_bid_job_detail_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result
+
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['source_language'] = instance.source_language.language.id
@@ -209,9 +232,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return data 
         else:
             return data 
-
-            
-         
+ 
     
     # def get_assigned(self,obj):
     #     return obj.project.assigned
@@ -244,7 +265,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
                                                 Q(job__project__ai_user=user))
         
-        return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
+        return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate',context=self.context).data
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
