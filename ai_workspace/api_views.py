@@ -1154,22 +1154,15 @@ def tbx_download(request,tbx_file_id):
     tbx_asset=obj.tbx_file
     authorize(request,resource=obj,action="download",actor=request.user)
     return download_file(tbx_asset.path)
-    # fl_path = tbx_asset.path
-    # filename = os.path.basename(fl_path)
-    # print(os.path.dirname(fl_path))
-    # fl = open(fl_path, 'rb')
-    # mime_type, _ = mimetypes.guess_type(fl_path)
-    # response = HttpResponse(fl, content_type=mime_type)
-    # response['Content-Disposition'] = "attachment; filename=%s" % filename
-    # return response
+
 
 class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
     @staticmethod
-    def update_addon_credit(user, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon")).\
+    def update_addon_credit(user, query, actual_used_credits=None, credit_diff=None):
+        add_ons = query.filter(Q(user=user) & Q(credit_pack_type="Addon")).\
                     filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now())).order_by('expiry')
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
@@ -1189,11 +1182,11 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(user, actual_used_credits):
+    def update_usercredit(user, query, actual_used_credits):
         present = datetime.now()
         try:
 
-            user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+            user_credit = query.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
 
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
@@ -1204,7 +1197,7 @@ class UpdateTaskCreditStatus(APIView):
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
-                    from_addon = UpdateTaskCreditStatus.update_addon_credit( user, credit_diff)
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit( user, query, credit_diff)
                     return from_addon
             else:
                 raise Exception
@@ -1215,17 +1208,19 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_credits( user, actual_used_credits):
-        #query = UserCredits.objects.get(Q(user=user))
-        credit_status = UpdateTaskCreditStatus.update_usercredit(user, actual_used_credits)
+        with transaction.atomic():
+            query = UserCredits.objects.select_for_update().filter(Q(user=user))
 
-        if credit_status:
-            msg = "Successfully debited MT credits"
-            status = 200
-        else:
-            msg = "Insufficient credits to apply MT"
-            status = 424
+            credit_status = UpdateTaskCreditStatus.update_usercredit(user, query, actual_used_credits)
 
-        return {"msg" : msg}, status
+            if credit_status:
+                msg = "Successfully debited MT credits"
+                status = 200
+            else:
+                msg = "Insufficient credits to apply MT"
+                status = 424
+
+            return {"msg" : msg}, status
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
