@@ -1203,7 +1203,7 @@ class UpdateTaskCreditStatus(APIView):
                 raise Exception
 
         except Exception as e:
-            from_addon = UpdateTaskCreditStatus.update_addon_credit(user, actual_used_credits)
+            from_addon = UpdateTaskCreditStatus.update_addon_credit(user, query, actual_used_credits)
             return from_addon
 
     @staticmethod
