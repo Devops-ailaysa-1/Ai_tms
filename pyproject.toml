@@ -90,14 +90,12 @@ pandas = "1.5.2"
 python-pptx = "^0.6.22"
 onnxruntime = "1.16.0"
 unstructured = "0.10.12"
-langchain = "^0.0.306"
 pydantic = "1.10.12"
 chromadb = "0.3.29"
 pysqlite3-binary = "^0.5.2"
-torchvision = {version = "^0.16.0+cpu", source = "torch"}
-sentence-transformers = "^2.2.2"
 docxcompose = "^1.4.0"
 pdfminer-six = "^20221105"
+langchain = "^0.0.316"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
