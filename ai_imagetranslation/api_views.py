@@ -476,16 +476,17 @@ def ImageTranslatewordcount(request):
     image_inpaint_creation_ids=request.query_params.getlist('image_inpaint_creation_id')
     for image_inpaint_creation_id in image_inpaint_creation_ids:
         image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id) #source_image__user=request.user,
-
-        print(image_inpaint_creation_instance.source_language)
         total_sent=[]
         source_json = image_inpaint_creation_instance.source_image.source_canvas_json
-        total_sent.append(dict_rec_json(source_json))
+        total_sent=dict_rec_json(source_json)[0]
+        print(total_sent)
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
                                         project = image_inpaint_creation_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
+    
     task_det_instance=TaskDetails.objects.filter(project__image_translate_project__id__in = image_inpaint_creation_ids)
+    print(task_det_instance)
     ser = TaskDetailSerializer(task_det_instance,many=True)
     return Response(ser.data)
 
