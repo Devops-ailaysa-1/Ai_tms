@@ -469,23 +469,22 @@ from ai_canvas.api_views import dict_rec_json
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
-
+ 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ImageTranslatewordcount(request):
-    image_inpaint_creation_ids=request.query_params.getlist('image_inpaint_creation_id')
-    for image_inpaint_creation_id in image_inpaint_creation_ids:
-        image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id) #source_image__user=request.user,
-
-        print(image_inpaint_creation_instance.source_language)
-        total_sent=[]
+    job_ids=request.query_params.getlist('job_id')
+    for job_id in job_ids:
+        image_inpaint_creation_instance = ImageInpaintCreation.objects.get(job__id=job_id) #source_image__user=request.user,
         source_json = image_inpaint_creation_instance.source_image.source_canvas_json
-        total_sent.append(dict_rec_json(source_json))
+        total_sent=dict_rec_json(source_json) 
+        print(total_sent)
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
                                         project = image_inpaint_creation_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
-    task_det_instance=TaskDetails.objects.filter(project__image_translate_project__id__in = image_inpaint_creation_ids)
+    
+    task_det_instance= TaskDetails.objects.filter(task__job_id__in =job_ids)
     ser = TaskDetailSerializer(task_det_instance,many=True)
     return Response(ser.data)
 
