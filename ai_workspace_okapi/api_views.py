@@ -429,6 +429,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
 
 class DocumentViewByDocumentId(views.APIView):
+
+    def __init__(self, request=None):
+        self.request = request
+
     @staticmethod
     def get_object(document_id):
         docs = Document.objects.all()
@@ -437,9 +441,9 @@ class DocumentViewByDocumentId(views.APIView):
 
 
     def edit_allow_check(self, task_obj, given_step):
-        given_step = int(given_step) if given_step else None
-        print("GivenStep------>",given_step, type(given_step))
         from ai_workspace.models import Task, TaskAssignInfo
+        
+        given_step = int(given_step) if given_step else None
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
