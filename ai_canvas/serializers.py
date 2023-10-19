@@ -61,10 +61,11 @@ class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
     task_assign_info = serializers.SerializerMethodField()
     task_reassign_info = serializers.SerializerMethodField()
     bid_job_detail_info = serializers.SerializerMethodField()
+    edit_allowed = serializers.SerializerMethodField()
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = ("id",'tranlated_json',"canvas_design",'source_language','target_language','created_at',
+        fields = ("id",'edit_allowed','tranlated_json',"canvas_design",'source_language','target_language','created_at',
                   'updated_at','undo_hide_tar','task_assign_info','task_reassign_info','bid_job_detail_info',)
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
@@ -85,6 +86,12 @@ class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
         result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
         return result
 
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

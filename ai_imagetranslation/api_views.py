@@ -138,7 +138,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         user,pr_managers = self.get_user()
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
-        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
+        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
         print("resss",response)
         return response
@@ -148,7 +148,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         # query_set = ImageTranslate.objects.get(id = pk)
-        serializer = ImageTranslateSerializer(obj,context={'user':user,'managers':pr_managers} )
+        serializer = ImageTranslateSerializer(obj,context={'request':request,'user':user,'managers':pr_managers} )
         return Response(serializer.data)
         
     def create(self,request):
@@ -197,7 +197,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         query_set = ImageTranslate.objects.get(id=pk)
-        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'user':user,'managers':pr_managers})
+        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'request':request,'user':user,'managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
