@@ -109,11 +109,42 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
         representation['thumbnail'] = instance.thumbnail.url
         return representation
 
+
+from ai_workspace.serializers import VendorDashBoardSerializer
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
+    task_assign_info = serializers.SerializerMethodField()
+    task_reassign_info = serializers.SerializerMethodField()
+    bid_job_detail_info = serializers.SerializerMethodField()
+    edit_allowed = serializers.SerializerMethodField()
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
         model = ImageInpaintCreation
-        fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box','export','thumbnail','created_at','updated_at')
+        fields = ('id','edit_allowed','source_image','target_language','target_canvas_json',
+                 'task_assign_info','task_reassign_info','bid_job_detail_info',
+                'target_bounding_box','export','thumbnail','created_at','updated_at')
+
+    def get_task_assign_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result
+
+    def get_task_reassign_info(self,obj):  
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result 
+
+    def get_bid_job_detail_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
+        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        return result
+
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -161,7 +192,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
                                                 |Q(job__project__ai_user=user))
         print(queryset)
-        return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
+        return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True,context=self.context).data
 
 
     def to_representation(self, instance):
