@@ -215,7 +215,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-        #print("Doc------------->",doc_data)
+        print("Doc------------->",doc_data)
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}
@@ -351,6 +351,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 if doc.status_code == 200:
                     doc_data = doc.json()
+                    print("Doc Data--------------------->",doc_data)
                     if doc_data.get('total_word_count') == 0:
                         return {'msg':'Empty File'}
                     serializer = (DocumentSerializerV2(data={**doc_data, \
