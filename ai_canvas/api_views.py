@@ -1155,7 +1155,7 @@ def dict_rec_json(json_copy):
             if i['type']== 'textbox':
                 text = i['text']
                 total_sent.append(text)
-    return total_sent
+    return  total_sent
 
 from googletrans import Translator
 @permission_classes([IsAuthenticated])
