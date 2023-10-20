@@ -1389,7 +1389,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project or self.job.project.project_type_id == 6:
+                if self.job.project.glossary_project or self.job.project.project_type_id__in == [6,7]: #designer,book proj
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
