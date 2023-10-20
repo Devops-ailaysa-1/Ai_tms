@@ -151,7 +151,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
-    "silk",
+    #"silk",
 ]
 
 
@@ -175,7 +175,7 @@ MIDDLEWARE = [
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    #'silk.middleware.SilkyMiddleware',
     
 ]
 
