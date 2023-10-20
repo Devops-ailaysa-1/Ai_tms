@@ -167,9 +167,9 @@ class BaseSegment(models.Model):
 # post_save.connect(translate_segments,sender=Segment)
 
 class Segment(BaseSegment):
-    is_merged = models.BooleanField(default=False, null=True, db_index=True)
-    is_merge_start = models.BooleanField(default=False, null=True, db_index=True)
-    is_split = models.BooleanField(default=False, null=True, db_index=True)
+    is_merged = models.BooleanField(default=False, null=True)
+    is_merge_start = models.BooleanField(default=False, null=True)
+    is_split = models.BooleanField(default=False, null=True)
 
 
 
