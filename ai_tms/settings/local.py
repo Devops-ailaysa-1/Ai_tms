@@ -174,22 +174,34 @@ CSRF_TRUSTED_ORIGINS += [
 # ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
-MIDDLEWARE = [
-    # "debug_toolbar.middleware.DebugToolbarMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'corsheaders.middleware.CorsPostCsrfMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
-    # "middlewares.error_middleware.error_middleware",
-    # "middlewares.error_middleware.StackOverflowMiddleware"
-]
+# MIDDLEWARE = [
+#     # "debug_toolbar.middleware.DebugToolbarMiddleware",
+#     'corsheaders.middleware.CorsMiddleware',
+#     'django.middleware.security.SecurityMiddleware',
+#     'django.contrib.sessions.middleware.SessionMiddleware',
+#     'django.middleware.common.CommonMiddleware',
+#     'django.middleware.csrf.CsrfViewMiddleware',
+#     'corsheaders.middleware.CorsPostCsrfMiddleware',
+#     'django.contrib.auth.middleware.AuthenticationMiddleware',
+#     'django.contrib.messages.middleware.MessageMiddleware',
+#     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+#     #'django.middleware.gzip.GZipMiddleware',
+#     # 'silk.middleware.SilkyMiddleware',
+#     # "middlewares.error_middleware.error_middleware",
+#     # "middlewares.error_middleware.StackOverflowMiddleware"
+# ]
 
+
+
+# GZIP_CONTENT_TYPES = (
+#     'text/css',
+#     'text/javascript',
+#     'text/xml',
+#     'text/plain',
+#     'text/html',
+#     'application/json',
+#     'application/javascript',
+# )
 # ROOT_URLCONF = 'ai_tms.urls'
 # AUTH_USER_MODEL="ai_auth.AiUser"
 
