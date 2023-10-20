@@ -75,8 +75,8 @@ post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
 ###############################################################################
 
 class TermsModel(models.Model):
-    sl_term         = models.CharField(max_length=200, null=False, blank=False)
-    tl_term         = models.CharField(max_length=200, null=True, blank=True)
+    sl_term         = models.CharField(max_length=200, null=False, blank=False,db_index=True)
+    tl_term         = models.CharField(max_length=200, null=True, blank=True,db_index=True)
     pos             = models.CharField(max_length=200, null=True, blank=True)
     sl_definition   = models.TextField(max_length=1000, blank=True, null=True)
     tl_definition   = models.TextField(max_length=1000, blank=True, null=True)
