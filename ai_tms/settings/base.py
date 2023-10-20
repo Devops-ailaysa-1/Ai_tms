@@ -162,7 +162,6 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
-    # 'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -176,6 +175,7 @@ MIDDLEWARE = [
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     #'silk.middleware.SilkyMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -195,6 +195,18 @@ TEMPLATES = [
         },
     },
 ]
+
+
+GZIP_CONTENT_TYPES = (
+    'text/css',
+    'text/javascript',
+    'text/xml',
+    'text/plain',
+    'text/html',
+    'application/json',
+    'application/javascript',
+)
+
 # __import__('pysqlite3')
 # import sys
 # sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
