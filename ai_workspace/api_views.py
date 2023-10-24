@@ -4400,14 +4400,19 @@ def translate_file(request):
     #     return Response(ser.data)
     # else:
     #     return Response({'msg':'task_id or project_id must'})
-
+from ai_exportpdf.utils import pdf_char_check
 def translate_file_process(task_id):
     tsk = Task.objects.get(id=task_id)
-    file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
-    ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
-    if ser.is_valid():
-        ser.save()
-    print(ser.errors)
+    frmt,page_len = pdf_char_check(tsk.file.get_source_file_path)
+    if frmt=='text':
+        file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
+
+        ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
+    else:
+        return {'msg':"Image pdf can't be processed",'status':402}
 
 
 def translate_file_task(task_id):
