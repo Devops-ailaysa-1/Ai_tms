@@ -124,18 +124,18 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
                 'target_bounding_box','export','thumbnail','created_at','updated_at')
 
     def get_task_assign_info(self,obj):
-        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
-        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
         return result
 
     def get_task_reassign_info(self,obj):  
-        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
-        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
         return result 
 
     def get_bid_job_detail_info(self,obj):
-        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of SerializerA
-        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from SerializerA
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
         return result
 
     def get_edit_allowed(self,obj):
