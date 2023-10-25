@@ -2298,7 +2298,7 @@ class ShowMTChoices(APIView):
         return Response(res, status=status.HTTP_200_OK)
 
 
-###########################Transcribe Short File############################## #######
+###########################Transcribe Short File#####################################
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
     ai_user = obj.job.project.ai_user

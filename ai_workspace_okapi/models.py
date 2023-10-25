@@ -167,7 +167,7 @@ class BaseSegment(models.Model):
 # post_save.connect(translate_segments,sender=Segment)
 
 class Segment(BaseSegment):
-    is_merged = models.BooleanField(default=False, null=True)
+    is_merged = models.BooleanField(default=False, null=True,)
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
 
@@ -187,7 +187,7 @@ class Segment(BaseSegment):
             #print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
-            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            split_segs = SplitSegment.objects.prefetch_related('mt_raw_split_segment').filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
                 if split_seg.temp_target != None:
@@ -200,27 +200,21 @@ class Segment(BaseSegment):
     @property
     def get_mt_raw_target_if_have(self):
         if self.is_split in [False, None]:
-            #print('self------>',self)
             seg = self.get_active_object().id
-            #print("seg------->",seg)
             try:
-                mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
+                mt_raw = Segment.objects.select_related('seg_mt_raw').get(id=seg).seg_mt_raw.mt_raw
             except:
                 mt_raw = ''
-            #print("RR---------------->",mt_raw)
-            #return mt_raw
             return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
         else:
-            #print("Inside else------->",self)
-            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            split_segs = SplitSegment.objects.prefetch_related('mt_raw_split_segment').filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
                 if split_seg.mt_raw_split_segment != None:
                     target_joined += split_seg.mt_raw_split_segment.first().mt_raw
                 else:
                     target_joined += split_seg.source
-            #print("RR----------------->",target_joined)
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
 
@@ -229,12 +223,14 @@ class Segment(BaseSegment):
     def get_merge_segment_count(self):
         count = 0
         if self.is_merged and self.is_merge_start:
-            count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
+            count = self.segments_merge_segments_set.all().count() - 1
+            #count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
         return count
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            return MergeSegment.objects.get(id=self.id)
+            return self.segments_merge_segments_set.first()
+            #return MergeSegment.objects.get(id=self.id)
         return self
 
     @property
@@ -459,7 +455,7 @@ class Document(models.Model):
         return self.created_by.email
 
     def get_segments(self):
-        return Segment.objects.filter(text_unit__document__id=self.id)
+        return Segment.objects.filter(text_unit__document=self)
 
     @property
     def segments_without_blank(self):
