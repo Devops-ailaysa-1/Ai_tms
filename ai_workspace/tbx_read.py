@@ -74,16 +74,6 @@ def TermSearch(request):
     out1 = []
     data = request.POST.dict()
     user_input = data.get("user_input")
-    text_tokens = word_tokenize(user_input)
-    tokens_new = [word for word in text_tokens if word not in punctuation]
-    unigram = ngrams(tokens_new,1)
-    single_words = list(" ".join(i) for i in unigram)
-    bigrams = ngrams(tokens_new,2)
-    double_words = list(" ".join(i) for i in bigrams)
-    trigrams = ngrams(tokens_new,3)
-    triple_words=list(" ".join(i) for i in trigrams)
-    fourgrams = ngrams(tokens_new,4)
-    four_words=list(" ".join(i) for i in fourgrams)
     doc_id = data.get("doc_id")
     doc = Document.objects.get(id = doc_id)
     if doc != None:
@@ -92,39 +82,52 @@ def TermSearch(request):
     codesrc = doc.source_language_code
     code = doc.target_language_code
 
-    job_id = Document.objects.get(id=doc_id).job_id
-    project_id = Job.objects.get(id=job_id).project_id
-    files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None) & Q(project_id=project_id)).all()
-
-    for i in range(len(files)):
-        file_id=files[i].id
-
-        queryset = TbxFile.objects.all()
-        file = get_object_or_404(queryset, pk=file_id)
-
-        tree = ET.parse(file.tbx_file.path)
-        root=tree.getroot()
-        remove_namespace(root, u"iso.org/ns/tbx/2016")
-        remove_namespace(root, u"urn:iso:std:iso:30042:ed-2")
-        remove_namespace(root, u"http://www.tbxinfo.net/ns/min")
-        remove_namespace(root, u"http://www.tbxinfo.net/ns/basic")
-        if root.tag=="martif":
-            t1='termEntry'
-            ls='langSet'
-        elif root.tag=='tbx':
-            t1='conceptEntry'
-            ls='langSec'
-        result=termIdentify(root,t1,ls,single_words,codesrc,code).get("res")
-        result1=termIdentify(root,t1,ls,double_words,codesrc,code).get("res")
-        result2=termIdentify(root,t1,ls,triple_words,codesrc,code).get("res")
-        result3=termIdentify(root,t1,ls,four_words,codesrc,code).get("res")
-        out1.extend(result)
-        out1.extend(result1)
-        out1.extend(result2)
-        out1.extend(result3)
-
+    job_id = doc.job_id
+    project_id = doc.job.project_id
     output=[]
-    [output.append(x) for x in out1 if x not in output]
+    files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None) & Q(project_id=project_id)).all()
+    if files:
+        text_tokens = word_tokenize(user_input)
+        tokens_new = [word for word in text_tokens if word not in punctuation]
+        unigram = ngrams(tokens_new,1)
+        single_words = list(" ".join(i) for i in unigram)
+        bigrams = ngrams(tokens_new,2)
+        double_words = list(" ".join(i) for i in bigrams)
+        trigrams = ngrams(tokens_new,3)
+        triple_words=list(" ".join(i) for i in trigrams)
+        fourgrams = ngrams(tokens_new,4)
+        four_words=list(" ".join(i) for i in fourgrams)
+    
+
+        for i in range(len(files)):
+            file_id=files[i].id
+
+            queryset = TbxFile.objects.all()
+            file = get_object_or_404(queryset, pk=file_id)
+
+            tree = ET.parse(file.tbx_file.path)
+            root=tree.getroot()
+            remove_namespace(root, u"iso.org/ns/tbx/2016")
+            remove_namespace(root, u"urn:iso:std:iso:30042:ed-2")
+            remove_namespace(root, u"http://www.tbxinfo.net/ns/min")
+            remove_namespace(root, u"http://www.tbxinfo.net/ns/basic")
+            if root.tag=="martif":
+                t1='termEntry'
+                ls='langSet'
+            elif root.tag=='tbx':
+                t1='conceptEntry'
+                ls='langSec'
+            result=termIdentify(root,t1,ls,single_words,codesrc,code).get("res")
+            result1=termIdentify(root,t1,ls,double_words,codesrc,code).get("res")
+            result2=termIdentify(root,t1,ls,triple_words,codesrc,code).get("res")
+            result3=termIdentify(root,t1,ls,four_words,codesrc,code).get("res")
+            out1.extend(result)
+            out1.extend(result1)
+            out1.extend(result2)
+            out1.extend(result3)
+
+        
+        [output.append(x) for x in out1 if x not in output]
 
     return JsonResponse({"out":output},safe = False,json_dumps_params={'ensure_ascii':False})
 
