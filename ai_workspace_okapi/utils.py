@@ -709,14 +709,14 @@ def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
 
-
-
 def get_consumption_of_file_translate(task):
+    from ai_exportpdf.utils import pdf_char_check
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
         pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
         pages = pdf.getNumPages()
-        if pages >=300:
+        frmt,page_len = pdf_char_check(task.file.file.path)
+        if frmt=="ocr" or pages >=300:
             return "exceeded"
         return consumption_of_credits_for_page(pages)
 

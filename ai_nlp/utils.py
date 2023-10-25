@@ -16,7 +16,6 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
 from bs4 import BeautifulSoup
 from bs4.element import Comment
-from langchain.chat_models import ChatOpenAI
 from celery.decorators import task
 openai.api_key = OPENAI_API_KEY
 # llm = ChatOpenAI(model_name='gpt-4')
