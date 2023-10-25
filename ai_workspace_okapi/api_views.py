@@ -47,7 +47,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
 import nltk
-import json
+import json, time
 from nltk import word_tokenize
 from nltk.util import ngrams
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -639,7 +639,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
-        print("PageSe----------->",page_segments)
+        #print("PageSe----------->",page_segments)
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
            mt_raw_update(task.id,page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
@@ -1461,7 +1461,8 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
 def pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            #del d['mt_raw_target']
+            # if 'mt_raw_target' in d:
+            #     del d['mt_raw_target']
             d.pop('mt_raw_target',None)
     return data
 
@@ -1482,7 +1483,9 @@ class DocumentToFile(views.APIView):
    
     @staticmethod
     def get_object(document_id):
-        qs = Document.objects.all()
+        qs = Document.objects.prefetch_related('document_text_unit_set__text_unit_segment_set','task_set','document_text_unit_set',
+                                                 'document_text_unit_set__text_unit_segment_set__segments_merge_segments_set',
+                                                 'document_text_unit_set__text_unit_segment_set__split_segment_set').all()
         document = get_object_or_404(qs, id=document_id)
         return  document
 
@@ -1520,7 +1523,7 @@ class DocumentToFile(views.APIView):
         segments = doc.segments_for_workspace.filter(seg_mt_raw__isnull=True)
         split_segments = SplitSegment.objects.filter(text_unit__document=doc).filter(mt_raw_split_segment__isnull=True)
         final_segments = list(chain(segments, split_segments))
-        print("Fs---------->",final_segments)
+        #print("Fs---------->",final_segments)
         if final_segments:
             cel = mt_raw_update.apply_async((task.id,None,), queue='high-priority')
             if cel:
@@ -1660,13 +1663,22 @@ class DocumentToFile(views.APIView):
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
+                start_time_2 = time.time()
                 res = self.document_data_to_file(request, document_id)
+                end_time_2 = time.time()
+                tot_time_taken = end_time_2 - start_time_2
+                print("Tot Tim Tak---------------->",tot_time_taken)
             if res.status_code in [200, 201]:
+                start_time_1 = time.time()
                 file_path = res.text
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
-                            return self.get_file_response(file_path)
+                            file_res =  self.get_file_response(file_path)
+                            end_time_1 = time.time()
+                            time_taken_1 = end_time_1 - start_time_1
+                            print("Time Taken for download---------------->",time_taken_1)
+                            return file_res
                 except Exception as e:
                     print("Exception during file output------> ", e)
             else:
@@ -1679,23 +1691,29 @@ class DocumentToFile(views.APIView):
     @staticmethod
     def document_data_to_file(request, document_id,mt_raw=None):
         output_type = request.GET.get("output_type", "")
+        start_time_doc = time.time()
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
+        end_time_doc = time.time()
+        tot_time_doc = end_time_doc - start_time_doc
+        print("TimeTakenfordoc---------------->",tot_time_doc)
         if mt_raw == True:
             data = mt_raw_pre_process(data)
         else:
             data = pre_process(data)
-        print("Data--------------->",data)
+        #print("Data--------------->",data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
             data['numberOfWords'] = 0
-        task = document.task_set.first()
+       
+        task = document.task_set.prefetch_related('file','job__source_language','job__target_language').first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("TT------------->",task_data)
+        #print("TT------------->",task_data)
         DocumentViewByTask.correct_fields(task_data)
+        
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
@@ -1709,19 +1727,21 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
-        print("data---------->",json.dumps(data))
-        with open("sample.json", "w") as outfile:
-            outfile.write(json.dumps(data))
-        print("req_res_params--------->",json.dumps(res_paths))
-        print('req_params------>',json.dumps(params_data))
-
+        #print("data---------->",json.dumps(data))
+        # with open("sample.json", "w") as outfile:
+        #     outfile.write(json.dumps(data))
+        #print("req_res_params--------->",json.dumps(res_paths))
+        #print('req_params------>',json.dumps(params_data))
+        start_time = time.time()
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
                 'document-json-dump': json.dumps(data),
                 "doc_req_res_params": json.dumps(res_paths),
                 "doc_req_params": json.dumps(params_data),})
-
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print("Time Taken to get java res-------------------->",time_taken)
         if settings.USE_SPACES:
 
             with open(task_data["output_file_path"], "rb") as f:
@@ -2852,7 +2872,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     source_file_path = File.objects.get(file_document_set=doc).get_source_file_path
     filename, ext = os.path.splitext(source_file_path.split('source/')[1])
     file_path = temp_name
-    task = doc.task_set.first()
+    task = doc.task_set.prefetch_related('job','file').first()
     ser = TaskSerializer(task)
     task_data = ser.data
     target_language = language_locale if language_locale else task_data["target_language"]
