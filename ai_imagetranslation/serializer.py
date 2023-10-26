@@ -183,7 +183,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
        
     def get_image_inpaint_creation(self,obj):
         user = self.context.get('user')
-        pr_managers = self.context.get('managers')
+        pr_managers = self.context.get('pr_managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
         queryset = obj.s_im.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
