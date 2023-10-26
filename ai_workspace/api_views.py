@@ -4354,6 +4354,8 @@ def msg_to_extend_deadline(request):
         html_message=msg_html,
     )
     print("vendor requested expiry date extension  mailsent to vendor>>")	
+    task_assign.task_assign_info.deadline_extend_msg_sent = True
+    task_assign.task_assign_info.save()
     return Response({"msg":"Notification sent"})   
 
 
