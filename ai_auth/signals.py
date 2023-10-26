@@ -118,7 +118,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
                 cv_file = ven.get('qualifications').get('cv_url',None)
                 native_lang = ven.get('qualifications').get('native_language')[0]
             if ven.get('professional_history',False):
-                year_of_experience = ven.get('professional_history').get('years_of_experience')
+                year_of_experience = ven.get('professional_history',{}).get('years_of_experience',None)
             location = ven.get('contact_info').get('address',{}).get('region',None)
             if ven.get('about_me_localizations') != []:
                 bio = ven.get('about_me_localizations',[{}])[0].get('value', None)
@@ -132,7 +132,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
             obj.bio = bio
             obj.save()
             profile,created = auth_model.AiUserProfile.objects.get_or_create(user=instance)
-            profile.organisation_name = ven.get('contact_info').get('company_name',None)
+            profile.organisation_name = ven.get('contact_info',{}).get('company_name',None)
             profile.save()
             subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
             [VendorSubjectFields.objects.get_or_create(user=instance,subject_id = i.get('subject')) for i in subs]

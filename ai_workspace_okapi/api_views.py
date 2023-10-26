@@ -1657,7 +1657,6 @@ class DocumentToFile(views.APIView):
 
             if output_type == "MTRAW":
                 mt_process = self.mt_pre_process(document_id)
-                print("In write--------->",mt_process.get('status'))
                 if mt_process.get('status') == True:
                     res = self.document_data_to_file(request,document_id,True)
                 else:

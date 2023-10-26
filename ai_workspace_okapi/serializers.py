@@ -179,7 +179,10 @@ class SegmentSerializerV2(SegmentSerializer):
                 print("mt dable and manual confirm check")
                 user = instance.text_unit.document.doc_credit_debit_user
                 initial_credit = user.credit_balance.get("total_left")
+                start_time = time.time()
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                end_time = time.time()
+                print("Total time taken for getting word count---------->",end_time-start_time)
                 consumable = max(round(consumable_credits/3),1) 
                 if initial_credit < consumable:
                     raise serializers.ValidationError("Insufficient Credits")
@@ -286,8 +289,7 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
         extra_context = kwargs.pop('context', None)
         super().__init__(*args, **kwargs)
 
-        # Set context data to be passed to SerializerB
-        print("ERR--------------->",extra_context)
+        # Set context data to be passed to SegmentSerializerV3
         if extra_context:
             self.fields['segment_ser'] = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set",context=extra_context)
             #self.fields['segment_ser'].context['extra_context'] = extra_context
@@ -486,9 +488,8 @@ class DocumentSerializerV3(DocumentSerializerV2):
         extra_context = kwargs.pop('extra_context', None)
         super().__init__(*args, **kwargs)
 
-        # Set context data to be passed to SerializerB
+        # Set context data to be passed to TextUnitSerializerV2
         if extra_context:
-            print("Extra Context exists---------->",extra_context)
             self.fields['text'] = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set",context=extra_context)
         else:
             self.fields['text'] = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set") 

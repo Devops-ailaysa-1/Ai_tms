@@ -183,8 +183,6 @@ class Segment(BaseSegment):
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
-            #print(self)
-            #print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.prefetch_related('mt_raw_split_segment').filter(segment_id = self.id).order_by('id')
