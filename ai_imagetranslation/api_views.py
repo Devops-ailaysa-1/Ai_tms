@@ -138,7 +138,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         user,pr_managers = self.get_user()
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
-        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
+        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'pr_managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
         print("resss",response)
         return response
@@ -148,7 +148,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         # query_set = ImageTranslate.objects.get(id = pk)
-        serializer = ImageTranslateSerializer(obj,context={'request':request,'user':user,'managers':pr_managers} )
+        serializer = ImageTranslateSerializer(obj,context={'request':request,'user':user,'pr_managers':pr_managers} )
         return Response(serializer.data)
         
     def create(self,request):
@@ -159,7 +159,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg' ,"JPEG","PNG" ,"JPG" ,"SVG"]:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         if image:
-            serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'pr_managers':pr_managers}) 
         
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
@@ -170,7 +170,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                     im['mask_json']=json.loads(request.POST.dict()['mask_json'])
                     if 'file_name' in request.POST.dict().keys():
                         im['file_name'] = request.POST.dict()['file_name']
-            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'pr_managers':pr_managers}) 
 
         elif canvas_asset_image_id:
             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
@@ -179,7 +179,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                 data['mask_json']=json.loads(request.POST.dict()['mask_json'])
             if 'file_name' in request.POST.dict().keys():
                 data['file_name'] = request.POST.dict()['file_name']
-            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'pr_managers':pr_managers}) 
         else:
             return Response({'msg':"upload any image"})
              
@@ -197,7 +197,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         query_set = ImageTranslate.objects.get(id=pk)
-        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
