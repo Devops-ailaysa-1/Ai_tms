@@ -263,7 +263,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
-        pr_managers = self.context.get('managers')
+        pr_managers = self.context.get('pr_managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
         queryset = obj.canvas_translate.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
