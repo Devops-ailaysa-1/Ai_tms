@@ -190,7 +190,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
-                                                |Q(job__project__ai_user=user))
+                                                |Q(job__project__ai_user=user)).distinct()
         print(queryset)
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True,context=self.context).data
 
