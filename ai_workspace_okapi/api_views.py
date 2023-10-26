@@ -1690,18 +1690,22 @@ class DocumentToFile(views.APIView):
 
     @staticmethod
     def document_data_to_file(request, document_id,mt_raw=None):
+        print("MTRaw------------>",mt_raw)
         output_type = request.GET.get("output_type", "")
         start_time_doc = time.time()
         document = DocumentToFile.get_object(document_id)
-        doc_serlzr = DocumentSerializerV3(document)
+        if mt_raw == True:
+            doc_serlzr = DocumentSerializerV3(document,extra_context={'mt_raw':True})
+        else:
+            doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
         end_time_doc = time.time()
         tot_time_doc = end_time_doc - start_time_doc
         print("TimeTakenfordoc---------------->",tot_time_doc)
         if mt_raw == True:
             data = mt_raw_pre_process(data)
-        else:
-            data = pre_process(data)
+        # else:
+        #     data = pre_process(data)
         #print("Data--------------->",data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
