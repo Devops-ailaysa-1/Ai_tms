@@ -270,7 +270,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
-                                                Q(job__project__ai_user=user))
+                                                Q(job__project__ai_user=user)).distinct()
         
         return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate',context=self.context).data
 
