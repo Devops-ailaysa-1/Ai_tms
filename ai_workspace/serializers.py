@@ -921,7 +921,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
-                    'pre_translate','task_assign_detail','account_raw_count','billable_char_count','billable_word_count',)
+                    'pre_translate','task_assign_detail','account_raw_count','billable_char_count',\
+					'billable_word_count','deadline_extend_msg_sent')
 
         extra_kwargs = {
             'assigned_by':{'write_only':True},
