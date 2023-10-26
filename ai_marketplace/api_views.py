@@ -1115,6 +1115,8 @@ class ProzVendorListView(generics.ListAPIView):
         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         print("Status---------->",integration_users_response)
+        if integration_users_response.status_code == 500:
+            return {'msg':"something wrong with ProZ API"},None
         integration_users = integration_users_response.json()
         print("Integration--------------->",integration_users.get('success'))
         common_users = []
@@ -1166,6 +1168,8 @@ class ProzVendorListView(generics.ListAPIView):
         print("Inside List")
         queryset,total = self.get_queryset()
         print("QS-------------->",queryset)
+        if queryset.get('msg'):
+            return Response({"msg":queryset.get('msg')},status=400)
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
         data.append({'total':total})

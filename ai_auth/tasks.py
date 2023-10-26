@@ -769,7 +769,6 @@ def mt_raw_update(task_id,segments):
     else:
         final_segments = segments
 
-    #print("SEGS--------------------->",final_segments)
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
@@ -784,12 +783,8 @@ def mt_raw_update(task_id,segments):
                     mt_raw = seg.mt_raw_split_segment.first().mt_raw
         except:
             mt_raw = None
-        #print("Seg---------->",seg) 
-        #print("MtRw---------->",mt_raw)
         if mt_raw == None:
-            #print("Inside mt raw none")
             if seg.target == '' or seg.target==None:
-                #print("**********************")
                 initial_credit = user.credit_balance.get("total_left")
                 print("Intial Credit------------->",initial_credit)
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
@@ -833,11 +828,11 @@ def mt_raw_update(task_id,segments):
                 else:
                     print("Insufficient credits")
                 
-    #print("UL->",mt_segments)
+    
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
     MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
     SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
-    #print("mt----------?",mt_segments)
+    
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
@@ -849,8 +844,7 @@ def mt_raw_update(task_id,segments):
         ]
 
     tt = MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
-    #print("norm and merg--------->",tt)
-    #print("mt_split------------->",mt_split_segments)
+
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
@@ -859,8 +853,7 @@ def mt_raw_update(task_id,segments):
             for i in mt_split_segments
         ]
     tr = MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
-    #print("split-------->",tr)
-    #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+   
     logger.info("mt_raw_update")
 
 
