@@ -252,7 +252,8 @@ def install_font(font_path):
 def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",transparent=True):
     
     if no_pil_object:
-        im=Image.open(requests.get(image_url, stream=True).raw)
+        im = Image.open(io.BytesIO(requests.get(image_url, stream=True).content))
+        # im=Image.open(requests.get(image_url, stream=True).raw)
         print(im)
         im=im.convert("RGB")
         name=image_url.split('/')[-1]

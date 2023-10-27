@@ -577,6 +577,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user, 'created_by': created_by}
             instance=BackgroundRemovel.objects.create(**data)
+            print(instance.image_url)
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.original_image=image_path_create
             instance.save()

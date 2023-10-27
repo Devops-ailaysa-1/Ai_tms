@@ -1192,9 +1192,11 @@ def lang_detection(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
-    canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
-    for canvas_trans_json_id in canvas_trans_json_ids:
-        design_instance = CanvasTranslatedJson.objects.get(id=canvas_trans_json_id) #canvas_design__user=request.user, 
+    # canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
+    job_ids=request.query_params.getlist('job_id')
+    for job_id in job_ids:
+    
+        design_instance = CanvasTranslatedJson.objects.get(job__id=job_id) #canvas_design__user=request.user, 
         total_sent=[]
         for i in design_instance.canvas_design.canvas_json_src.all():
             total_sent.extend(dict_rec_json(i.json))
@@ -1203,7 +1205,8 @@ def Designerwordcount(request):
                                                             prompt_string_list= total_sent)
         task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
                                         project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
-    task_det_instance=TaskDetails.objects.filter(project__designer_project__canvas_translate__id__in = canvas_trans_json_ids)
+    # task_det_instance=TaskDetails.objects.filter(project__designer_project__canvas_translate__id__in = canvas_trans_json_ids)
+    task_det_instance= TaskDetails.objects.filter(task__job_id__in =job_ids)
     ser = TaskDetailSerializer(task_det_instance,many=True)
     return Response(ser.data)
 
