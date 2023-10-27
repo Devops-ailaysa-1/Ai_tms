@@ -1829,15 +1829,14 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 						res_obj = res.first()
 						res_obj.task_assign_info.delete()
 						res_obj.assign_to = instance.task.job.project.ai_user
-						res_obj.assigned_by = request_user
 						res_obj.status = 1
 						res_obj.client_response = None
 						res_obj.save()
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=request_user)
-				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
-				task_assign_data.update({'status':1,'assigned_by':request_user})
+				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None,'assigned_by':request_user})
+				task_assign_data.update({'status':1})
 				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
