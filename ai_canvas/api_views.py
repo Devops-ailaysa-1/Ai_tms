@@ -281,6 +281,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
         print("Pms----------->",project_managers)
+        print("User----------->",user)
         return user,project_managers
 
     def get_object(self, pk):
@@ -375,8 +376,11 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
 
     def list(self,request):
 
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+
+        # project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        # user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
 
         # pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         # user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
