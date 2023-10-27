@@ -570,7 +570,7 @@ def pre_translate_update(task_id):
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
-    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     # if task.document == None:
     #     document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
     segments = task.document.segments_for_find_and_replace
