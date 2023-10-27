@@ -184,13 +184,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     def get_image_inpaint_creation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('pr_managers')
+        team_members = user.get_team_members if user.get_team_members else []
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
         queryset = obj.s_im.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
-                                                |Q(job__project__ai_user=user)).distinct()
+                                                |Q(job__project__ai_user=user)|(Q(job__job_tasks_set__task_info__assign_to=user)&\
+                                                Q(job__job_tasks_set__task_info__assign_to__in = team_members))).distinct()
         print(queryset)
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True,context=self.context).data
 
