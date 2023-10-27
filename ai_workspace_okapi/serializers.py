@@ -179,7 +179,10 @@ class SegmentSerializerV2(SegmentSerializer):
                 print("mt dable and manual confirm check")
                 user = instance.text_unit.document.doc_credit_debit_user
                 initial_credit = user.credit_balance.get("total_left")
+                start_time = time.time()
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                end_time = time.time()
+                print("Total time taken for getting word count---------->",end_time-start_time)
                 consumable = max(round(consumable_credits/3),1) 
                 if initial_credit < consumable:
                     raise serializers.ValidationError("Insufficient Credits")
@@ -200,18 +203,26 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
+    def __init__(self, *args, **kwargs):
+        extra_context = kwargs.pop('context', None)
+        super().__init__(*args, **kwargs)
+
+        if extra_context:
+            self.fields['mt_raw_target'] = serializers.CharField(
+                read_only=True, source="get_mt_raw_target_if_have", trim_whitespace=False
+            )
     target = serializers.CharField(read_only=True, source="get_merge_target_if_have",
         trim_whitespace=False)
     merge_segment_count = serializers.IntegerField(read_only=True,
         source="get_merge_segment_count", )
-    mt_raw_target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
-        trim_whitespace=False)
+    # mt_raw_target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
+    #     trim_whitespace=False)
 
     class Meta:
         # pass
         model=Segment
-        fields = ['source', 'target','mt_raw_target', 'coded_source', 'coded_brace_pattern',
-            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+        fields = ['source', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count','target']#,'mt_raw_target']
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
             'coded_ids_sequence','mt_raw_target']
     def to_representation(self, instance):
@@ -274,13 +285,22 @@ class TextUnitSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
 class TextUnitSerializerV2(serializers.ModelSerializer):
-    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
+    def __init__(self, *args, **kwargs):
+        extra_context = kwargs.pop('context', None)
+        super().__init__(*args, **kwargs)
+
+        # Set context data to be passed to SegmentSerializerV3
+        if extra_context:
+            self.fields['segment_ser'] = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set",context=extra_context)
+            #self.fields['segment_ser'].context['extra_context'] = extra_context
+        else:
+            self.fields['segment_ser'] = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
+
+    #segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
 
     class Meta:
         model = TextUnit
-        fields = (
-            "segment_ser","okapi_ref_translation_unit_id"
-        )
+        fields = ("okapi_ref_translation_unit_id",)
 
     def to_representation(self, instance):
         ret = super(TextUnitSerializerV2, self).to_representation(instance=instance)
@@ -463,12 +483,23 @@ class DocumentSerializerV2(DocumentSerializer):
                   )
 
 class DocumentSerializerV3(DocumentSerializerV2):
-    text = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set")
+    
+    def __init__(self, *args, **kwargs):
+        extra_context = kwargs.pop('extra_context', None)
+        super().__init__(*args, **kwargs)
+
+        # Set context data to be passed to TextUnitSerializerV2
+        if extra_context:
+            self.fields['text'] = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set",context=extra_context)
+        else:
+            self.fields['text'] = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set") 
+             
+    #text = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set")
     filename = serializers.CharField(read_only=True, source="file.filename")
     class Meta(DocumentSerializerV2.Meta):
         model = Document
         fields = (
-            "text",  'total_word_count', 'total_char_count', 'total_segment_count', "filename"
+           'total_word_count', 'total_char_count', 'total_segment_count', "filename"
         )
 
     def to_representation(self, instance):

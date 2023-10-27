@@ -2298,7 +2298,7 @@ class ShowMTChoices(APIView):
         return Response(res, status=status.HTTP_200_OK)
 
 
-###########################Transcribe Short File############################## #######
+###########################Transcribe Short File#####################################
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
     ai_user = obj.job.project.ai_user
@@ -4354,6 +4354,8 @@ def msg_to_extend_deadline(request):
         html_message=msg_html,
     )
     print("vendor requested expiry date extension  mailsent to vendor>>")	
+    task_assign.task_assign_info.deadline_extend_msg_sent = True
+    task_assign.task_assign_info.save()
     return Response({"msg":"Notification sent"})   
 
 
