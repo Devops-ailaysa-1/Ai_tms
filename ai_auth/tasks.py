@@ -909,7 +909,8 @@ def weighted_count_update(receiver,sender,assignment_id):
                     else:
                         if existing_cc != char_count:
                             notify_word_count(assigns,word_count,char_count)
-        except:
+        except Exception as e:
+            print(f'Error in notify: {e}')
             print("<---------Notification error------------->")
             pass
     logger.info('billable count updated and mail sent')
