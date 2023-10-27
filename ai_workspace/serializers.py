@@ -1174,9 +1174,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
+		request_user = self.context.get('request').user
 		user = self.context.get('user')
-		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_assign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_assign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task Assign Info---------->",cached_value)
@@ -1207,10 +1208,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		#return cached_value
 
 	def get_task_reassign_info(self, obj):
+		request_user = self.context.get('request').user
 		project_managers = self.context.get('pr_managers')
 		user = self.context.get('user')
-		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_reassign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_reassign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task ReAssign Info---------->",cached_value)

@@ -760,7 +760,7 @@ def mt_raw_update(task_id,segments):
     user = task.job.project.ai_user
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
-    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     if segments == None:
         segments = task.document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
@@ -898,6 +898,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                 for i in [*set(receivers)]:
                     if i in hired_editors or (i.team and i.team.owner) in hired_editors:
                         ws_forms.task_assign_detail_mail(i,assignment_id)
+                        print("Mail sent")
             else:
                 print("------------------------PUT------------------------------")
                 assigns = task_assgn_objs[0].task_assign
