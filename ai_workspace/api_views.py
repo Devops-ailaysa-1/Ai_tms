@@ -4426,7 +4426,9 @@ def translate_file_task(task_id):
     if consumable_credits == None:
         return {'msg':'something went wrong in calculating page count','status':404}
     if consumable_credits == "exceeded":
-        return {'msg':'PDF file page limit should less then 300 or image pdf','status':404}
+        return {'msg':'PDF file page limit should be less then 300','status':404}
+    if consumable_credits == "ocr":
+        return {'msg':'PDF file is in image pdf','status':404}
     initial_credit = user.credit_balance.get("total_left")
     print("Initial------------->",initial_credit)
     if initial_credit>consumable_credits:

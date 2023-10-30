@@ -235,6 +235,8 @@ from rest_framework import serializers
 
 
 def pdf_char_check(file_path):
+    import time
+    start = time.time()
     pdf_check_list = []
     pdfdoc = PyPDF2.PdfReader(file_path)
     pdf_check = {0:'ocr',1:'text'}
@@ -247,6 +249,8 @@ def pdf_char_check(file_path):
                 pdf_check_list.append(0)
         else:
             pdf_check_list.append(0)
+    end = time.time()
+    print("char_count_check",end-start)
     return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
 
 
