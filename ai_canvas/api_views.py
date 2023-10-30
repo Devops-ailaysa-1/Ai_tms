@@ -1194,6 +1194,7 @@ def lang_detection(request):
 def Designerwordcount(request):
     # canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
     job_ids=request.query_params.getlist('job_id')
+    print("job_ids",job_ids)
     for job_id in job_ids:
     
         design_instance = CanvasTranslatedJson.objects.get(job__id=job_id) #canvas_design__user=request.user, 
