@@ -718,15 +718,21 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				
 				else:
 					pro_fil = ProjectFilesCreateType.objects.create(project=project)
+
+
+				project,contents,subjects,steps = Project.objects.create_content_and_subject_and_steps_for_project(project,\
+							proj_content_type, proj_subject, proj_steps,\
+							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
+
 					
-				if proj_subject:
-					proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+				# if proj_subject:
+				# 	proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
 					
-				if proj_content_type:
-					proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
+				# if proj_content_type:
+				# 	proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
 					
-				if proj_steps:
-					proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+				# if proj_steps:
+				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
 				if project_type == 1 or project_type == 2 or project_type == 5:
@@ -746,13 +752,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-				# tasks = Task.objects.create_tasks_of_files_and_jobs(
-				# 	files=files, jobs=jobs, project=project, klass=Task)
+
 				task_assign = TaskAssign.objects.assign_task(project=project)
-				#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-				#objls_is_allowed(task_assign,"create",user)
-				#tt = mt_only(project,self.context.get('request'))
-				#print(tt)
+
 		except BaseException as e:
 			print("Exception---------->",e)
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
