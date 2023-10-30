@@ -266,11 +266,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         pr_managers = self.context.get('pr_managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
+        print("Team Memberss-------->",user.get_team_members)
+        team_members = user.get_team_members if user.get_team_members else []
         queryset = obj.canvas_translate.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
-                                                Q(job__project__ai_user=user)).distinct()
+                                                Q(job__project__ai_user=user)|(Q(job__job_tasks_set__task_info__assign_to=user)&\
+                                                Q(job__job_tasks_set__task_info__assign_to__in = team_members))).distinct()
         
         return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate',context=self.context).data
 

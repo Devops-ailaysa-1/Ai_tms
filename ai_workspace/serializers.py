@@ -1174,9 +1174,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
+		request_user = self.context.get('request').user
 		user = self.context.get('user')
-		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_assign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_assign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task Assign Info---------->",cached_value)
@@ -1207,10 +1208,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		#return cached_value
 
 	def get_task_reassign_info(self, obj):
+		request_user = self.context.get('request').user
 		project_managers = self.context.get('pr_managers')
 		user = self.context.get('user')
-		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_reassign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_reassign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task ReAssign Info---------->",cached_value)
@@ -1833,7 +1835,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=request_user)
-				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None,'assigned_by':request_user})
 				task_assign_data.update({'status':1})
 				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')
