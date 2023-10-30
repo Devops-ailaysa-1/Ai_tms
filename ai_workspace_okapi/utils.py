@@ -716,8 +716,11 @@ def get_consumption_of_file_translate(task):
         pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
         pages = pdf.getNumPages()
         frmt,page_len = pdf_char_check(task.file.file.path)
-        if frmt=="ocr" or pages >=300:
-            return "exceeded"
+        if pages >=300:
+             return "exceeded"
+        if frmt=="ocr": #or pages >=300:
+            return "ocr"
+
         return consumption_of_credits_for_page(pages)
 
     if ext == '.docx' or ext == '.doc':
