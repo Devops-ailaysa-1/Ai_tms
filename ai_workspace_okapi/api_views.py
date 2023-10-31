@@ -208,6 +208,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def write_from_json_file(task, json_file_path):
 
+        start_time_v2 = time.time()
+
         # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
@@ -245,7 +247,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
-            start_time_v2 = time.time()
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
                                                      }, ))
