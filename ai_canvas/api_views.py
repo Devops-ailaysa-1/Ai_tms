@@ -293,7 +293,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def create(self,request):
         thumbnail = request.FILES.get('thumbnail')
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(data=request.data,context={'request':request,'user':user,'pr_managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -303,13 +303,13 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def list(self, request):
         queryset = self.get_queryset()
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(queryset,many=True,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(queryset,many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(obj,context={'request':request,'user':user,'pr_managers':pr_managers})
  
         return Response(serializer.data)
  
@@ -317,7 +317,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def update(self,request,pk):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
-        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request,'user':user,'managers':pr_managers})
+        serializer = CanvasDesignSerializer(obj,data=request.data,partial=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1155,7 +1155,7 @@ def dict_rec_json(json_copy):
             if i['type']== 'textbox':
                 text = i['text']
                 total_sent.append(text)
-    return total_sent
+    return  total_sent
 
 from googletrans import Translator
 @permission_classes([IsAuthenticated])
@@ -1192,17 +1192,23 @@ def lang_detection(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
-    canvas_trans_json_id=request.query_params.get('canvas_trans_json_id')
-    design_instance = CanvasTranslatedJson.objects.get(id=canvas_trans_json_id) #canvas_design__user=request.user, 
-    total_sent=[]
-    for i in design_instance.canvas_design.canvas_json_src.all():
-         total_sent.extend(dict_rec_json(i.json))
-    print(total_sent)
-    wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
-                                                        prompt_string_list= total_sent)
-    task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
-                                      project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
-    ser = TaskDetailSerializer(task_det_instance)
+    # canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
+    job_ids=request.query_params.getlist('job_id')
+    print("job_ids",job_ids)
+    for job_id in job_ids:
+    
+        design_instance = CanvasTranslatedJson.objects.get(job__id=job_id) #canvas_design__user=request.user, 
+        total_sent=[]
+        for i in design_instance.canvas_design.canvas_json_src.all():
+            total_sent.extend(dict_rec_json(i.json))
+        print(total_sent)
+        wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
+                                                            prompt_string_list= total_sent)
+        task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
+                                        project = design_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
+    # task_det_instance=TaskDetails.objects.filter(project__designer_project__canvas_translate__id__in = canvas_trans_json_ids)
+    task_det_instance= TaskDetails.objects.filter(task__job_id__in =job_ids)
+    ser = TaskDetailSerializer(task_det_instance,many=True)
     return Response(ser.data)
 
  ######################################################canvas______download################################

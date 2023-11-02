@@ -718,15 +718,21 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				
 				else:
 					pro_fil = ProjectFilesCreateType.objects.create(project=project)
+
+
+				project,contents,subjects,steps = Project.objects.create_content_and_subject_and_steps_for_project(project,\
+							proj_content_type, proj_subject, proj_steps,\
+							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
+
 					
-				if proj_subject:
-					proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+				# if proj_subject:
+				# 	proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
 					
-				if proj_content_type:
-					proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
+				# if proj_content_type:
+				# 	proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
 					
-				if proj_steps:
-					proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+				# if proj_steps:
+				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
 				if project_type == 1 or project_type == 2 or project_type == 5:
@@ -746,13 +752,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-				# tasks = Task.objects.create_tasks_of_files_and_jobs(
-				# 	files=files, jobs=jobs, project=project, klass=Task)
+
 				task_assign = TaskAssign.objects.assign_task(project=project)
-				#ch_selected = Project.objects.add_default_choice_list_for_project(project=project)
-				#objls_is_allowed(task_assign,"create",user)
-				#tt = mt_only(project,self.context.get('request'))
-				#print(tt)
+
 		except BaseException as e:
 			print("Exception---------->",e)
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
@@ -921,7 +923,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
-                    'pre_translate','task_assign_detail','account_raw_count','billable_char_count','billable_word_count',)
+                    'pre_translate','task_assign_detail','account_raw_count','billable_char_count',\
+					'billable_word_count','deadline_extend_msg_sent')
 
         extra_kwargs = {
             'assigned_by':{'write_only':True},
@@ -1173,9 +1176,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
+		request_user = self.context.get('request').user
 		user = self.context.get('user')
-		cache_key = f'task_assign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_assign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_assign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_assign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task Assign Info---------->",cached_value)
@@ -1206,10 +1210,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		#return cached_value
 
 	def get_task_reassign_info(self, obj):
+		request_user = self.context.get('request').user
 		project_managers = self.context.get('pr_managers')
 		user = self.context.get('user')
-		cache_key = f'task_reassign_info_{obj.pk}_{user.pk}'
-		computed_key = f'task_reassign_computed_{obj.pk}_{user.pk}'
+		cache_key = f'task_reassign_info_{obj.pk}_{request_user.pk}'
+		computed_key = f'task_reassign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
 		print("Cached Value in Task ReAssign Info---------->",cached_value)
@@ -1832,7 +1837,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=request_user)
-				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None,'assigned_by':request_user})
 				task_assign_data.update({'status':1})
 				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')

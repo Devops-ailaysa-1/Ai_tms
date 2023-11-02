@@ -1,5 +1,5 @@
 from random import choices
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
@@ -114,15 +114,26 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     def get_team_members(self):
         if self.team:
             return [i.internal_member for i in self.team.internal_member_team_info.all()]
+            
+
+    # @property
+    # def credit_balance(self):
+    #     with transaction.atomic():
+    #         # Lock the user record while retrieving the credit balance
+    #         queryset = UserCredits.objects.select_for_update().filter(user=self)
+    #         return self.get_credit_balance
+
 
     @property
+    @transaction.atomic()
     def credit_balance(self):
         # total_credit_left = 0
         addons = subscription = subscription_total= addon_buyed_credits= 0
         present = datetime.now()
+        obj =  UserCredits.objects.filter(Q(user=self)).select_for_update()
 
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon")).\
+            addon_credits = obj.filter(Q(user=self) & Q(credit_pack_type="Addon")).\
                     filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now())).order_by('expiry')
             for addon in addon_credits:
                 addons += addon.credits_left
@@ -135,7 +146,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             print("NO ADD-ONS AVAILABLE")
 
         try:
-            sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
+            sub_credits = obj.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
                                                 & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 subscription += sub_credits.credits_left
@@ -358,7 +369,7 @@ class TempPricingPreference(models.Model):
 
 
 class UserCredits(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='user_credits')
     stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE)
     price_id = models.CharField(max_length=200,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

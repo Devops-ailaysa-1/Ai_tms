@@ -1264,8 +1264,7 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 #####for testing streaming #############
-
-
+import time
 @api_view(["GET"])
 def generate(request):
     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
@@ -1283,6 +1282,7 @@ However, building and maintaining quantum computers is very challenging because 
         title=title.split(" ")
         def stream():
             for chunk in title:
+                time.sleep(0.05)
                 if chunk:
                     yield '\ndata: {}\n\n'.format(chunk)
                 else:

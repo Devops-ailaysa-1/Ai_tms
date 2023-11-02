@@ -109,11 +109,42 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
         representation['thumbnail'] = instance.thumbnail.url
         return representation
 
+
+from ai_workspace.serializers import VendorDashBoardSerializer
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
+    task_assign_info = serializers.SerializerMethodField()
+    task_reassign_info = serializers.SerializerMethodField()
+    bid_job_detail_info = serializers.SerializerMethodField()
+    edit_allowed = serializers.SerializerMethodField()
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
         model = ImageInpaintCreation
-        fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box','export','thumbnail','created_at','updated_at')
+        fields = ('id','edit_allowed','source_image','target_language','target_canvas_json',
+                 'task_assign_info','task_reassign_info','bid_job_detail_info',
+                'target_bounding_box','export','thumbnail','created_at','updated_at')
+
+    def get_task_assign_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result
+
+    def get_task_reassign_info(self,obj):  
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result 
+
+    def get_bid_job_detail_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result
+
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -142,26 +173,29 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     mask_json=serializers.JSONField(required=False)
     image_inpaint_creation=serializers.SerializerMethodField()
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    project_name = serializers.CharField(required=False)
     class Meta:
         model=ImageTranslate
         fields=('id','image','file_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update','assigned',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
+            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project','project_name')
        
     def get_image_inpaint_creation(self,obj):
         user = self.context.get('user')
-        pr_managers = self.context.get('managers')
+        pr_managers = self.context.get('pr_managers')
+        team_members = user.get_team_members if user.get_team_members else []
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
         queryset = obj.s_im.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 &Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
-                                                |Q(job__project__ai_user=user))
-        print(queryset)
-        return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True).data
+                                                |Q(job__project__ai_user=user)|(Q(job__job_tasks_set__task_info__assign_to=user)&\
+                                                Q(job__job_tasks_set__task_info__assign_to__in = team_members))).distinct()
+        
+        return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True,context=self.context).data
 
 
     def to_representation(self, instance):
@@ -199,9 +233,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         file_name = validated_data.pop('file_name',None)
-        if file_name:
-            project_instance.project_name = file_name
-            project_instance.save()
+        # if file_name:
+        #     project_instance.project_name = file_name
+        #     project_instance.save()
+        # if project_name:
+        #     project_instance.project_name = file_name
+        #     project_instance.save()
+
 
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
@@ -243,7 +281,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'msg':'source json is not sent'})
         tar_json_copy=copy.deepcopy(instance.source_canvas_json)
         tar_json_copy['background']="rgba(231,232,234,0)"
-        # initial_credit = 2
+        
         for tar_lang in inpaint_creation_target_lang:
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             print(src_lang , type(src_lang))
@@ -253,7 +291,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             print("total_credit",total_sentence)
             initial_credit = instance.user.credit_balance.get("total_left")
             print("----------",initial_credit)
-            
+            # initial_credit = 200
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
                 obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
@@ -276,7 +314,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     #     i['mt_text']=i['text']
                     # else:
                     translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)                     
+                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)               
                     i['text']=translate_bbox
                     i['mt_text']=translate_bbox
                 if i['name'] == "Background-static":
@@ -302,6 +340,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
+        project_name=validated_data.get('project_name' ,None)
         image_id=validated_data.get('image_id',None)
         image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
         user = self.context.get('user')
@@ -345,11 +384,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
             
-        if validated_data.get('project_name' ,None):
-            file_name=validated_data.get('project_name')
-            instance.file_name = file_name
+        if project_name:
+            print("project_name" ,project_name)
+            instance.file_name = project_name
             proj_inst = Project.objects.get(id = instance.project.id)
-            proj_inst.project_name = file_name
+            proj_inst.project_name = project_name
             proj_inst.save()
             instance.save()
             
@@ -363,6 +402,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             initial_credit = instance.user.credit_balance.get("total_left")
+            # initial_credit=100
             consumble_credit = get_consumable_credits_for_image_trans_inpaint()
             if initial_credit < consumble_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
@@ -545,6 +585,7 @@ class BackgroundRemovelSerializer(serializers.ModelSerializer):
         if canvas_json: 
             data={'image_url':canvas_json['src'],'image_json_id':canvas_json['name'] ,'user':user, 'created_by': created_by}
             instance=BackgroundRemovel.objects.create(**data)
+            print(instance.image_url)
             image_path_create=convert_image_url_to_file(instance.image_url)
             instance.original_image=image_path_create
             instance.save()
