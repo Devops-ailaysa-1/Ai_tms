@@ -14,7 +14,7 @@ import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-import os
+import os,uuid
 from django.db.models import Q
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
@@ -616,7 +616,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             page=pages+1
             src_json_page=can_src.json
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
-
+            ################
+            for i in src_json_page['objects']: 
+                if i['type']=='textbox':
+                    text_uuid=uuid.uuid4()
+                    name="Textbox_"+(str(text_uuid)) 
+                    i['name']=name
+            ###############
+            
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
 
             for count,src_js in enumerate(instance.canvas_json_src.all()):
