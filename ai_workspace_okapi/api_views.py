@@ -208,6 +208,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def write_from_json_file(task, json_file_path):
 
+        start_time_v2 = time.time()
+
         # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
@@ -215,7 +217,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-        print("Doc------------->",doc_data)
+        print("Doc------------->",doc_data.get('total_word_count'))
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}
@@ -252,7 +254,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 document = serializer.save()
                 task.document = document
                 task.save()
-
+            end_time_v2 = time.time()
+            print("Total time to SerV2-------------->",end_time_v2-start_time_v2)
+        
         return document
     
     def authorize_doc(self,request,doc,action):
@@ -341,44 +345,42 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
             # For large files, json file is already written during word count
             if exists(json_file_path):
+                start_time_j = time.time()
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-                
-            else:
-                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                    "doc_req_params": json.dumps(params_data),
-                    "doc_req_res_params": json.dumps(res_paths)
-                })
+                end_time_j = time.time()
+                print("Time taken to write doc from json file------------>",end_time_j-start_time_j)
+            # else:
+            #     doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+            #         "doc_req_params": json.dumps(params_data),
+            #         "doc_req_res_params": json.dumps(res_paths)
+            #     })
 
-                if doc.status_code == 200:
-                    doc_data = doc.json()
-                    print("Doc Data--------------------->",doc_data)
-                    if doc_data.get('total_word_count') == 0:
-                        return {'msg':'Empty File'}
-                    serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                             "file": task.file.id, "job": task.job.id, }, ))
+            #     if doc.status_code == 200:
+            #         doc_data = doc.json()
+            #         print("Doc Data--------------------->",doc_data)
+            #         if doc_data.get('total_word_count') == 0:
+            #             return {'msg':'Empty File'}
+            #         serializer = (DocumentSerializerV2(data={**doc_data, \
+            #                                                  "file": task.file.id, "job": task.job.id, }, ))
 
-                    if serializer.is_valid(raise_exception=True):
-                        document = serializer.save()
-                        task.document = document
-                        task.save()
-                else:
-                    logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
-                    raise ValueError("Sorry! Something went wrong with file processing.")
+            #         if serializer.is_valid(raise_exception=True):
+            #             document = serializer.save()
+            #             task.document = document
+            #             task.save()
+            #     else:
+            #         logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+            #         raise ValueError("Sorry! Something went wrong with file processing.")
 
         return document
 
     def get(self, request, task_id, format=None):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
-
+        
         task = self.get_object(task_id=task_id)
-        print(task.job.project.is_proj_analysed)
-        # doc = Document.objects.filter(file_id=task.file.id,job_id=task.job.id).last()
-        # if task.document == None and doc:
-        #     print("Inside TRTRT")
-        #     doc.delete()
+        print("Proj Analysed--------------->",task.job.project.is_proj_analysed)
         # if task.job.project.is_proj_analysed == False:
-            # return Response({'msg':'analysis is still running'}, status = 400)
+        #     return Response({'msg':'analysis is still running'}, status = 400)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
@@ -415,10 +417,16 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
+            start_time_doc_create = time.time()
             document = self.create_document_for_task_if_not_exists(task)   
-            self.authorize_doc(request,document,action="read")        
+            end_time_doc_create = time.time()
+            print("Time Taken for doc create---------->",end_time_doc_create-start_time_doc_create)
+            self.authorize_doc(request,document,action="read")       
             try:
+                st_time = time.time()
                 doc = DocumentSerializerV2(document).data
+                tt_time = time.time()
+                print("Time for Doc Ser---------------->",tt_time - st_time)
                 return Response(doc, status=201)
             except:
                 if document.get('doc')!= None:
