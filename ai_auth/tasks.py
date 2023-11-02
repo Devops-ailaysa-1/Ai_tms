@@ -570,7 +570,7 @@ def pre_translate_update(task_id):
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
-    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     # if task.document == None:
     #     document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
     segments = task.document.segments_for_find_and_replace
@@ -760,7 +760,7 @@ def mt_raw_update(task_id,segments):
     user = task.job.project.ai_user
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
-    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     if segments == None:
         segments = task.document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
@@ -769,7 +769,6 @@ def mt_raw_update(task_id,segments):
     else:
         final_segments = segments
 
-    print("SEGS--------------------->",final_segments)
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
@@ -784,12 +783,8 @@ def mt_raw_update(task_id,segments):
                     mt_raw = seg.mt_raw_split_segment.first().mt_raw
         except:
             mt_raw = None
-        print("Seg---------->",seg) 
-        print("MtRw---------->",mt_raw)
         if mt_raw == None:
-            print("Inside mt raw none")
             if seg.target == '' or seg.target==None:
-                print("**********************")
                 initial_credit = user.credit_balance.get("total_left")
                 print("Intial Credit------------->",initial_credit)
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
@@ -833,11 +828,11 @@ def mt_raw_update(task_id,segments):
                 else:
                     print("Insufficient credits")
                 
-    print("UL->",mt_segments)
+    
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
     MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
     SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
-    print("mt----------?",mt_segments)
+    
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
@@ -849,8 +844,7 @@ def mt_raw_update(task_id,segments):
         ]
 
     tt = MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
-    print("norm and merg--------->",tt)
-    print("mt_split------------->",mt_split_segments)
+
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
@@ -859,8 +853,7 @@ def mt_raw_update(task_id,segments):
             for i in mt_split_segments
         ]
     tr = MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
-    print("split-------->",tr)
-    #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+   
     logger.info("mt_raw_update")
 
 
@@ -905,6 +898,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                 for i in [*set(receivers)]:
                     if i in hired_editors or (i.team and i.team.owner) in hired_editors:
                         ws_forms.task_assign_detail_mail(i,assignment_id)
+                        print("Mail sent")
             else:
                 print("------------------------PUT------------------------------")
                 assigns = task_assgn_objs[0].task_assign
@@ -915,7 +909,8 @@ def weighted_count_update(receiver,sender,assignment_id):
                     else:
                         if existing_cc != char_count:
                             notify_word_count(assigns,word_count,char_count)
-        except:
+        except Exception as e:
+            print(f'Error in notify: {e}')
             print("<---------Notification error------------->")
             pass
     logger.info('billable count updated and mail sent')

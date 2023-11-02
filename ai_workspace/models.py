@@ -1389,7 +1389,7 @@ class Task(models.Model):
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
             try:
-                if self.job.project.glossary_project or self.job.project.project_type_id == 6:
+                if self.job.project.glossary_project or self.job.project.project_type_id__in == [6,7]: #designer,book proj
                     return None
             except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
@@ -1688,7 +1688,7 @@ class TaskAssign(models.Model):
     client_reason = models.TextField(null=True, blank=True)
     return_request_reason = models.TextField(null=True, blank=True)
     user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
-
+    
     objects = TaskAssignManager()
 
 
@@ -1752,6 +1752,7 @@ class TaskAssignInfo(models.Model):
     billable_word_count = models.IntegerField(blank=True,null=True)
     account_raw_count = models.BooleanField(default=True)
     change_request_reason = models.TextField(blank=True, null=True)
+    deadline_extend_msg_sent = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:

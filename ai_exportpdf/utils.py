@@ -228,22 +228,50 @@ def para_creation_from_ocr(texts):
     return para_text
 
 import PyPDF2
+
+
+
 from rest_framework import serializers
-def file_pdf_check(file_path,pdf_id): 
-    try:
-        pdfdoc = PyPDF2.PdfReader(file_path)
-        pdf_check = {0:'ocr',1:'text'}
-        pdf_check_list = []
-        for i in range(len(pdfdoc.pages)):
-            current_page = pdfdoc.pages[i]
-            if current_page.extract_text():
-                if len(current_page.extract_text()) >=700:
-                    pdf_check_list.append(1)
-                else:
-                    pdf_check_list.append(0)
+
+
+def pdf_char_check(file_path):
+    import time
+    start = time.time()
+    pdf_check_list = []
+    pdfdoc = PyPDF2.PdfReader(file_path)
+    pdf_check = {0:'ocr',1:'text'}
+    for i in range(len(pdfdoc.pages)):
+        current_page = pdfdoc.pages[i]
+        if current_page.extract_text():
+            if len(current_page.extract_text()) >=700:
+                pdf_check_list.append(1)
             else:
                 pdf_check_list.append(0)
-        return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
+        else:
+            pdf_check_list.append(0)
+    end = time.time()
+    print("char_count_check",end-start)
+    return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
+
+
+
+def file_pdf_check(file_path,pdf_id): 
+    try:
+        res = pdf_char_check(file_path)
+        return res
+        # pdfdoc = PyPDF2.PdfReader(file_path)
+        # pdf_check = {0:'ocr',1:'text'}
+        # pdf_check_list = []
+        # for i in range(len(pdfdoc.pages)):
+        #     current_page = pdfdoc.pages[i]
+        #     if current_page.extract_text():
+        #         if len(current_page.extract_text()) >=700:
+        #             pdf_check_list.append(1)
+        #         else:
+        #             pdf_check_list.append(0)
+        #     else:
+        #         pdf_check_list.append(0)
+        # return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
     except:
         if pdf_id:
             file_details = Ai_PdfUpload.objects.get(id = pdf_id)

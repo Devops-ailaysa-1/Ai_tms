@@ -94,8 +94,6 @@ langchain = "^0.0.306"
 pydantic = "1.10.12"
 chromadb = "0.3.29"
 pysqlite3-binary = "^0.5.2"
-torchvision = {version = "^0.16.0+cpu", source = "torch"}
-sentence-transformers = "^2.2.2"
 docxcompose = "^1.4.0"
 pdfminer-six = "^20221105"
 [tool.poetry.dev-dependencies]
@@ -107,11 +105,7 @@ django-debug-toolbar = "^3.8.1"
 ptvsd = "^4.3.2"
 
 
-[[tool.poetry.source]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cpu"
-default = false
-secondary = false
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

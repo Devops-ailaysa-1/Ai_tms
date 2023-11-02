@@ -14,7 +14,7 @@ import copy
 from ai_canvas.template_json import basic_json
 from ai_staff.models import SocialMediaSize
 from PIL import Image
-import os
+import os,uuid
 from django.db.models import Q
 from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
 from ai_canvas.models import AiAssertscategory,AiAsserts
@@ -54,15 +54,45 @@ class CanvasTargetJsonFilesSerializer(serializers.ModelSerializer):
             data['thumbnail'] = None
         return data
 
+
+from ai_workspace.serializers import VendorDashBoardSerializer
 class CanvasTranslatedJsonSerializer(serializers.ModelSerializer):
     tranlated_json = CanvasTargetJsonFilesSerializer(source = 'canvas_json_tar',many=True,required=False)
+    task_assign_info = serializers.SerializerMethodField()
+    task_reassign_info = serializers.SerializerMethodField()
+    bid_job_detail_info = serializers.SerializerMethodField()
+    edit_allowed = serializers.SerializerMethodField()
 
     class Meta:
         model = CanvasTranslatedJson
-        fields = ("id",'tranlated_json',"canvas_design",'source_language','target_language','created_at','updated_at','undo_hide_tar')
+        fields = ("id",'edit_allowed','tranlated_json',"canvas_design",'source_language','target_language','created_at',
+                  'updated_at','undo_hide_tar','task_assign_info','task_reassign_info','bid_job_detail_info',)
         extra_kwargs = {'id':{'read_only':True},
                 'created_at':{'read_only':True},'updated_at':{'read_only':True},
                 }
+
+    def get_task_assign_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_assign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result
+
+    def get_task_reassign_info(self,obj):  
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_task_reassign_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result 
+
+    def get_bid_job_detail_info(self,obj):
+        serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+        result = serializer_task.get_bid_job_detail_info(obj.job.job_tasks_set.first())  # Call the method from VendorDashBoardSerializer
+        return result
+
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['source_language'] = instance.source_language.language.id
@@ -209,9 +239,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             return data 
         else:
             return data 
-
-            
-         
+ 
     
     # def get_assigned(self,obj):
     #     return obj.project.assigned
@@ -235,16 +263,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
-        pr_managers = self.context.get('managers')
+        pr_managers = self.context.get('pr_managers')
         print("User------------->",user)
         print("Prmanagers--------------->",pr_managers)
+        print("Team Memberss-------->",user.get_team_members)
+        team_members = user.get_team_members if user.get_team_members else []
         queryset = obj.canvas_translate.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__task_ven_status='task_accepted'))\
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)|\
-                                                Q(job__project__ai_user=user))
+                                                Q(job__project__ai_user=user)|(Q(job__job_tasks_set__task_info__assign_to=user)&\
+                                                Q(job__job_tasks_set__task_info__assign_to__in = team_members))).distinct()
         
-        return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate').data
+        return CanvasTranslatedJsonSerializer(queryset,many=True,read_only=True,source='canvas_translate',context=self.context).data
 
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
@@ -585,7 +616,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             page=pages+1
             src_json_page=can_src.json
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
-
+            ################
+            for i in src_json_page['objects']: 
+                if i['type']=='textbox':
+                    text_uuid=uuid.uuid4()
+                    name="Textbox_"+(str(text_uuid)) 
+                    i['name']=name
+            ###############
+            
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,thumbnail=can_src.thumbnail,page_no=len(instance.canvas_json_src.all())+1)
 
             for count,src_js in enumerate(instance.canvas_json_src.all()):

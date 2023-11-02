@@ -708,17 +708,34 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
+def pdf_char_check_for_document_trans(file_path):
+    tot_str=''
+    pdf_check_list = []
+    pdfdoc = PdfFileReader(file_path)
+    pdf_check = {0:'ocr',1:'text'}
+    for i in range(len(pdfdoc.pages)):
+        current_page = pdfdoc.pages[i]
+        current_page.extract_text()
+            # if len(current_page.extract_text()) >=700:
+        tot_str = tot_str+current_page.extract_text()
+        if len(tot_str) >=100:
+            return ["text" , len(pdfdoc.pages)]
+    return ["ocr" , len(pdfdoc.pages)]
 
 
 
 def get_consumption_of_file_translate(task):
+    # from ai_exportpdf.utils import pdf_char_check
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
-        pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
-        pages = pdf.getNumPages()
-        if pages >=300:
-            return "exceeded"
-        return consumption_of_credits_for_page(pages)
+        # pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
+        # pages = pdf.getNumPages()
+        frmt,page_len = pdf_char_check_for_document_trans(task.file.file.path)
+        if page_len >=300:
+             return "exceeded"
+        if frmt=="ocr": #or pages >=300:
+            return "ocr"
+        return consumption_of_credits_for_page(page_len)
 
     if ext == '.docx' or ext == '.doc':
         page_count,file_path = page_count_in_docx(task.file.file.path)

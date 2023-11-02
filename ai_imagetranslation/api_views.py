@@ -138,7 +138,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         user,pr_managers = self.get_user()
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
-        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'user':user,'managers':pr_managers}) #  ImageTranslateListSerializer
+        serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'pr_managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
         print("resss",response)
         return response
@@ -148,7 +148,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         # query_set = ImageTranslate.objects.get(id = pk)
-        serializer = ImageTranslateSerializer(obj,context={'user':user,'managers':pr_managers} )
+        serializer = ImageTranslateSerializer(obj,context={'request':request,'user':user,'pr_managers':pr_managers} )
         return Response(serializer.data)
         
     def create(self,request):
@@ -159,7 +159,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg' ,"JPEG","PNG" ,"JPG" ,"SVG"]:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         if image:
-            serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer=ImageTranslateSerializer(data=request.data,context={'request':request,'user':user,'pr_managers':pr_managers}) 
         
         elif image_id:
             im_details = Imageload.objects.filter(id__in = image_id)
@@ -170,7 +170,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                     im['mask_json']=json.loads(request.POST.dict()['mask_json'])
                     if 'file_name' in request.POST.dict().keys():
                         im['file_name'] = request.POST.dict()['file_name']
-            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer = ImageTranslateSerializer(data=data,many=True,context={'request':request,'user':user,'pr_managers':pr_managers}) 
 
         elif canvas_asset_image_id:
             im_details = CanvasUserImageAssets.objects.get(id = canvas_asset_image_id)
@@ -179,7 +179,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                 data['mask_json']=json.loads(request.POST.dict()['mask_json'])
             if 'file_name' in request.POST.dict().keys():
                 data['file_name'] = request.POST.dict()['file_name']
-            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'managers':pr_managers}) 
+            serializer = ImageTranslateSerializer(data=data,many=False,context={'request':request,'user':user,'pr_managers':pr_managers}) 
         else:
             return Response({'msg':"upload any image"})
              
@@ -197,7 +197,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
         query_set = ImageTranslate.objects.get(id=pk)
-        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'user':user,'managers':pr_managers})
+        serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -469,23 +469,23 @@ from ai_canvas.api_views import dict_rec_json
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
-
+ 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ImageTranslatewordcount(request):
-    image_inpaint_creation_id=request.query_params.get('image_inpaint_creation_id')
-    image_inpaint_creation_instance = ImageInpaintCreation.objects.get(id=image_inpaint_creation_id) #source_image__user=request.user,
-
-    print(image_inpaint_creation_instance.source_language)
-    total_sent=[]
-    source_json = image_inpaint_creation_instance.source_image.source_canvas_json
-    total_sent.append(dict_rec_json(source_json))
-    wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
-                                                        prompt_string_list= total_sent)
-    task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
-                                      project = image_inpaint_creation_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
-
-    ser = TaskDetailSerializer(task_det_instance)
+    job_ids=request.query_params.getlist('job_id')
+    for job_id in job_ids:
+        image_inpaint_creation_instance = ImageInpaintCreation.objects.get(job__id=job_id) #source_image__user=request.user,
+        source_json = image_inpaint_creation_instance.source_image.source_canvas_json
+        total_sent=dict_rec_json(source_json) 
+        print(total_sent)
+        wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
+                                                            prompt_string_list= total_sent)
+        task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
+                                        project = image_inpaint_creation_instance.job.project,defaults = {"task_word_count": wc,"task_char_count":len(" ".join(total_sent))})
+    
+    task_det_instance= TaskDetails.objects.filter(task__job_id__in =job_ids)
+    ser = TaskDetailSerializer(task_det_instance,many=True)
     return Response(ser.data)
 
 

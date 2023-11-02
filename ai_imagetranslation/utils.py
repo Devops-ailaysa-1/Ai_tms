@@ -185,6 +185,35 @@ def lama_diff(mask,diff):
     img_blend=layer_blend(Image.fromarray(diff),msk_pil)
     return  np.asarray(img_blend)
 
+
+
+def background_merge_for_lama(u2net_result,original_img,user_image):
+    u2net_result = np.asarray(u2net_result)
+    u2net_result = u2net_result[:, :, :3]
+    original_img = np.asarray(original_img)
+    newdata=[]
+    # original_img=cv2.cvtColor(original_img,cv2.COLOR_BGR2RGB)
+    u2net_result=cv2.subtract(u2net_result,original_img)
+    # cv2.imwrite("u2net_result.png",u2net_result)
+    u2net_result=Image.fromarray(u2net_result).convert('RGBA')
+    # u2net_result.save("u2net_result.png")
+    u2net_result= u2net_result.filter(ImageFilter.GaussianBlur(radius=1))
+    # u2net_result.save("u2net_result_1.png")
+    original_img=Image.fromarray(original_img).convert("RGBA")
+    # original_img.save("original_img_1.png")
+    u2net_data=u2net_result.getdata()
+    original_img=original_img.getdata()
+    for i in range(u2net_data.size[0]*u2net_data.size[1]):
+        if u2net_data[i][0]==0 and u2net_data[i][1]==0 and u2net_data[i][2]==0:
+            newdata.append((255,255,255,0))
+        else:
+            newdata.append(original_img[i])
+    u2net_result.putdata(newdata)
+    img_io = io.BytesIO()
+    u2net_result.save(img_io, format='PNG')
+    layer_b = layer_blend(user_image,u2net_result) #####layer_blend with ori_image with res of background merge
+    return layer_b
+
 def lama_inpaint_optimize(image_diff,lama_result,original):
     buffered = BytesIO()
     img_gen='https://apinodestaging.ailaysa.com/ai_canvas_mask_generate'
@@ -198,20 +227,30 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
     ###convert thumb to black and white
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
+ 
     black_and_white=black_and_white.resize(image_diff.size)
+    # black_and_white.save("13.png")
     img_arr=np.asarray(black_and_white)
+ 
     img_arr_copy=np.copy(img_arr)
     img_arr_copy[img_arr_copy!= 0]=255
-
+    # cv2.imwrite("14.png",img_arr_copy)
     ###morphing
     SE=cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
     res=cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
     img_transparent=Image.fromarray(res)
-    img_transparent=convert_transparent(img_transparent,255)
-    lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent)
+    # img_transparent.save("15.png")
+    layer_b = background_merge_for_lama(img_transparent,lama_result,original)
+    # layer_b.save("layer_b.png")
+    img_transparent_2=convert_transparent(img_transparent,255)
+    # img_transparent_2.save("img_transparent_2.png")
+    lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent_2)
+    # lama_transparent.save("lama_transparent.png")
     lama_convert_transparent=convert_transparent(lama_transparent,0)
+    # lama_convert_transparent.save("lama_convert_transparent.png")
     result=layer_blend(original,lama_convert_transparent)
-    return result,black_and_white
+    # result.save("result.png")
+    return layer_b,black_and_white #result,black_and_white
 
 
 def resize_data_remove(resize_instance):
@@ -226,6 +265,7 @@ def resize_data_remove(resize_instance):
 
 def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False):
     initial_credit =image_details.user.credit_balance.get("total_left") 
+    # initial_credit=10
     if initial_credit <1:
         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
     IMG_RESIZE_SHAPE=(256,256)
@@ -235,11 +275,14 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
         img_path=image_details.image.path
     mask_path=image_details.mask.path
     mask=cv2.imread(mask_path)
-    img=cv2.imread(img_path)
+    img=cv2.imread(img_path) 
+    # cv2.imwrite("1.png",img) #-------------------->
+    # cv2.imwrite("2.png",mask) #-------------------->
     if image_details.mask:
 
         image_to_extract_text=np.bitwise_and(mask,img)
-        content=image_content(image_to_extract_text)
+        # cv2.imwrite("3.png",image_to_extract_text) #--------------------> 
+        content=image_content(image_to_extract_text) ####### byte content 
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
@@ -253,23 +296,39 @@ def inpaint_image_creation(image_details,inpaintparallel=False,magic_erase=False
         if output['code']==200:
             if output['result'].shape[0]==np.prod(resize_img.shape):
                 res=np.reshape(output['result'],resize_img.shape)
+                # cv2.imwrite("4.png",res) #-------------------->
                 res=cv2.resize(res,img.shape[1::-1])
+                # cv2.imwrite("5.png",res) #-------------------->
                 diff=cv2.absdiff(img,res)
+                # cv2.imwrite("6.png",diff) #-------------------->
                 diff=lama_diff(mask,diff)
+                # cv2.imwrite("7.png",diff) #-------------------->
                 diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
+                # cv2.imwrite("8.png",diff) #-------------------->
                 res=cv2.cvtColor(res,cv2.COLOR_BGR2RGB)
+                # cv2.imwrite("9.png",res) #-------------------->
                 diff=Image.fromarray(diff)
+                # diff.save("10.png")
                 lama_result=Image.fromarray(res)
+                # lama_result.save("11.png")
                 original=Image.open(img_path)
+                # original.save("12.png")
                 dst,black_and_white=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
                 dst=np.asarray(dst)
+                # cv2.imwrite("19.png",dst)#-------------------->
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
+                # cv2.imwrite("20.png",dst_final)#-------------------->
                 image_color_change=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                # cv2.imwrite("21.png",image_color_change)#-------------------->
                 black_and_white=np.asarray(black_and_white)
+                # cv2.imwrite("22.png",black_and_white)#-------------------->
                 black_and_white=black_and_white[:, :, :3]
+                # cv2.imwrite("23.png",black_and_white)#-------------------->
                 image_color_change=image_color_change[:, :, :3]
+                # cv2.imwrite("24.png",image_color_change)#-------------------->
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
+                # cv2.imwrite("25.png",image_to_ext_color)#-------------------->
                 image_text_details,text_box_list,sentence=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 from ai_workspace.api_views import UpdateTaskCreditStatus
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(image_details.user, 1)
@@ -392,7 +451,7 @@ def background_remove(instance):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
-    # mask = Image.fromarray(post_process(np.array(mask)))
+    mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
     instance.mask=mask_store
     instance.save()
