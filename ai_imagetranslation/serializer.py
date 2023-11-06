@@ -93,10 +93,20 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
     
 class ImageTranslateListSerializer(serializers.ModelSerializer):
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    assign_enable = serializers.SerializerMethodField()
     class Meta:
         model=ImageTranslate
-        fields=('id','created_at','assigned','updated_at','project','assigned','thumbnail','width','height','file_name')
+        fields=('id','created_at','assigned','assign_enable','updated_at','project','assigned','thumbnail','width','height','file_name')
 
+    
+
+    def get_assign_enable(self,obj):  
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+        result = serializer_task.check_role(obj.project)  # Call the method from ProjectQuickSetupSerializer
+        return result
+    
+    
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if instance.s_im.count() ==0:
@@ -108,6 +118,8 @@ class ImageTranslateListSerializer(serializers.ModelSerializer):
             instance.save()
         representation['thumbnail'] = instance.thumbnail.url
         return representation
+
+    
 
 
 from ai_workspace.serializers import VendorDashBoardSerializer

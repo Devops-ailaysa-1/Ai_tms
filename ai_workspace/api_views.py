@@ -4569,7 +4569,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_2.request.GET = request.GET
 
         queryset2 = view_instance_2.get_queryset_for_combined()
-        print("Queryset@------------>",queryset2)
+        # print("Queryset@------------>",queryset2)
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
@@ -4582,8 +4582,8 @@ class CombinedProjectListView(viewsets.ModelViewSet):
             queryset1 = queryset1.filter(project_name__icontains=search_query)
             queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
             queryset3 = queryset3.filter(pdf_file_name__icontains=search_query)
-        print("Qu------->",queryset2)
-        print("Q3--------->",queryset3)
+        # print("Qu------->",queryset2)
+        # print("Q3--------->",queryset3)
         merged_queryset = list(chain(queryset1,queryset2,queryset3))
         ordering_param = request.GET.get('ordering', '-created_at')  
 
