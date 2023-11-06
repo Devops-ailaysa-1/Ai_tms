@@ -89,7 +89,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         prompt=''
         if not user: user = instance.user
         if instance.catagories.category == 'Free Style':
-            prompt+= instance.description if lang in ai_langs else instance.description_mt
+            prompt+= instance.description if lang in ai_langs else instance.description_mt + '.'
         else:
             print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
