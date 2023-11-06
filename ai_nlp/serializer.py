@@ -67,7 +67,6 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
 
         unit_chk = chat_unit_obj.get_units(service_name="pdf-chat-files")
-        # unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             instance = PdffileUpload.objects.create(**validated_data)
             page_count,file_format = chat_page_chk(instance)
