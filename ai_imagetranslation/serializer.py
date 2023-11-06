@@ -185,13 +185,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     mask_json=serializers.JSONField(required=False)
     image_inpaint_creation=serializers.SerializerMethodField()
     assigned = serializers.ReadOnlyField(source='project.assigned')
+    project_name = serializers.CharField(required=False)
     class Meta:
         model=ImageTranslate
         fields=('id','image','file_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update','assigned',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id','canvas_asset_image_id',
-            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project')
+            'created_at','updated_at','magic_erase','image_translate_delete_target','image_load','image_id','project','project_name')
        
     def get_image_inpaint_creation(self,obj):
         user = self.context.get('user')
@@ -205,7 +206,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                 |Q(job__job_tasks_set__task_info__assign_to__in=pr_managers)\
                                                 |Q(job__project__ai_user=user)|(Q(job__job_tasks_set__task_info__assign_to=user)&\
                                                 Q(job__job_tasks_set__task_info__assign_to__in = team_members))).distinct()
-        print(queryset)
+        
         return ImageInpaintCreationSerializer(queryset,source='s_im',many=True,read_only=True,context=self.context).data
 
 
@@ -244,9 +245,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         project_instance = Project.objects.create(project_type =project_type,team=team,ai_user=user,created_by=user)
         project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
         file_name = validated_data.pop('file_name',None)
-        if file_name:
-            project_instance.project_name = file_name
-            project_instance.save()
+        # if file_name:
+        #     project_instance.project_name = file_name
+        #     project_instance.save()
+        # if project_name:
+        #     project_instance.project_name = file_name
+        #     project_instance.save()
+
 
         data={**validated_data ,'user':user}
         if validated_data.get('image',None):
@@ -347,6 +352,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         target_canvas_json=validated_data.get('target_canvas_json',None)
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
+        project_name=validated_data.get('project_name' ,None)
         image_id=validated_data.get('image_id',None)
         image_translate_delete_target=validated_data.get('image_translate_delete_target',None)
         user = self.context.get('user')
@@ -390,11 +396,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
             
-        if validated_data.get('project_name' ,None):
-            file_name=validated_data.get('project_name')
-            instance.file_name = file_name
+        if project_name:
+            print("project_name" ,project_name)
+            instance.file_name = project_name
             proj_inst = Project.objects.get(id = instance.project.id)
-            proj_inst.project_name = file_name
+            proj_inst.project_name = project_name
             proj_inst.save()
             instance.save()
             
