@@ -39,7 +39,7 @@ class PdffileUpload(models.Model):
     status = models.CharField(max_length=200,null=True,blank=True)
     text_file =  models.FileField(upload_to=user_directory_path_pdf_upload,null=True,blank=True)
     website = models.TextField(null=True,blank=True)
-    # embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
+    embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
 
 class PdffileChatHistory(models.Model):
     pdf_file =models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
