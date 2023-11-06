@@ -156,15 +156,14 @@ def pdf_chat(request):
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
     if chat_text:
-        unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text)
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-            # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
-            # chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
+            total_message_unit_bal = total_message_unit_bal-1 ## credit detection
+            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached question limit'}, code=400) #Insufficient Credits
