@@ -105,6 +105,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
             
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
+
+        prompt+=' Make sure to cover all relevant aspects within the token limit.' 
         print("prompt-->",prompt)
         initial_credit = user.credit_balance.get("total_left")
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
