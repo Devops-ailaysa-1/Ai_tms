@@ -244,23 +244,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     # def get_assigned(self,obj):
     #     return obj.project.assigned
 
-    def get_assign_enable(self, instance):
-        user = self.context.get("request").user
-        try:
-            if instance.project.team:
-                cached_value = True if ((instance.project.team.owner == user)\
-                    or(instance.project.team.internal_member_team_info.all().\
-                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-                    or(instance.project.team.owner.user_info.all()\
-                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                    else False
-            else:
-                cached_value = True if ((instance.project.ai_user == user) or\
-                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                else False
-            return cached_value
-        except: return None
+    def get_assign_enable(self,obj):  
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+        result = serializer_task.check_role(obj.project)  # Call the method from ProjectQuickSetupSerializer
+        return result
 
+        
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('pr_managers')
@@ -748,23 +738,12 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
         fields = ('id','project','assigned','assign_enable','file_name','width','height','thumbnail_src','translate_available','updated_at')
         
     
-    def get_assign_enable(self, instance):
-        user = self.context.get("request").user
-        try:
-            if instance.project.team:
-                cached_value = True if ((instance.project.team.owner == user)\
-                    or(instance.project.team.internal_member_team_info.all().\
-                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-                    or(instance.project.team.owner.user_info.all()\
-                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                    else False
-            else:
-                cached_value = True if ((instance.project.ai_user == user) or\
-                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                else False
-            return cached_value
-        except: return None
-    
+    def get_assign_enable(self,obj):  
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+        result = serializer_task.check_role(obj.project)  # Call the method from ProjectQuickSetupSerializer
+        return result
+
     
     
     def to_representation(self, instance):
