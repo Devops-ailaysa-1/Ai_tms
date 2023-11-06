@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel
 from ai_nlp.utils import loader #,thumbnail_create
 
 
@@ -67,6 +67,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
 
         unit_chk = chat_unit_obj.get_units(service_name="pdf-chat-files")
+        # unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             instance = PdffileUpload.objects.create(**validated_data)
             page_count,file_format = chat_page_chk(instance)
@@ -80,18 +81,15 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             
             instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
             instance.status="PENDING"
-            # if instance.file.name.endswith(".epub"):
-            #     text_scrap = epub_processing(instance.file.path)
-            #     instance.text_file =text_scrap
-            #     instance.save()
+            emb_instance = ChatEmbeddingLLMModel.objects.get(model_name="cohere")
+            print("emb_instance",emb_instance)
+            instance.embedding_name = emb_instance
+            instance.save()
             celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
             print(celery_id)
             print("vector chromadb created")
             instance.celery_id=celery_id
             instance.is_train=False
-
-            # if instance.file.name.endswith(".pdf"):
-            #     instance.pdf_thumbnail = thumbnail_create(instance.file.path)
             chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
             chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             instance.save()
