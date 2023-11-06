@@ -70,36 +70,36 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        # try:
-        path_split=instance.file.path.split(".")
-        persistent_dir=path_split[0]+"/"
-        os.makedirs(persistent_dir,mode=0o777)
-        print(persistent_dir)
-        if instance.file.name.endswith(".docx"):
-            loader = Docx2txtLoader(instance.file.path)
-        elif instance.file.name.endswith(".txt"):
+        try:
+            path_split=instance.file.path.split(".")
+            persistent_dir=path_split[0]+"/"
+            os.makedirs(persistent_dir,mode=0o777)
+            print(persistent_dir)
+            if instance.file.name.endswith(".docx"):
+                loader = Docx2txtLoader(instance.file.path)
+            elif instance.file.name.endswith(".txt"):
 
-            loader = TextLoader(instance.file.path)
-        elif instance.file.name.endswith(".epub"):
-            text = epub_processing(instance.file.path,text_word_count_check=False)
-            instance.text_file = text
+                loader = TextLoader(instance.file.path)
+            elif instance.file.name.endswith(".epub"):
+                text = epub_processing(instance.file.path,text_word_count_check=False)
+                instance.text_file = text
+                instance.save()
+                loader = TextLoader(instance.text_file.path)
+            else:
+                loader = PDFMinerLoader(instance.file.path)
+            data = loader.load()
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
+            texts = text_splitter.split_documents(data)
+
+            # embeddings = OpenAIEmbeddings()
+            embeddings = CohereEmbeddings(model="multilingual-22-12")
+            save_prest( texts, embeddings, persistent_dir)
+            instance.vector_embedding_path = persistent_dir
+            instance.status = "SUCCESS"
+            instance.save() 
+        except:
+            instance.status ="ERROR"  #####need to add if error 
             instance.save()
-            loader = TextLoader(instance.text_file.path)
-        else:
-            loader = PDFMinerLoader(instance.file.path)
-        data = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
-        texts = text_splitter.split_documents(data)
-
-        # embeddings = OpenAIEmbeddings()
-        embeddings = CohereEmbeddings(model="multilingual-22-12")
-        save_prest( texts, embeddings, persistent_dir)
-        instance.vector_embedding_path = persistent_dir
-        instance.status = "SUCCESS"
-        instance.save() 
-        # except:
-        #     instance.status ="ERROR"  #####need to add if error 
-        #     instance.save()
 
 def save_prest(texts,embeddings,persistent_dir):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
