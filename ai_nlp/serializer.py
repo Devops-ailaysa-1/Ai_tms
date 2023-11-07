@@ -63,7 +63,7 @@ def chat_page_chk(instance):
 
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
-    pdf_file_question = PdfQustionSerializer(many=True)
+    pdf_file_question = PdfQustionSerializer(many=True,required=False)
     class Meta:
         model = PdffileUpload
         fields =('id','file_name','created_at','updated_at','celery_id','status','user','file','pdf_file_question')
