@@ -8,12 +8,12 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
-
+import random
 from langchain.chat_models import ChatOpenAI
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
 from celery.decorators import task
-from ai_nlp.models import PdffileUpload 
+from ai_nlp.models import PdffileUpload ,PdfQustion
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
 from bs4 import BeautifulSoup
@@ -22,7 +22,6 @@ from celery.decorators import task
 from langchain.llms import Cohere
 from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
-
 openai.api_key = OPENAI_API_KEY
 import os
 # llm = ChatOpenAI(model_name='gpt-4')
@@ -90,39 +89,36 @@ def loader(file_id) -> None:
             data = loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
             texts = text_splitter.split_documents(data)
-
             # embeddings = OpenAIEmbeddings()
             embeddings = CohereEmbeddings(model="multilingual-22-12")
-            save_prest( texts, embeddings, persistent_dir)
+            save_prest( texts, embeddings, persistent_dir,instance)
             instance.vector_embedding_path = persistent_dir
             instance.status = "SUCCESS"
-            instance.save() 
+            instance.save()
         except:
             instance.status ="ERROR"  #####need to add if error 
             instance.save()
 
-def save_prest(texts,embeddings,persistent_dir):
+def save_prest(texts,embeddings,persistent_dir,instance):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
+    # print("presisting.....")
+    result = generate_question(vector_db)
+    result = result.split("\n")
+    for i in result:
+        PdfQustion.objects.create(pdf_file_chat=instance , question=i)
+        # print("-------------->>",i)
+    # print("presisted.....")
     vector_db.persist()
     vector_db = None
+ 
 
 
-def prompt_template():
-    prompt_template = """Text: {context}
-
-    Question: {question}
-
-    Answer the question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available."""
-
-
-    PROMPT = PromptTemplate(
-        template=prompt_template, input_variables=["context", "question"]
-    )
-
-    chain_type_kwargs = {"prompt": PROMPT}
-
-    return chain_type_kwargs
-
+def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
+    # print("chain")
+    chain = load_qa_chain(llm, chain_type="stuff",chain_type_kwargs=chain_type_kwargs)
+    # print("inside query__lm")
+    res = chain({"input_documents":similarity_document, "question": query})
+    return res["output_text"] 
 
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
@@ -136,25 +132,74 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         embed = OpenAIEmbeddings()
     else: # elif model_name == "cohere":
         print(model_name,"cohere")
-        
         llm = Cohere(model="command-nightly", temperature=0)
         embed = CohereEmbeddings(model = "multilingual-22-12") #multilingual-22-12 embed-multilingual-v3.0
+
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
-    v = vector_db.similarity_search(query=query,k=2)
-    # print(v)
-    chain_type_kwargs = prompt_template()
- 
-    # qa = RetrievalQA.from_chain_type(llm=Cohere(model="command-nightly", temperature=0), chain_type="stuff", retriever=vector_db.as_retriever(), 
-                                        #  chain_type_kwargs=chain_type_kwargs, return_source_documents=True)
-    # with get_openai_callback() as cb:
-    chain = load_qa_chain(llm, chain_type="stuff") #map_reduce stuff refine
-    res = chain({"input_documents": v, "question": query})
-    # answer = qa({"query": query})
-    return res["output_text"]
-    #answer['result']
-    # res["output_text"] 
+    v = vector_db.similarity_search(query=query,k=2 )
+    result = querying_llm(llm = llm , chain_type="stuff" ,chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
+    return result
 
 
+
+
+def generate_question(document):
+    from ai_openai.utils import get_prompt_chatgpt_turbo
+    collections = document._collection
+    print("collected_doc")
+    document_list = collections.get()["documents"]
+    doc_len = len(document_list)
+    n = 2 if doc_len>2 else 1
+    print(n)
+    document = random.sample(document_list,n)
+    document = " ".join(document)
+    query = "Generate five questions from the above content and split all five questions with new line"
+    prompt = prompt_gen_question_chatbook(document,query)
+    prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
+    # print(prompt_res)
+    generated_text =prompt_res['choices'][0]['message']['content']
+    # print(prompt_res['choices'])
+    # for i in generated_text:
+    #     text = i["content"]
+    #     text = text.split('\n')
+    #     for j in text:
+
+    # print(generated_text)
+    # result = querying_llm(llm = llm , chain_type="stuff" ,chain_type_kwargs=prompt_gen_question_chatbook(),similarity_document=doc,query=query)
+    # chain = load_qa_chain(llm, chain_type="stuff",chain_type_kwargs=prompt_gen_question_chatbook())
+    # res = chain({"input_documents":doc, "question": query})
+    # print(query)
+    # print("########################")
+    # print("generated_question----->>",res)
+    return generated_text
+
+
+
+
+def prompt_template_chatbook():
+    prompt_template = """Text: {context}
+
+    Question: {question}
+
+    Answer the question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available."""
+
+    PROMPT = PromptTemplate(
+        template=prompt_template, input_variables=["context", "question"]
+    )
+
+    chain_type_kwargs = {"prompt": PROMPT}
+
+    return chain_type_kwargs
+
+
+def prompt_gen_question_chatbook(context,question):
+    prompt_template = """Text: {}
+
+    Question: {}
+
+    """.format(context,question)
+
+    return prompt_template
 
 
 
