@@ -1,6 +1,12 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel,PdfQustion
 from ai_nlp.utils import loader #,thumbnail_create
+
+
+class PdfQustionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =PdfQustion
+        fields ='__all__'
 
 
 class PdffileChatHistorySerializer(serializers.ModelSerializer):
@@ -10,6 +16,7 @@ class PdffileChatHistorySerializer(serializers.ModelSerializer):
 
 class PdffileShowDetailsSerializer(serializers.ModelSerializer):
     pdf_file_chat=PdffileChatHistorySerializer(many=True)
+    pdf_file_question = PdfQustionSerializer(many=True)
     class Meta:
         model = PdffileUpload
         fields = '__all__'
@@ -56,9 +63,10 @@ def chat_page_chk(instance):
 
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
+    pdf_file_question = PdfQustionSerializer(many=True)
     class Meta:
         model = PdffileUpload
-        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file')
+        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file','pdf_file_question')
 
 
     def create(self, validated_data):
@@ -67,6 +75,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
 
         unit_chk = chat_unit_obj.get_units(service_name="pdf-chat-files")
+        unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             instance = PdffileUpload.objects.create(**validated_data)
             page_count,file_format = chat_page_chk(instance)
@@ -89,8 +98,8 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             print("vector chromadb created")
             instance.celery_id=celery_id
             instance.is_train=False
-            chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
-            chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
+            # chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
+            # chat_unit_obj.deduct_units(service_name="pdf-chat-files",to_deduct_units=1)
             instance.save()
 
             return instance
