@@ -162,7 +162,7 @@ def pdf_chat(request):
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-            total_message_unit_bal = total_message_unit_bal-1 ## credit detection
+            # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
             chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
