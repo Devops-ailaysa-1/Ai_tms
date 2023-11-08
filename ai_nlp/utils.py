@@ -144,6 +144,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     else: # elif model_name == "cohere":
         print(model_name,"cohere")
         llm = Cohere(model="command-nightly", temperature=0) #command-nightly
+        # llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
         embed = CohereEmbeddings(model = "multilingual-22-12") #multilingual-22-12 embed-multilingual-v3.0
 
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
@@ -192,7 +193,7 @@ def prompt_template_chatbook(if_kwargs=False):
 
     Question: {question}
 
-    Answer the Question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available. Do not end with question mark ?"""
+    Answer the Question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available."""
 
     PROMPT = PromptTemplate(
         template=prompt_template, input_variables=["context", "question"]
