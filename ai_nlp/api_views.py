@@ -164,7 +164,7 @@ def pdf_chat(request):
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
             # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
-            # chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
+            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached question limit'}, code=400) #Insufficient Credits
