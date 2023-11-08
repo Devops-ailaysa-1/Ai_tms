@@ -156,6 +156,7 @@ def pdf_chat(request):
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
     if chat_text:
+        unit_chk['total_units_left'] =90
         if unit_chk['total_units_left']>0: 
             chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text)
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)

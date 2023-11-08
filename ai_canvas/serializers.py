@@ -777,7 +777,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
         data=super().to_representation(instance)
         if not data.get('thumbnail',None):
             extension=instance.image.path.split('.')[-1]
-            if extension !='svg':
+            if extension  not in ['svg','mp4','MP4','SVG']:
                 im = Image.open(instance.image.path)
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
             else:
@@ -804,7 +804,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             # im = cv2.imread(instance.image.path)
             if not instance.image_name:
                 instance.image_name=instance.image.path.split('/')[-1]
-            if extension !='svg':
+            if extension not in ['svg','mp4','MP4','SVG']:
                 im=Image.open(instance.image.path)
                 width,height=im.size
                 # height,width,_ = im.shape
