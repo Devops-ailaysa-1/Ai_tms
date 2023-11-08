@@ -76,10 +76,6 @@ params = {
             'safesearch': "true"
         }
 
-
-
-
-
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
@@ -176,7 +172,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         image = request.FILES.get('image')
         user = request.user.team.owner if request.user.team else request.user
-        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif','JPEG','PNG','SVG','JPG']:
+        if image and str(image).split('.')[-1] not in ['svg', 'png', 'jpeg', 'jpg','avif','JPEG','PNG','SVG','JPG','mp4','MP4']:
             return Response({'msg':'only .svg, .png, .jpeg, .jpg suppported file'},status=400)
         serializer = CanvasUserImageAssetsSerializer(data={**request.POST.dict(),'image':image},context={'request':request,'user':user,'created_by':request.user})
         if serializer.is_valid():
