@@ -117,10 +117,19 @@ def save_prest(texts,embeddings,persistent_dir,instance):
 
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     # print("chain")
-    chain = load_qa_chain(llm, chain_type="stuff") #,chain_type_kwargs=chain_type_kwargs
+    chain = load_qa_chain(llm, chain_type="stuff" ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
 
     res = chain({"input_documents":similarity_document, "question": query})
-    return res["output_text"] 
+
+    # qa = RetrievalQA.from_chain_type(llm=llm, 
+    #                              chain_type="stuff", 
+    #                              retriever=similarity_document , 
+    #                              chain_type_kwargs=chain_type_kwargs, 
+    #                              return_source_documents=True)
+
+    # res = qa({"query":query})['result']
+
+    return  res['output_text'] #res["output_text"] 
 
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
@@ -134,7 +143,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         embed = OpenAIEmbeddings()
     else: # elif model_name == "cohere":
         print(model_name,"cohere")
-        llm = Cohere(model="command-nightly", temperature=0)
+        llm = Cohere(model="command-nightly", temperature=0) #command-nightly
         embed = CohereEmbeddings(model = "multilingual-22-12") #multilingual-22-12 embed-multilingual-v3.0
 
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
@@ -178,20 +187,20 @@ def generate_question(document):
 
 
 
-def prompt_template_chatbook():
+def prompt_template_chatbook(if_kwargs=False):
     prompt_template = """Text: {context}
 
     Question: {question}
 
-    Answer the question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available."""
+    Answer the Question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available. Do not end with question mark ?"""
 
     PROMPT = PromptTemplate(
         template=prompt_template, input_variables=["context", "question"]
     )
-
-    # chain_type_kwargs = {"prompt": PROMPT}
-
+    # if if_kwargs==False:
     return PROMPT
+    # else:
+    # return  {"prompt": PROMPT}
 
 
 def prompt_gen_question_chatbook(context,question):
