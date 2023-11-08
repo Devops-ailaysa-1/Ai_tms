@@ -8,7 +8,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
-import random
+import random,re
 from langchain.chat_models import ChatOpenAI
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
@@ -104,8 +104,10 @@ def save_prest(texts,embeddings,persistent_dir,instance):
     # print("presisting.....")
     result = generate_question(vector_db)
     result = result.split("\n")
-    for i in result:
-        PdfQustion.objects.create(pdf_file_chat=instance , question=i)
+    for sentence in result:
+        cleaned_sentence = remove_number_from_sentence(sentence)
+        cleaned_sentence = cleaned_sentence.strip()
+        PdfQustion.objects.create(pdf_file_chat=instance , question=cleaned_sentence)
         # print("-------------->>",i)
     # print("presisted.....")
     vector_db.persist()
@@ -115,8 +117,8 @@ def save_prest(texts,embeddings,persistent_dir,instance):
 
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     # print("chain")
-    chain = load_qa_chain(llm, chain_type="stuff",chain_type_kwargs=chain_type_kwargs)
-    # print("inside query__lm")
+    chain = load_qa_chain(llm, chain_type="stuff") #,chain_type_kwargs=chain_type_kwargs
+
     res = chain({"input_documents":similarity_document, "question": query})
     return res["output_text"] 
 
@@ -153,7 +155,7 @@ def generate_question(document):
     print(n)
     document = random.sample(document_list,n)
     document = " ".join(document)
-    query = "Generate five questions from the above content and split all five questions with new line"
+    query = "Generate four questions from the above content and split all four questions with new line"
     prompt = prompt_gen_question_chatbook(document,query)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
     # print(prompt_res)
@@ -187,9 +189,9 @@ def prompt_template_chatbook():
         template=prompt_template, input_variables=["context", "question"]
     )
 
-    chain_type_kwargs = {"prompt": PROMPT}
+    # chain_type_kwargs = {"prompt": PROMPT}
 
-    return chain_type_kwargs
+    return PROMPT
 
 
 def prompt_gen_question_chatbook(context,question):
@@ -202,6 +204,11 @@ def prompt_gen_question_chatbook(context,question):
     return prompt_template
 
 
+
+def remove_number_from_sentence(sentence):
+    pattern = r'^\d+.'
+    cleaned_sentence = re.sub(pattern, '', sentence)
+    return cleaned_sentence
 
 # def thumbnail_create(path) -> core :
 #     img_io = io.BytesIO()
