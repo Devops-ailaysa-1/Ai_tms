@@ -87,7 +87,7 @@ def loader(file_id) -> None:
         else:
             loader = PDFMinerLoader(instance.file.path)
         data = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
         # embeddings = OpenAIEmbeddings()
         print("emb----------------->>>>>>>>>>")
@@ -134,7 +134,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         embed = OpenAIEmbeddings()
     else: 
         print(model_name,"cohere")
-        llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+        # llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
         # llm = Cohere(model="command-nightly", temperature=0) #command-nightly
         embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
         
