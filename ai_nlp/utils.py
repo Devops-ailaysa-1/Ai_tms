@@ -92,6 +92,7 @@ def loader(file_id) -> None:
         # embeddings = OpenAIEmbeddings()
         print("emb----------------->>>>>>>>>>")
         embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
+        print("--------->>>>> multilingual-22-12")
         save_prest( texts, embeddings, persistent_dir,instance)
         instance.vector_embedding_path = persistent_dir
         instance.status = "SUCCESS"
@@ -150,7 +151,7 @@ def prompt_temp_context_question(context,question):
 
         Question: {question}
 
-        Answer the Question based on the context If the context doesn't contain the answer, reply that the answer is not available.""".format(context=context,question=question)
+        Answer the Question based on the given context """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
     return prompt_template
 
 
@@ -158,13 +159,11 @@ def gen_text_context_question(vectors_list,question):
     context = ""
     for i in vectors_list:
         context +=i.page_content
+    print(context)
     prompt_template = prompt_temp_context_question(context,question)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1)
     generated_text =prompt_res['choices'][0]['message']['content']
     return generated_text
-
-    
-
 
 
 def generate_question(document):
