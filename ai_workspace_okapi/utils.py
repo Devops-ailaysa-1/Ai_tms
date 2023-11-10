@@ -627,18 +627,21 @@ def file_translate(task,file_path,target_language_code):
 
 import subprocess
 import io
-
+from rest_framework import serializers
 def count_pdf_pages(pdf_file):
     # Count the pages in the PDF using pdfinfo
-    command = [
-        'pdfinfo',
-        pdf_file
-    ]
-    result = subprocess.run(command, stdout=subprocess.PIPE, text=True, check=True)
-    info = result.stdout
-    for line in info.split('\n'):
-        if line.startswith("Pages:"):
-            return int(line.split(':')[1])
+    try:
+        command = [
+            'pdfinfo',
+            pdf_file
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, text=True, check=True)
+        info = result.stdout
+        for line in info.split('\n'):
+            if line.startswith("Pages:"):
+                return int(line.split(':')[1])
+    except:
+        raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
 def page_count_in_docx(docx_path):
