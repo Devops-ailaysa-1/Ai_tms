@@ -131,12 +131,13 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     if model_name == "openai":
         print(model_name ,"openai")
         llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
-        embed = OpenAIEmbeddings()
+        
     else: 
         print(model_name,"cohere")
         # llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
-        # llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-        embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
+        llm = Cohere(model="command-nightly", temperature=0) #command-nightly
+        # embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
+        embed = OpenAIEmbeddings()
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
