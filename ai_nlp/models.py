@@ -7,7 +7,7 @@ from ai_auth.models import AiUser
 
 class ChatEmbeddingLLMModel(models.Model):
     model_name = models.CharField(max_length=200,null=True,blank=True)
-    embedding_name = models.CharField(max_length=200,null=True,blank=True)
+    # embedding_name = models.CharField(max_length=200,null=True,blank=True)
 
 def user_directory_path_pdf_upload(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_chat_doc/semantic_search_file",filename)

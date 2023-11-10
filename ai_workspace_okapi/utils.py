@@ -8,6 +8,7 @@ from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 from PyPDF2 import PdfFileReader
+from PyPDF2.errors import FileNotDecryptedError
 from pptx import Presentation
 import string
 import backoff
@@ -708,19 +709,25 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
+from rest_framework import serializers
+
 def pdf_char_check_for_document_trans(file_path):
     tot_str=''
     pdf_check_list = []
     pdfdoc = PdfFileReader(file_path)
     pdf_check = {0:'ocr',1:'text'}
-    for i in range(len(pdfdoc.pages)):
-        current_page = pdfdoc.pages[i]
-        current_page.extract_text()
-            # if len(current_page.extract_text()) >=700:
-        tot_str = tot_str+current_page.extract_text()
-        if len(tot_str) >=100:
-            return ["text" , len(pdfdoc.pages)]
-    return ["ocr" , len(pdfdoc.pages)]
+    try:
+        for i in range(len(pdfdoc.pages)):
+            current_page = pdfdoc.pages[i]
+            current_page.extract_text()
+                # if len(current_page.extract_text()) >=700:
+            tot_str = tot_str+current_page.extract_text()
+            if len(tot_str) >=100:
+                return ["text" , len(pdfdoc.pages)]
+        return ["ocr" , len(pdfdoc.pages)]
+    except FileNotDecryptedError:
+        raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
+
 
 
 
