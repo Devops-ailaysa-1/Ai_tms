@@ -140,30 +140,30 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
-    # result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
-    result = gen_text_context_question(vectors_list=v,question=query)
+    result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
+    # result = gen_text_context_question(vectors_list=v,question=query)
     return result
 
 
 from ai_openai.utils import get_prompt_chatgpt_turbo
-def prompt_temp_context_question(context,question):
-    prompt_template = """context: {context}
+# def prompt_temp_context_question(context,question):
+#     prompt_template = """context: {context}
 
-        Question: {question}
+#         Question: {question}
 
-        Answer the Question based on the given context """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
-    return prompt_template
+#         Answer the Question based on the given context """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
+#     return prompt_template
 
 
-def gen_text_context_question(vectors_list,question):
-    context = ""
-    for i in vectors_list:
-        context +=i.page_content
-    print(context)
-    prompt_template = prompt_temp_context_question(context,question)
-    prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1)
-    generated_text =prompt_res['choices'][0]['message']['content']
-    return generated_text
+# def gen_text_context_question(vectors_list,question):
+#     context = ""
+#     for i in vectors_list:
+#         context +=i.page_content
+#     print(context)
+#     prompt_template = prompt_temp_context_question(context,question)
+#     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1)
+#     generated_text =prompt_res['choices'][0]['message']['content']
+#     return generated_text
 
 
 def generate_question(document):
