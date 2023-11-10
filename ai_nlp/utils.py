@@ -69,47 +69,45 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        try:
-            path_split=instance.file.path.split(".")
-            persistent_dir=path_split[0]+"/"
-            os.makedirs(persistent_dir,mode=0o777)
-            print(persistent_dir)
-            if instance.file.name.endswith(".docx"):
-                loader = Docx2txtLoader(instance.file.path)
-            elif instance.file.name.endswith(".txt"):
+        # try:
+        path_split=instance.file.path.split(".")
+        persistent_dir=path_split[0]+"/"
+        os.makedirs(persistent_dir,mode=0o777)
+        print(persistent_dir)
+        if instance.file.name.endswith(".docx"):
+            loader = Docx2txtLoader(instance.file.path)
+        elif instance.file.name.endswith(".txt"):
 
-                loader = TextLoader(instance.file.path)
-            elif instance.file.name.endswith(".epub"):
-                text = epub_processing(instance.file.path,text_word_count_check=False)
-                instance.text_file = text
-                instance.save()
-                loader = TextLoader(instance.text_file.path)
-            else:
-                loader = PDFMinerLoader(instance.file.path)
-            data = loader.load()
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
-            texts = text_splitter.split_documents(data)
-            # embeddings = OpenAIEmbeddings()
-            embeddings = CohereEmbeddings(model="multilingual-22-12")
-            save_prest( texts, embeddings, persistent_dir,instance)
-            instance.vector_embedding_path = persistent_dir
-            instance.status = "SUCCESS"
+            loader = TextLoader(instance.file.path)
+        elif instance.file.name.endswith(".epub"):
+            text = epub_processing(instance.file.path,text_word_count_check=False)
+            instance.text_file = text
             instance.save()
-        except:
-            instance.status ="ERROR"  #####need to add if error 
-            instance.save()
+            loader = TextLoader(instance.text_file.path)
+        else:
+            loader = PDFMinerLoader(instance.file.path)
+        data = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0, separators=[" ", ",", "\n"])
+        texts = text_splitter.split_documents(data)
+        # embeddings = OpenAIEmbeddings()
+        print("emb----------------->>>>>>>>>>")
+        embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
+        save_prest( texts, embeddings, persistent_dir,instance)
+        instance.vector_embedding_path = persistent_dir
+        instance.status = "SUCCESS"
+        instance.save()
+        # except:
+        #     instance.status ="ERROR"  #####need to add if error 
+        #     instance.save()
 
 def save_prest(texts,embeddings,persistent_dir,instance):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
-    # print("presisting.....")
     result = generate_question(vector_db)
     result = result.split("\n")
     for sentence in result:
         cleaned_sentence = remove_number_from_sentence(sentence)
         cleaned_sentence = cleaned_sentence.strip()
         PdfQustion.objects.create(pdf_file_chat=instance , question=cleaned_sentence)
-        # print("-------------->>",i)
-    # print("presisted.....")
     vector_db.persist()
     vector_db = None
  
@@ -118,16 +116,7 @@ def save_prest(texts,embeddings,persistent_dir,instance):
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     # print("chain")
     chain = load_qa_chain(llm, chain_type="stuff" ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
-
     res = chain({"input_documents":similarity_document, "question": query})
-
-    # qa = RetrievalQA.from_chain_type(llm=llm, 
-    #                              chain_type="stuff", 
-    #                              retriever=similarity_document , 
-    #                              chain_type_kwargs=chain_type_kwargs, 
-    #                              return_source_documents=True)
-
-    # res = qa({"query":query})['result']
 
     return  res['output_text'] #res["output_text"] 
 
@@ -135,54 +124,61 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     if instance.embedding_name.model_name:
         model_name = instance.embedding_name.model_name
+        print("model_name",model_name)
     else:
         model_name = "openai"
     if model_name == "openai":
         print(model_name ,"openai")
         llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
         embed = OpenAIEmbeddings()
-    else: # elif model_name == "cohere":
+    else: 
         print(model_name,"cohere")
-        llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-        # llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
-        embed = CohereEmbeddings(model = "multilingual-22-12") #multilingual-22-12 embed-multilingual-v3.0
-
+        llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+        # llm = Cohere(model="command-nightly", temperature=0) #command-nightly
+        embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
+        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
-    result = querying_llm(llm = llm , chain_type="stuff" ,chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
+    # result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
+    result = gen_text_context_question(vectors_list=v,question=query)
     return result
 
+
+from ai_openai.utils import get_prompt_chatgpt_turbo
+def prompt_temp_context_question(context,question):
+    prompt_template = """context: {context}
+
+        Question: {question}
+
+        Answer the Question based on the context If the context doesn't contain the answer, reply that the answer is not available.""".format(context=context,question=question)
+    return prompt_template
+
+
+def gen_text_context_question(vectors_list,question):
+    context = ""
+    for i in vectors_list:
+        context +=i.page_content
+    prompt_template = prompt_temp_context_question(context,question)
+    prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1)
+    generated_text =prompt_res['choices'][0]['message']['content']
+    return generated_text
+
+    
 
 
 
 def generate_question(document):
-    from ai_openai.utils import get_prompt_chatgpt_turbo
     collections = document._collection
     print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
-    print(n)
     document = random.sample(document_list,n)
     document = " ".join(document)
-    query = "Generate four questions from the above content and split all four questions with new line"
+    query = "Generate four questions from the above content and split all four questions with new line in same language"
     prompt = prompt_gen_question_chatbook(document,query)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
-    # print(prompt_res)
     generated_text =prompt_res['choices'][0]['message']['content']
-    # print(prompt_res['choices'])
-    # for i in generated_text:
-    #     text = i["content"]
-    #     text = text.split('\n')
-    #     for j in text:
-
-    # print(generated_text)
-    # result = querying_llm(llm = llm , chain_type="stuff" ,chain_type_kwargs=prompt_gen_question_chatbook(),similarity_document=doc,query=query)
-    # chain = load_qa_chain(llm, chain_type="stuff",chain_type_kwargs=prompt_gen_question_chatbook())
-    # res = chain({"input_documents":doc, "question": query})
-    # print(query)
-    # print("########################")
-    # print("generated_question----->>",res)
     return generated_text
 
 
