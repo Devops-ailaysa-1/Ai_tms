@@ -116,7 +116,7 @@ def save_prest(texts,embeddings,persistent_dir,instance):
 
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     # print("chain")
-    chain = load_qa_chain(llm, chain_type="stuff" ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
+    chain = load_qa_chain(llm, chain_type=chain_type ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
     res = chain({"input_documents":similarity_document, "question": query})
 
     return  res['output_text'] #res["output_text"] 
@@ -136,8 +136,8 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         print(model_name,"cohere")
         # llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
         llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-        # embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
-        embed = OpenAIEmbeddings()
+        embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
+        # embed = OpenAIEmbeddings()
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
@@ -189,7 +189,7 @@ def prompt_template_chatbook(if_kwargs=False):
 
     Question: {question}
 
-    Answer the Question based on the text provided. If the text doesn't contain the answer, reply that the answer is not available."""
+    Answer the Question based on the text provided in same language. If the text doesn't contain the answer, reply that the answer is not available."""
 
     PROMPT = PromptTemplate(
         template=prompt_template, input_variables=["context", "question"]
