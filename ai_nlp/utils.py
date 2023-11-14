@@ -125,7 +125,6 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     if instance.embedding_name.model_name:
         model_name = instance.embedding_name.model_name
-        print("model_name",model_name)
     else:
         model_name = "openai"
     if model_name == "openai":
@@ -141,21 +140,18 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
-    # result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query) ##chatgpt
+    result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query) ##chatgpt
 
-    result = gen_text_context_question(vectors_list=v,question=query)
+    # result = gen_text_context_question(vectors_list=v,question=query)
     return result
 
 
-import cohere
+# import cohere
 
-def cohere_endpoint(prompt_template):
-    co = cohere.Client("3m756aexJwhQztVHTgbsGSg3CagAbUCkzWj9j1aV")
-    response = co.generate(prompt=prompt_template, model="command-nightly" , num_generations=1,stream=False,max_tokens=256)
-    return response[0].text
-
-
-
+# def cohere_endpoint(prompt_template):
+#     co = cohere.Client("3m756aexJwhQztVHTgbsGSg3CagAbUCkzWj9j1aV")
+#     response = co.generate(prompt=prompt_template, model="command-nightly" , num_generations=1,stream=False,max_tokens=256)
+#     return response[0].text
 
 
 
@@ -175,9 +171,9 @@ def gen_text_context_question(vectors_list,question):
         context +=i.page_content
     prompt_template = prompt_temp_context_question(context,question)
     print(prompt_template)
-    # prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
-    # generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
-    generated_text = cohere_endpoint(prompt_template)
+    prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
+    generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
+    # generated_text = cohere_endpoint(prompt_template)
     
     return generated_text
 
