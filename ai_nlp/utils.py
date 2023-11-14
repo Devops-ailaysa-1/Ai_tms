@@ -141,30 +141,45 @@ def load_embedding_vector(instance,query)->RetrievalQA:
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     v = vector_db.similarity_search(query=query,k=2 )
-    result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query)
-    # result = gen_text_context_question(vectors_list=v,question=query)
+    # result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query) ##chatgpt
+
+    result = gen_text_context_question(vectors_list=v,question=query)
     return result
 
 
+import cohere
+
+def cohere_endpoint(prompt_template):
+    co = cohere.Client("3m756aexJwhQztVHTgbsGSg3CagAbUCkzWj9j1aV")
+    response = co.generate(prompt=prompt_template, model="command-nightly" , num_generations=1,stream=False,max_tokens=256)
+    return response[0].text
+
+
+
+
+
+
 from ai_openai.utils import get_prompt_chatgpt_turbo
-# def prompt_temp_context_question(context,question):
-#     prompt_template = """context: {context}
+def prompt_temp_context_question(context,question):
+    prompt_template = """Text: {context}
 
-#         Question: {question}
+        Question: {question}
 
-#         Answer the Question based on the given context """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
-#     return prompt_template
+        Answer the Question based on the text provided . If the text doesn't contain the answer, reply that the answer is not available. """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
+    return prompt_template
 
 
-# def gen_text_context_question(vectors_list,question):
-#     context = ""
-#     for i in vectors_list:
-#         context +=i.page_content
-#     print(context)
-#     prompt_template = prompt_temp_context_question(context,question)
-#     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1)
-#     generated_text =prompt_res['choices'][0]['message']['content']
-#     return generated_text
+def gen_text_context_question(vectors_list,question):
+    context = ""
+    for i in vectors_list:
+        context +=i.page_content
+    prompt_template = prompt_temp_context_question(context,question)
+    print(prompt_template)
+    # prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
+    # generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
+    generated_text = cohere_endpoint(prompt_template)
+    
+    return generated_text
 
 
 def generate_question(document):
@@ -182,22 +197,19 @@ def generate_question(document):
     return generated_text
 
 
-
-
-def prompt_template_chatbook(if_kwargs=False):
+def prompt_template_chatbook(prompt_string=False):
     prompt_template = """Text: {context}
 
     Question: {question}
 
-    Answer the Question based on the text provided in same language. If the text doesn't contain the answer, reply that the answer is not available."""
+    Answer the Question based on the text provided . If the text doesn't contain the answer, reply that the answer is not available."""
 
-    PROMPT = PromptTemplate(
-        template=prompt_template, input_variables=["context", "question"]
-    )
-    # if if_kwargs==False:
-    return PROMPT
-    # else:
-    # return  {"prompt": PROMPT}
+    PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+    
+    if prompt_string==False:
+        return PROMPT
+    else:
+        return  {"prompt": prompt_template}
 
 
 def prompt_gen_question_chatbook(context,question):
