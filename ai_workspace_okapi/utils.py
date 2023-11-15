@@ -15,10 +15,14 @@ import backoff
 
 spring_host = os.environ.get("SPRING_HOST")
 
+
+client = translate.Client()
+
+
 # from ai_workspace_okapi.models import SelflearningAsset
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
-client = translate.Client()
+
 
 class DebugVariables(object): # For Class Functions only to use
     def __init__(self,flags):
