@@ -6,7 +6,7 @@ from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
 from ai_imagetranslation.utils import (inpaint_image_creation ,image_content,stable_diffusion_public ,get_consumable_credits_for_image_trans_inpaint,
-                                background_remove,background_merge ,create_thumbnail_img_load,get_consumable_credits_for_image_generation_sd)
+                                background_remove,background_merge ,create_thumbnail_img_load,get_consumable_credits_for_image_generation_sd,stable_diffusion_public_segmind)
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from django.db.models import Case, When
@@ -691,19 +691,18 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             #         negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
             #         print("negative_prompt",negative_prompt)
             prompt = default_prompt.format(prompt)
-        print(prompt)
-        print("===")
-        print(negative_prompt)
+ 
         if not image_resolution:
             raise serializers.ValidationError({'msg':'no image resolution'}) 
         
         #prompt,steps,height,width,negative_prompt
         initial_credit = user.credit_balance.get("total_left")
+        initial_credit = 100
         consumble_credits= get_consumable_credits_for_image_generation_sd(number_of_image=1)
         if initial_credit>=consumble_credits:
             instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
                                                     height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
-            image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
+            image=stable_diffusion_public_segmind.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
             instance.celery_id=image
             instance.status="PENDING"
             from ai_workspace.api_views import UpdateTaskCreditStatus
