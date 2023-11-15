@@ -1,6 +1,12 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel,PdfQustion
 from ai_nlp.utils import loader #,thumbnail_create
+
+
+class PdfQustionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =PdfQustion
+        fields ='__all__'
 
 
 class PdffileChatHistorySerializer(serializers.ModelSerializer):
@@ -10,6 +16,7 @@ class PdffileChatHistorySerializer(serializers.ModelSerializer):
 
 class PdffileShowDetailsSerializer(serializers.ModelSerializer):
     pdf_file_chat=PdffileChatHistorySerializer(many=True)
+    pdf_file_question = PdfQustionSerializer(many=True)
     class Meta:
         model = PdffileUpload
         fields = '__all__'
@@ -30,10 +37,12 @@ def check_txt(path):
         tot_tokens = num_tokens(str(fp.read()))
     return tot_tokens
 
-from PyPDF2 import PdfFileReader
+from PyPDF2 import PdfFileReader 
+from PyPDF2.errors import FileNotDecryptedError
 from ai_nlp.utils import epub_processing
+
 def chat_page_chk(instance):
-    from ai_workspace_okapi.utils import page_count_in_docx
+    from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
     page_count=0
     file_format=''
     if instance.file.name.endswith(".docx"): 
@@ -41,8 +50,12 @@ def chat_page_chk(instance):
         file_format='docx'
     elif instance.file.name.endswith(".pdf"):
         pdf = PdfFileReader(open(instance.file.path,'rb') ,strict=False)
-        page_count = pdf.getNumPages()
-        file_format='pdf'
+        try:
+            # page_count = pdf.getNumPages()
+            page_count = count_pdf_pages(instance.file.path)
+            file_format='pdf'
+        except FileNotDecryptedError:
+            raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
     elif instance.file.name.endswith(".epub"):
         text = epub_processing(instance.file.path,text_word_count_check=True)
         page_count = num_tokens(text)
@@ -56,9 +69,10 @@ def chat_page_chk(instance):
 
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
+    pdf_file_question = PdfQustionSerializer(many=True,required=False)
     class Meta:
         model = PdffileUpload
-        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file')
+        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file','pdf_file_question')
 
 
     def create(self, validated_data):
@@ -67,6 +81,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
 
         unit_chk = chat_unit_obj.get_units(service_name="pdf-chat-files")
+        # unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             instance = PdffileUpload.objects.create(**validated_data)
             page_count,file_format = chat_page_chk(instance)
@@ -97,3 +112,11 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached your file upload limit'}, code=400)
         
+
+from ai_nlp.models import StoryIllustate
+
+
+class StoryIllustateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoryIllustate
+        fields ='__all__'

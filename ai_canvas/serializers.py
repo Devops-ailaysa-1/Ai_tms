@@ -16,9 +16,10 @@ from ai_staff.models import SocialMediaSize
 from PIL import Image
 import os,uuid
 from django.db.models import Q
-from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
+from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file,find_frame_and_dutation_video
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
+
 
 HOST_NAME=os.getenv("HOST_NAME")
 
@@ -771,13 +772,13 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
-        fields = ("id","image_name","image",'thumbnail','height','width',"status")
+        fields = ("id","image_name","image",'thumbnail','height','width',"status","duration","frame")
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
         if not data.get('thumbnail',None):
             extension=instance.image.path.split('.')[-1]
-            if extension !='svg':
+            if extension  not in ['svg','mp4','MP4','SVG']:
                 im = Image.open(instance.image.path)
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
             else:
@@ -804,7 +805,10 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             # im = cv2.imread(instance.image.path)
             if not instance.image_name:
                 instance.image_name=instance.image.path.split('/')[-1]
-            if extension !='svg':
+            
+            
+
+            if extension not in ['svg','mp4','MP4','SVG']:
                 im=Image.open(instance.image.path)
                 width,height=im.size
                 # height,width,_ = im.shape
@@ -829,6 +833,17 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     # im =core.files.base.ContentFile(im.tobytes(),name=instance.image.name.split('/')[-1]) #content
                     instance.image=im
                     instance.save()
+            
+            if extension in ['mp4','MP4']: ##mp4
+                duration,frames ,image= find_frame_and_dutation_video(instance.image.path)
+                instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=image)
+                instance.duration = str(duration)
+                instance.frame = str(frames)
+                instance.save()
+                # image=convert_image_url_to_file(image_url=image,no_pil_object=False)
+
+
+
         return instance
     
 ####################################################################################################

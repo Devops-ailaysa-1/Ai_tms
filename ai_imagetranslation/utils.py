@@ -48,6 +48,7 @@ MODEL_VERSION =os.getenv('MODEL_VERSION')
 STABLE_DIFFUSION_PUBLIC_API=os.getenv('STABLE_DIFFUSION_PUBLIC_API')
 
 
+
 credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
 
@@ -435,21 +436,21 @@ def get_consumable_credits_for_image_trans_inpaint():
 #     instance.save()
 #     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
-bg_url = '/remove/bg_result/'
+
+
 
 def background_remove(instance):
     try:
         image_path=instance.original_image.path
     except:
         image_path=instance.image.path
-    url = "http://143.244.129.12:8091/remove/bg-remove"
     img = Image.open(image_path)
     file_name = image_path.split("/")[-1]
     payload = {}
     files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
-    response = requests.request("POST", url, headers=headers, data=payload, files=files)
-    image_path = 'http://143.244.129.12:8091'+bg_url+response.json()['result_path'].split("/")[-1]
+    response = requests.request("POST", BACKGROUND_REMOVAL_URL, headers=headers, data=payload, files=files)
+    image_path = BACKGROUND_REMOVAL_URL+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
     mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
@@ -499,6 +500,48 @@ def sd_status_check(ids,url):
 
  
 from celery.decorators import task
+import segmind
+from segmind import SDXL
+SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
+
+
+
+
+@task(queue='default')
+def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
+    sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
+    sdxl = SDXL(api_key=SEGMIND_API_KEY)
+    prompt = sd_instance.prompt
+    width = sd_instance.width
+    height = sd_instance.height
+    try:
+        if sd_instance.negative_prompt:
+            negative_prompt = sd_instance.negative_prompt
+            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1,negative_prompt= negative_prompt,
+                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+        else:
+            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1, 
+                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+        
+
+        image=convert_image_url_to_file(image_url=image,no_pil_object=False)
+        sd_instance.generated_image=image
+        sd_instance.image=image
+        sd_instance.save()
+        im=Image.open(sd_instance.generated_image.path)
+        sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+        sd_instance.status="DONE"
+        sd_instance.save()
+        print("finished_generate")
+    except:
+
+        sd_instance.status="ERROR"
+        sd_instance.save()
+        raise serializers.ValidationError({'msg':"error on processing SD"})
+
+
+
+
 
 @task(queue='default')
 def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
@@ -530,8 +573,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
-    print("------")
-    print(data)
+ 
     if sd_instance.negative_prompt:
         data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 
@@ -568,6 +610,20 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         sd_instance.save()
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
+
+def find_frame_and_dutation_video(path):
+    video = cv2.VideoCapture(path)
+    frame_rate = video.get(cv2.CAP_PROP_FPS)
+
+    video.set(cv2.CAP_PROP_POS_MSEC, 0)
+
+    success, image = video.read()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = Image.fromarray(image)
+    total_num_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    duration = total_num_frames / frame_rate
+    return duration,total_num_frames,image
+
 
 #########stabilityai
 # @task(queue='default')

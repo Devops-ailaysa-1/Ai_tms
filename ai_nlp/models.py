@@ -7,7 +7,7 @@ from ai_auth.models import AiUser
 
 class ChatEmbeddingLLMModel(models.Model):
     model_name = models.CharField(max_length=200,null=True,blank=True)
-    embedding_name = models.CharField(max_length=200,null=True,blank=True)
+    # embedding_name = models.CharField(max_length=200,null=True,blank=True)
 
 def user_directory_path_pdf_upload(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_chat_doc/semantic_search_file",filename)
@@ -22,6 +22,8 @@ def user_directory_path_pdf_thumbnail(instance, filename):
 #     add_on_subscribed =  models.BooleanField(null=True,blank=True,default=False)
 #     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 #     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
 
 class PdffileUpload(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
@@ -41,6 +43,7 @@ class PdffileUpload(models.Model):
     website = models.TextField(null=True,blank=True)
     embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
 
+
 class PdffileChatHistory(models.Model):
     pdf_file =models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
     question =models.CharField(max_length=2000,null=True,blank=True)
@@ -49,6 +52,13 @@ class PdffileChatHistory(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     token_usage = models.CharField(max_length=2000,null=True,blank=True)
 
+
+class PdfQustion(models.Model):
+    pdf_file_chat = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_question",null=True,blank=True)
+    question = models.CharField(max_length=500,null=True,blank=True)
+    
+
+
 # class ChatTokenUsage(models.Model):
 #     chat_his = models.OneToOneField(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
 #     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
@@ -56,3 +66,8 @@ class PdffileChatHistory(models.Model):
 #     prompt_token=models.IntegerField(null=True,blank=True)
 #     complete_token=models.IntegerField(null=True,blank=True)
 #     tot_token=models.IntegerField(null=True,blank=True)
+
+
+class StoryIllustate(models.Model):
+    image = models.FileField(upload_to='story-image-gen',blank=True,null=True)
+    prompt = models.CharField(max_length=500,null=True,blank=True)
