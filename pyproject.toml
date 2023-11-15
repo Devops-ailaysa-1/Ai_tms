@@ -98,6 +98,7 @@ docxcompose = "^1.4.0"
 pdfminer-six = "^20221105"
 cohere = "^4.32"
 pycryptodome = "3.19.0"
+segmind = "^0.2.3"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
