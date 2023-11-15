@@ -573,8 +573,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
             "enhance_prompt":'no','tomesd':'yes',
             'scheduler':'DDIMScheduler', "self_attention":'no','use_karras_sigmas':"no"
          } # DDIMScheduler EulerAncestralDiscreteScheduler  PNDMScheduler ,
-    print("------")
-    print(data)
+ 
     if sd_instance.negative_prompt:
         data['negative_prompt']=sd_instance.negative_prompt
     payload = json.dumps(data) 
@@ -611,6 +610,20 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         sd_instance.save()
         raise serializers.ValidationError({'msg':"error on processing SD"})
  
+
+def find_frame_and_dutation_video(path):
+    video = cv2.VideoCapture(path)
+    frame_rate = video.get(cv2.CAP_PROP_FPS)
+
+    video.set(cv2.CAP_PROP_POS_MSEC, 0)
+
+    success, image = video.read()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = Image.fromarray(image)
+    total_num_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    duration = total_num_frames / frame_rate
+    return duration,total_num_frames,image
+
 
 #########stabilityai
 # @task(queue='default')
