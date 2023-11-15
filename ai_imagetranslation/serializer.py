@@ -697,7 +697,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         
         #prompt,steps,height,width,negative_prompt
         initial_credit = user.credit_balance.get("total_left")
-        initial_credit = 100
+        # initial_credit = 100
         consumble_credits= get_consumable_credits_for_image_generation_sd(number_of_image=1)
         if initial_credit>=consumble_credits:
             instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
