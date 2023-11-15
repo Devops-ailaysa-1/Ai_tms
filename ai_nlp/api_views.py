@@ -188,8 +188,8 @@ def pdf_chat_remaining_units(request):
 import json,openai,random
 import segmind
 from segmind import SDXL
-from ai_nlp.models import StoryIllustate
-from ai_nlp.serializer import StoryIllustateSerializer
+from ai_nlp.models import StoryIllustate,IllustateGeneration
+from ai_nlp.serializer import StoryIllustateSerializer,IllustateGenerationSerializer
 from ai_canvas.utils import  convert_image_url_to_file 
 
 
@@ -209,21 +209,25 @@ def chat_gpt_16k(prompt):
 
 
 
-def generate_images(prompts, style,token):
-    all_images =[]
+def generate_images(prompts, style,token,instance):
     modeld = SDXL(api_key=token)
     negative_prompt = "photorealistic, realistic, photograph, deformed, mutated, stock photo, 35mm film, deformed, glitch, low contrast, noisy"
-    img = modeld.generate(prompt = prompts,negative_prompt=negative_prompt,samples = 1,style = style,scheduler="UniPC",seed =None)
-    all_images.append(img)
-    return all_images
+    for prompt in prompts:
+        print(prompt)
+        img = modeld.generate(prompt = prompt,negative_prompt=negative_prompt,
+                              samples = 1,style = style,scheduler="UniPC",seed =None)
+        image=convert_image_url_to_file(image_url=img,no_pil_object=False)
+        StoryIllustate.objects.create(illustration_text= instance , image = image,prompt=prompt)
+    
 
 
 
 def generate_prompt(text, count):
-    prompt_prefix =  """{} Generate {} short briefs from the above story to give as input to an illustrator to generate relevant children's story illustrations.
-                Strictly add no common prefix to briefs. Strictly generate each brief as a single sentence that contains all the necessary information.
-                Strictly output your response in a list format, adhering to the following sample structure:""".format(json.dumps(text), json.dumps(count))
+    prompt_prefix =  """{} Generate {} short briefs as a list from the above story to give as input to an illustrator to generate relevant children's story illustrations.
+    Strictly add no common prefix to briefs. Strictly generate each brief as a single sentence that contains all the necessary information.
+    Strictly output your response in a list format, adhering to the following sample structure:""".format(json.dumps(text), json.dumps(count))
     comple_responce = chat_gpt_16k(prompt_prefix)
+    print(comple_responce)
     return comple_responce
 
 
@@ -236,11 +240,36 @@ def generate_story_illus(request):
     token = request.query_params.get('token',"SG_9362eeb10f212b60")
     style = request.query_params.get('style',"watercolor")
     if text:
+        instance = IllustateGeneration.objects.create(user =request.user, text =text )
         comple_responce = eval(generate_prompt(text, count=1))
-        all_images = generate_images(comple_responce['illustrations'][0],style,token)
-        image=convert_image_url_to_file(image_url=all_images[0],no_pil_object=False)
-        instance = StoryIllustate.objects.create(image = image,prompt=comple_responce['illustrations'][0])
-        serializer = StoryIllustateSerializer(instance)
+        generate_images(comple_responce['illustrations'],style,token,instance)
+        story_instance = IllustateGeneration.objects.get(id = instance.id)
+        serializer = IllustateGenerationSerializer(story_instance)
+        return Response(serializer.data)
+
+
+
+class IllustateGenerationViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    page_size=20
+    def get_object(self, pk):
+        try:
+            user = self.request.user 
+            return IllustateGeneration.objects.get(user=user,id=pk)
+        except IllustateGeneration.DoesNotExist:
+            raise Http404
+
+    def list(self, request):
+        queryset = IllustateGeneration.objects.filter(user=request.user).order_by("-id")
+        # queryset = self.filter_queryset(queryset)
+        # pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = IllustateGenerationSerializer(queryset,many=True)
+        # response = self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = IllustateGenerationSerializer(obj)
         return Response(serializer.data)
 
 

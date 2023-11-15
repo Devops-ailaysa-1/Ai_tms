@@ -67,7 +67,11 @@ class PdfQustion(models.Model):
 #     complete_token=models.IntegerField(null=True,blank=True)
 #     tot_token=models.IntegerField(null=True,blank=True)
 
+class IllustateGeneration(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    text =  models.CharField(max_length=500,null=True,blank=True)
 
 class StoryIllustate(models.Model):
+    illustration_text = models.ForeignKey(IllustateGeneration,on_delete=models.CASCADE,related_name="illustrate_story",null=True,blank=True)
     image = models.FileField(upload_to='story-image-gen',blank=True,null=True)
     prompt = models.CharField(max_length=500,null=True,blank=True)
