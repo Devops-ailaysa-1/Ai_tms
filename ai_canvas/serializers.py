@@ -835,10 +835,12 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     instance.save()
             
             if extension in ['mp4','MP4']: ##mp4
-                duration,frames ,image= find_frame_and_dutation_video(instance.image.path)
+                duration,frames ,image,width,height = find_frame_and_dutation_video(instance.image.path)
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=image)
                 instance.duration = str(duration)
                 instance.frame = str(frames)
+                instance.height=height #  to change
+                instance.width=width
                 instance.save()
                 # image=convert_image_url_to_file(image_url=image,no_pil_object=False)
 

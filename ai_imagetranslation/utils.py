@@ -619,10 +619,12 @@ def find_frame_and_dutation_video(path):
 
     success, image = video.read()
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
     image = Image.fromarray(image)
+    width ,height = image.size
     total_num_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     duration = total_num_frames / frame_rate
-    return duration,total_num_frames,image
+    return duration,total_num_frames,image,width,height
 
 
 #########stabilityai
