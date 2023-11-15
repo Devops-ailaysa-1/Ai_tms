@@ -66,3 +66,8 @@ class PdfQustion(models.Model):
 #     prompt_token=models.IntegerField(null=True,blank=True)
 #     complete_token=models.IntegerField(null=True,blank=True)
 #     tot_token=models.IntegerField(null=True,blank=True)
+
+
+class StoryIllustate(models.Model):
+    image = models.FileField(upload_to='story-image-gen',blank=True,null=True)
+    prompt = models.CharField(max_length=500,null=True,blank=True)
