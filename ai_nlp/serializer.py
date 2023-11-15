@@ -113,10 +113,21 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached your file upload limit'}, code=400)
         
 
-from ai_nlp.models import StoryIllustate
+from ai_nlp.models import StoryIllustate,IllustateGeneration
+
+
+
 
 
 class StoryIllustateSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoryIllustate
         fields ='__all__'
+
+
+class IllustateGenerationSerializer(serializers.ModelSerializer):
+    illustrate_story = StoryIllustateSerializer(required=False,many=True)
+    class Meta:
+        model = IllustateGeneration
+        fields =('id','illustrate_story','text')
+
