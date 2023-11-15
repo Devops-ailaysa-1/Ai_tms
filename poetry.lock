@@ -5931,6 +5931,21 @@ botocore = ">=1.12.36,<2.0a.0"
 crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 
 [[package]]
+name = "segmind"
+version = "0.2.3"
+description = "Package for Using Segmind APIs in Python"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "segmind-0.2.3-py3-none-any.whl", hash = "sha256:087ebcd91f6ede1d294438440ea13fe10b35adc562b3e0c79ebae3f9750a33b0"},
+    {file = "segmind-0.2.3.tar.gz", hash = "sha256:f32aa521356924ae7b0a719164a2c979d10686573603ef4aaaf4d0141fe4c2a5"},
+]
+
+[package.dependencies]
+pillow = "*"
+
+[[package]]
 name = "sentry-sdk"
 version = "1.5.12"
 description = "Python client for Sentry (https://sentry.io)"
@@ -7808,4 +7823,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c4721cd7dd8fd714b7e5167ac110c0965341eeb64c974dfb794f68321c1dca83"
+content-hash = "cb65087cf0e6da5e45681598896cf38eacc5e1d3ea46abd2efde1e7a73d0828e"
