@@ -220,9 +220,9 @@ def generate_images(prompts, style,token):
 
 
 def generate_prompt(text, count):
-    prompt_prefix = """{}Generate {} short briefs as a list from the above story to give as input to an illustrator to generate relevant children's story illustrations.
+    prompt_prefix =  """{} Generate {} short briefs from the above story to give as input to an illustrator to generate relevant children's story illustrations.
                 Strictly add no common prefix to briefs. Strictly generate each brief as a single sentence that contains all the necessary information.
-                Strictly output your response in a JSON list format, adhering to the following sample structure:""".format(json.dumps(text), json.dumps(count))
+                Strictly output your response in a list format, adhering to the following sample structure:""".format(json.dumps(text), json.dumps(count))
     comple_responce = chat_gpt_16k(prompt_prefix)
     return comple_responce
 
