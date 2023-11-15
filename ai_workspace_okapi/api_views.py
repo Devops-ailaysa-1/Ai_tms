@@ -1106,10 +1106,6 @@ class MT_RawAndTM_View(views.APIView):
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 
-                print(translation)
-                # translation=MT_RawAndTM_View.asset_replace(translation)
-
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
@@ -1118,11 +1114,8 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                
-                # translation=MT_RawAndTM_View.asset_replace(translation)
 
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
@@ -1234,7 +1227,7 @@ class MT_RawAndTM_View(views.APIView):
         return words
 
     # @staticmethod   
-    # def asset_replace(request,translation,project,lang): 
+    # def asset_replace(translation,project,lang): 
     #     choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
     #     print("choice--------->",choice, choice.last())
     #     self_learn=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
@@ -1301,9 +1294,9 @@ class MT_RawAndTM_View(views.APIView):
                 # replace asset auto
                 seg_obj = Segment.objects.get(id=segment_id)
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                #rep = data.get('mt_raw',None)
+                # rep = data.get('mt_raw',None)
                 # if rep:
-                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(rep,project,target_lang)
                 #     data['mt_raw']=asset_rep
                 #     data['options']=asset_list
 
@@ -1327,7 +1320,7 @@ class MT_RawAndTM_View(views.APIView):
                 target_lang = seg_obj.text_unit.document.job.target_language_id
                 #rep = data.get('mt_raw',None)
                 # if rep:
-                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(rep,project,target_lang)
                 #     data['mt_raw']=asset_rep
                 #     data['options']=asset_list
                 #     print('rep----------',asset_rep)
@@ -1335,24 +1328,6 @@ class MT_RawAndTM_View(views.APIView):
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
             
-"""
-
-
-
-def word_change():
-    # segment=request.POST.get('segment',None)
-    # tar_lang=request.POST.get('target_language',None)
-    segment="This apple size is small so he provide multiple apples"
-    tar_lang=17
-    word=word_tokenize(segment)
-    for word in word:
-        assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id =946) & Q(source_word__iexact = word))
-        if assets:
-            edited_word=assets.last().edited_word
-            # print(edited_word)
-            segment=segment.replace(word,edited_word)         
-    print(segment)
-"""
         # return JsonResponse(result,status=status.HTTP_200_OK)
 
 
@@ -3219,29 +3194,11 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     def create(self,request): 
-        doc_id=request.POST.get('document_id',None)
+        doc_id=request.POST.get('document',None)
         choice_list_id=request.POST.get('choice_list_id',None)
         source=request.POST.get('source_word',None)
         edited=request.POST.get('edited_word',None)
-        if doc_id:                                               
-            doc=get_object_or_404(Document,id=doc_id)
-            lang=get_object_or_404(Languages,id=doc.target_language_id)
-            user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-            choice_list_sld=ChoiceListSelected.objects.filter(project_id=doc.project).filter(choice_list__language=lang)
-            print(choice_list_sld,'------------')
-            if choice_list_sld:
-                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.last().choice_list.id)
-            else:
-                choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
-                if created == False:
-                    choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language) 
-                # data = {"project":doc.project, "choice_list":choice_list.id} 
-                # serializer = ChoiceListSelectedSerializer(data=data,many=False)
-                # if serializer.is_valid():
-                #     serializer.save()  
-            ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
-        else:
-           ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list_id}) 
+        ser = SelflearningAssetSerializer(data=request.POST.dict()) 
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
