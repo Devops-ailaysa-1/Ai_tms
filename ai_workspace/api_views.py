@@ -4738,6 +4738,18 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
+# from ai_workspace.utils import fedaral_json_translate
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def fedaral_json(request):
+#     json = request.POST.get('json')
+#     json_file = fedaral_json_translate(json_file=json,src_code='en',tar_code='ta')
+#     print(json_file)
+#     return Response(json_file)
+
+
+
+
         # if ordering_param.startswith('-'):
         #     field_name = ordering_param[1:]  
         #     reverse_order = True

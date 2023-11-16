@@ -105,6 +105,7 @@ urlpatterns += [
 	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
 	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
 	path('translate_file/',api_views.translate_file),
+    # path('json_trans/',api_views.fedaral_json)
 	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),
 ]
 # views urls adding for local testing

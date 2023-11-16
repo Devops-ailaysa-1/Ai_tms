@@ -279,7 +279,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai = None):
+                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
 
@@ -322,7 +322,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = client.translate(source_string,
                                 target_language=target_lang_code,
-                                format_="text").get("translatedText")
+                                format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)), queue='low-priority')
