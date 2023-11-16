@@ -4450,99 +4450,6 @@ def translate_file_task(task_id):
         return {'msg':'Insufficient Credits','status':402}
 
 
-
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-# def get_translate_file_detail(request,project_id):
-#     pr = Project.objects.get(id=project_id)
-#     if pr.file_translate == True:
-#         data = []
-#         for i in pr.get_tasks:
-#             translated = True if i.task_file_detail.exists() else False
-#             data.append({'task_id':i.id,'Translated':translated})
-#         return Response(data,status=200)
-#     else:
-#         return Response({'msg':'Not a file translate project'},status=400) 
-    # print(ser.errors)
-    # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
-    # ser = TaskTranslatedFileSerializer(queryset,many=True)
-    # return Response(ser.data)
-# ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
-#             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
-#             print("State--------------->",state)
-#             if state == 'PENDING' or state == 'STARTED':
-#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
-#             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
-#                 if state == "FAILURE":
-#                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-#                     user_credit.credits_left = user_credit.credits_left + consumable_credits
-#                     user_credit.save()
-#                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
-#                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def translate_file_process(task_id):
-#     pr_id = request.GET.get(project_id)
-#     tsk_id = request.GET.get(task_id)
-#     pr = Project.objects.get(id=pr_id)
-#     tsk = Task.objects.filter(id=tsk_id)
-#     user = pr.ai_user
-#     tasks = pr.get_tasks if pr_id else tsk
-#     for i in tasks:
-#         file,name = file_translate(i.file.get_source_file_path,i.job.target_language_code)
-#         ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":i.id})
-#         if ser.is_valid():
-#             ser.save()
-#         print(ser.errors)
-#     queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
-#     ser = TaskTranslatedFileSerializer(queryset,many=True)
-#     return Response(ser.data)
-
-
-
-
-    # @integrity_error
-    # def create(self,request):
-    #     step = request.POST.get('step')
-    #     task_assign_detail = request.POST.get('task_assign_detail')
-    #     files=request.FILES.getlist('instruction_file')
-    #     sender = self.request.user
-    #     receiver = request.POST.get('assign_to')
-    #     Receiver = AiUser.objects.get(id = receiver)
-    #     ################################Need to change########################################
-    #     user = request.user.team.owner  if request.user.team  else request.user
-    #     if Receiver.email == 'ailaysateam@gmail.com':
-    #         HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-    #     ##########################################################################################
-    #     task = request.POST.getlist('task')
-    #     hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
-    #     tasks= [json.loads(i) for i in task]
-    #     tsks = Task.objects.filter(id__in=tasks)
-    #     for tsk in tsks:
-    #         authorize(request, resource=tsk, actor=request.user, action="read")
-    #     job_id = Task.objects.get(id=tasks[0]).job.id
-    #     assignment_id = create_assignment_id()
-    #     for i in task_assign_detail:
-            
-    #         with transaction.atomic():
-    #             try:
-    #                 serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-    #                 if serializer.is_valid():
-    #                     serializer.save()
-    #                     weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-    #                     msg_send(sender,Receiver,tasks[0])
-    #                     print("Task Assigned")
-    #                 print("Error--------->",serializer.errors)
-    #             except:
-    #                 pass
-    #                 # if Receiver in hired_editors:
-    #                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-    #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
-    #     return Response({"msg":"Task Assigned"})
-    #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 from itertools import chain
 from .serializers import CombinedSerializer
 
@@ -4625,51 +4532,6 @@ def analysed_true(pr,tasks):
                         "task_words":task_words}
 
 
-# @api_view(['GET'])
-# def combined_paginated_response(request):
-#     view_instance_1 = QuickProjectSetupView()
-
-#     view_instance_1.request = request
-#     view_instance_1.request.GET = request.GET
-
-#     queryset1 = view_instance_1.get_queryset()
-
-
-#     view_instance_2 = MyDocumentsView()
-
-#     view_instance_2.request = request
-#     view_instance_2.request.GET = request.GET
-
-#     queryset2 = view_instance_2.get_queryset_new()
-
-#     search_query = request.GET.get('search')
-
-#     if search_query:
-#         queryset1 = queryset1.filter(project_name__icontains=search_query)
-#         queryset2 = queryset2.filter(doc_name__icontains=search_query)
-
-#     merged_queryset = list(chain(queryset1,queryset2))
-#     ser = CombinedSerializer(merged_queryset,many=True,context={'request': request})
-#     return Response(ser.data)
-    
-
-
-            # parent_queryset = queryset.annotate(
-        #                     sorted_datetime=ExpressionWrapper(Coalesce(
-        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
-        #                     Case(
-        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
-        #                         default=F('created_at'),
-        #                         output_field=DateTimeField(),
-        #                     ),
-        #                     Value(datetime.min),),
-        #                     output_field=DateTimeField(),)
-        #                     )#.order_by('-sorted_datetime')
-
-        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
-               # print("User------------------>111----->",user)
-        # user = self.request.user.team.owner if self.request.user.team else self.request.user
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
 
 
 
@@ -4804,5 +4666,6 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             authorize(request,resource=pr,action="create",actor=self.request.user)
             return Response(serializer.data)
         return Response(serializer.errors)
+
 
 

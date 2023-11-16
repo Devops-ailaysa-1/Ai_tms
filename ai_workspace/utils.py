@@ -102,6 +102,38 @@ def task_assing_role_ls(task_assign_info_ls):
 		)
 
 
+import copy,json
+
+TRANSLATABLE_KEYS_FEDARAL=os.getenv("TRANSLATABLE_KEYS_FEDARAL").split(" ")
+HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
+
+
+MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
+LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
+
+print(TRANSLATABLE_KEYS_FEDARAL)
+print(HTML_MIME_FEDARAL)
+print(MIME_TYPE_FEDARAL)
+print(LIST_KEYS_FEDARAL)
+
+
+def fedaral_json_translate(json_file,tar_code,src_code):
+    from ai_workspace_okapi.utils import get_translation
+    json_file_copy=copy.deepcopy(json_file)
+    for key,value in json_file_copy.items():
+        if key in TRANSLATABLE_KEYS_FEDARAL:
+            format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+            if type(value) == list:
+                if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+                    for lists in LIST_KEYS_FEDARAL[key]:
+                        for list_names in json_file_copy[key]:
+                            list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+                                                                source_lang_code=src_code,format_=format_)
+            else:
+                json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+                                                       source_lang_code=src_code,format_=format_)
+    return json_file_copy
+
 
 # def generate_list_cache_key(user):
 #     print("R---->",user)

@@ -6,6 +6,8 @@ from django.conf import settings
 router = DefaultRouter()
 
 router.register(r'pdf-chat-upload',api_views.PdffileUploadViewset,basename='pdf_chat')
+router.register(r'story-list',api_views.IllustateGenerationViewset,basename='story_list')
+
 urlpatterns =  router.urls
 urlpatterns += [
     path('ner', api_views.named_entity, name='ner'),
