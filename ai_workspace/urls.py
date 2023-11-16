@@ -21,6 +21,8 @@ router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
 router.register(r"project/express/setup", api_views.ExpressProjectSetupView,\
 				basename="project-express-setup")
+router.register(r"project/news/setup", api_views.NewsProjectSetupView,\
+				basename="project-news-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
@@ -105,6 +107,7 @@ urlpatterns += [
 	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
 	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
 	path('translate_file/',api_views.translate_file),
+	path('get_stories/',api_views.GetNewsFederalView.as_view(),name='get-news-list'),
 	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),
 ]
 # views urls adding for local testing

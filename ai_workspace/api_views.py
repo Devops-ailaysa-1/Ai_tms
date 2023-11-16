@@ -33,7 +33,7 @@ from indicnlp.tokenize.sentence_tokenize import sentence_split
 from notifications.signals import notify
 from pydub import AudioSegment
 from rest_framework import permissions
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, pagination
 from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -4738,105 +4738,71 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
-        # if ordering_param.startswith('-'):
-        #     field_name = ordering_param[1:]  
-        #     reverse_order = True
-        # else:
-        #     field_name = ordering_param
-        #     reverse_order = False
-        # if field_name == 'created_at':
-        #     ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
-        # else:
-        #     ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
-        # print("Or---------->",ordered_queryset)
-        # pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        # ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
-        # response = self.get_paginated_response(ser.data)
-        # return response
-    
+class GetNewsFederalView(generics.ListAPIView):
+    pagination.PageNumberPagination.page_size = 20
 
-    # @staticmethod
-    # @cached(timeout=60 * 15)
-    # def get_tasks_by_projectid(request, pk):
-    #     project = get_object_or_404(Project.objects.all(),
-    #                 id=pk)
-    #     pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
-    #     user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-    #     if project.ai_user == request.user:
-    #         print("Owner")
-    #         return project.get_tasks
-    #     if project.team:
-    #         print("Team")
-    #         print(project.team.get_project_manager)
-    #         if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
-    #             return project.get_tasks
-    #         # elif self.request.user in project.team.get_project_manager:
-    #         #     return project.get_tasks
-    #         else:
-    #             return [task for job in project.project_jobs_set.all() for task \
-    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    #     else:
-    #         print("Indivual")
-    #         # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-    #         #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-    #         return [task for job in project.project_jobs_set.all() for task \
-    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    # @staticmethod
-    # def get_queryset_with_caching(request,pk):
-    #     try:
-    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
-    #         print("Cache HIT")  # This will be printed if the queryset is fetched from the cache
-    #         res = "CacheHit"
-    #     except CacheMiss:
-    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
-    #         print("Cache MISS")  # This will be printed if the queryset is fetched from the database
-    #         res = "CatchMiss"
-    #     return res
+    def get_stories(self):
+        page = self.request.query_params.get('page', 1)
+        count = self.request.query_params.get('count', 20)
+        news_id = self.request.query_params.get('news_id', None)
+        search = self.request.query_params.get('search', None)
+        #contenttype = self.request.query_params.get('content')
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
 
-# @staticmethod
-#     def get_tasks_by_projectid(request, pk):
-#         project = get_object_or_404(Project.objects.all(),
-#                     id=pk)
-#         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
-#         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-#         if project.ai_user == request.user:
-#             print("Owner")
-#             return project.get_tasks
-#         if project.team:
-#             print("Team")
-#             print(project.team.get_project_manager)
-#             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
-#                 return project.get_tasks
-#             # elif self.request.user in project.team.get_project_manager:
-#             #     return project.get_tasks
-#             else:
-#                 return project.get_tasks.filter(assign_to=user_1)
-#                 #return [task for job in project.project_jobs_set.all() for task \
-#                 #    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-#         else:
-#             print("Indivual")
-#             return project.get_tasks.filter(assign_to=user_1)
-#             # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-#             #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-#             # return [task for job in project.project_jobs_set.all() for task \
-#             #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    # from .utils import custom_cache_page
-    # @custom_cache_page(timeout=60 * 15)
-    # #@custom_cache_page(60 * 15, key_func=lambda req: get_pr_list_cache_key(req.user))
-        # def list(self, request, *args, **kwargs):
-        # queryset = self.filter_queryset(self.get_queryset())
-        # print("QR------------>",queryset)
-        # user_1 = self.get_user()
-        # cache_key = f'pr_list_{user_1.pk}'
-        # cached_value = cache.get(cache_key)
-        # print("Cached Value in pr_list---------->",cached_value)
-        # if cached_value is not None:
-        #     paginated_data = self.paginate_queryset(cached_value)
-        #     return self.get_paginated_response(paginated_data)
-        #     #return Response(cached_value)
-        # else:
-        #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        #     serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        #     cache.set(cache_key,serializer.data, 60 * 15)
-        #     response = self.get_paginated_response(serializer.data)
-        #     return  response
+        headers = {
+            's-id': os.getenv("FEDERAL-KEY"),
+            }
+        
+        startIndex = (int(page) - 1) * int(count)
+       
+        params={ 
+            'startIndex':startIndex,
+            'count':count,
+            }
+        if news_id:
+            params.update({'newsId':news_id})
+        if search:
+            params.update({'search':search})
+        integration_api_url = "https://thefederal.com/dev/h-api/news"
+        response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        print("Status---------->",response)
+        return response
+
+    def list(self, request, *args, **kwargs):
+        #### Need to check request from federal team ####
+        response = self.get_stories()
+        print("RES-------------->",response)
+        if response.status_code == 500:
+            return Response({'msg':"something wrong with API"},status=400)
+        return Response(response.json())
+
+from django.core.files.base import ContentFile
+class NewsProjectSetupView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get_files(self,news):
+        files =[]
+        headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+        for i in news:
+            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsID':i})
+            if response.status_code == 200:
+                name = f"{i}.json"
+                im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
+                files.append(im_file)
+        return files
+
+    def create(self, request):
+        news = request.POST.getlist('news_id')
+        files = self.get_files(news)
+        user = self.request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['9']},context={"request": request,'user_1':user_1})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            pr = Project.objects.get(id=serializer.data.get('id'))
+            authorize(request,resource=pr,action="create",actor=self.request.user)
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+

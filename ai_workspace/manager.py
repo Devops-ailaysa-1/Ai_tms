@@ -274,6 +274,7 @@ class TaskAssignManager(models.Manager):
                          "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})
                 if not created:
                     self.filter(obj=obj).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
+        return None       
         # task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
         #                  defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
         #                  "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
@@ -284,7 +285,7 @@ class TaskAssignManager(models.Manager):
         # self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
         # print("tASK ASSIGN --> ", task_assign)
         # return task_assign
-        return obj
+        #return obj
 
     # def create_tasks_of_audio_files(self, files,jobs,klass,project = None):
     #     if hasattr(project, "ai_user"):
