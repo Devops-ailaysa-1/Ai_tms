@@ -111,15 +111,18 @@ HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
 LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
 
-print(TRANSLATABLE_KEYS_FEDARAL)
-print(HTML_MIME_FEDARAL)
-print(MIME_TYPE_FEDARAL)
-print(LIST_KEYS_FEDARAL)
+# print(TRANSLATABLE_KEYS_FEDARAL)
+# print(HTML_MIME_FEDARAL)
+# print(MIME_TYPE_FEDARAL)
+# print(LIST_KEYS_FEDARAL)
 
+import json
 
-def fedaral_json_translate(json_file,tar_code,src_code):
+def federal_json_translate(json_data,tar_code,src_code):
+    print("tar_code-->",tar_code)
+    print("src_code-->",src_code)
     from ai_workspace_okapi.utils import get_translation
-    json_file_copy=copy.deepcopy(json_file)
+    json_file_copy = copy.deepcopy(json_data)
     for key,value in json_file_copy.items():
         if key in TRANSLATABLE_KEYS_FEDARAL:
             format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
@@ -127,12 +130,63 @@ def fedaral_json_translate(json_file,tar_code,src_code):
                 if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
                     for lists in LIST_KEYS_FEDARAL[key]:
                         for list_names in json_file_copy[key]:
-                            list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-                                                                source_lang_code=src_code,format_=format_)
+                            if lists in list_names.keys():
+                                  list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+																	source_lang_code=src_code,format_=format_)
             else:
                 json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-                                                       source_lang_code=src_code,format_=format_)
-    return json_file_copy
+														source_lang_code=src_code,format_=format_)
+    return  json_file_copy
+
+
+
+
+# def federal_json(json_data,tar_code,src_code):
+#     from ai_workspace_okapi.utils import get_translation
+#     translated_json_list = []
+#     json_data = json_data['news']
+#     for i in json_data:
+#         json_file_copy = copy.deepcopy(i)
+#         for key,value in json_file_copy.items():
+#             if key in TRANSLATABLE_KEYS_FEDARAL:
+#                 format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+                 
+#                 if type(value) == list:
+#                     if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+#                         for lists in LIST_KEYS_FEDARAL[key]:
+#                             for list_names in json_file_copy[key]:
+#                                 if lists in list_names.keys():
+#                                     list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+# 																	source_lang_code=src_code,format_=format_)
+#                 else:
+#                     json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+# 														source_lang_code=src_code,format_=format_)
+#         translated_json_list.append(json_file_copy)
+#     return  {'news': translated_json_list}
+
+
+
+# def fedaral_json_translate(json_file,tar_code,src_code):
+#     with open(json_file,'r') as fp:
+#         jf = json.load(fp)
+# 	translated_json_list = []
+# 	json_files = jf['news']
+# 	for json_file in json_files:
+# 		json_file_copy=copy.deepcopy(json_file)
+# 		for key,value in json_file_copy.items():
+# 			if key in TRANSLATABLE_KEYS_FEDARAL:
+# 				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+# 				if type(value) == list:
+# 					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+# 						for lists in LIST_KEYS_FEDARAL[key]:
+# 							for list_names in json_file_copy[key]:
+# 								list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+# 																	source_lang_code=src_code,format_=format_)
+# 				else:
+# 					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+# 														source_lang_code=src_code,format_=format_)
+# 		translated_json_list.append(json_file_copy)
+#     return {'news':translated_json_list}
 
 
 # def generate_list_cache_key(user):

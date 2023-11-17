@@ -735,7 +735,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9]:
+				if project_type in [1,2,5,9]:  #8
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -1941,7 +1941,63 @@ class AssertSerializer(ProjectQuickSetupSerializer):
             data.update(ch_data)
         return data
 
+from itertools import repeat
 
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.utils import federal_json_translate
+from concurrent.futures import ThreadPoolExecutor
+class TaskNewsDetailsSerializer(serializers.ModelSerializer):
+	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+	source_json = serializers.JSONField(required=False )
+	target_json = serializers.JSONField(required=False )
+	class Meta:
+		model = TaskNewsDetails
+		fields = ("id","task","source_json","target_json","created_at","updated_at")
+
+	
+	def create(self, validated_data):
+		task = validated_data.get('task')
+		instance = TaskNewsDetails.objects.create(task=task)
+
+		file_path = instance.task.file.file.path
+		src_code = instance.task.job.source__language
+		tar_code = instance.task.job.target__language
+
+		with open(file_path, 'r') as fp:
+				json_data = json.load(fp)
+
+		# json_data_list = json_data['news']
+		# with ThreadPoolExecutor() as executor:
+		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
+		# executor.shutdown()
+
+		translated_json = federal_json_translate(json_data=json_data,tar_code=tar_code,src_code=src_code)
+		instance.source_json=json_data
+		instance.target_json=translated_json
+		instance.save()
+		mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
+		TaskNewsMT.objects.create(task=instance,mt_raw_json=json_data,mt_engine=mt_engine)
+		return instance
+
+	def update(self, instance, validated_data):
+		source_json = validated_data.get('source_json',None)
+		target_json = validated_data.get('target_json',None)
+
+		if source_json:
+			instance.source_json = source_json
+		if target_json:
+			instance.target_json = target_json
+
+		return instance
+	
+
+ 
+
+
+# class TaskNewsMTSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = TaskNewsMT
+# 		fields = "__all__"
 
 
 

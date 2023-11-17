@@ -4652,6 +4652,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 name = f"{i}.json"
                 im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
                 files.append(im_file)
+        print("files---->" ,files)
         return files
 
     def create(self, request):
@@ -4669,3 +4670,42 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
 
 
+
+from ai_workspace.serializers import TaskNewsDetailsSerializer
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+
+class TaskNewsDetailsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    # def list(self,request):
+    #     user = request.user
+    #     task_news = TaskNewsDetails.objects.filter(ai_user_id=user.id).all()
+    #     serializer = TaskNewsDetailsSerializer(task_news, many=True)
+    #     return Response(serializer.data)
+
+    def create(self,request):
+        serializer = TaskNewsDetailsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        obj = TaskNewsDetails.objects.get(id=pk )  ##request filter
+        serializer = TaskNewsDetailsSerializer(obj,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+    
+    def retrieve(self, request, pk=None):
+        obj = TaskNewsDetails.objects.get(id=pk )
+        serializer = TaskNewsDetailsSerializer(obj)
+        return Response(serializer.data)
+
+    
+    def delete(self,request,pk):
+        queryset = TaskNewsDetails.objects.all()
+        obj = get_object_or_404(queryset, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

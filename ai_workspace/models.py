@@ -2206,8 +2206,8 @@ class ExpressProjectAIMT(models.Model):
 
 class TaskNewsDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="news_task")
-    source_json = models.JSONField()
-    target_json = models.JSONField()
+    source_json = models.JSONField(blank=True, null=True)
+    target_json = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
@@ -2217,3 +2217,5 @@ class TaskNewsMT(models.Model):
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_news_mt")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
