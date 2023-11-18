@@ -244,3 +244,18 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 #         return _wrapped_view
 #     return decorator
 
+def split_dict(single_data):
+    trans_keys = ["keywords","description","source","image_caption","heading","newsId","authorName","location","story"]
+    trans_key_get_list = {"media":"caption", "news_tags":"name"}
+    trans_keys_dict = {}
+    json_data = single_data.get('news')[0]
+    for key,value in  json_data.items():
+        if key in trans_keys:
+            trans_keys_dict[key] = value
+        if key in list(trans_key_get_list.keys()):
+            trans_list=[]
+            for i in value:
+                if trans_key_get_list[key] in i.keys():
+                    trans_list.append({trans_key_get_list[key] :i[trans_key_get_list[key]]})
+            trans_keys_dict[key] = trans_list
+    return trans_keys_dict
