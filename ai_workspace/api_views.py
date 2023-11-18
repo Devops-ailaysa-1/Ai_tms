@@ -4661,7 +4661,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         files = self.get_files(news)
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['9']},context={"request": request,'user_1':user_1})
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))

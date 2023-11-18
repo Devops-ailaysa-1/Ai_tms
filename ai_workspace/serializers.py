@@ -735,7 +735,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9]:  #8
+				if project_type in [1,2,5,9,8]:  #8
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -1971,7 +1971,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
 		# executor.shutdown()
 
-		translated_json = federal_json_translate(json_data=json_data,tar_code=tar_code,src_code=src_code)
+		translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code)
 		instance.source_json=json_data
 		instance.target_json=translated_json
 		instance.save()

@@ -118,26 +118,26 @@ LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
 
 import json
 
-def federal_json_translate(json_data,tar_code,src_code):
-    print("tar_code-->",tar_code)
-    print("src_code-->",src_code)
-    
-    from ai_workspace_okapi.utils import get_translation
-    json_file_copy = copy.deepcopy(json_data)
-    for key,value in json_file_copy.items():
-        if key in TRANSLATABLE_KEYS_FEDARAL:
-            format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-            if type(value) == list:
-                if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-                    for lists in LIST_KEYS_FEDARAL[key]:
-                        for list_names in json_file_copy[key]:
-                            if lists in list_names.keys():
-                                  list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-																	source_lang_code=src_code,format_=format_)
-            else:
-                json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-														source_lang_code=src_code,format_=format_)
-    return  json_file_copy
+def federal_json_translate(json_file,tar_code,src_code):
+	from ai_workspace_okapi.utils import get_translation
+	json_file = json_file['news']
+	for json_data in json_file:
+		json_file_copy = copy.deepcopy(json_data)
+		for key,value in json_file_copy.items():
+			if key in TRANSLATABLE_KEYS_FEDARAL:
+				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+				if type(value) == list:
+					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+						for lists in LIST_KEYS_FEDARAL[key]:
+							for list_names in json_file_copy[key]:
+								if lists in list_names.keys():
+									# print(list_names[lists])
+									list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+																		source_lang_code=src_code,format_=format_)
+				else:
+					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+															source_lang_code=src_code,format_=format_)
+	return  json_file_copy
 
 
 
