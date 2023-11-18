@@ -251,6 +251,7 @@ def split_dict(single_data):
         if key in list(trans_key_get_list.keys()):
             trans_list=[]
             for i in value:
-                trans_list.append({trans_key_get_list[key] :i[trans_key_get_list[key]]})
+                if trans_key_get_list[key] in i.keys():
+                    trans_list.append({trans_key_get_list[key] :i[trans_key_get_list[key]]})
             trans_keys_dict[key] = trans_list
     return trans_keys_dict
