@@ -4639,6 +4639,8 @@ class GetNewsFederalView(generics.ListAPIView):
         return Response(response.json())
 
 from django.core.files.base import ContentFile
+from ai_workspace.utils import split_dict
+
 class NewsProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -4648,10 +4650,11 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         for i in news:
             federal_api_url = "https://thefederal.com/dev/h-api/news"
             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
-            print("Res---------->",response.json())
+            translatable_data = split_dict(response.json()) 
+            print("Trans------------------->",translatable_data)
             if response.status_code == 200:
                 name = f"{i}.json"
-                im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
+                im_file = DJFile(ContentFile(json.dumps(translatable_data)),name=name)
                 files.append(im_file)
         print("files---->" ,files)
         return files

@@ -449,7 +449,7 @@ class Project(models.Model):
 
     @property
     def get_analysis_tasks(self):
-        if self.project_type_id in [3,6,7,9]: #[glossary,designer,book,news]
+        if self.project_type_id in [3,6,7]: #[glossary,designer,book]
             return Task.objects.none()
         if self.project_type_id == 4 and self.voice_proj_detail.project_type_sub_category_id == 2:
             return self.get_tasks
@@ -1351,8 +1351,8 @@ class Task(models.Model):
                     cached_value = "Designer"
                 elif self.job.project.project_type_id == 7:
                     cached_value = "Book"
-                elif self.job.project.project_type_id == 9:
-                    cached_value = "News"
+                # elif self.job.project.project_type_id == 9:
+                #     cached_value = "News"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:

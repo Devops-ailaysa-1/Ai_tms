@@ -1966,6 +1966,8 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		with open(file_path, 'r') as fp:
 				json_data = json.load(fp)
 
+		print("JSon--------->",json_data)
+
 		# json_data_list = json_data['news']
 		# with ThreadPoolExecutor() as executor:
 		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
