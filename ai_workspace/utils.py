@@ -116,9 +116,11 @@ LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
 # print(MIME_TYPE_FEDARAL)
 # print(LIST_KEYS_FEDARAL)
 
-import json
+ 
 
-def federal_json_translate(json_file,tar_code,src_code):
+
+
+def federal_json_translate(json_file,tar_code,src_code,translate=True):
 	from ai_workspace_okapi.utils import get_translation
 	json_file = json_file['news']
 	for json_data in json_file:
@@ -132,10 +134,12 @@ def federal_json_translate(json_file,tar_code,src_code):
 							for list_names in json_file_copy[key]:
 								if lists in list_names.keys():
 									# print(list_names[lists])
-									list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-																		source_lang_code=src_code,format_=format_)
+									if translate:
+										list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+																			source_lang_code=src_code,format_=format_)			
 				else:
-					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+					if translate:
+						json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
 															source_lang_code=src_code,format_=format_)
 	return  json_file_copy
 

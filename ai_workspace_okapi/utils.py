@@ -294,6 +294,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         email= user.email
         initial_credit = user.credit_balance.get("total_left")
 
+
     if cc == None:
         if isinstance(source_string,list):
             for src_text in source_string:

@@ -1278,7 +1278,6 @@ class MT_RawAndTM_View(views.APIView):
 
             # For normal and merged segments
             if split_check(segment_id):
-
                 tm_data = self.get_tm_data(request, segment_id)
                 print("Tm data-------->",tm_data)
             
@@ -1592,9 +1591,23 @@ class DocumentToFile(views.APIView):
         workbook.close()
 
         return download_file(bilingual_file_path)
+    
+    def json_key_manipulation(self,res_json_path): #### for federal
+        to_rearrange_key = ['heading','story']
+        with open(res_json_path,"r") as fp:
+            fp = json.load(fp)
+            fp = fp['news'][0]
+        rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
+        rearraged_keys_dict.update(fp)
+        rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        with open(res_json_path, 'w') as file:
+            json.dump(rearraged_keys_dict, file, indent=2)   
+
+
 
 
     def get(self, request, document_id):
+
         doc = DocumentToFile.get_object(document_id)
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
@@ -1639,9 +1652,18 @@ class DocumentToFile(views.APIView):
                 return self.download_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
 
             if output_type == "MTRAW":
+                print("output_type----->>>" , output_type)
                 mt_process = self.mt_pre_process(document_id)
                 if mt_process.get('status') == True:
-                    res = self.document_data_to_file(request,document_id,True)
+                    print("mt_process.get('status')",mt_process.get('status'))
+                    doc = Document.objects.get(id=document_id)
+                    if doc.job.project.project_type.type == "News":
+                        res = self.document_data_to_file(request,document_id,True)
+                        self.json_key_manipulation(res.text)
+                    else:
+                        res = self.document_data_to_file(request,document_id,True)
+                    print("res")
+                    print(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
