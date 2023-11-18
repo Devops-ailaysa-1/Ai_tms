@@ -4647,7 +4647,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         headers = { 's-id': os.getenv("FEDERAL-KEY"),}
         for i in news:
             federal_api_url = "https://thefederal.com/dev/h-api/news"
-            response = requests.request("GET", federal_api_url, headers=headers, params={'newsID':i})
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
+            print("Res---------->",response.json())
             if response.status_code == 200:
                 name = f"{i}.json"
                 im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
