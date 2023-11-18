@@ -4677,11 +4677,11 @@ from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    # def list(self,request):
-    #     user = request.user
-    #     task_news = TaskNewsDetails.objects.filter(ai_user_id=user.id).all()
-    #     serializer = TaskNewsDetailsSerializer(task_news, many=True)
-    #     return Response(serializer.data)
+    def list(self,request):
+        user = request.user
+        task_news = TaskNewsDetails.objects.filter(task__file__project__ai_user=user)
+        serializer = TaskNewsDetailsSerializer(task_news, many=True)
+        return Response(serializer.data)
 
     def create(self,request):
         serializer = TaskNewsDetailsSerializer(data=request.data)
