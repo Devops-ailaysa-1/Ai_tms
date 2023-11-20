@@ -1599,12 +1599,14 @@ class DocumentToFile(views.APIView):
         to_rearrange_key = ['heading','story']
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
-            print("Fp------------->", fp)
-            #fp = fp['news'][0]
+            # fp = fp['news'][0]
+            
+        print("Fp------------->", fp.keys())
         rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
         rearraged_keys_dict.update(fp)
-        rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
         res_json_path_text = res_json_path.split("json")[0]+"txt"
+        print(res_json_path_text)
         # with open(res_json_path_text, 'w') as file:
         #     file.write(rearraged_keys_dict)
         #     file.close()
