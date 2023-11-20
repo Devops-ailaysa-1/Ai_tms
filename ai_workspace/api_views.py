@@ -909,7 +909,6 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-        print("User1=============>",user_1)
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
