@@ -1596,7 +1596,7 @@ class DocumentToFile(views.APIView):
         to_rearrange_key = ['heading','story']
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
-            fp = fp['news'][0]
+            # fp = fp['news'][0]
         rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
         rearraged_keys_dict.update(fp)
         rearraged_keys_dict = {'news':[rearraged_keys_dict]}
@@ -1689,7 +1689,6 @@ class DocumentToFile(views.APIView):
             
             if isinstance(res, str):
                 self.download_file_processing(res)
-
 
             if  res.status_code in [200, 201]:
                 self.download_file_processing(res.text)
