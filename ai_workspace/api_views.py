@@ -708,6 +708,8 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
+        elif value == "news":
+            queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
