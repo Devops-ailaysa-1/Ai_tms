@@ -708,6 +708,8 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
+        elif value == "news":
+            queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
@@ -909,7 +911,6 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-        print("User1=============>",user_1)
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -4659,6 +4660,22 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         print("files---->" ,files)
         return files
 
+    def create_news_detail(self,pr):
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            print("JsonData------------>",json_data)
+            newsID = json_data.get('newsId')
+            headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
+            if response.status_code == 200:
+                TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':response.json()})
+
+            
+
     def create(self, request):
         news = request.POST.getlist('news_id')
         files = self.get_files(news)
@@ -4668,6 +4685,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
+            self.create_news_detail(pr)
             authorize(request,resource=pr,action="create",actor=self.request.user)
             return Response(serializer.data)
         return Response(serializer.errors)

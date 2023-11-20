@@ -1099,6 +1099,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
 	design_project = serializers.SerializerMethodField()
+	news_detail = serializers.SerializerMethodField()
 	# open_in =  serializers.SerializerMethodField()
 	# transcribed = serializers.SerializerMethodField()
 	# text_to_speech_convert_enable = serializers.SerializerMethodField()
@@ -1114,7 +1115,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done',)
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail')
 
 
 	def get_design_project(self,obj):
@@ -1134,6 +1135,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
 			return res
 		else:return res
+
+	def get_news_detail(self,obj):
+		data = {}
+		if obj.job.project.project_type_id == 8:
+			if obj.news_task.exists():
+				json_data = obj.news_task.first().source_json.get('news')[0]
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading')}
+		return data
 
 	# def get_image_translate_project(self,obj):
 	# 	if obj.job.project.project_type_id == 6: #Designer Project
@@ -1244,48 +1253,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			return None
 		else:
 			return cached_value	
-		#return cached_value
 
-	# def to_representation(self, instance):
 
-	# 	representation = super().to_representation(instance)
-	# 	if instance.job.project.project_type_id == 4 :
-	# 		representation["transcribed"] = self.get_transcribed(instance)
-	# 		representation["text_to_speech_convert_enable"] = self.get_text_to_speech_convert_enable(instance)
-	# 	return representation
-
-	# def get_task_self_assign_info(self,obj):
-	# 	user = self.context.get("request").user
-	# 	task_assign = obj.task_info.filter(task_assign_info__isnull=False)
-	# 	if task_assign:
-	# 		for i in task_assign:
-	# 			if i.step_id == 1:return None
-	# 			else:
-	# 				self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
-	# 				print("SA------------>",self_assign)
-	# 				if self_assign:
-	# 					step = self_assign.step.id
-	# 					mt_enable = self_assign.mt_enable
-	# 					pre_translate = self_assign.pre_translate
-	# 					copy_paste_enable = self_assign.copy_paste_enable
-	# 					task_status = self_assign.get_status_display()
-	# 					try:
-	# 						if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
-	# 							can_open = False
-	# 						else:can_open = True
-	# 					except:can_open = True
-	# 					return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
-	# 				else:return None
-	# 	else:
-	# 		return None
-
-	# def get_task_word_count(self,instance):
-	# 	if instance.document_id:
-	# 		document = Document.objects.get(id = instance.document_id)
-	# 		return document.total_word_count
-	# 	else:
-	# 		t = TaskDetails.objects.get(task_id = instance.id)
-	# 		return t.task_word_count
 
 
 class ProjectSerializerV2(serializers.ModelSerializer):
