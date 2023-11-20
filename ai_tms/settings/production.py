@@ -88,7 +88,7 @@ import newrelic.agent
 #      'redirect',
 # ]
 
-CSRF_TRUSTED_ORIGINS =+ [
+CSRF_TRUSTED_ORIGINS += [
  "http://localhost:3000",  "http://localhost:4200"
 ]
 
