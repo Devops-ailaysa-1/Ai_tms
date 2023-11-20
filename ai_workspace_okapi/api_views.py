@@ -1609,14 +1609,14 @@ class DocumentToFile(views.APIView):
         #     file.close()
 
         with open(res_json_path_text,'w') as fp:
-            for key,value in res_json_path_text.items():
+            for key,value in rearraged_keys_dict.items():
                 key = str(key)
                 value = str(value)
                 if key in list(LIST_KEYS_FEDARAL.keys()):
                     fp.write(key.capitalize()+":")
                     fp.write("\n")
                     text = []
-                    for i in x[key]:
+                    for i in rearraged_keys_dict[key]:
                         text.append(i[LIST_KEYS_FEDARAL[key][0]])
                     fp.write(",".join(text))
                     fp.write("\n")
