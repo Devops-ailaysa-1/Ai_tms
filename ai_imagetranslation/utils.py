@@ -500,8 +500,7 @@ def sd_status_check(ids,url):
 
  
 from celery.decorators import task
-import segmind
-from segmind import SDXL
+
 SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
 
 
@@ -509,6 +508,8 @@ SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
 
 @task(queue='default')
 def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
+    import segmind
+    from segmind import SDXL
     sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
     sdxl = SDXL(api_key=SEGMIND_API_KEY)
     prompt = sd_instance.prompt

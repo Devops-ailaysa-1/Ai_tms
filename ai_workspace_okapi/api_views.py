@@ -94,7 +94,7 @@ from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 from os.path import exists
 from .serializers import (VerbSerializer)
-from .utils import SpacesService, text_to_speech,LIST_KEYS_FEDARAL
+from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
 from ai_auth.utils import filter_authorize,authorize_list
@@ -1594,6 +1594,7 @@ class DocumentToFile(views.APIView):
     
     @staticmethod
     def json_key_manipulation(res_json_path): #### for federal
+        from ai_workspace.utils import LIST_KEYS_FEDARAL
         print("######################")
         to_rearrange_key = ['heading','story']
         with open(res_json_path,"r") as fp:
@@ -1629,9 +1630,8 @@ class DocumentToFile(views.APIView):
                 fp.write("\n")
                 fp.write("\n")
             fp.close()
-
         return res_json_path_text
-            # json.dump(rearraged_keys_dict, file, indent=2)   
+ 
     
 
     def download_file_processing(self,file_path):
@@ -1709,10 +1709,11 @@ class DocumentToFile(views.APIView):
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
             if isinstance(res, str):
-                self.download_file_processing(res)
+                return self.download_file_processing(res)
+                # print("downloaded")
 
-            if  res.status_code in [200, 201]:
-                self.download_file_processing(res.text)
+            elif  res.status_code in [200, 201]:
+                return self.download_file_processing(res.text)
                 # start_time_1 = time.time()
                 # file_path = res.text
                 # try:

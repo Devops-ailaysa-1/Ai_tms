@@ -5,8 +5,8 @@ from sentry_sdk.integrations.django import DjangoIntegration
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 import newrelic.agent
-from newrelic.agent import NewRelicContextFormatter
-newrelic.agent.initialize('newrelic.ini')
+# from newrelic.agent import NewRelicContextFormatter
+# newrelic.agent.initialize('newrelic.ini')
 # from fluent import sender
 # from fluent import event
 # sender.setup('django', host='fluentd', port=24224)
@@ -88,7 +88,7 @@ newrelic.agent.initialize('newrelic.ini')
 #      'redirect',
 # ]
 
-CSRF_TRUSTED_ORIGINS =+ [
+CSRF_TRUSTED_ORIGINS += [
  "http://localhost:3000",  "http://localhost:4200"
 ]
 

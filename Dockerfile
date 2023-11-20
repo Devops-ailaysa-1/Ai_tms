@@ -31,12 +31,12 @@ RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords')"
 
 COPY . .
 
-COPY --chmod=777 ./ai_tms_web.entrypoint.sh /
-# RUN chmod +x ai_tms_web.entrypoint.sh
-RUN ls
-RUN ["chmod", "+x", "/ai_tms_web.entrypoint.sh"]
+# COPY --chmod=777 ./ai_tms_web.entrypoint.sh /
+# # RUN chmod +x ai_tms_web.entrypoint.sh
+# RUN ls
+# RUN ["chmod", "+x", "/ai_tms_web.entrypoint.sh"]
 
 
 EXPOSE 8000
 
-ENTRYPOINT ["/ai_tms_web.entrypoint.sh"]
+# ENTRYPOINT ["/ai_tms_web.entrypoint.sh"]
