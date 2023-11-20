@@ -1592,7 +1592,9 @@ class DocumentToFile(views.APIView):
 
         return download_file(bilingual_file_path)
     
-    def json_key_manipulation(self,res_json_path): #### for federal
+    @staticmethod
+    def json_key_manipulation(res_json_path): #### for federal
+        print("######################")
         to_rearrange_key = ['heading','story']
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
@@ -1600,6 +1602,7 @@ class DocumentToFile(views.APIView):
         rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
         rearraged_keys_dict.update(fp)
         rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        print("Rearranged-------------->",rearraged_keys_dict)
         with open(res_json_path, 'w') as file:
             json.dump(rearraged_keys_dict, file, indent=2)   
 
@@ -1658,15 +1661,15 @@ class DocumentToFile(views.APIView):
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)
-                    if doc.job.project.project_type.type == "News":
+                    if doc.job.project.project_type_id == 8:
                         #res = self.document_data_to_file(request,document_id,True)
-                        self.json_key_manipulation(res.text)
+                        DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
                 res = self.document_data_to_file(request, document_id)
-                if doc.job.project.project_type.type == "News":
-                   self.json_key_manipulation(res.text) 
+                if doc.job.project.project_type_id == 8:
+                   DocumentToFile.json_key_manipulation(res.text) 
 
             if res.status_code in [200, 201]:
                 start_time_1 = time.time()
@@ -2837,10 +2840,10 @@ def download_mt_file(request):
     state = mt_raw_update.AsyncResult(cel_task.celery_task_id).state
     print("st------>",state)
     if state == 'SUCCESS':
-        #if cel_task.error_type == 'Insufficient Credits':
-        #    return Response({'msg':'Insufficient Credits'},status=400)
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
+        if doc.job.project.project_type_id == 8:
+            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
             file_path = res.text
             try:
