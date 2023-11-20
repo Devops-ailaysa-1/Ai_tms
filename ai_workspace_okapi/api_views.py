@@ -217,7 +217,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-        print("Doc------------->",doc_data.get('total_word_count'))
+        print("Doc------------->",doc_data)
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}

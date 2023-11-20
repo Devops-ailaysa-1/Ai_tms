@@ -273,7 +273,7 @@ class TaskAssignManager(models.Manager):
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
                          "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})
                 if not created:
-                    self.filter(pk__in=obj.id).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
+                    self.filter(pk=obj.id).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
         return None       
         # task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
         #                  defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
