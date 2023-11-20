@@ -2206,6 +2206,7 @@ class ExpressProjectAIMT(models.Model):
 
 class TaskNewsDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="news_task")
+    news_id = models.CharField(max_length=250,blank=True, null=True)
     source_json = models.JSONField(blank=True, null=True)
     target_json = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

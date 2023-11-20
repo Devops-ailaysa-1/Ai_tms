@@ -1141,7 +1141,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
 				json_data = obj.news_task.first().source_json.get('news')[0]
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading')}
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading'),'maincat_name':json_data.get('maincat_name')}
 		return data
 
 	# def get_image_translate_project(self,obj):
