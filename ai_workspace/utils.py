@@ -113,7 +113,7 @@ LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
 
 def federal_json_translate(json_file,tar_code,src_code,translate=True):
 	from ai_workspace_okapi.utils import get_translation
-	from ai_workspace.utils import LIST_KEYS_FEDARAL
+	
 	json_file = json_file['news']
 	for json_data in json_file:
 		json_file_copy = copy.deepcopy(json_data)

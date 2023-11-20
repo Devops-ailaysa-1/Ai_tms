@@ -1630,9 +1630,8 @@ class DocumentToFile(views.APIView):
                 fp.write("\n")
                 fp.write("\n")
             fp.close()
-
         return res_json_path_text
-            # json.dump(rearraged_keys_dict, file, indent=2)   
+ 
     
 
     def download_file_processing(self,file_path):
@@ -1710,10 +1709,11 @@ class DocumentToFile(views.APIView):
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
             if isinstance(res, str):
-                self.download_file_processing(res)
+                return self.download_file_processing(res)
+                # print("downloaded")
 
-            if  res.status_code in [200, 201]:
-                self.download_file_processing(res.text)
+            elif  res.status_code in [200, 201]:
+                return self.download_file_processing(res.text)
                 # start_time_1 = time.time()
                 # file_path = res.text
                 # try:

@@ -186,8 +186,7 @@ def pdf_chat_remaining_units(request):
 #######################################test____story_____#################
 
 import json,openai,random
-import segmind
-from segmind import SDXL
+
 from ai_nlp.models import StoryIllustate,IllustateGeneration
 from ai_nlp.serializer import StoryIllustateSerializer,IllustateGenerationSerializer
 from ai_canvas.utils import  convert_image_url_to_file 
@@ -210,6 +209,8 @@ def chat_gpt_16k(prompt):
 
 
 def generate_images(prompts, style,token,instance):
+    import segmind
+    from segmind import SDXL
     modeld = SDXL(api_key=token)
     negative_prompt = "photorealistic, realistic, photograph, deformed, mutated, stock photo, 35mm film, deformed, glitch, low contrast, noisy"
     for prompt in prompts:
