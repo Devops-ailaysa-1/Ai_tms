@@ -504,8 +504,6 @@ from celery.decorators import task
 SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
 
 
-
-
 @task(queue='default')
 def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
     import segmind
