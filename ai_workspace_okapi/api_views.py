@@ -1657,21 +1657,17 @@ class DocumentToFile(views.APIView):
                 if mt_process.get('status') == True:
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
+                    res = self.document_data_to_file(request,document_id,True)
                     if doc.job.project.project_type.type == "News":
-                        res = self.document_data_to_file(request,document_id,True)
+                        #res = self.document_data_to_file(request,document_id,True)
                         self.json_key_manipulation(res.text)
-                    else:
-                        res = self.document_data_to_file(request,document_id,True)
-                    print("res")
-                    print(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
-                start_time_2 = time.time()
                 res = self.document_data_to_file(request, document_id)
-                end_time_2 = time.time()
-                tot_time_taken = end_time_2 - start_time_2
-                print("Tot Tim Tak---------------->",tot_time_taken)
+                if doc.job.project.project_type.type == "News":
+                   self.json_key_manipulation(res.text) 
+
             if res.status_code in [200, 201]:
                 start_time_1 = time.time()
                 file_path = res.text
