@@ -4659,6 +4659,22 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         print("files---->" ,files)
         return files
 
+    def create_news_detail(self,pr):
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            print("JsonData------------>",json_data)
+            newsID = json_data.get('newsId')
+            headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
+            if response.status_code == 200:
+                TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':response.json()})
+
+            
+
     def create(self, request):
         news = request.POST.getlist('news_id')
         files = self.get_files(news)
@@ -4668,6 +4684,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
+            self.create_news_detail(pr)
             authorize(request,resource=pr,action="create",actor=self.request.user)
             return Response(serializer.data)
         return Response(serializer.errors)
