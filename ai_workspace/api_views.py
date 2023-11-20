@@ -4715,26 +4715,22 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-from django import core
-from ai_canvas.api_views import download_file_canvas,mime_type
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def download_fedaral(request):
-    task_news_id =request.query_params.get('task_news_id') 
-    output_type = request.query_params.get('output_type')   #output_type MTRAW
-    news_instance = TaskNewsDetails.objects.get(id=task_news_id)
+# from django import core
+# from ai_canvas.api_views import download_file_canvas,mime_type
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def download_fedaral(request):
+#     task_news_id =request.query_params.get('task_news_id') 
+#     output_type = request.query_params.get('output_type')   #output_type MTRAW
+#     news_instance = TaskNewsDetails.objects.get(id=task_news_id)
 
-    if output_type == "MTRAW": #only_target
-        file_format = "json"
-        target_json = news_instance.target_json
-        pairs = news_instance.task.job.source_target_pair
-
-        
-        target_json
+#     if output_type == "MTRAW": #only_target
+#         file_format = "json"
+#         target_json = news_instance.target_json
+#         pairs = news_instance.task.job.source_target_pair
 
 
-
-
+#         target_json
 
 
 
@@ -4742,7 +4738,7 @@ def download_fedaral(request):
         # file_name = "sample_{}.json".format(pairs)
         # export_src=core.files.File(core.files.base.ContentFile(serialized_data),file_name)
         # response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
-        return response
+        # return response
     # else:
     #     return Response({"msg":"no output type"})
  

@@ -111,15 +111,6 @@ HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
 LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
 
-# print(TRANSLATABLE_KEYS_FEDARAL)
-# print(HTML_MIME_FEDARAL)
-# print(MIME_TYPE_FEDARAL)
-# print(LIST_KEYS_FEDARAL)
-
- 
-
-
-
 def federal_json_translate(json_file,tar_code,src_code,translate=True):
 	from ai_workspace_okapi.utils import get_translation
 	json_file = json_file['news']
@@ -133,7 +124,6 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 						for lists in LIST_KEYS_FEDARAL[key]:
 							for list_names in json_file_copy[key]:
 								if lists in list_names.keys():
-									# print(list_names[lists])
 									if translate:
 										list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
 																			source_lang_code=src_code,format_=format_)			
@@ -219,14 +209,6 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 
 
 
-
-
-
-
-
-
-
-
 # from functools import wraps
 # from django.core.cache import cache
 # def custom_cache_page(timeout):
@@ -259,3 +241,15 @@ def split_dict(single_data):
                     trans_list.append({trans_key_get_list[key] :i[trans_key_get_list[key]]})
             trans_keys_dict[key] = trans_list
     return trans_keys_dict
+
+
+
+def merge_dict(translated_json,raw_json):
+	# raw_json = raw_json_instance.source_json
+	raw_json_copy = raw_json.copy()
+	raw_json.update(translated_json)
+	for i in list(LIST_KEYS_FEDARAL.keys()):
+		for count,j in enumerate(raw_json[i]):
+			j.update(raw_json_copy[i][count])
+	return raw_json
+	 
