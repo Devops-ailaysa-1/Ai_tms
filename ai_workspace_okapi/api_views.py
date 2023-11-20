@@ -94,7 +94,7 @@ from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 from os.path import exists
 from .serializers import (VerbSerializer)
-from .utils import SpacesService, text_to_speech
+from .utils import SpacesService, text_to_speech,LIST_KEYS_FEDARAL
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
 from ai_auth.utils import filter_authorize,authorize_list
@@ -1604,9 +1604,32 @@ class DocumentToFile(views.APIView):
         rearraged_keys_dict.update(fp)
         rearraged_keys_dict = {'news':[rearraged_keys_dict]}
         res_json_path_text = res_json_path.split("json")[0]+"txt"
-        with open(res_json_path_text, 'w') as file:
-            file.write(rearraged_keys_dict)
-            file.close()
+        # with open(res_json_path_text, 'w') as file:
+        #     file.write(rearraged_keys_dict)
+        #     file.close()
+
+        with open(res_json_path_text,'w') as fp:
+            for key,value in rearraged_keys_dict.items():
+                key = str(key)
+                value = str(value)
+                if key in list(LIST_KEYS_FEDARAL.keys()):
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    text = []
+                    for i in rearraged_keys_dict[key]:
+                        text.append(i[LIST_KEYS_FEDARAL[key][0]])
+                    fp.write(",".join(text))
+                    fp.write("\n")
+                else:
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    fp.write(value)
+                    fp.write("\n")
+                fp.write("---------")
+                fp.write("\n")
+                fp.write("\n")
+            fp.close()
+
         return res_json_path_text
             # json.dump(rearraged_keys_dict, file, indent=2)   
     
@@ -1687,7 +1710,6 @@ class DocumentToFile(views.APIView):
             
             if isinstance(res, str):
                 self.download_file_processing(res)
-
 
             if  res.status_code in [200, 201]:
                 self.download_file_processing(res.text)
