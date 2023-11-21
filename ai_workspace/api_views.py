@@ -4777,8 +4777,8 @@ def get_translated_story(request,news_id):
             res = {'success': True, 'data': {'msg':'Inprogress'}}
             return Response({'result':res},status=202)
     else:
-        res = {'success' : True, 'data': {'msg':'detail not found'}}
-        return Response({'result':res},status=204)
+        #res = {'success' : True, 'data': {'msg':'detail not found'}}
+        return Response(status=204)
 
 
 
