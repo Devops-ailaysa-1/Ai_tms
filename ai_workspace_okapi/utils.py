@@ -307,6 +307,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
+    print("format----------->",format_)
     
     
     if isinstance(source_string,str) and special_character_check(source_string)  :

@@ -886,6 +886,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            pr = Project.objects.get(id=serlzr.data.get('id'))
+            if pr.project_type_id == 8:
+                NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
             #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -4671,7 +4674,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         print("files---->" ,files)
         return files
 
-    def create_news_detail(self,pr):
+    @staticmethod
+    def create_news_detail(pr):
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4696,7 +4700,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
-            self.create_news_detail(pr)
+            NewsProjectSetupView.create_news_detail(pr)
             authorize(request,resource=pr,action="create",actor=self.request.user)
             return Response(serializer.data)
         return Response(serializer.errors)
@@ -4764,13 +4768,16 @@ def get_translated_story(request,news_id):
                 src_json = task_news.first().source_json.get('news')[0]
                 final_json = merge_dict(tar_json,src_json)
                 res = {'success': True, 'data':final_json}
+                return Response({'result':res},status = 200)
             else:
                 res = {'success':False, 'data':{}}  
+                return Response({'result':res},status = 500)
         else:
             res = {'success': True, 'data': {'msg':'Inprogress'}}
+            return Response({'result':res},status=202)
     else:
         res = {'success' : True, 'data': {'msg':'detail not found'}}
-    return Response({'result':res})
+        return Response({'result':res},status=204)
 
 
 
