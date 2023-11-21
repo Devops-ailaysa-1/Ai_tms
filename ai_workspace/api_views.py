@@ -4641,8 +4641,8 @@ class GetNewsFederalView(generics.ListAPIView):
                 if tasks:
                     tar_code = []
                     news_json['claimed'] = True
-                    news_json['src_code'] = tasks[0].task.job.source_language_code
-                    news_json['tar_code'] = [task.task.job.target_language_code  for task in tasks]
+                    news_json['src_code'] = tasks[0].task.job.source_language_id
+                    news_json['tar_code'] = [task.task.job.target_language_id  for task in tasks]
             response._content = json.dumps(news_jsons).encode('utf-8')
         return response
 
