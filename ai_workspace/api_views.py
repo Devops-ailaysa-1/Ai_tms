@@ -4633,22 +4633,11 @@ class GetNewsFederalView(generics.ListAPIView):
             for news_json in news_jsons:
                 tasks = TaskNewsDetails.objects.filter(news_id=news_json['newsId'])
                 if tasks:
-                    for task in tasks:
-                        news_json['src_code'] = task.task.job.source_language_code
-                        news_json['tar_code'] = task.task.job.target_language_code
-                        # src_code.append(task.task.job.source_language_code)
-                        # tar_code.append(task.task.job.target_language_code)
+                    tar_code = []
+                    news_json['claimed'] = True
+                    news_json['src_code'] = tasks[0].task.job.source_language_code
+                    news_json['tar_code'] = [task.task.job.target_language_code for task in tasks]
             response._content = json.dumps(news_jsons).encode('utf-8')
-                    # news_jsons['src_code']=",".join(src_code)
-                    # news_jsons['tar_code']=",".join(tar_code)
-
-                # print("-----> src_lang",src_code )
-                # print("-----> tar_lang",tar_code )
-            
-
-
-
-        # print("Status---------->",response)
         return response
 
     def list(self, request, *args, **kwargs):
