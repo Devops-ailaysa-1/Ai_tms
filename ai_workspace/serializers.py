@@ -1811,10 +1811,12 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
-				task_assign_data.update({'status':task_assign_data.get('client_response')})
-				if task_assign_data.get('client_response') in [2,1] :
-					# task_assign_data.update({'status':2})
-					# TaskAssign.objects.filter(task=instance.task,step=instance.step,reassigned=False).update(status=2)
+				# if task_assign_data.get('client_response') == 3:
+				# 	task_assign_data.update({'status':2})
+				if task_assign_data.get('client_response') == 2:
+					task_assign_data.update({'status':2})
+					TaskAssign.objects.filter(task=instance.task,step=instance.step,reassigned=False).update(status=2)
+				if task_assign_data.get('client_response') != 3:
 					notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
