@@ -4636,7 +4636,7 @@ class GetNewsFederalView(generics.ListAPIView):
                     tar_code = []
                     news_json['claimed'] = True
                     news_json['src_code'] = tasks[0].task.job.source_language_code
-                    news_json['tar_code'] = [task.task.job.target_language_code for task in tasks]
+                    news_json['tar_code'] = [task.task.job.target_language_code  for task in tasks]
             response._content = json.dumps(news_jsons).encode('utf-8')
         return response
 
@@ -4740,6 +4740,37 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         obj = get_object_or_404(queryset, pk=pk)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_translated_story(request,news_id):
+    from ai_workspace_okapi.api_views import DocumentToFile
+    from .utils import merge_dict
+    tar_lang = request.GET.get('target_lang')
+    task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+    if task_news:
+        task_assign = task_news.first().task.task_info.filter(client_response=3)
+        if task_assign:
+            doc = task_assign.first().task.document
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,doc.id)
+            if res.status_code in [200, 201]:
+                with open(res.text,"r") as fp:
+                    tar_json = json.load(fp)
+                src_json = task_news.first().source_json.get('news')[0]
+                final_json = merge_dict(tar_json,src_json)
+                res = {'success': True, 'data':final_json}
+            else:
+                res = {'success':False, 'data':{}}  
+        else:
+            res = {'success': True, 'data': {'msg':'Inprogress'}}
+    else:
+        res = {'success' : True, 'data': {'msg':'detail not found'}}
+    return Response({'result':res})
+
+
+
 
 
 # from django import core
