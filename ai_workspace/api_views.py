@@ -98,6 +98,8 @@ from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
 from ai_canvas.serializers import CanvasDesignSerializer
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import authentication_classes
 
 class IsCustomer(permissions.BasePermission):
 
@@ -4743,7 +4745,8 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+# @permission_classes([IsAuthenticated])
 def get_translated_story(request,news_id):
     from ai_workspace_okapi.api_views import DocumentToFile
     from .utils import merge_dict
