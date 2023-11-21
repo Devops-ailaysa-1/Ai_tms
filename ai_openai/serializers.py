@@ -9,7 +9,7 @@ import re
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations ,get_prompt_gpt_4,\
+                    get_prompt_freestyle ,get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL

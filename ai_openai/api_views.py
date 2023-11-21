@@ -898,16 +898,44 @@ class BookBMViewset(viewsets.ViewSet):
 
 
 from django.http import StreamingHttpResponse,JsonResponse
-import openai  #blog_cre_id list
+import openai,tiktoken,time,os  #blog_cre_id list
 from ai_staff.models import PromptSubCategories
-import time
 from rest_framework import serializers
 from ai_openai.serializers import lang_detector
-import tiktoken
-import os
+ 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+
 from ai_openai.models import MyDocuments
+from ai_openai.utils import get_prompt_gpt_turbo_1106
+from ai_openai.models import NewsPrompt
+
+
+
+import json
+
+@api_view(['GET'])
+def newscontentbuilder(request):
+    sentence =  request.query_params.get('sentence')
+    news_prompt = request.query_params.get('news_prompt')
+    news_prompt_instance = NewsPrompt.objects.get(id = news_prompt)
+    prompt_template = """Context: {context}
+
+    
+    {prompt}
+    """
+    
+    if news_prompt_instance.name:
+ 
+        prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
+        messages = [{"role":"system","content":news_prompt_instance.assistant},
+                    {"role": "user", "content":prompt_template}]
+        completion = get_prompt_gpt_turbo_1106(messages=messages)
+        result = completion['choices'][0]['message']['content']
+        res = json.loads(result)
+    return Response({'id':news_prompt_instance.id ,'sentence':sentence , 'result':res})
+    
+
 
 def num_tokens_from_string(string) -> int:
     print("openai____",string)
@@ -1261,6 +1289,9 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
             return Response({'msg':'deleted successfully'},status=200)
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
+
+
+
 
 
 #####for testing streaming #############

@@ -87,8 +87,8 @@ def get_img_content_from_openai_url(image_url):
     return img_byte_arr
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
-def get_prompt_gpt_4(prompt,max_token,n):
-    completion = openai.ChatCompletion.create(model="gpt-4",messages=[{"role":"user","content": prompt}],n=n, max_tokens=int(max_token))
+def get_prompt_gpt_turbo_1106(messages):
+    completion = openai.ChatCompletion.create(model="gpt-3.5-turbo-1106",messages=messages)
     return completion
 
 

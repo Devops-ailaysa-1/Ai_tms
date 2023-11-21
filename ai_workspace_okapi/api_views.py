@@ -1033,7 +1033,7 @@ class MT_RawAndTM_View(views.APIView):
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
-
+        # initial_credit = 100
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)

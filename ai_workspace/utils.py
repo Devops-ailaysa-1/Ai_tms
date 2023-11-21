@@ -246,11 +246,10 @@ def split_dict(single_data):
 
 
 def merge_dict(translated_json,raw_json):
-	# raw_json = raw_json_instance.source_json
-	raw_json_copy = raw_json.copy()
+	import copy
+	raw_json_copy = copy.deepcopy(raw_json)
 	raw_json.update(translated_json)
 	for i in list(LIST_KEYS_FEDARAL.keys()):
 		for count,j in enumerate(raw_json[i]):
 			j.update(raw_json_copy[i][count])
 	return raw_json
-	 
