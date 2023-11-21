@@ -1,5 +1,6 @@
 import re
 from rest_framework import permissions
+from rest_framework import authentication 
 from ai_auth.models import UserAttribute, AiUser
 from django.contrib.auth.backends import BaseBackend
 from bcrypt import checkpw
@@ -53,3 +54,10 @@ class MysqlBackend(BaseBackend):
         except AiUser.DoesNotExist:
             pass
         return None
+    
+
+class APIAuthentication(authentication.TokenAuthentication):
+    '''
+    Change Autorization header keyword
+    '''
+    keyword = 'Api-Key'
