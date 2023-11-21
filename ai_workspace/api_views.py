@@ -4628,9 +4628,24 @@ class GetNewsFederalView(generics.ListAPIView):
             params.update({'search':search})
         integration_api_url = "https://thefederal.com/dev/h-api/news"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
-        # if response.status_code == 200:
-        #     for i in response.json().get('news')[0]:
-        #         task_get = TaskNewsDetails.objects.filter(news_id=i)
+        if response.status_code == 200:
+            news_jsons = response.json().get('news')
+            for news_json in news_jsons:
+                tasks = TaskNewsDetails.objects.filter(news_id=news_json['newsId'])
+                if tasks:
+                    src_code = []
+                    tar_code = []
+                    for task in tasks:
+                        src_code.append(task.task.job.source_language_code)
+                        tar_code.append(task.task.job.target_language_code)
+
+                    src_code=",".join(src_code)
+                    tar_code=",".join(tar_code)
+
+                # print("-----> src_lang",src_code )
+                # print("-----> tar_lang",tar_code )
+            
+
 
 
         # print("Status---------->",response)

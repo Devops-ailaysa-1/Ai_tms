@@ -1646,8 +1646,6 @@ class DocumentToFile(views.APIView):
             print("Exception during file output------> ", e)
 
 
-
-
     def get(self, request, document_id):
 
         doc = DocumentToFile.get_object(document_id)
