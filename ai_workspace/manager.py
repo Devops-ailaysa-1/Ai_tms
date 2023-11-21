@@ -267,24 +267,24 @@ class TaskAssignManager(models.Manager):
         copy_paste_enable = project.copy_paste_enable
         print("Inside Manager---------->",pre_translate)
         print("Inside---->",steps)
-        for task in tasks:
-            for step in steps:
-                obj,created = self.get_or_create(task=task,step=step,reassigned=False,\
-                         defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
-                         "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})
-                if not created:
-                    self.filter(pk__in=obj.id).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
-        return None       
-        # task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
+        # for task in tasks:
+        #     for step in steps:
+        #         obj,created = self.get_or_create(task=task,step=step,reassigned=False,\
         #                  defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
-        #                  "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
-        #                 for task in tasks for step in steps]
-        # print("Insideeee-------->",task_assign)
-        # #data = [i[0].id for i in task_assign if i[1]==False]
-        # data = list(map(lambda i: i[0].id, filter(lambda i: not i[1], task_assign)))
-        # self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
-        # print("tASK ASSIGN --> ", task_assign)
-        # return task_assign
+        #                  "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})
+        #         if not created:
+        #             self.filter(pk=obj.id).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
+        # return None       
+        task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
+                         defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
+                         "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
+                        for task in tasks for step in steps]
+        print("Insideeee-------->",task_assign)
+        data = [i[0].id for i in task_assign if i[1]==False]
+        #data = list(map(lambda i: i[0].id, filter(lambda i: not i[1], task_assign)))
+        self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
+        print("tASK ASSIGN --> ", task_assign)
+        return task_assign
         #return obj
 
     # def create_tasks_of_audio_files(self, files,jobs,klass,project = None):

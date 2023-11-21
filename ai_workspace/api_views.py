@@ -98,6 +98,9 @@ from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
 from ai_canvas.serializers import CanvasDesignSerializer
+from rest_framework.authentication import TokenAuthentication
+from ai_auth.authentication import APIAuthentication
+from rest_framework.decorators import authentication_classes
 
 class IsCustomer(permissions.BasePermission):
 
@@ -884,6 +887,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            pr = Project.objects.get(id=serlzr.data.get('id'))
+            if pr.project_type_id == 8:
+                NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
             #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -4468,7 +4474,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_1.request = request
         view_instance_1.request.GET = request.GET
 
-        queryset1 = view_instance_1.get_queryset()
+        queryset1 = view_instance_1.get_queryset().exclude(project_type_id=8)
 
 
         view_instance_2 = MyDocumentsView()
@@ -4633,17 +4639,11 @@ class GetNewsFederalView(generics.ListAPIView):
             for news_json in news_jsons:
                 tasks = TaskNewsDetails.objects.filter(news_id=news_json['newsId'])
                 if tasks:
-                    for task in tasks:
-                        news_json['src_code'] = task.task.job.source_language_code
-                        news_json['tar_code'] = task.task.job.target_language_code
+                    tar_code = []
+                    news_json['claimed'] = True
+                    news_json['src_code'] = tasks[0].task.job.source_language_code
+                    news_json['tar_code'] = [task.task.job.target_language_code  for task in tasks]
             response._content = json.dumps(news_jsons).encode('utf-8')
-                    # news_jsons['src_code']=",".join(src_code)
-                    # news_jsons['tar_code']=",".join(tar_code)
-
-                # print("-----> src_lang",src_code )
-                # print("-----> tar_lang",tar_code )
-            
-        # print("Status---------->",response)
         return response
 
     def list(self, request, *args, **kwargs):
@@ -4675,7 +4675,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         print("files---->" ,files)
         return files
 
-    def create_news_detail(self,pr):
+    @staticmethod
+    def create_news_detail(pr):
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4700,7 +4701,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
-            self.create_news_detail(pr)
+            NewsProjectSetupView.create_news_detail(pr)
             authorize(request,resource=pr,action="create",actor=self.request.user)
             return Response(serializer.data)
         return Response(serializer.errors)
@@ -4746,6 +4747,41 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         obj = get_object_or_404(queryset, pk=pk)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@authentication_classes([APIAuthentication])
+# @permission_classes([IsAuthenticated])
+def get_translated_story(request,news_id):
+    from ai_workspace_okapi.api_views import DocumentToFile
+    from .utils import merge_dict
+    tar_lang = request.GET.get('target_lang')
+    task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+    if task_news:
+        task_assign = task_news.first().task.task_info.filter(client_response=3)
+        if task_assign:
+            doc = task_assign.first().task.document
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,doc.id)
+            if res.status_code in [200, 201]:
+                with open(res.text,"r") as fp:
+                    tar_json = json.load(fp)
+                src_json = task_news.first().source_json.get('news')[0]
+                final_json = merge_dict(tar_json,src_json)
+                res = {'success': True, 'data':final_json}
+                return Response({'result':res},status = 200)
+            else:
+                res = {'success':False, 'data':{}}  
+                return Response({'result':res},status = 500)
+        else:
+            res = {'success': True, 'data': {'msg':'Inprogress'}}
+            return Response({'result':res},status=202)
+    else:
+        #res = {'success' : True, 'data': {'msg':'detail not found'}}
+        return Response(status=204)
+
+
+
 
 
 # from django import core
