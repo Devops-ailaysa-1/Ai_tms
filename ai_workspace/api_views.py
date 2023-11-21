@@ -4468,7 +4468,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_1.request = request
         view_instance_1.request.GET = request.GET
 
-        queryset1 = view_instance_1.get_queryset()
+        queryset1 = view_instance_1.get_queryset().exclude(project_type_id=8)
 
 
         view_instance_2 = MyDocumentsView()
