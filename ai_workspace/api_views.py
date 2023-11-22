@@ -4750,8 +4750,8 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
 
 @api_view(["GET"])
-@authentication_classes([APIAuthentication])
-# @permission_classes([IsAuthenticated])
+#@authentication_classes([APIAuthentication])
+@permission_classes([IsAuthenticated])
 def get_translated_story(request,news_id):
     from ai_workspace_okapi.api_views import DocumentToFile
     from .utils import merge_dict
