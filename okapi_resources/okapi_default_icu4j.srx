@@ -724,10 +724,6 @@ M.K.Stalin.</okpsrx:sample>
 <beforebreak>[:]</beforebreak>
 <afterbreak>\s?</afterbreak>
 </rule>
-<rule break="yes">
-<beforebreak>\.</beforebreak>
-<afterbreak>(?![^>]*>)</afterbreak>
-</rule>
 </languagerule>
 <languagerule languagerulename="Spanish">
 <!--Handle gracefully lists, avoiding breaking on starting numbers, letters and roman numbers.
