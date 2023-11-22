@@ -4750,35 +4750,60 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
 
 @api_view(["GET"])
-@authentication_classes([APIAuthentication])
-#@permission_classes([IsAuthenticated])
-def get_translated_story(request,news_id):
+#@authentication_classes([APIAuthentication])
+@permission_classes([IsAuthenticated])
+def get_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     from .utils import merge_dict
     tar_lang = request.GET.get('target_lang')
-    task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
-    if task_news:
-        task_assign = task_news.first().task.task_info.filter(client_response=3)
-        if task_assign:
-            doc = task_assign.first().task.document
-            doc_to_file = DocumentToFile()
-            res = doc_to_file.document_data_to_file(request,doc.id)
-            if res.status_code in [200, 201]:
-                with open(res.text,"r") as fp:
-                    tar_json = json.load(fp)
-                src_json = task_news.first().source_json.get('news')[0]
-                final_json = merge_dict(tar_json,src_json)
-                res = {'success': True, 'data':final_json}
-                return Response({'result':res},status = 200)
+    news_id = request.GET.get('news_id')
+    if news_id:
+        task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+        if task_news:
+            task_assign = task_news.first().task.task_info.filter(client_response=3)
+            if task_assign:
+                doc = task_assign.first().task.document
+                doc_to_file = DocumentToFile()
+                res = doc_to_file.document_data_to_file(request,doc.id)
+                if res.status_code in [200, 201]:
+                    with open(res.text,"r") as fp:
+                        tar_json = json.load(fp)
+                    src_json = task_news.first().source_json.get('news')[0]
+                    final_json = merge_dict(tar_json,src_json)
+                    res = {'success': True, 'data':final_json}
+                    return Response({'result':res},status = 200)
+                else:
+                    res = {'success':False, 'data':{}}  
+                    return Response({'result':res},status = 500)
             else:
-                res = {'success':False, 'data':{}}  
-                return Response({'result':res},status = 500)
+                res = {'success': True, 'data': {'msg':'Inprogress'}}
+                return Response({'result':res},status=202)
         else:
-            res = {'success': True, 'data': {'msg':'Inprogress'}}
-            return Response({'result':res},status=202)
+            #res = {'success' : True, 'data': {'msg':'detail not found'}}
+            return Response(status=204)
     else:
-        #res = {'success' : True, 'data': {'msg':'detail not found'}}
-        return Response(status=204)
+        from datetime import date
+        today_date = date.today()
+        task_news = TaskNewsDetails.objects.filter(updated_at__date=today_date,task__job__target_language__language = tar_lang)
+        print("TaskNews------------->",task_news)
+        data = []
+        if task_news:
+            for i in task_news:
+                task_assign = i.task.task_info.filter(client_response=3)
+                print("TA-------->",task_assign)
+                if task_assign:
+                    doc = task_assign.first().task.document
+                    if doc:
+                        doc_to_file = DocumentToFile()
+                        res = doc_to_file.document_data_to_file(request,doc.id)
+                        if res.status_code in [200, 201]:
+                            with open(res.text,"r") as fp:
+                                tar_json = json.load(fp)
+                            src_json = task_news.first().source_json.get('news')[0]
+                            final_json = merge_dict(tar_json,src_json)
+                            data.append(final_json)
+        res = {'success': True, 'result': data}
+        return Response({'result':res},status = 200)
 
 
 
