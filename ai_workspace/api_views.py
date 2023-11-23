@@ -101,6 +101,7 @@ from ai_canvas.serializers import CanvasDesignSerializer
 from rest_framework.authentication import TokenAuthentication
 from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
+from .utils import merge_dict
 
 class IsCustomer(permissions.BasePermission):
 
@@ -4754,7 +4755,6 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 #@permission_classes([IsAuthenticated])
 def get_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    from .utils import merge_dict
     tar_lang = request.GET.get('target_lang')
     news_id = request.GET.get('news_id')
     if news_id:
@@ -4815,15 +4815,18 @@ def get_news_detail(request):
     obj = Task.objects.get(id=task_id)
     target_json,source_json= {},{}
     if obj.job.project.project_type_id == 8:
+        if obj.news_task.exists():
+            source_json = obj.news_task.first().source_json.get('news')[0]
+
         if obj.document:
             doc_to_file = DocumentToFile()
             res = doc_to_file.document_data_to_file(request,obj.document.id)
             with open(res.text,"r") as fp:
                 json_data = json.load(fp)
             target_json = json_data	
-        if obj.news_task.exists():
-            source_json = obj.news_task.first().source_json.get('news')[0]
-    return Response({'source_json':source_json,'target_json':target_json})
+            final_json = merge_dict(target_json,source_json)
+        
+    return Response({'source_json':source_json,'target_json':final_json})
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:

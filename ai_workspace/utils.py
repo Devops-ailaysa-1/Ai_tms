@@ -246,9 +246,6 @@ def split_dict(single_data):
 
 
 def merge_dict(translated_json,raw_json):
-	#LIST_KEYS_FEDARAL_1 = {'media':['caption'] , 'news_tags':['name']}
-	print("Raw Json----------->",raw_json)
-	print("Translated Json------------>", translated_json)
 	raw_json_trans = copy.deepcopy(raw_json)
 	translated_json_copy = copy.deepcopy(translated_json)
 	for key,values in list(LIST_KEYS_FEDARAL.items()): 
