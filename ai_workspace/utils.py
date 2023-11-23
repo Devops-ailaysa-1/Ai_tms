@@ -229,7 +229,7 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 
 def split_dict(single_data):
     trans_keys = ["keywords","description","source","image_caption","heading","newsId","authorName","location","story"]
-    trans_key_get_list = {"media":"caption", "news_tags":"name"}
+    trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
     trans_keys_dict = {}
     json_data = single_data.get('news')[0]
     for key,value in  json_data.items():
@@ -246,6 +246,8 @@ def split_dict(single_data):
 
 
 def merge_dict(translated_json,raw_json):
+	print("Tar---------->",translated_json)
+	print("Raw---------->", raw_json)
 	raw_json_trans = copy.deepcopy(raw_json)
 	translated_json_copy = copy.deepcopy(translated_json)
 	for key,values in list(LIST_KEYS_FEDARAL.items()):

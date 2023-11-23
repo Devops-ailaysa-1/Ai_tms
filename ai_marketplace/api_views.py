@@ -1067,6 +1067,7 @@ from allauth.socialaccount.models import SocialAccount
 class ProzVendorListView(generics.ListAPIView):
     serializer_class = CommonSPSerializer
     pagination.PageNumberPagination.page_size = 20
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         page = self.request.query_params.get('page', 1)
