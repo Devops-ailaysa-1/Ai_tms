@@ -235,6 +235,12 @@ post_save.connect(add_purchase_units, sender=AiUser)
 #post_save.connect(proz_connect, sender=AiUser)
 
 
+class EnterpriseUsers(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name="user_enterprise")
+    subscription_name = models.CharField(max_length=100,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
