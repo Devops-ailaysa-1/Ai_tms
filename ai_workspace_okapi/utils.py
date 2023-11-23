@@ -308,13 +308,13 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
     print("format----------->",format_)
-    
-    
+    # initial_credit =200
+     
     if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
-
+    
     elif user and not from_open_ai and initial_credit < cc:
             print("Insufficient")
             translate = ''

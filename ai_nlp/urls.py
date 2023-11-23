@@ -6,7 +6,7 @@ from django.conf import settings
 router = DefaultRouter()
 
 router.register(r'pdf-chat-upload',api_views.PdffileUploadViewset,basename='pdf_chat')
-router.register(r'story-list',api_views.IllustateGenerationViewset,basename='story_list')
+# router.register(r'story-list',api_views.IllustateGenerationViewset,basename='story_list')
 
 urlpatterns =  router.urls
 urlpatterns += [
@@ -14,5 +14,5 @@ urlpatterns += [
     path('synonyms', api_views.wordapi_synonyms, name='synonyms'),
     path('chat-with-pdf', api_views.pdf_chat,name='chat-pdf'), 
     path('chat-unit-remaining',api_views.pdf_chat_remaining_units,name='chat-unit-rem'),
-    path('story_telling',api_views.generate_story_illus,name='story-illust')
+    # path('story_telling',api_views.generate_story_illus,name='story-illust')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

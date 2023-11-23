@@ -9,7 +9,7 @@ import re
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations ,get_prompt_gpt_4,\
+                    get_prompt_freestyle ,get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL
@@ -259,11 +259,11 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
         }
         
     def get_target_langs(self,obj):
-        return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
+        return [i.result_lang.language for i in obj.ai_prompt.all()] #.distinct('result_lang')
 
     def get_prompt_results(self,obj):
         result_dict ={}
-        results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
+        results = AiPromptResult.objects.filter(prompt_id = obj.id) #.distinct('copy')
         for i in results:
             rr = AiPromptResult.objects.filter(prompt_id = obj.id).filter(copy=i.copy)
             result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
