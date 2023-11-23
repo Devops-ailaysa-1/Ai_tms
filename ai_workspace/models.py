@@ -2211,6 +2211,8 @@ class TaskNewsDetails(models.Model):
     news_id = models.CharField(max_length=250,blank=True, null=True)
     source_json = models.JSONField(blank=True, null=True)
     target_json = models.JSONField(blank=True, null=True)
+    pushed = models.BooleanField(default=False)
+    feed_id = models.CharField(max_length=250,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
