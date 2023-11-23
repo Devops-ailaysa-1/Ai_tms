@@ -102,6 +102,7 @@ from rest_framework.authentication import TokenAuthentication
 from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
 from .utils import merge_dict
+from ai_auth.access_policies import IsEnterpriseUser
 
 class IsCustomer(permissions.BasePermission):
 
@@ -4610,6 +4611,7 @@ class AssertList(viewsets.ModelViewSet):
 
 class GetNewsFederalView(generics.ListAPIView):
     pagination.PageNumberPagination.page_size = 20
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
     def get_stories(self):
         page = self.request.query_params.get('page', 1)
@@ -4649,17 +4651,20 @@ class GetNewsFederalView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         #### Need to check request from federal team ####
-        response = self.get_stories()
-        print("RES-------------->",response)
-        if response.status_code == 500:
-            return Response({'msg':"something wrong with API"},status=400)
-        return Response(response.json())
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        if user.user_enterprise.subscription_name == 'Enterprise - TFN':
+            response = self.get_stories()
+            print("RES-------------->",response)
+            if response.status_code == 500:
+                return Response({'msg':"something wrong with API"},status=400)
+            return Response(response.json())
+        return Response({"detail": "You do not have permission to perform this action."},status=403)
 
 from django.core.files.base import ContentFile
 from ai_workspace.utils import split_dict
 
 class NewsProjectSetupView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
     def get_files(self,news):
         files =[]
@@ -4714,7 +4719,7 @@ from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
     def list(self,request):
         user = request.user
@@ -4808,7 +4813,7 @@ def get_translated_story(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     task_id = request.GET.get('task_id')
