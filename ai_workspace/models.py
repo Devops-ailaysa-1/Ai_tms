@@ -285,6 +285,8 @@ class Project(models.Model):
             prefix = 'Book Project-'
         elif self.project_type_id == 6:
             prefix = 'Designer Project-'
+        elif self.project_type_id == 8:
+            prefix = 'News Story-'
         else:
             prefix = 'Project-'
         return prefix

@@ -4,7 +4,8 @@ from .models import (AiUser, UserAttribute,
                     BillingAddress,UserTaxInfo,Team,InternalMember, 
                     VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,
                     AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage,SubscriptionOrder,
-                    TroubleshootIssues,AiTroubleshootData,PurchasedUnits,PurchasedUnitsCount)
+                    TroubleshootIssues,AiTroubleshootData,PurchasedUnits,PurchasedUnitsCount,
+                    EnterpriseUsers)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -199,6 +200,10 @@ class ApiUsageAdmin(admin.ModelAdmin):
 
     def campaign_code(self,obj):
         return obj.campaign_name.campaign_name
+    
+@admin.register(EnterpriseUsers)
+class EnterpriseUsersAdmin(admin.ModelAdmin):
+    list_display = ("user","subscription_name")
 
 # Custom Admin Page  #
 

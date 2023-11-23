@@ -101,6 +101,7 @@ from ai_canvas.serializers import CanvasDesignSerializer
 from rest_framework.authentication import TokenAuthentication
 from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
+from .utils import merge_dict
 
 class IsCustomer(permissions.BasePermission):
 
@@ -4641,8 +4642,8 @@ class GetNewsFederalView(generics.ListAPIView):
                 if tasks:
                     tar_code = []
                     news_json['claimed'] = True
-                    news_json['src_code'] = tasks[0].task.job.source_language_code
-                    news_json['tar_code'] = [task.task.job.target_language_code  for task in tasks]
+                    news_json['src_code'] = tasks[0].task.job.source_language_id
+                    news_json['tar_code'] = list(set([task.task.job.target_language_id  for task in tasks]))
             response._content = json.dumps(news_jsons).encode('utf-8')
         return response
 
@@ -4751,11 +4752,11 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
 @api_view(["GET"])
 @authentication_classes([APIAuthentication])
-# @permission_classes([IsAuthenticated])
-def get_translated_story(request,news_id):
+#@permission_classes([IsAuthenticated])
+def get_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    from .utils import merge_dict
     tar_lang = request.GET.get('target_lang')
+<<<<<<< HEAD
     task_news = TaskNewsDetails.objects.filter(news_id=news_id,task__job__target_language__language = tar_lang)
     if task_news:
         task_assign = task_news.first().task.task_info.filter(client_response=3)
@@ -4772,18 +4773,87 @@ def get_translated_story(request,news_id):
                 final_json = merge_dict(tar_json,src_json)
                 res = {'success': True, 'data':final_json}
                 return Response({'result':res},status = 200)
+=======
+    news_id = request.GET.get('news_id')
+    if news_id:
+        task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+        if task_news:
+            task_assign = task_news.first().task.task_info.filter(client_response=3)
+            if task_assign:
+                doc = task_assign.first().task.document
+                doc_to_file = DocumentToFile()
+                res = doc_to_file.document_data_to_file(request,doc.id)
+                if res.status_code in [200, 201]:
+                    with open(res.text,"r") as fp:
+                        tar_json = json.load(fp)
+                    src_json = task_news.first().source_json.get('news')[0]
+                    final_json = merge_dict(tar_json,src_json)
+                    res = {'success': True, 'data':final_json}
+                    return Response({'result':res},status = 200)
+                else:
+                    res = {'success':False, 'data':{}}  
+                    return Response({'result':res},status = 500)
+>>>>>>> origin/ai_enterprise_news
             else:
-                res = {'success':False, 'data':{}}  
-                return Response({'result':res},status = 500)
+                res = {'success': True, 'data': {'msg':'Inprogress'}}
+                return Response({'result':res},status=202)
         else:
-            res = {'success': True, 'data': {'msg':'Inprogress'}}
-            return Response({'result':res},status=202)
+            #res = {'success' : True, 'data': {'msg':'detail not found'}}
+            return Response(status=204)
     else:
-        #res = {'success' : True, 'data': {'msg':'detail not found'}}
-        return Response(status=204)
+        from datetime import date
+        today_date = date.today()
+        task_news = TaskNewsDetails.objects.filter(updated_at__date=today_date,task__job__target_language__language = tar_lang)
+        print("TaskNews------------->",task_news)
+        data = []
+        if task_news:
+            for i in task_news:
+                task_assign = i.task.task_info.filter(client_response=3)
+                print("TA-------->",task_assign)
+                if task_assign:
+                    doc = task_assign.first().task.document
+                    if doc:
+                        doc_to_file = DocumentToFile()
+                        res = doc_to_file.document_data_to_file(request,doc.id)
+                        if res.status_code in [200, 201]:
+                            with open(res.text,"r") as fp:
+                                tar_json = json.load(fp)
+                            src_json = task_news.first().source_json.get('news')[0]
+                            final_json = merge_dict(tar_json,src_json)
+                            data.append(final_json)
+        res = {'success': True, 'result': data}
+        return Response({'result':res},status = 200)
 
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_news_detail(request):
+    from ai_workspace_okapi.api_views import DocumentToFile
+    task_id = request.GET.get('task_id')
+    obj = Task.objects.get(id=task_id)
+    target_json,source_json= {},{}
+    if obj.job.project.project_type_id == 8:
+        if obj.news_task.exists():
+            source_json = obj.news_task.first().source_json.get('news')[0]
+
+        if obj.document:
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,obj.document.id)
+            with open(res.text,"r") as fp:
+                json_data = json.load(fp)
+            trans_json = json_data	
+            target_json = merge_dict(trans_json,source_json)
+        
+    return Response({'source_json':source_json,'target_json':target_json})
+
+	# def get_source_news_data(self,obj):
+	# 	if obj.job.project.project_type_id == 8:
+	# 		if obj.news_task.exists():
+	# 			source_json = obj.news_task.first().source_json
+	# 			return source_json
+	# 		else: return None
+	# 	else: return None
 
 
 # from django import core
