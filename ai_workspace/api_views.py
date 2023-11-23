@@ -4613,6 +4613,17 @@ class GetNewsFederalView(generics.ListAPIView):
     pagination.PageNumberPagination.page_size = 20
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
+
+    @staticmethod
+    def check_user_federal(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        try:
+            if user.user_enterprise.subscription_name == 'Enterprise - TFN':
+                return True
+        except:
+            return False
+
+
     def get_stories(self):
         page = self.request.query_params.get('page', 1)
         count = self.request.query_params.get('count', 20)
@@ -4651,14 +4662,16 @@ class GetNewsFederalView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         #### Need to check request from federal team ####
-        user = self.request.user.team.owner if self.request.user.team else self.request.user
-        if user.user_enterprise.subscription_name == 'Enterprise - TFN':
+        allow = GetNewsFederalView.check_user_federal(request.user)
+        if allow:
             response = self.get_stories()
             print("RES-------------->",response)
             if response.status_code == 500:
                 return Response({'msg':"something wrong with API"},status=400)
             return Response(response.json())
-        return Response({"detail": "You do not have permission to perform this action."},status=403)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403)
+      
 
 from django.core.files.base import ContentFile
 from ai_workspace.utils import split_dict
@@ -4699,18 +4712,22 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             
 
     def create(self, request):
-        news = request.POST.getlist('news_id')
-        files = self.get_files(news)
-        user = self.request.user
-        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            pr = Project.objects.get(id=serializer.data.get('id'))
-            NewsProjectSetupView.create_news_detail(pr)
-            authorize(request,resource=pr,action="create",actor=self.request.user)
-            return Response(serializer.data)
-        return Response(serializer.errors)
+        allow = GetNewsFederalView.check_user_federal(request.user)
+        if allow:
+            news = request.POST.getlist('news_id')
+            files = self.get_files(news)
+            user = self.request.user
+            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                pr = Project.objects.get(id=serializer.data.get('id'))
+                NewsProjectSetupView.create_news_detail(pr)
+                authorize(request,resource=pr,action="create",actor=self.request.user)
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403) 
 
 
 
@@ -4816,22 +4833,26 @@ def get_translated_story(request):
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    task_id = request.GET.get('task_id')
-    obj = Task.objects.get(id=task_id)
-    target_json,source_json= {},{}
-    if obj.job.project.project_type_id == 8:
-        if obj.news_task.exists():
-            source_json = obj.news_task.first().source_json.get('news')[0]
+    allow = GetNewsFederalView.check_user_federal(request.user)
+    if allow:
+        task_id = request.GET.get('task_id')
+        obj = Task.objects.get(id=task_id)
+        target_json,source_json= {},{}
+        if obj.job.project.project_type_id == 8:
+            if obj.news_task.exists():
+                source_json = obj.news_task.first().source_json.get('news')[0]
 
-        if obj.document:
-            doc_to_file = DocumentToFile()
-            res = doc_to_file.document_data_to_file(request,obj.document.id)
-            with open(res.text,"r") as fp:
-                json_data = json.load(fp)
-            trans_json = json_data	
-            target_json = merge_dict(trans_json,source_json)
-        
-    return Response({'source_json':source_json,'target_json':target_json})
+            if obj.document:
+                doc_to_file = DocumentToFile()
+                res = doc_to_file.document_data_to_file(request,obj.document.id)
+                with open(res.text,"r") as fp:
+                    json_data = json.load(fp)
+                trans_json = json_data	
+                target_json = merge_dict(trans_json,source_json)
+            
+        return Response({'source_json':source_json,'target_json':target_json})
+    else:
+        return Response({"detail": "You do not have permission to perform this action."},status=403)
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:
