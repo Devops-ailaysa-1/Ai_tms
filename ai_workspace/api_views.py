@@ -4756,7 +4756,7 @@ def get_translated_story(request,news_id):
     from ai_workspace_okapi.api_views import DocumentToFile
     from .utils import merge_dict
     tar_lang = request.GET.get('target_lang')
-    task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+    task_news = TaskNewsDetails.objects.filter(news_id=news_id,task__job__target_language__language = tar_lang)
     if task_news:
         task_assign = task_news.first().task.task_info.filter(client_response=3)
         if task_assign:
@@ -4766,6 +4766,8 @@ def get_translated_story(request,news_id):
             if res.status_code in [200, 201]:
                 with open(res.text,"r") as fp:
                     tar_json = json.load(fp)
+                    print("tar_json")
+                    print(tar_json)
                 src_json = task_news.first().source_json.get('news')[0]
                 final_json = merge_dict(tar_json,src_json)
                 res = {'success': True, 'data':final_json}

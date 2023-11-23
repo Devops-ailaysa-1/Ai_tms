@@ -924,8 +924,8 @@ def newscontentbuilder(request):
     
     {prompt}
     """
-    
-    if news_prompt_instance.name:
+
+    if news_prompt_instance.name == "NER":
  
         prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
         messages = [{"role":"system","content":news_prompt_instance.assistant},
