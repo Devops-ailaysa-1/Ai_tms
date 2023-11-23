@@ -4823,10 +4823,10 @@ def get_news_detail(request):
             res = doc_to_file.document_data_to_file(request,obj.document.id)
             with open(res.text,"r") as fp:
                 json_data = json.load(fp)
-            target_json = json_data	
-            final_json = merge_dict(target_json,source_json)
+            trans_json = json_data	
+            target_json = merge_dict(trans_json,source_json)
         
-    return Response({'source_json':source_json,'target_json':final_json})
+    return Response({'source_json':source_json,'target_json':target_json})
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:
