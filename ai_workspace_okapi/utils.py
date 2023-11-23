@@ -279,7 +279,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai = None):
+                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
 
@@ -294,6 +294,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         email= user.email
         initial_credit = user.credit_balance.get("total_left")
 
+
     if cc == None:
         if isinstance(source_string,list):
             for src_text in source_string:
@@ -306,13 +307,14 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
-    
-    
+    print("format----------->",format_)
+    # initial_credit =200
+     
     if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
-
+    
     elif user and not from_open_ai and initial_credit < cc:
             print("Insufficient")
             translate = ''
@@ -322,7 +324,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = client.translate(source_string,
                                 target_language=target_lang_code,
-                                format_="text").get("translatedText")
+                                format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)), queue='low-priority')

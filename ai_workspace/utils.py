@@ -102,6 +102,88 @@ def task_assing_role_ls(task_assign_info_ls):
 		)
 
 
+import copy,json
+
+TRANSLATABLE_KEYS_FEDARAL=os.getenv("TRANSLATABLE_KEYS_FEDARAL").split(" ")
+HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
+
+
+MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
+LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
+
+def federal_json_translate(json_file,tar_code,src_code,translate=True):
+	from ai_workspace_okapi.utils import get_translation
+	
+	json_file = json_file['news']
+	for json_data in json_file:
+		json_file_copy = copy.deepcopy(json_data)
+		for key,value in json_file_copy.items():
+			if key in TRANSLATABLE_KEYS_FEDARAL:
+				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+				if type(value) == list:
+					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+						for lists in LIST_KEYS_FEDARAL[key]:
+							for list_names in json_file_copy[key]:
+								if lists in list_names.keys():
+									if translate:
+										list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+																			source_lang_code=src_code,format_=format_)			
+				else:
+					if translate:
+						json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+															source_lang_code=src_code,format_=format_)
+	return  json_file_copy
+
+
+
+
+# def federal_json(json_data,tar_code,src_code):
+#     from ai_workspace_okapi.utils import get_translation
+#     translated_json_list = []
+#     json_data = json_data['news']
+#     for i in json_data:
+#         json_file_copy = copy.deepcopy(i)
+#         for key,value in json_file_copy.items():
+#             if key in TRANSLATABLE_KEYS_FEDARAL:
+#                 format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+                 
+#                 if type(value) == list:
+#                     if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+#                         for lists in LIST_KEYS_FEDARAL[key]:
+#                             for list_names in json_file_copy[key]:
+#                                 if lists in list_names.keys():
+#                                     list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+# 																	source_lang_code=src_code,format_=format_)
+#                 else:
+#                     json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+# 														source_lang_code=src_code,format_=format_)
+#         translated_json_list.append(json_file_copy)
+#     return  {'news': translated_json_list}
+
+
+
+# def fedaral_json_translate(json_file,tar_code,src_code):
+#     with open(json_file,'r') as fp:
+#         jf = json.load(fp)
+# 	translated_json_list = []
+# 	json_files = jf['news']
+# 	for json_file in json_files:
+# 		json_file_copy=copy.deepcopy(json_file)
+# 		for key,value in json_file_copy.items():
+# 			if key in TRANSLATABLE_KEYS_FEDARAL:
+# 				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+# 				if type(value) == list:
+# 					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+# 						for lists in LIST_KEYS_FEDARAL[key]:
+# 							for list_names in json_file_copy[key]:
+# 								list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+# 																	source_lang_code=src_code,format_=format_)
+# 				else:
+# 					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+# 														source_lang_code=src_code,format_=format_)
+# 		translated_json_list.append(json_file_copy)
+#     return {'news':translated_json_list}
+
 
 # def generate_list_cache_key(user):
 #     print("R---->",user)
@@ -128,14 +210,6 @@ def task_assing_role_ls(task_assign_info_ls):
 
 
 
-
-
-
-
-
-
-
-
 # from functools import wraps
 # from django.core.cache import cache
 # def custom_cache_page(timeout):
@@ -153,3 +227,35 @@ def task_assing_role_ls(task_assign_info_ls):
 #         return _wrapped_view
 #     return decorator
 
+def split_dict(single_data):
+    trans_keys = ["keywords","description","source","image_caption","heading","newsId","authorName","location","story"]
+    trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
+    trans_keys_dict = {}
+    json_data = single_data.get('news')[0]
+    for key,value in  json_data.items():
+        if key in trans_keys:
+            trans_keys_dict[key] = value
+        if key in list(trans_key_get_list.keys()):
+            trans_list=[]
+            for i in value:
+                if trans_key_get_list[key] in i.keys():
+                    trans_list.append({trans_key_get_list[key] :i[trans_key_get_list[key]]})
+            trans_keys_dict[key] = trans_list
+    return trans_keys_dict
+
+
+
+def merge_dict(translated_json,raw_json):
+	print("Tar---------->",translated_json)
+	print("Raw---------->", raw_json)
+	raw_json_trans = copy.deepcopy(raw_json)
+	translated_json_copy = copy.deepcopy(translated_json)
+	for key,values in list(LIST_KEYS_FEDARAL.items()):
+		if key in list(raw_json_trans.keys()):
+			for count,j in enumerate(raw_json_trans[key]):
+				j.update(translated_json_copy[key][count])
+		translated_json_copy.pop(key)
+	raw_json_trans.update(translated_json_copy)
+	return raw_json_trans
+
+	 

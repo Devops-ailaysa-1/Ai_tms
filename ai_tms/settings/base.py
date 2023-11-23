@@ -565,7 +565,7 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
-TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
+TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
 
 # FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
 # FONT_THUMBNAIL_URL = '/font-thumnail/'

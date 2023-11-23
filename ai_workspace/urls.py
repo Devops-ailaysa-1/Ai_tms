@@ -21,6 +21,8 @@ router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
 router.register(r"project/express/setup", api_views.ExpressProjectSetupView,\
 				basename="project-express-setup")
+router.register(r"project/news/setup", api_views.NewsProjectSetupView,\
+				basename="project-news-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
@@ -31,6 +33,9 @@ router.register(r'steps',api_views.StepsView,basename='steps')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
+
+router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
+
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
@@ -105,6 +110,11 @@ urlpatterns += [
 	path('send_msg_extend_deadline/',api_views.msg_to_extend_deadline),
 	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
 	path('translate_file/',api_views.translate_file),
+	path('get_stories/',api_views.GetNewsFederalView.as_view(),name='get-news-list'),
+	path('translated_story/',api_views.get_translated_story),
+	path('news_detail/',api_views.get_news_detail),
+    # path("download_post/",api_views.download_fedaral)
+    # path('json_trans/',api_views.fedaral_json)
 	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),
 ]
 # views urls adding for local testing
@@ -114,6 +124,7 @@ urlpatterns += [
 	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
 	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+    
 
 	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here
 
