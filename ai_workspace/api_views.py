@@ -4756,24 +4756,6 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 def get_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     tar_lang = request.GET.get('target_lang')
-<<<<<<< HEAD
-    task_news = TaskNewsDetails.objects.filter(news_id=news_id,task__job__target_language__language = tar_lang)
-    if task_news:
-        task_assign = task_news.first().task.task_info.filter(client_response=3)
-        if task_assign:
-            doc = task_assign.first().task.document
-            doc_to_file = DocumentToFile()
-            res = doc_to_file.document_data_to_file(request,doc.id)
-            if res.status_code in [200, 201]:
-                with open(res.text,"r") as fp:
-                    tar_json = json.load(fp)
-                    print("tar_json")
-                    print(tar_json)
-                src_json = task_news.first().source_json.get('news')[0]
-                final_json = merge_dict(tar_json,src_json)
-                res = {'success': True, 'data':final_json}
-                return Response({'result':res},status = 200)
-=======
     news_id = request.GET.get('news_id')
     if news_id:
         task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
@@ -4793,7 +4775,6 @@ def get_translated_story(request):
                 else:
                     res = {'success':False, 'data':{}}  
                     return Response({'result':res},status = 500)
->>>>>>> origin/ai_enterprise_news
             else:
                 res = {'success': True, 'data': {'msg':'Inprogress'}}
                 return Response({'result':res},status=202)
