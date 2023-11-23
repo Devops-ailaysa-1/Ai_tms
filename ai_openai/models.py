@@ -342,8 +342,11 @@ class BookBackMatter(models.Model):
 #     instant_result = models.CharField(max_length=800)
     
 
-
-
+class NewsPrompt(models.Model):
+    name = models.CharField(max_length = 200, null=True, blank=True)
+    news_modify_name = models.CharField(max_length = 200, null=True, blank=True)
+    prompt = models.CharField(max_length = 900, null=True, blank=True)
+    assistant = models.CharField(max_length = 200, null=True, blank=True)
 
 
 

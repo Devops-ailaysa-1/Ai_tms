@@ -217,7 +217,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-        print("Doc------------->",doc_data.get('total_word_count'))
+        print("Doc------------->",doc_data)
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}
@@ -1033,7 +1033,7 @@ class MT_RawAndTM_View(views.APIView):
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
-
+        # initial_credit = 100
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)
@@ -1278,7 +1278,6 @@ class MT_RawAndTM_View(views.APIView):
 
             # For normal and merged segments
             if split_check(segment_id):
-
                 tm_data = self.get_tm_data(request, segment_id)
                 print("Tm data-------->",tm_data)
             
@@ -1592,9 +1591,63 @@ class DocumentToFile(views.APIView):
         workbook.close()
 
         return download_file(bilingual_file_path)
+    
+    @staticmethod
+    def json_key_manipulation(res_json_path): #### for federal
+        from ai_workspace.utils import LIST_KEYS_FEDARAL
+        print("######################")
+        to_rearrange_key = ['heading','story']
+        with open(res_json_path,"r") as fp:
+            fp = json.load(fp)
+            # fp = fp['news'][0]
+            
+        print("Fp------------->", fp.keys())
+        rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
+        rearraged_keys_dict.update(fp)
+        # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        res_json_path_text = res_json_path.split("json")[0]+"txt"
+        print(res_json_path_text)
+        # with open(res_json_path_text, 'w') as file:
+        #     file.write(rearraged_keys_dict)
+        #     file.close()
+
+        with open(res_json_path_text,'w') as fp:
+            for key,value in rearraged_keys_dict.items():
+                key = str(key)
+                value = str(value)
+                if key in list(LIST_KEYS_FEDARAL.keys()):
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    text = []
+                    for i in rearraged_keys_dict[key]:
+                        text.append(i[LIST_KEYS_FEDARAL[key][0]])
+                    fp.write(",".join(text))
+                    fp.write("\n")
+                else:
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    fp.write(value)
+                    fp.write("\n")
+                fp.write("---------")
+                fp.write("\n")
+                fp.write("\n")
+            fp.close()
+        return res_json_path_text
+ 
+    
+
+    def download_file_processing(self,file_path):
+        try:
+            if os.path.isfile(file_path):# if os.path.isfile(res.text):
+                if os.path.exists(file_path):
+                    file_res =  self.get_file_response(file_path)
+                    return file_res
+        except Exception as e:
+            print("Exception during file output------> ", e)
 
 
     def get(self, request, document_id):
+
         doc = DocumentToFile.get_object(document_id)
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
@@ -1639,30 +1692,41 @@ class DocumentToFile(views.APIView):
                 return self.download_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
 
             if output_type == "MTRAW":
+                print("output_type----->>>" , output_type)
                 mt_process = self.mt_pre_process(document_id)
                 if mt_process.get('status') == True:
+                    print("mt_process.get('status')",mt_process.get('status'))
+                    doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)
+                    if doc.job.project.project_type_id == 8:
+                        #res = self.document_data_to_file(request,document_id,True)
+                        res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
-                start_time_2 = time.time()
                 res = self.document_data_to_file(request, document_id)
-                end_time_2 = time.time()
-                tot_time_taken = end_time_2 - start_time_2
-                print("Tot Tim Tak---------------->",tot_time_taken)
-            if res.status_code in [200, 201]:
-                start_time_1 = time.time()
-                file_path = res.text
-                try:
-                    if os.path.isfile(res.text):
-                        if os.path.exists(file_path):
-                            file_res =  self.get_file_response(file_path)
-                            end_time_1 = time.time()
-                            time_taken_1 = end_time_1 - start_time_1
-                            print("Time Taken for download---------------->",time_taken_1)
-                            return file_res
-                except Exception as e:
-                    print("Exception during file output------> ", e)
+                if doc.job.project.project_type_id == 8:
+                   res = DocumentToFile.json_key_manipulation(res.text) 
+            
+            if isinstance(res, str):
+                return self.download_file_processing(res)
+                # print("downloaded")
+
+            elif  res.status_code in [200, 201]:
+                return self.download_file_processing(res.text)
+                # start_time_1 = time.time()
+                # file_path = res.text
+                # try:
+                #     if os.path.isfile(res.text):
+                #         if os.path.exists(file_path):
+                #             file_res =  self.get_file_response(file_path)
+                #             end_time_1 = time.time()
+                #             time_taken_1 = end_time_1 - start_time_1
+                #             print("Time Taken for download---------------->",time_taken_1)
+                #             return file_res
+                # except Exception as e:
+                #     print("Exception during file output------> ", e)
+            
             else:
                 logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
                 return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
@@ -2819,10 +2883,10 @@ def download_mt_file(request):
     state = mt_raw_update.AsyncResult(cel_task.celery_task_id).state
     print("st------>",state)
     if state == 'SUCCESS':
-        #if cel_task.error_type == 'Insufficient Credits':
-        #    return Response({'msg':'Insufficient Credits'},status=400)
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
+        if doc.job.project.project_type_id == 8:
+            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
             file_path = res.text
             try:

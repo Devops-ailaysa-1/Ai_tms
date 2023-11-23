@@ -30,8 +30,6 @@ HOST_NAME=os.getenv('HOST_NAME')
 def credit_calculation_for_img_gen():
     pass 
 
-    
-
 
 class ImageloadSerializer(serializers.ModelSerializer):
     image_asset_id=serializers.PrimaryKeyRelatedField(queryset=CanvasUserImageAssets.objects.all(),required= False)
