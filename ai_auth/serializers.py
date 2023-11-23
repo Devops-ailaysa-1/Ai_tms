@@ -337,6 +337,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
     is_social = serializers.SerializerMethodField(source="get_is_social",read_only=True)
     is_campaign =  serializers.SerializerMethodField(source="get_is_campaign",read_only=True)
+    is_enterprise = serializers.SerializerMethodField(source="get_is_enterprise",read_only=True)
     signup_method =  serializers.SerializerMethodField(source="get_signup_method",read_only=True)
 
     class Meta:
@@ -376,7 +377,19 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             return True
         else :
             return False
-    
+        
+    def get_is_enterprise(self,obj):
+        print("inside ss")
+        if obj.is_enterprise:
+            return True
+        else:
+            if obj.team:
+                print("inside objs ")
+                return obj.team.owner.is_enterprise  
+            else:
+                return False
+ 
+
     def get_signup_method(self,obj):
         soc = SocialAccount.objects.filter(user=obj)
         if soc.count()==0:
