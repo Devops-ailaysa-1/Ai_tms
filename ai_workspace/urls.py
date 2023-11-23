@@ -112,6 +112,7 @@ urlpatterns += [
 	path('translate_file/',api_views.translate_file),
 	path('get_stories/',api_views.GetNewsFederalView.as_view(),name='get-news-list'),
 	path('translated_story/',api_views.get_translated_story),
+	path('news_detail/',api_views.get_news_detail),
     # path("download_post/",api_views.download_fedaral)
     # path('json_trans/',api_views.fedaral_json)
 	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),
