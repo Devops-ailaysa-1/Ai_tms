@@ -362,7 +362,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
 
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method',*extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method','is_enterprise',*extra_fields)
         read_only_fields = ('email',)
 
     def get_is_social(self,obj):
