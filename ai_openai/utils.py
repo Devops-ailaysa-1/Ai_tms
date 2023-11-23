@@ -92,18 +92,21 @@ def get_prompt_gpt_turbo_1106(messages):
     return completion
 
 
+OPEN_AI_GPT_MODEL = "gpt-4"   #"gpt-3.5-turbo"
+TEXT_DAVINCI = "text-davinci-003"
+
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
     print("<--------------------------Inside------------------------------------->")
     print("Max tokens------------>",max_token)
     if max_token:
-        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n,max_tokens=int(max_token))
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n,max_tokens=int(max_token))
     else:
-        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
 async def generate_text(prompt):
-    response = await openai.Completion.acreate(engine="text-davinci-003",prompt=prompt,max_tokens=150,n=1,top_p=1,
+    response = await openai.Completion.acreate(engine=TEXT_DAVINCI,prompt=prompt,max_tokens=150,n=1,top_p=1,
                                                frequency_penalty=1,presence_penalty=1,temperature=0.7,)
     return response
 
@@ -120,7 +123,7 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
 
 ############
 async def generate_outline_response(prompt,n):
-    response = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt[0]}],
+    response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
                                                    n=n,max_tokens=170)
     return response 
  
