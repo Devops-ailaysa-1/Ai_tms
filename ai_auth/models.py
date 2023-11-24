@@ -467,6 +467,9 @@ class PurchasedUnitsCount(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
+    def __str__(self) -> str:
+        return self.user.email
+
 
 class PdfChatUsageQuota(models.Model):
     user = models.OneToOneField(AiUser,on_delete=models.CASCADE)
