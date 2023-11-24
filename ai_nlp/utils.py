@@ -145,6 +145,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     if model_name == "openai":
         print(model_name ,"openai")
         llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
+        embed = OpenAIEmbeddings()
         
     else: 
         print(model_name,"cohere")
