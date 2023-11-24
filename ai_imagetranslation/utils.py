@@ -450,6 +450,7 @@ def background_remove(instance):
     files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
     response = requests.request("POST", BACKGROUND_REMOVAL_URL, headers=headers, data=payload, files=files)
+    
     image_path = BACKGROUND_REMOVAL_URL+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
     mask = Image.fromarray(post_process(np.array(mask)))
