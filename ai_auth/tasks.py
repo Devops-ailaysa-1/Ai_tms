@@ -589,7 +589,10 @@ def pre_translate_update(task_id):
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
                 try:
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    if task.job.project.project_type_id == 8:
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits,format_='html')
+                    else:
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                     tags = get_tags(seg)
                     if tags:
                         seg.target = mt + tags

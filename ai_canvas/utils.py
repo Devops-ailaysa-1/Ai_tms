@@ -716,3 +716,5 @@ def replace_url_with_base64(input_string):
 #     return (red, green, blue, alpha)
 #   else:
 #     raise ValueError("Invalid color format")
+
+

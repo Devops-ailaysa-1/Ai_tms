@@ -241,8 +241,7 @@ docx2txt==0.8
 langchain==0.0.284
 faiss-cpu==1.7.4
 pysqlite3-binary
-
-
+pycryptodome==3.19.0
 transformers 
 tqdm  
 scikit-learn 

@@ -735,7 +735,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type == 1 or project_type == 2 or project_type == 5:
+				if project_type in [1,2,5,9,8]:  #8
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -1099,6 +1099,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
 	design_project = serializers.SerializerMethodField()
+	news_detail = serializers.SerializerMethodField()
+	push_detail = serializers.SerializerMethodField()
+	#target_news_data = serializers.SerializerMethodField()
+	#source_news_data = serializers.SerializerMethodField()
 	# open_in =  serializers.SerializerMethodField()
 	# transcribed = serializers.SerializerMethodField()
 	# text_to_speech_convert_enable = serializers.SerializerMethodField()
@@ -1114,11 +1118,18 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done',)
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",)
 
+	
+				
+
+	def get_push_detail(self,obj):
+		if obj.job.project.project_type_id == 8:
+			try:return obj.news_task.first().pushed
+			except:return None
+		return None
 
 	def get_design_project(self,obj):
-		#print("Type--------->",obj.job.project.project_type_id)
 		res = None
 		if obj.job.project.project_type_id == 6: #Designer Project
 			image_job = CanvasTranslatedJson.objects.filter(job_id = obj.job.id)
@@ -1134,6 +1145,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					res ={'desg_project':image_proj_obj,'desg_job': image_job_obj}
 			return res
 		else:return res
+
+	def get_news_detail(self,obj):
+		data = {}
+		if obj.job.project.project_type_id == 8:
+			if obj.news_task.exists():
+				json_data = obj.news_task.first().source_json.get('news')[0]
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading'),'maincat_name':json_data.get('maincat_name')}
+		return data
 
 	# def get_image_translate_project(self,obj):
 	# 	if obj.job.project.project_type_id == 6: #Designer Project
@@ -1244,48 +1263,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			return None
 		else:
 			return cached_value	
-		#return cached_value
 
-	# def to_representation(self, instance):
 
-	# 	representation = super().to_representation(instance)
-	# 	if instance.job.project.project_type_id == 4 :
-	# 		representation["transcribed"] = self.get_transcribed(instance)
-	# 		representation["text_to_speech_convert_enable"] = self.get_text_to_speech_convert_enable(instance)
-	# 	return representation
-
-	# def get_task_self_assign_info(self,obj):
-	# 	user = self.context.get("request").user
-	# 	task_assign = obj.task_info.filter(task_assign_info__isnull=False)
-	# 	if task_assign:
-	# 		for i in task_assign:
-	# 			if i.step_id == 1:return None
-	# 			else:
-	# 				self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
-	# 				print("SA------------>",self_assign)
-	# 				if self_assign:
-	# 					step = self_assign.step.id
-	# 					mt_enable = self_assign.mt_enable
-	# 					pre_translate = self_assign.pre_translate
-	# 					copy_paste_enable = self_assign.copy_paste_enable
-	# 					task_status = self_assign.get_status_display()
-	# 					try:
-	# 						if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
-	# 							can_open = False
-	# 						else:can_open = True
-	# 					except:can_open = True
-	# 					return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
-	# 				else:return None
-	# 	else:
-	# 		return None
-
-	# def get_task_word_count(self,instance):
-	# 	if instance.document_id:
-	# 		document = Document.objects.get(id = instance.document_id)
-	# 		return document.total_word_count
-	# 	else:
-	# 		t = TaskDetails.objects.get(task_id = instance.id)
-	# 		return t.task_word_count
 
 
 class ProjectSerializerV2(serializers.ModelSerializer):
@@ -1842,10 +1821,13 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				print("TAS Data----------->",task_assign_data,task_history)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
+				# if task_assign_data.get('client_response') == 3:
+				# 	task_assign_data.update({'status':2})
 				if task_assign_data.get('client_response') == 2:
 					task_assign_data.update({'status':2})
 					TaskAssign.objects.filter(task=instance.task,step=instance.step,reassigned=False).update(status=2)
-				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
+				if task_assign_data.get('client_response') != 3:
+					notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
 		
@@ -1941,7 +1923,65 @@ class AssertSerializer(ProjectQuickSetupSerializer):
             data.update(ch_data)
         return data
 
+from itertools import repeat
 
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.utils import federal_json_translate
+from concurrent.futures import ThreadPoolExecutor
+class TaskNewsDetailsSerializer(serializers.ModelSerializer):
+	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+	source_json = serializers.JSONField(required=False )
+	target_json = serializers.JSONField(required=False )
+	class Meta:
+		model = TaskNewsDetails
+		fields = ("id","task","source_json","target_json","created_at","updated_at")
+
+	
+	def create(self, validated_data):
+		task = validated_data.get('task')
+		instance = TaskNewsDetails.objects.create(task=task)
+
+		file_path = instance.task.file.file.path
+		src_code = instance.task.job.source__language
+		tar_code = instance.task.job.target__language
+
+		with open(file_path, 'r') as fp:
+				json_data = json.load(fp)
+
+		print("JSon--------->",json_data)
+
+		# json_data_list = json_data['news']
+		# with ThreadPoolExecutor() as executor:
+		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
+		# executor.shutdown()
+
+		translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code)
+		instance.source_json=json_data
+		instance.target_json=translated_json
+		instance.save()
+		mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
+		TaskNewsMT.objects.create(task=instance,mt_raw_json=json_data,mt_engine=mt_engine)
+		return instance
+
+	def update(self, instance, validated_data):
+		source_json = validated_data.get('source_json',None)
+		target_json = validated_data.get('target_json',None)
+
+		if source_json:
+			instance.source_json = source_json
+		if target_json:
+			instance.target_json = target_json
+
+		return instance
+	
+
+ 
+
+
+# class TaskNewsMTSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = TaskNewsMT
+# 		fields = "__all__"
 
 
 

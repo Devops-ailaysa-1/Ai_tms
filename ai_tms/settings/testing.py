@@ -155,15 +155,10 @@ CACHEOPS = {
     
 }
 
+
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'KEY_PREFIX': '',  
-        },
-        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
@@ -278,7 +273,7 @@ CACHEOPS = {
 
     # Cache all queries to Permission
     # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
-    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+    # 'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
 
 
     # # And since ops is empty by default you can rewrite last line as:
@@ -295,17 +290,17 @@ CACHEOPS = {
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
+# DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
 
-DBBACKUP_STORAGE_OPTIONS = {
-    'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
-    'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
-    'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
-    'endpoint_url': 'https://ams3.digitaloceanspaces.com',
-    'default_acl': 'private',
-    'location': os.getenv('MEDIA_BACKUP_LOCATION')
+# DBBACKUP_STORAGE_OPTIONS = {
+#     'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
+#     'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
+#     'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
+#     'endpoint_url': 'https://ams3.digitaloceanspaces.com',
+#     'default_acl': 'private',
+#     'location': os.getenv('MEDIA_BACKUP_LOCATION')
 
-}
+# }
 
 
 

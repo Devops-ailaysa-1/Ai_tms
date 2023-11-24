@@ -50,6 +50,8 @@ class CanvasUserImageAssets(models.Model):
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='img_asst_created_by')  
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_user_imageassets,blank=True,null=True)
     status=models.BooleanField(default=False)
+    duration=models.CharField(max_length=200,null=True,blank=True)
+    frame=models.CharField(max_length=200,null=True,blank=True)
 
 class CanvasDesign(models.Model):
     project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="designer_project")

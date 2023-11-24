@@ -44,6 +44,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     is_vendor = models.BooleanField(default=False)
     is_agency = models.BooleanField(default=False)
     is_internal_member = models.BooleanField(default=False)
+    is_enterprise = models.BooleanField(default=False)
     first_login = models.BooleanField(default=False)
     need_fix = models.BooleanField(default=False)
     currency_based_on_country = models.ForeignKey(Currencies,related_name='aiuser_country_based_currency',
@@ -233,6 +234,12 @@ post_save.connect(get_currency_based_on_country, sender=AiUser)
 post_save.connect(add_purchase_units, sender=AiUser)
 #post_save.connect(proz_connect, sender=AiUser)
 
+
+class EnterpriseUsers(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name="user_enterprise")
+    subscription_name = models.CharField(max_length=100,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
 
 class BaseAddress(models.Model):
@@ -459,6 +466,9 @@ class PurchasedUnitsCount(models.Model):
     expires_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.user.email
 
 
 class PdfChatUsageQuota(models.Model):

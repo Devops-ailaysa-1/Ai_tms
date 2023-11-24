@@ -33,7 +33,7 @@ from indicnlp.tokenize.sentence_tokenize import sentence_split
 from notifications.signals import notify
 from pydub import AudioSegment
 from rest_framework import permissions
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, pagination
 from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -98,6 +98,11 @@ from django.db.models.query import QuerySet
 from ai_auth.utils import get_assignment_role
 from django.views.decorators.cache import never_cache
 from ai_canvas.serializers import CanvasDesignSerializer
+from rest_framework.authentication import TokenAuthentication
+from ai_auth.authentication import APIAuthentication
+from rest_framework.decorators import authentication_classes
+from .utils import merge_dict
+from ai_auth.access_policies import IsEnterpriseUser
 
 class IsCustomer(permissions.BasePermission):
 
@@ -705,9 +710,11 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "ai_voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
         elif value == "translation":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_type_id__in = [6,7,8])#.exclude(project_file_create_type__file_create_type="From insta text")#.exclude(project_type_id = 5)
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
+        elif value == "news":
+            queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
             #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
         #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
@@ -882,6 +889,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            pr = Project.objects.get(id=serlzr.data.get('id'))
+            if pr.project_type_id == 8:
+                NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
             #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -909,7 +919,6 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-        print("User1=============>",user_1)
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -4450,99 +4459,6 @@ def translate_file_task(task_id):
         return {'msg':'Insufficient Credits','status':402}
 
 
-
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-# def get_translate_file_detail(request,project_id):
-#     pr = Project.objects.get(id=project_id)
-#     if pr.file_translate == True:
-#         data = []
-#         for i in pr.get_tasks:
-#             translated = True if i.task_file_detail.exists() else False
-#             data.append({'task_id':i.id,'Translated':translated})
-#         return Response(data,status=200)
-#     else:
-#         return Response({'msg':'Not a file translate project'},status=400) 
-    # print(ser.errors)
-    # queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
-    # ser = TaskTranslatedFileSerializer(queryset,many=True)
-    # return Response(ser.data)
-# ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
-#             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
-#             print("State--------------->",state)
-#             if state == 'PENDING' or state == 'STARTED':
-#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
-#             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
-#                 if state == "FAILURE":
-#                     user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-#                     user_credit.credits_left = user_credit.credits_left + consumable_credits
-#                     user_credit.save()
-#                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name),queue='high-priority' )
-#                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-#                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def translate_file_process(task_id):
-#     pr_id = request.GET.get(project_id)
-#     tsk_id = request.GET.get(task_id)
-#     pr = Project.objects.get(id=pr_id)
-#     tsk = Task.objects.filter(id=tsk_id)
-#     user = pr.ai_user
-#     tasks = pr.get_tasks if pr_id else tsk
-#     for i in tasks:
-#         file,name = file_translate(i.file.get_source_file_path,i.job.target_language_code)
-#         ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":i.id})
-#         if ser.is_valid():
-#             ser.save()
-#         print(ser.errors)
-#     queryset = TaskTranslatedFile.objects.filter(task__in=tasks)
-#     ser = TaskTranslatedFileSerializer(queryset,many=True)
-#     return Response(ser.data)
-
-
-
-
-    # @integrity_error
-    # def create(self,request):
-    #     step = request.POST.get('step')
-    #     task_assign_detail = request.POST.get('task_assign_detail')
-    #     files=request.FILES.getlist('instruction_file')
-    #     sender = self.request.user
-    #     receiver = request.POST.get('assign_to')
-    #     Receiver = AiUser.objects.get(id = receiver)
-    #     ################################Need to change########################################
-    #     user = request.user.team.owner  if request.user.team  else request.user
-    #     if Receiver.email == 'ailaysateam@gmail.com':
-    #         HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-    #     ##########################################################################################
-    #     task = request.POST.getlist('task')
-    #     hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
-    #     tasks= [json.loads(i) for i in task]
-    #     tsks = Task.objects.filter(id__in=tasks)
-    #     for tsk in tsks:
-    #         authorize(request, resource=tsk, actor=request.user, action="read")
-    #     job_id = Task.objects.get(id=tasks[0]).job.id
-    #     assignment_id = create_assignment_id()
-    #     for i in task_assign_detail:
-            
-    #         with transaction.atomic():
-    #             try:
-    #                 serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-    #                 if serializer.is_valid():
-    #                     serializer.save()
-    #                     weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-    #                     msg_send(sender,Receiver,tasks[0])
-    #                     print("Task Assigned")
-    #                 print("Error--------->",serializer.errors)
-    #             except:
-    #                 pass
-    #                 # if Receiver in hired_editors:
-    #                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-    #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
-    #     return Response({"msg":"Task Assigned"})
-    #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 from itertools import chain
 from .serializers import CombinedSerializer
 
@@ -4560,7 +4476,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_1.request = request
         view_instance_1.request.GET = request.GET
 
-        queryset1 = view_instance_1.get_queryset()
+        queryset1 = view_instance_1.get_queryset().exclude(project_type_id=8)
 
 
         view_instance_2 = MyDocumentsView()
@@ -4569,7 +4485,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_2.request.GET = request.GET
 
         queryset2 = view_instance_2.get_queryset_for_combined()
-        print("Queryset@------------>",queryset2)
+        # print("Queryset@------------>",queryset2)
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         project_managers = request.user.team.get_project_manager if request.user.team else []
@@ -4582,8 +4498,8 @@ class CombinedProjectListView(viewsets.ModelViewSet):
             queryset1 = queryset1.filter(project_name__icontains=search_query)
             queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
             queryset3 = queryset3.filter(pdf_file_name__icontains=search_query)
-        print("Qu------->",queryset2)
-        print("Q3--------->",queryset3)
+        # print("Qu------->",queryset2)
+        # print("Q3--------->",queryset3)
         merged_queryset = list(chain(queryset1,queryset2,queryset3))
         ordering_param = request.GET.get('ordering', '-created_at')  
 
@@ -4625,51 +4541,6 @@ def analysed_true(pr,tasks):
                         "task_words":task_words}
 
 
-# @api_view(['GET'])
-# def combined_paginated_response(request):
-#     view_instance_1 = QuickProjectSetupView()
-
-#     view_instance_1.request = request
-#     view_instance_1.request.GET = request.GET
-
-#     queryset1 = view_instance_1.get_queryset()
-
-
-#     view_instance_2 = MyDocumentsView()
-
-#     view_instance_2.request = request
-#     view_instance_2.request.GET = request.GET
-
-#     queryset2 = view_instance_2.get_queryset_new()
-
-#     search_query = request.GET.get('search')
-
-#     if search_query:
-#         queryset1 = queryset1.filter(project_name__icontains=search_query)
-#         queryset2 = queryset2.filter(doc_name__icontains=search_query)
-
-#     merged_queryset = list(chain(queryset1,queryset2))
-#     ser = CombinedSerializer(merged_queryset,many=True,context={'request': request})
-#     return Response(ser.data)
-    
-
-
-            # parent_queryset = queryset.annotate(
-        #                     sorted_datetime=ExpressionWrapper(Coalesce(
-        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
-        #                     Case(
-        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
-        #                         default=F('created_at'),
-        #                         output_field=DateTimeField(),
-        #                     ),
-        #                     Value(datetime.min),),
-        #                     output_field=DateTimeField(),)
-        #                     )#.order_by('-sorted_datetime')
-
-        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
-               # print("User------------------>111----->",user)
-        # user = self.request.user.team.owner if self.request.user.team else self.request.user
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
 
 
 
@@ -4738,105 +4609,335 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
-        # if ordering_param.startswith('-'):
-        #     field_name = ordering_param[1:]  
-        #     reverse_order = True
-        # else:
-        #     field_name = ordering_param
-        #     reverse_order = False
-        # if field_name == 'created_at':
-        #     ordered_queryset = sorted(merged_queryset, key=lambda obj:getattr(obj, field_name), reverse=reverse_order)
-        # else:
-        #     ordered_queryset = sorted(merged_queryset,key=lambda obj: (getattr(obj, 'project_name', None) or getattr(obj,'pdf_file_name',None)),reverse=reverse_order)
-        # print("Or---------->",ordered_queryset)
-        # pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        # ser = ToolkitSerializer(pagin_tc,many=True,context={'request': request})
-        # response = self.get_paginated_response(ser.data)
-        # return response
+class GetNewsFederalView(generics.ListAPIView):
+    pagination.PageNumberPagination.page_size = 20
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+    @staticmethod
+    def check_user_federal(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        try:
+            if user.user_enterprise.subscription_name == 'Enterprise - TFN':
+                return True
+        except:
+            return False
+
+
+    def get_stories(self):
+        page = self.request.query_params.get('page', 1)
+        count = self.request.query_params.get('count', 20)
+        news_id = self.request.query_params.get('news_id', None)
+        search = self.request.query_params.get('search', None)
+        #contenttype = self.request.query_params.get('content')
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+
+        headers = {
+            's-id': os.getenv("FEDERAL-KEY"),
+            }
+        
+        startIndex = (int(page) - 1) * int(count)
+       
+        params={ 
+            'startIndex':startIndex,
+            'count':count,
+            }
+        if news_id:
+            params.update({'newsId':news_id})
+        if search:
+            params.update({'search':search})
+        integration_api_url = "https://thefederal.com/dev/h-api/news"
+        response = requests.request("GET", integration_api_url, headers=headers, params=params)
+        if response.status_code == 200:
+            news_jsons = response.json().get('news')
+            for news_json in news_jsons:
+                tasks = TaskNewsDetails.objects.filter(news_id=news_json['newsId'])
+                if tasks:
+                    tar_code = []
+                    news_json['claimed'] = True
+                    news_json['src_code'] = tasks[0].task.job.source_language_id
+                    news_json['tar_code'] = list(set([task.task.job.target_language_id  for task in tasks]))
+            response._content = json.dumps(news_jsons).encode('utf-8')
+        return response
+
+    def list(self, request, *args, **kwargs):
+        #### Need to check request from federal team ####
+        allow = GetNewsFederalView.check_user_federal(request.user)
+        if allow:
+            response = self.get_stories()
+            print("RES-------------->",response)
+            if response.status_code == 500:
+                return Response({'msg':"something wrong with API"},status=400)
+            return Response(response.json())
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403)
+      
+
+from django.core.files.base import ContentFile
+from ai_workspace.utils import split_dict
+
+class NewsProjectSetupView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+    def get_files(self,news):
+        files =[]
+        headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+        for i in news:
+            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
+            translatable_data = split_dict(response.json()) 
+            print("Trans------------------->",translatable_data)
+            if response.status_code == 200:
+                name = f"{i}.json"
+                im_file = DJFile(ContentFile(json.dumps(translatable_data)),name=name)
+                files.append(im_file)
+        print("files---->" ,files)
+        return files
+
+    @staticmethod
+    def create_news_detail(pr):
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            print("JsonData------------>",json_data)
+            newsID = json_data.get('newsId')
+            headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
+            if response.status_code == 200:
+                TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':response.json()})
+
+            
+
+    def create(self, request):
+        allow = GetNewsFederalView.check_user_federal(request.user)
+        if allow:
+            news = request.POST.getlist('news_id')
+            files = self.get_files(news)
+            user = self.request.user
+            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                pr = Project.objects.get(id=serializer.data.get('id'))
+                NewsProjectSetupView.create_news_detail(pr)
+                authorize(request,resource=pr,action="create",actor=self.request.user)
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
+
+
+
+from ai_workspace.serializers import TaskNewsDetailsSerializer
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+
+class TaskNewsDetailsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+    def list(self,request):
+        user = request.user
+        task_news = TaskNewsDetails.objects.filter(task__file__project__ai_user=user)
+        serializer = TaskNewsDetailsSerializer(task_news, many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = TaskNewsDetailsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        obj = TaskNewsDetails.objects.get(id=pk )  ##request filter
+        serializer = TaskNewsDetailsSerializer(obj,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
     
+    def retrieve(self, request, pk=None):
+        obj = TaskNewsDetails.objects.get(id=pk )
+        serializer = TaskNewsDetailsSerializer(obj)
+        return Response(serializer.data)
 
-    # @staticmethod
-    # @cached(timeout=60 * 15)
-    # def get_tasks_by_projectid(request, pk):
-    #     project = get_object_or_404(Project.objects.all(),
-    #                 id=pk)
-    #     pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
-    #     user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-    #     if project.ai_user == request.user:
-    #         print("Owner")
-    #         return project.get_tasks
-    #     if project.team:
-    #         print("Team")
-    #         print(project.team.get_project_manager)
-    #         if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
-    #             return project.get_tasks
-    #         # elif self.request.user in project.team.get_project_manager:
-    #         #     return project.get_tasks
-    #         else:
-    #             return [task for job in project.project_jobs_set.all() for task \
-    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    #     else:
-    #         print("Indivual")
-    #         # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-    #         #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-    #         return [task for job in project.project_jobs_set.all() for task \
-    #                 in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    # @staticmethod
-    # def get_queryset_with_caching(request,pk):
-    #     try:
-    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
-    #         print("Cache HIT")  # This will be printed if the queryset is fetched from the cache
-    #         res = "CacheHit"
-    #     except CacheMiss:
-    #         queryset = VendorDashBoardView.get_tasks_by_projectid(request=request,pk=pk)
-    #         print("Cache MISS")  # This will be printed if the queryset is fetched from the database
-    #         res = "CatchMiss"
-    #     return res
+    
+    def delete(self,request,pk):
+        queryset = TaskNewsDetails.objects.all()
+        obj = get_object_or_404(queryset, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-# @staticmethod
-#     def get_tasks_by_projectid(request, pk):
-#         project = get_object_or_404(Project.objects.all(),
-#                     id=pk)
-#         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
-#         user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
-#         if project.ai_user == request.user:
-#             print("Owner")
-#             return project.get_tasks
-#         if project.team:
-#             print("Team")
-#             print(project.team.get_project_manager)
-#             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
-#                 return project.get_tasks
-#             # elif self.request.user in project.team.get_project_manager:
-#             #     return project.get_tasks
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def push_translated_story(request):
+    from ai_workspace_okapi.api_views import DocumentToFile
+    task_id = request.GET.get('task_id')
+    task = Task.objects.get(id=task_id)
+    src_json,tar_json = {},{}
+    headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+    CMS_create_url = "https://thefederal.com/dev/h-api/createFeed"
+    params={ 
+            'sessionId':os.getenv("CMS-SESSION-ID"),
+            }
+    doc = task.document
+    if doc:
+        src_json = task.news_task.first().source_json.get('news')[0]
+        doc_to_file = DocumentToFile()
+        res = doc_to_file.document_data_to_file(request,doc.id)
+        if res.status_code in [200, 201]:
+            with open(res.text,"r") as fp:
+                trans_json = json.load(fp)
+            tar_json = merge_dict(trans_json,src_json)
+          
+    params.update({
+        'heading' : tar_json.get('heading'),
+        'description' : tar_json.get('description'),
+        'story':tar_json.get('story'),
+        #'story':'<div class="pasted-from-word-wrapper"><p>మాజీ\r\nకోల్\u200cకతా నైట్ రైడర్స్ (కేకేఆర్) కెప్టెన్ గౌతమ్ గంభీర్ తిరిగి ఫ్రాంచైజీలోకి వచ్చాడు\r\nIPL 2024కి ముందు మెంటార్\u200cగా, జట్టు బుధవారం (నవంబర్ 22) ప్రకటించింది.</p>\r\n\r\n\r\n\r\n<p>గంభీర్\r\n2022లో రెండు సీజన్\u200cల కోసం లక్నో సూపర్ జెయింట్స్ (LSG)తో వారి ‘గ్లోబల్ మెంటర్’\r\nమరియు 2023. తన పోస్ట్ నుండి నిష్క్రమించిన తర్వాత, అతను యజమానులకు కృతజ్ఞతలు తెలిపాడు మరియు జట్టుతో అనుబంధాన్ని "పాపలేని ప్రయాణం" అని పిలిచాడు.</p>\r\n\r\n\r\n\r\n<p>వెంకీ\r\nKKR యొక్క CEO మైసూర్, గంభీర్ KKRకి మెంటార్\u200cగా మరియు తిరిగి వస్తాడని ప్రకటించారు\r\nప్రధాన కోచ్ చంద్రకాంత్ పండిట్\u200cతో చేతులు కలపండి.</p>\r\n\r\n\r\n\r\n<p>గంభీర్\r\nKKRతో మునుపటి అనుబంధం 2011 నుండి 2017 వరకు ఉంది. ఈ కాలంలో, ది\r\nజట్టు రెండుసార్లు టైటిల్ గెలుచుకుంది, ఐదుసార్లు IPL ప్లేఆఫ్స్\u200cకు అర్హత సాధించింది, మరియు\r\n2014లో ఇప్పుడు నిలిచిపోయిన ఛాంపియన్స్ లీగ్ T20 ఫైనల్స్\u200cకు చేరుకుంది.</p>\r\n\r\n\r\n\r\n<p>మాట్లాడుతున్నాను\r\nతిరిగి వచ్చినప్పుడు గంభీర్ ఇలా అన్నాడు, “నేను భావోద్వేగ వ్యక్తిని కాదు మరియు చాలా విషయాలు కాదు\r\nనన్ను కదిలించు. కానీ ఇది భిన్నమైనది. ఇది అన్ని ప్రారంభించిన చోటికి తిరిగి వచ్చింది. ఈరోజు,\r\nనేను జారడం గురించి ఆలోచిస్తున్నప్పుడు నా గొంతులో ఒక ముద్ద మరియు నా గుండెలో మంట ఉంది\r\nఆ ఊదా మరియు బంగారు జెర్సీలోకి మరోసారి. నేను KKRకి మాత్రమే తిరిగి రావడం లేదు\r\nకానీ నేను సంతోష నగరానికి తిరిగి వస్తున్నాను. నేను తిరిగి వచ్చాను. నాకు ఆకలిగా ఉంది. నేను నంబర్\r\n23. అమీ KKR.”</p>\r\n\r\n\r\n\r\n<p>స్వాగతం\r\nగంభీర్ KKRకి తిరిగి వచ్చాడు, జట్టు సహ-యజమాని షారూఖ్ ఖాన్, "గౌతమ్ ఉన్నాడు\r\nఎల్లప్పుడూ కుటుంబంలో భాగమే మరియు మా కెప్టెన్ ఇంటికి తిరిగి వస్తున్నాడు\r\n"మెంటర్"గా విభిన్న అవతార్. అతను చాలా మిస్ అయ్యాడు మరియు ఇప్పుడు మనమందరం\r\nచందు సర్ మరియు గౌతమ్ ఎప్పటికీ చెప్పలేని స్ఫూర్తిని నింపడంలో ఎదురుచూస్తున్నాము\r\nజట్టు KKRతో మాయాజాలాన్ని సృష్టించడంలో మరియు క్రీడాస్ఫూర్తి కోసం వారు నిలబడతారు."</p><p>రెండు సీజన్లలో (2022 మరియు 2023) ఏడవ స్థానంలో నిలిచిన తర్వాత గంభీర్ తమ అదృష్టాన్ని మార్చుకోగలడని KKR భావిస్తోంది.</p></p></ div><div draggable="true" class="hocal-draggable"><div class="h-embed" contenteditable="false"><div class="h-embed-wrapper"><blockquote contenteditable="false " class="twitter-tweet"><p lang="in" dir="ltr">❤️❤️ LSG బ్రిగేడ్! <a href="https://t.co/xfG3YBu6l4">pic.twitter.com/xfG3YBu6l4</a></p>— గౌతమ్ గంభీర్ (@GautamGambhir) <a href="https://twitter.com /GautamGambhir/status/1727201647737421861?ref_src=twsrc%5Etfw">నవంబర్ 22, 2023</a></blockquote>\r\n\r\n<blockquote contenteditable="false" class="twitter-tweet"><p lang="en" dir="ltr">నేను తిరిగి వచ్చాను. నాకు ఆకలిగా ఉంది. నేను నం.23. అమీ KKR ❤️❤️ <a href="https://twitter.com/KKRiders?ref_src=twsrc%5Etfw">@KKRiders</a> <a href="https://t.co/KDRneHmzN4">పిక్. twitter.com/KDRneHmzN4</a></p>— గౌతమ్ గంభీర్ (@GautamGambhir) <a href="https://twitter.com/GautamGambhir/status/1727207189063077902?ref_src=twsrc"No3,2Etwsrc"2 </a></blockquote> </div> </div></div><div class="pasted-from-word-wrapper"></div>',
+        'location': tar_json.get('location'),
+        'locationId' : tar_json.get('locationId'),
+        'categoryId': tar_json.get('maincategory'),
+        'mediaIds': tar_json.get('mediaId'),
+        'tags': tar_json.get('tags'),
+        'keywords': tar_json.get('keywords'),
+    })
+    print("Params------------------>",params)
+    response = requests.request("POST", CMS_create_url, headers=headers, params=params)
+    print("Response------------>",response)
+    if response.status_code == 200:
+        print("Inside")
+        feed = response.json().get('feedId')
+        print("Feed------->",feed)
+        task.news_task.update(feed_id=feed,pushed=True)
+        print(task.news_task.first().id)
+        return Response({'msg':'pushed successfully'},status=200)
+    return Response({'msg':"something went wrong"},status=400)
+
+
+
+# @api_view(["GET"])
+# @authentication_classes([APIAuthentication])
+# #@permission_classes([IsAuthenticated])
+# def get_translated_story(request):
+#     from ai_workspace_okapi.api_views import DocumentToFile
+#     tar_lang = request.GET.get('target_lang')
+#     news_id = request.GET.get('news_id')
+#     if news_id:
+#         task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
+#         if task_news:
+#             task_assign = task_news.first().task.task_info.filter(client_response=3)
+#             if task_assign:
+#                 doc = task_assign.first().task.document
+#                 doc_to_file = DocumentToFile()
+#                 res = doc_to_file.document_data_to_file(request,doc.id)
+#                 if res.status_code in [200, 201]:
+#                     with open(res.text,"r") as fp:
+#                         tar_json = json.load(fp)
+#                     src_json = task_news.first().source_json.get('news')[0]
+#                     final_json = merge_dict(tar_json,src_json)
+#                     res = {'success': True, 'data':final_json}
+#                     return Response({'result':res},status = 200)
+#                 else:
+#                     res = {'success':False, 'data':{}}  
+#                     return Response({'result':res},status = 500)
 #             else:
-#                 return project.get_tasks.filter(assign_to=user_1)
-#                 #return [task for job in project.project_jobs_set.all() for task \
-#                 #    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
+#                 res = {'success': True, 'data': {'msg':'Inprogress'}}
+#                 return Response({'result':res},status=202)
 #         else:
-#             print("Indivual")
-#             return project.get_tasks.filter(assign_to=user_1)
-#             # return [task for job in project.project_jobs_set.prefetch_related('project').all() for task \
-#             #             in job.job_tasks_set.prefetch_related('task_info','task_info__assign_to','document','task_info__task_assign_info').all() if task.task_info.filter(assign_to = user_1).exists()]
-#             # return [task for job in project.project_jobs_set.all() for task \
-#             #         in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
-    # from .utils import custom_cache_page
-    # @custom_cache_page(timeout=60 * 15)
-    # #@custom_cache_page(60 * 15, key_func=lambda req: get_pr_list_cache_key(req.user))
-        # def list(self, request, *args, **kwargs):
-        # queryset = self.filter_queryset(self.get_queryset())
-        # print("QR------------>",queryset)
-        # user_1 = self.get_user()
-        # cache_key = f'pr_list_{user_1.pk}'
-        # cached_value = cache.get(cache_key)
-        # print("Cached Value in pr_list---------->",cached_value)
-        # if cached_value is not None:
-        #     paginated_data = self.paginate_queryset(cached_value)
-        #     return self.get_paginated_response(paginated_data)
-        #     #return Response(cached_value)
-        # else:
-        #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        #     serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        #     cache.set(cache_key,serializer.data, 60 * 15)
-        #     response = self.get_paginated_response(serializer.data)
-        #     return  response
+#             #res = {'success' : True, 'data': {'msg':'detail not found'}}
+#             return Response(status=204)
+#     else:
+#         from datetime import date
+#         today_date = date.today()
+#         task_news = TaskNewsDetails.objects.filter(updated_at__date=today_date,task__job__target_language__language = tar_lang)
+#         print("TaskNews------------->",task_news)
+#         data = []
+#         if task_news:
+#             for i in task_news:
+#                 task_assign = i.task.task_info.filter(client_response=3)
+#                 print("TA-------->",task_assign)
+#                 if task_assign:
+#                     doc = task_assign.first().task.document
+#                     if doc:
+#                         doc_to_file = DocumentToFile()
+#                         res = doc_to_file.document_data_to_file(request,doc.id)
+#                         if res.status_code in [200, 201]:
+#                             with open(res.text,"r") as fp:
+#                                 tar_json = json.load(fp)
+#                             src_json = task_news.first().source_json.get('news')[0]
+#                             final_json = merge_dict(tar_json,src_json)
+#                             data.append(final_json)
+#         res = {'success': True, 'result': data}
+#         return Response({'result':res},status = 200)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
+def get_news_detail(request):
+    from ai_workspace_okapi.api_views import DocumentToFile
+    allow = GetNewsFederalView.check_user_federal(request.user)
+    if allow:
+        task_id = request.GET.get('task_id')
+        obj = Task.objects.get(id=task_id)
+        target_json,source_json= {},{}
+        if obj.job.project.project_type_id == 8:
+            if obj.news_task.exists():
+                source_json = obj.news_task.first().source_json.get('news')[0]
+
+            if obj.document:
+                doc_to_file = DocumentToFile()
+                res = doc_to_file.document_data_to_file(request,obj.document.id)
+                with open(res.text,"r") as fp:
+                    json_data = json.load(fp)
+                trans_json = json_data	
+                target_json = merge_dict(trans_json,source_json)
+            
+        return Response({'source_json':source_json,'target_json':target_json})
+    else:
+        return Response({"detail": "You do not have permission to perform this action."},status=403)
+
+	# def get_source_news_data(self,obj):
+	# 	if obj.job.project.project_type_id == 8:
+	# 		if obj.news_task.exists():
+	# 			source_json = obj.news_task.first().source_json
+	# 			return source_json
+	# 		else: return None
+	# 	else: return None
+
+
+# from django import core
+# from ai_canvas.api_views import download_file_canvas,mime_type
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def download_fedaral(request):
+#     task_news_id =request.query_params.get('task_news_id') 
+#     output_type = request.query_params.get('output_type')   #output_type MTRAW
+#     news_instance = TaskNewsDetails.objects.get(id=task_news_id)
+
+#     if output_type == "MTRAW": #only_target
+#         file_format = "json"
+#         target_json = news_instance.target_json
+#         pairs = news_instance.task.job.source_target_pair
+
+
+#         target_json
+
+
+
+        # serialized_data = json.dumps(target_json).encode('utf-8')
+        # file_name = "sample_{}.json".format(pairs)
+        # export_src=core.files.File(core.files.base.ContentFile(serialized_data),file_name)
+        # response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
+        # return response
+    # else:
+    #     return Response({"msg":"no output type"})
+ 
+        
+     

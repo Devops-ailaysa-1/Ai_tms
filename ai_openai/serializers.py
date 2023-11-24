@@ -9,7 +9,7 @@ import re
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations ,get_prompt_gpt_4,\
+                    get_prompt_freestyle ,get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL
@@ -89,7 +89,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         prompt=''
         if not user: user = instance.user
         if instance.catagories.category == 'Free Style':
-            prompt+= instance.description if lang in ai_langs else instance.description_mt
+            prompt+= instance.description if lang in ai_langs else instance.description_mt + '.'
         else:
             print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
@@ -105,12 +105,14 @@ class AiPromptSerializer(serializers.ModelSerializer):
             
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
+
+        prompt+=' Make sure to cover all relevant aspects within the token limit.' 
         print("prompt-->",prompt)
         initial_credit = user.credit_balance.get("total_left")
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
-        token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 256
+        token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
         # openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
         # generated_text = openai_response.get('choices' ,None)
         openai_response =get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)

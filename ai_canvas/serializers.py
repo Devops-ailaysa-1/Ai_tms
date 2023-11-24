@@ -16,9 +16,10 @@ from ai_staff.models import SocialMediaSize
 from PIL import Image
 import os,uuid
 from django.db.models import Q
-from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file
+from ai_imagetranslation.utils import create_thumbnail_img_load,convert_image_url_to_file,find_frame_and_dutation_video
 from ai_canvas.models import AiAssertscategory,AiAsserts
 from ai_workspace.models import ProjectType,Project,Steps,ProjectSteps
+
 
 HOST_NAME=os.getenv("HOST_NAME")
 
@@ -244,23 +245,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     # def get_assigned(self,obj):
     #     return obj.project.assigned
 
-    def get_assign_enable(self, instance):
-        user = self.context.get("request").user
-        try:
-            if instance.project.team:
-                cached_value = True if ((instance.project.team.owner == user)\
-                    or(instance.project.team.internal_member_team_info.all().\
-                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-                    or(instance.project.team.owner.user_info.all()\
-                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                    else False
-            else:
-                cached_value = True if ((instance.project.ai_user == user) or\
-                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                else False
-            return cached_value
-        except: return None
+    def get_assign_enable(self,obj):  
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+        result = serializer_task.check_role(obj.project)  # Call the method from ProjectQuickSetupSerializer
+        return result
 
+        
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
         pr_managers = self.context.get('pr_managers')
@@ -755,23 +746,12 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
         fields = ('id','project','assigned','assign_enable','file_name','width','height','thumbnail_src','translate_available','updated_at')
         
     
-    def get_assign_enable(self, instance):
-        user = self.context.get("request").user
-        try:
-            if instance.project.team:
-                cached_value = True if ((instance.project.team.owner == user)\
-                    or(instance.project.team.internal_member_team_info.all().\
-                    filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-                    or(instance.project.team.owner.user_info.all()\
-                    .filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                    else False
-            else:
-                cached_value = True if ((instance.project.ai_user == user) or\
-                (instance.project.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-                else False
-            return cached_value
-        except: return None
-    
+    def get_assign_enable(self,obj):  
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+        result = serializer_task.check_role(obj.project)  # Call the method from ProjectQuickSetupSerializer
+        return result
+
     
     
     def to_representation(self, instance):
@@ -792,13 +772,13 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
         model = CanvasUserImageAssets
-        fields = ("id","image_name","image",'thumbnail','height','width',"status")
+        fields = ("id","image_name","image",'thumbnail','height','width',"status","duration","frame")
 
     def to_representation(self, instance):
         data=super().to_representation(instance)
         if not data.get('thumbnail',None):
             extension=instance.image.path.split('.')[-1]
-            if extension !='svg':
+            if extension  not in ['svg','mp4','MP4','SVG']:
                 im = Image.open(instance.image.path)
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
             else:
@@ -825,7 +805,10 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             # im = cv2.imread(instance.image.path)
             if not instance.image_name:
                 instance.image_name=instance.image.path.split('/')[-1]
-            if extension !='svg':
+            
+            
+
+            if extension not in ['svg','mp4','MP4','SVG']:
                 im=Image.open(instance.image.path)
                 width,height=im.size
                 # height,width,_ = im.shape
@@ -850,6 +833,19 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
                     # im =core.files.base.ContentFile(im.tobytes(),name=instance.image.name.split('/')[-1]) #content
                     instance.image=im
                     instance.save()
+            
+            # if extension in ['mp4','MP4']: ##mp4
+            #     duration,frames ,image,width,height = find_frame_and_dutation_video(instance.image.path)
+            #     instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=image)
+            #     instance.duration = str(duration)
+            #     instance.frame = str(frames)
+            #     instance.height=height #  to change
+            #     instance.width=width
+            #     instance.save()
+                # image=convert_image_url_to_file(image_url=image,no_pil_object=False)  is in command
+
+
+
         return instance
     
 ####################################################################################################
