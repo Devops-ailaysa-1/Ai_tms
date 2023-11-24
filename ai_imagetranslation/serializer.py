@@ -6,7 +6,7 @@ from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
 from ai_imagetranslation.utils import (inpaint_image_creation ,image_content,stable_diffusion_public ,get_consumable_credits_for_image_trans_inpaint,
-                                background_remove,background_merge ,create_thumbnail_img_load,get_consumable_credits_for_image_generation_sd,stable_diffusion_public_segmind)
+                                background_remove,background_merge ,create_thumbnail_img_load,get_consumable_credits_for_image_generation_sd) #stable_diffusion_public_segmind)
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from django.db.models import Case, When
@@ -304,7 +304,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             # initial_credit = 200
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
-                obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
+                # obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
                 # print(obj_inst.data) 'translation_result':obj_inst.data,   
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
@@ -700,7 +700,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if initial_credit>=consumble_credits:
             instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
                                                     height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
-            image=stable_diffusion_public_segmind.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
+            image=stable_diffusion_public.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
             instance.celery_id=image
             instance.status="PENDING"
             from ai_workspace.api_views import UpdateTaskCreditStatus
