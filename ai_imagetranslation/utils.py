@@ -436,8 +436,9 @@ def get_consumable_credits_for_image_trans_inpaint():
 #     instance.save()
 #     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
-
-
+BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
+BACKGROUND_BASE_URL = os.getenv('BACKGROUND_BASE_URL')
+result_base_path = BACKGROUND_BASE_URL+"/remove/bg_result/"
 
 def background_remove(instance):
     try:
@@ -447,11 +448,13 @@ def background_remove(instance):
     img = Image.open(image_path)
     file_name = image_path.split("/")[-1]
     payload = {}
+    result = "http://143.244.129.12:8091/remove/bg_result"
     files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
     response = requests.request("POST", BACKGROUND_REMOVAL_URL, headers=headers, data=payload, files=files)
+    print("image_path----->",image_path)
     
-    image_path = BACKGROUND_REMOVAL_URL+response.json()['result_path'].split("/")[-1]
+    image_path = result_base_path+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
     mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
