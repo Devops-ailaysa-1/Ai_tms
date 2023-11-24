@@ -89,9 +89,9 @@ def loader(file_id) -> None:
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
-        # embeddings = OpenAIEmbeddings()
+        embeddings = OpenAIEmbeddings()
         print("emb----------------->>>>>>>>>>")
-        embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
+        # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
         print("--------->>>>> multilingual-22-12")
         save_prest( texts, embeddings, persistent_dir,instance)
         instance.vector_embedding_path = persistent_dir
@@ -124,7 +124,6 @@ def save_prest(texts,embeddings,persistent_dir,instance):
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     chain = load_qa_chain(llm, chain_type=chain_type ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
     res = chain({"input_documents":similarity_document, "question": query})
-
     return  res['output_text'] #res["output_text"] 
 
 def load_embedding_vector(instance,query)->RetrievalQA:
@@ -137,21 +136,21 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     
 
     vector_path = instance.vector_embedding_path
-    if instance.embedding_name.model_name:
-        model_name = instance.embedding_name.model_name
-    else:
-        model_name = "openai"
+    # if instance.embedding_name.model_name:
+    #     model_name = instance.embedding_name.model_name
+    # else:
+    #     model_name = "openai"
 
-    if model_name == "openai":
-        print(model_name ,"openai")
-        llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
-        embed = OpenAIEmbeddings()
+    # if model_name == "openai":
+    #     print(model_name ,"openai")
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
+    embed = OpenAIEmbeddings()
         
-    else: 
-        print(model_name,"cohere")
+    # else: 
+    #     print(model_name,"cohere")
  
-        llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-        embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
+    #     llm = Cohere(model="command-nightly", temperature=0) #command-nightly
+    #     embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
  
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
