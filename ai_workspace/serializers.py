@@ -1125,9 +1125,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_push_detail(self,obj):
 		if obj.job.project.project_type_id == 8:
-			qr = obj.task_info.filter(client_response = 3)
-			if qr: return True
-			else: return False
+			try:return obj.news_task.first().pushed
+			except:return None
 		return None
 
 	def get_design_project(self,obj):
