@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory ,ChatEmbeddingLLMModel,PdfQustion
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,PdfQustion #ChatEmbeddingLLMModel
 from ai_nlp.utils import loader #,thumbnail_create
 
 
@@ -95,9 +95,9 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             
             instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
             instance.status="PENDING"
-            emb_instance = ChatEmbeddingLLMModel.objects.get(model_name="cohere")
-            print("emb_instance",emb_instance)
-            instance.embedding_name = emb_instance
+            # emb_instance = ChatEmbeddingLLMModel.objects.get(model_name="cohere")
+            # print("emb_instance",emb_instance)
+            # instance.embedding_name = emb_instance
             instance.save()
             celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
             print(celery_id)
