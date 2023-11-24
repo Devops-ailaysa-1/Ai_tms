@@ -502,42 +502,42 @@ def sd_status_check(ids,url):
  
 from celery.decorators import task
 
-SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
+# SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
 
 
-@task(queue='default')
-def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
-    import segmind
-    from segmind import SDXL
-    sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
-    sdxl = SDXL(api_key=SEGMIND_API_KEY)
-    prompt = sd_instance.prompt
-    width = sd_instance.width
-    height = sd_instance.height
-    try:
-        if sd_instance.negative_prompt:
-            negative_prompt = sd_instance.negative_prompt
-            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1,negative_prompt= negative_prompt,
-                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
-        else:
-            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1, 
-                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+# @task(queue='default')
+# def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
+#     import segmind
+#     from segmind import SDXL
+#     sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
+#     sdxl = SDXL(api_key=SEGMIND_API_KEY)
+#     prompt = sd_instance.prompt
+#     width = sd_instance.width
+#     height = sd_instance.height
+#     try:
+#         if sd_instance.negative_prompt:
+#             negative_prompt = sd_instance.negative_prompt
+#             image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1,negative_prompt= negative_prompt,
+#                                     seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+#         else:
+#             image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1, 
+#                                     seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
         
 
-        image=convert_image_url_to_file(image_url=image,no_pil_object=False)
-        sd_instance.generated_image=image
-        sd_instance.image=image
-        sd_instance.save()
-        im=Image.open(sd_instance.generated_image.path)
-        sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-        sd_instance.status="DONE"
-        sd_instance.save()
-        print("finished_generate")
-    except:
+#         image=convert_image_url_to_file(image_url=image,no_pil_object=False)
+#         sd_instance.generated_image=image
+#         sd_instance.image=image
+#         sd_instance.save()
+#         im=Image.open(sd_instance.generated_image.path)
+#         sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+#         sd_instance.status="DONE"
+#         sd_instance.save()
+#         print("finished_generate")
+#     except:
 
-        sd_instance.status="ERROR"
-        sd_instance.save()
-        raise serializers.ValidationError({'msg':"error on processing SD"})
+#         sd_instance.status="ERROR"
+#         sd_instance.save()
+#         raise serializers.ValidationError({'msg':"error on processing SD"})
 
 
 
