@@ -111,7 +111,7 @@ urlpatterns += [
 	path('assert_lists/',api_views.AssertList.as_view({'get':'list'})),
 	path('translate_file/',api_views.translate_file),
 	path('get_stories/',api_views.GetNewsFederalView.as_view(),name='get-news-list'),
-	path('translated_story/',api_views.get_translated_story),
+	path('push_story/',api_views.push_translated_story),
 	path('news_detail/',api_views.get_news_detail),
     # path("download_post/",api_views.download_fedaral)
     # path('json_trans/',api_views.fedaral_json)

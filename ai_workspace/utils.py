@@ -109,7 +109,7 @@ HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
 
 
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
-LIST_KEYS_FEDARAL={'media':['caption'] , 'news_tags':['name']}
+LIST_KEYS_FEDARAL={'media':['caption']}# , 'news_tags':['name']}
 
 def federal_json_translate(json_file,tar_code,src_code,translate=True):
 	from ai_workspace_okapi.utils import get_translation
@@ -228,7 +228,7 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 #     return decorator
 
 def split_dict(single_data):
-    trans_keys = ["keywords","description","source","image_caption","heading","newsId","authorName","location","story"]
+    trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
     trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
     trans_keys_dict = {}
     json_data = single_data.get('news')[0]
@@ -246,14 +246,15 @@ def split_dict(single_data):
 
 
 def merge_dict(translated_json,raw_json):
-	print("Tar---------->",translated_json)
-	print("Raw---------->", raw_json)
+	#print("Tar---------->",translated_json)
+	#print("Raw---------->", raw_json)
 	raw_json_trans = copy.deepcopy(raw_json)
 	translated_json_copy = copy.deepcopy(translated_json)
 	for key,values in list(LIST_KEYS_FEDARAL.items()):
 		if key in list(raw_json_trans.keys()):
 			for count,j in enumerate(raw_json_trans[key]):
-				j.update(translated_json_copy[key][count])
+				if values[count] in j.keys():
+					j.update(translated_json_copy[key][count])
 		translated_json_copy.pop(key)
 	raw_json_trans.update(translated_json_copy)
 	return raw_json_trans
