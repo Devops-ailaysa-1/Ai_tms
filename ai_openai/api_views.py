@@ -960,9 +960,10 @@ def blog_crt(request):
 @api_view(["GET"])
 def credit_check_blog(request):
     if request.method=='GET':
+        user = request.user.team.owner if request.user.team else request.user
         blog_id=request.query_params.get('blog_id')
         blog_creation=BlogCreation.objects.get(id=blog_id)
-        initial_credit = request.user.credit_balance.get("total_left")
+        initial_credit = user.credit_balance.get("total_left")
         if blog_creation.user_language_code != 'en':
             credits_required = 2500
         else:
