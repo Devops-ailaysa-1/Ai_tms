@@ -4780,9 +4780,9 @@ def push_translated_story(request):
     task_id = request.GET.get('task_id')
     task = Task.objects.get(id=task_id)
     src_json,tar_json = {},{}
-    headers = { 's-id': os.getenv("FEDERAL-KEY"),}
-    CMS_create_url = "https://thefederal.com/dev/h-api/createFeed"
-    params={ 
+    headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
+    CMS_create_url = "https://stagingfederalsite.hocalwire.in/dev/h-api/createFeedV2"
+    payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
     doc = task.document
@@ -4795,23 +4795,23 @@ def push_translated_story(request):
                 trans_json = json.load(fp)
             tar_json = merge_dict(trans_json,src_json)
           
-    params.update({
+    payload.update({
         'heading' : tar_json.get('heading'),
         'description' : tar_json.get('description'),
         'story':tar_json.get('story'),
-        #'story':'<div class="pasted-from-word-wrapper"><p>మాజీ\r\nకోల్\u200cకతా నైట్ రైడర్స్ (కేకేఆర్) కెప్టెన్ గౌతమ్ గంభీర్ తిరిగి ఫ్రాంచైజీలోకి వచ్చాడు\r\nIPL 2024కి ముందు మెంటార్\u200cగా, జట్టు బుధవారం (నవంబర్ 22) ప్రకటించింది.</p>\r\n\r\n\r\n\r\n<p>గంభీర్\r\n2022లో రెండు సీజన్\u200cల కోసం లక్నో సూపర్ జెయింట్స్ (LSG)తో వారి ‘గ్లోబల్ మెంటర్’\r\nమరియు 2023. తన పోస్ట్ నుండి నిష్క్రమించిన తర్వాత, అతను యజమానులకు కృతజ్ఞతలు తెలిపాడు మరియు జట్టుతో అనుబంధాన్ని "పాపలేని ప్రయాణం" అని పిలిచాడు.</p>\r\n\r\n\r\n\r\n<p>వెంకీ\r\nKKR యొక్క CEO మైసూర్, గంభీర్ KKRకి మెంటార్\u200cగా మరియు తిరిగి వస్తాడని ప్రకటించారు\r\nప్రధాన కోచ్ చంద్రకాంత్ పండిట్\u200cతో చేతులు కలపండి.</p>\r\n\r\n\r\n\r\n<p>గంభీర్\r\nKKRతో మునుపటి అనుబంధం 2011 నుండి 2017 వరకు ఉంది. ఈ కాలంలో, ది\r\nజట్టు రెండుసార్లు టైటిల్ గెలుచుకుంది, ఐదుసార్లు IPL ప్లేఆఫ్స్\u200cకు అర్హత సాధించింది, మరియు\r\n2014లో ఇప్పుడు నిలిచిపోయిన ఛాంపియన్స్ లీగ్ T20 ఫైనల్స్\u200cకు చేరుకుంది.</p>\r\n\r\n\r\n\r\n<p>మాట్లాడుతున్నాను\r\nతిరిగి వచ్చినప్పుడు గంభీర్ ఇలా అన్నాడు, “నేను భావోద్వేగ వ్యక్తిని కాదు మరియు చాలా విషయాలు కాదు\r\nనన్ను కదిలించు. కానీ ఇది భిన్నమైనది. ఇది అన్ని ప్రారంభించిన చోటికి తిరిగి వచ్చింది. ఈరోజు,\r\nనేను జారడం గురించి ఆలోచిస్తున్నప్పుడు నా గొంతులో ఒక ముద్ద మరియు నా గుండెలో మంట ఉంది\r\nఆ ఊదా మరియు బంగారు జెర్సీలోకి మరోసారి. నేను KKRకి మాత్రమే తిరిగి రావడం లేదు\r\nకానీ నేను సంతోష నగరానికి తిరిగి వస్తున్నాను. నేను తిరిగి వచ్చాను. నాకు ఆకలిగా ఉంది. నేను నంబర్\r\n23. అమీ KKR.”</p>\r\n\r\n\r\n\r\n<p>స్వాగతం\r\nగంభీర్ KKRకి తిరిగి వచ్చాడు, జట్టు సహ-యజమాని షారూఖ్ ఖాన్, "గౌతమ్ ఉన్నాడు\r\nఎల్లప్పుడూ కుటుంబంలో భాగమే మరియు మా కెప్టెన్ ఇంటికి తిరిగి వస్తున్నాడు\r\n"మెంటర్"గా విభిన్న అవతార్. అతను చాలా మిస్ అయ్యాడు మరియు ఇప్పుడు మనమందరం\r\nచందు సర్ మరియు గౌతమ్ ఎప్పటికీ చెప్పలేని స్ఫూర్తిని నింపడంలో ఎదురుచూస్తున్నాము\r\nజట్టు KKRతో మాయాజాలాన్ని సృష్టించడంలో మరియు క్రీడాస్ఫూర్తి కోసం వారు నిలబడతారు."</p><p>రెండు సీజన్లలో (2022 మరియు 2023) ఏడవ స్థానంలో నిలిచిన తర్వాత గంభీర్ తమ అదృష్టాన్ని మార్చుకోగలడని KKR భావిస్తోంది.</p></p></ div><div draggable="true" class="hocal-draggable"><div class="h-embed" contenteditable="false"><div class="h-embed-wrapper"><blockquote contenteditable="false " class="twitter-tweet"><p lang="in" dir="ltr">❤️❤️ LSG బ్రిగేడ్! <a href="https://t.co/xfG3YBu6l4">pic.twitter.com/xfG3YBu6l4</a></p>— గౌతమ్ గంభీర్ (@GautamGambhir) <a href="https://twitter.com /GautamGambhir/status/1727201647737421861?ref_src=twsrc%5Etfw">నవంబర్ 22, 2023</a></blockquote>\r\n\r\n<blockquote contenteditable="false" class="twitter-tweet"><p lang="en" dir="ltr">నేను తిరిగి వచ్చాను. నాకు ఆకలిగా ఉంది. నేను నం.23. అమీ KKR ❤️❤️ <a href="https://twitter.com/KKRiders?ref_src=twsrc%5Etfw">@KKRiders</a> <a href="https://t.co/KDRneHmzN4">పిక్. twitter.com/KDRneHmzN4</a></p>— గౌతమ్ గంభీర్ (@GautamGambhir) <a href="https://twitter.com/GautamGambhir/status/1727207189063077902?ref_src=twsrc"No3,2Etwsrc"2 </a></blockquote> </div> </div></div><div class="pasted-from-word-wrapper"></div>',
         'location': tar_json.get('location'),
         'locationId' : tar_json.get('locationId'),
-        'categoryId': tar_json.get('maincategory'),
+        #'categoryId': tar_json.get('maincategory'),
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
     })
-    print("Params------------------>",params)
-    response = requests.request("POST", CMS_create_url, headers=headers, params=params)
+    print("Payload------------------>",payload)
+    response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
     print("Response------------>",response)
     if response.status_code == 200:
         print("Inside")
+        print("RR-------------->",response.json())
         feed = response.json().get('feedId')
         print("Feed------->",feed)
         task.news_task.update(feed_id=feed,pushed=True)
