@@ -259,7 +259,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
         }
         
     def get_target_langs(self,obj):
-        return [i.result_lang.language for i in obj.ai_prompt.all()].distinct('result_lang')
+        return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
 
     def get_prompt_results(self,obj):
         result_dict ={}

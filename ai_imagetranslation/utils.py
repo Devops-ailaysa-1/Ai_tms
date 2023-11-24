@@ -436,8 +436,9 @@ def get_consumable_credits_for_image_trans_inpaint():
 #     instance.save()
 #     return core.files.File(core.files.base.ContentFile(img_byte_arr),"background_remove.png")
 
-
-
+BACKGROUND_REMOVAL_URL= os.getenv('BACKGROUND_REMOVAL_URL')
+BACKGROUND_BASE_URL = os.getenv('BACKGROUND_BASE_URL')
+result_base_path = BACKGROUND_BASE_URL+"/remove/bg_result/"
 
 def background_remove(instance):
     try:
@@ -447,11 +448,13 @@ def background_remove(instance):
     img = Image.open(image_path)
     file_name = image_path.split("/")[-1]
     payload = {}
+    result = "http://143.244.129.12:8091/remove/bg_result"
     files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
     response = requests.request("POST", BACKGROUND_REMOVAL_URL, headers=headers, data=payload, files=files)
+    print("image_path----->",image_path)
     
-    image_path = BACKGROUND_REMOVAL_URL+response.json()['result_path'].split("/")[-1]
+    image_path = result_base_path+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
     mask = Image.fromarray(post_process(np.array(mask)))
     mask_store = convert_image_url_to_file(mask,no_pil_object=False,name="mask.png")
@@ -502,42 +505,42 @@ def sd_status_check(ids,url):
  
 from celery.decorators import task
 
-SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
+# SEGMIND_API_KEY="SG_48b5c8b2ed3a178c"
 
 
-@task(queue='default')
-def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
-    import segmind
-    from segmind import SDXL
-    sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
-    sdxl = SDXL(api_key=SEGMIND_API_KEY)
-    prompt = sd_instance.prompt
-    width = sd_instance.width
-    height = sd_instance.height
-    try:
-        if sd_instance.negative_prompt:
-            negative_prompt = sd_instance.negative_prompt
-            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1,negative_prompt= negative_prompt,
-                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
-        else:
-            image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1, 
-                                    seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+# @task(queue='default')
+# def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
+#     import segmind
+#     from segmind import SDXL
+#     sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
+#     sdxl = SDXL(api_key=SEGMIND_API_KEY)
+#     prompt = sd_instance.prompt
+#     width = sd_instance.width
+#     height = sd_instance.height
+#     try:
+#         if sd_instance.negative_prompt:
+#             negative_prompt = sd_instance.negative_prompt
+#             image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1,negative_prompt= negative_prompt,
+#                                     seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
+#         else:
+#             image = sdxl.generate(prompt=prompt,style="base",scheduler="UniPC",num_inference_steps=25,guidance_scale=8,samples=1, 
+#                                     seed=None,strength=0.2,refiner=True,high_noise_fraction=0.8,base64=False,)
         
 
-        image=convert_image_url_to_file(image_url=image,no_pil_object=False)
-        sd_instance.generated_image=image
-        sd_instance.image=image
-        sd_instance.save()
-        im=Image.open(sd_instance.generated_image.path)
-        sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-        sd_instance.status="DONE"
-        sd_instance.save()
-        print("finished_generate")
-    except:
+#         image=convert_image_url_to_file(image_url=image,no_pil_object=False)
+#         sd_instance.generated_image=image
+#         sd_instance.image=image
+#         sd_instance.save()
+#         im=Image.open(sd_instance.generated_image.path)
+#         sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
+#         sd_instance.status="DONE"
+#         sd_instance.save()
+#         print("finished_generate")
+#     except:
 
-        sd_instance.status="ERROR"
-        sd_instance.save()
-        raise serializers.ValidationError({'msg':"error on processing SD"})
+#         sd_instance.status="ERROR"
+#         sd_instance.save()
+#         raise serializers.ValidationError({'msg':"error on processing SD"})
 
 
 
