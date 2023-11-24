@@ -32,7 +32,8 @@ class IsEnterpriseUser(BasePermission):
     """
 
     def has_permission(self, request, view):
-        return request.user.is_enterprise
+        user = request.user.team.owner if request.user.team else request.user
+        return user.is_enterprise
 
 
 # class InternalTeamAccess(AccessPolicy):
