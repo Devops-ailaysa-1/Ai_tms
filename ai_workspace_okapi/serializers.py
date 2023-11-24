@@ -520,19 +520,32 @@ class DocumentSerializerV3(DocumentSerializerV2):
 
 from .models import SelflearningAsset,ChoiceLists,ChoiceListSelected
 class SelflearningAssetSerializer (serializers.ModelSerializer):
+    document = serializers.PrimaryKeyRelatedField(required=False,write_only=True, queryset=Document.objects.all())
     class Meta():
         model=SelflearningAsset
-        fields="__all__"
+        fields=("source_word","edited_word","occurance","choice_list","created_at","updated_at","document")
 
     def create(self,validated_data):
-        choicelist = validated_data.get('choice_list',None)
+        print("Validated Data------------->",validated_data)
         edited = validated_data.get('edited_word',None)
         source = validated_data.get('source_word',None)
-        # user = validated_data.get('user',None)
-        print(choicelist,"++++++++++++++++")
+        document = validated_data.get('document', None)
+        choice_list = validated_data.get('choice_list', None)
+        print("ChList---------->",choice_list)
 
-        slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choicelist,source_word=source)
-        print(slf_lrn_list)
+        # user = validated_data.get('user',None)
+        if document:
+            project = document.job.project
+        if source and edited and document:
+            if choice_list:
+                choice_list = ChoiceLists.objects.get(id = choice_list)
+            else:
+                choice_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=document.job.target_language_id,is_default=True)
+            cl_selected = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=document.job.target_language_id)
+            if not cl_selected:
+                cl_selected, created = ChoiceListSelected.objects.get_or_create(project=project,choice_list=choice_list)
+        slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choice_list,source_word=source)
+
         if  slf_lrn_list.filter(edited_word=edited):
             ins = slf_lrn_list.filter(edited_word=edited).last()
             ins.occurance +=1
@@ -540,7 +553,7 @@ class SelflearningAssetSerializer (serializers.ModelSerializer):
         else:
             if slf_lrn_list.count() >= 5:
                 first_out=slf_lrn_list.first().delete()
-            ins=SelflearningAsset.objects.create(choice_list=choicelist,source_word=source,edited_word=edited,occurance=1)  
+            ins=SelflearningAsset.objects.create(choice_list=choice_list,source_word=source,edited_word=edited,occurance=1)  
         return ins
 
 
@@ -593,17 +606,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
         return super().to_internal_value(data=data)
 
-    # def slf_learning_word_update(self,instance,doc):
-    #     from ai_workspace_okapi.models import SelflearningAsset
-    #     slf_lrn_inst=SelflearningAsset.objects.filter(user=doc.owner_pk,target_language=doc.target_language_id)
-    #     if slf_lrn_inst:
-    #         word_list=list(slf_lrn_inst.values_list('source_word',flat=True))
-    #         mt_raw_lists=instance.mt_raw.split(' ')
-    #         for mt_raw_list in mt_raw_lists:
-    #             if mt_raw_list in word_list:
-    #                 edited_word=slf_lrn_inst.filter(source_word=mt_raw_list).last().edited_word
-    #                 instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
-    #                 instance.save()
+
 
     def create(self, validated_data):
 
@@ -880,10 +883,7 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
-from ai_workspace_okapi.models import SelflearningAsset
-class SelflearningAssetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=SelflearningAsset
+
 
 
 

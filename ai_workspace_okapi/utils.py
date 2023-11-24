@@ -8,6 +8,7 @@ from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 from PyPDF2 import PdfFileReader
+from PyPDF2.errors import FileNotDecryptedError
 from pptx import Presentation
 import string
 import backoff
@@ -15,10 +16,14 @@ import backoff
 
 spring_host = os.environ.get("SPRING_HOST")
 
+
+client = translate.Client()
+
+
 # from ai_workspace_okapi.models import SelflearningAsset
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
-client = translate.Client()
+
 
 class DebugVariables(object): # For Class Functions only to use
     def __init__(self,flags):
@@ -274,7 +279,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai = None):
+                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
 
@@ -289,6 +294,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         email= user.email
         initial_credit = user.credit_balance.get("total_left")
 
+
     if cc == None:
         if isinstance(source_string,list):
             for src_text in source_string:
@@ -301,13 +307,14 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
-    
-    
+    print("format----------->",format_)
+    # initial_credit =200
+     
     if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
-
+    
     elif user and not from_open_ai and initial_credit < cc:
             print("Insufficient")
             translate = ''
@@ -317,7 +324,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = client.translate(source_string,
                                 target_language=target_lang_code,
-                                format_="text").get("translatedText")
+                                format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)), queue='low-priority')
@@ -626,18 +633,21 @@ def file_translate(task,file_path,target_language_code):
 
 import subprocess
 import io
-
+from rest_framework import serializers
 def count_pdf_pages(pdf_file):
     # Count the pages in the PDF using pdfinfo
-    command = [
-        'pdfinfo',
-        pdf_file
-    ]
-    result = subprocess.run(command, stdout=subprocess.PIPE, text=True, check=True)
-    info = result.stdout
-    for line in info.split('\n'):
-        if line.startswith("Pages:"):
-            return int(line.split(':')[1])
+    try:
+        command = [
+            'pdfinfo',
+            pdf_file
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, text=True, check=True)
+        info = result.stdout
+        for line in info.split('\n'):
+            if line.startswith("Pages:"):
+                return int(line.split(':')[1])
+    except:
+        raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
 def page_count_in_docx(docx_path):
@@ -708,19 +718,25 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
+from rest_framework import serializers
+
 def pdf_char_check_for_document_trans(file_path):
     tot_str=''
     pdf_check_list = []
     pdfdoc = PdfFileReader(file_path)
     pdf_check = {0:'ocr',1:'text'}
-    for i in range(len(pdfdoc.pages)):
-        current_page = pdfdoc.pages[i]
-        current_page.extract_text()
-            # if len(current_page.extract_text()) >=700:
-        tot_str = tot_str+current_page.extract_text()
-        if len(tot_str) >=100:
-            return ["text" , len(pdfdoc.pages)]
-    return ["ocr" , len(pdfdoc.pages)]
+    try:
+        for i in range(len(pdfdoc.pages)):
+            current_page = pdfdoc.pages[i]
+            current_page.extract_text()
+                # if len(current_page.extract_text()) >=700:
+            tot_str = tot_str+current_page.extract_text()
+            if len(tot_str) >=100:
+                return ["text" , len(pdfdoc.pages)]
+        return ["ocr" , len(pdfdoc.pages)]
+    except FileNotDecryptedError:
+        raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
+
 
 
 

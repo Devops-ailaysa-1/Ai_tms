@@ -400,12 +400,12 @@ def my_handler(event, **kwargs):
 #     subscriptin_modify_default_tax_rate(sub_id=sub_id,tax_rates=tax_rate)
 
 
-@webhooks.handler("customer.subscription.updated")
-def my_handler(event, **kwargs):
-    print("**** customer subscription updated *****")
-    print(event.data)
-    data = event.data
-    print("**** customer subscription updated   End *****")
+# @webhooks.handler("customer.subscription.updated")
+# def my_handler(event, **kwargs):
+#     # print("**** customer subscription updated *****")
+#     # print(event.data)
+#     data = event.data
+#     # print("**** customer subscription updated   End *****")
     # subscription_prices = data.get('object').get('items').get('data')[0].get('price')
     # subscription_id = data.get('object').get('id')
     # print("subscription prices",subscription_prices)

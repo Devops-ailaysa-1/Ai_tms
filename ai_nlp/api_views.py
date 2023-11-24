@@ -156,13 +156,13 @@ def pdf_chat(request):
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
     if chat_text:
+        # unit_chk['total_units_left'] =90
         if unit_chk['total_units_left']>0: 
-            chat_QA_res = load_embedding_vector(vector_path=pdf_file.vector_embedding_path,query=chat_text)
+            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text)
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-            # total_message_unit_bal = total_message_unit_bal-1 ## credit detection
             chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
             return Response(serializer.data)
         else:
@@ -178,6 +178,103 @@ def pdf_chat_remaining_units(request):
     unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
     unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
     return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
+
+
+
+
+
+#######################################test____story_____#################
+
+# import json,openai,random
+
+# from ai_nlp.models import StoryIllustate,IllustateGeneration
+# from ai_nlp.serializer import StoryIllustateSerializer,IllustateGenerationSerializer
+# from ai_canvas.utils import  convert_image_url_to_file 
+
+
+
+# def chat_gpt_16k(prompt):
+#     sample_output = {"illustrations": ["...", "...", "..."]}
+#     prompt_postinstruction = "\nOutput:"
+#     prompt = prompt + json.dumps(sample_output) + prompt_postinstruction
+#     messages = [
+#         {"role": "system", "content": "You are an expert author who can read children's stories and create short briefs for an illustrator, providing specific instructions, ideas, or guidelines for the illustrations you want them to create."},
+#         {"role": "user", "content": prompt}]
+#     completion = openai.ChatCompletion.create(model="gpt-3.5-turbo-16k",messages=messages,n=1,max_tokens=2000,top_p=1,
+#                                               stop=["###"],temperature=1.3)
+#     response_json =completion['choices'][0]['message']['content']
+#     return response_json
+
+
+
+
+# def generate_images(prompts, style,token,instance):
+#     import segmind
+#     from segmind import SDXL
+#     modeld = SDXL(api_key=token)
+#     negative_prompt = "photorealistic, realistic, photograph, deformed, mutated, stock photo, 35mm film, deformed, glitch, low contrast, noisy"
+#     for prompt in prompts:
+#         print(prompt)
+#         img = modeld.generate(prompt = prompt,negative_prompt=negative_prompt,
+#                               samples = 1,style = style,scheduler="UniPC",seed =None)
+#         image=convert_image_url_to_file(image_url=img,no_pil_object=False)
+#         StoryIllustate.objects.create(illustration_text= instance , image = image,prompt=prompt)
+    
+
+
+
+# def generate_prompt(text, count):
+#     prompt_prefix =  """{} Generate {} short briefs as a list from the above story to give as input to an illustrator to generate relevant children's story illustrations.
+#     Strictly add no common prefix to briefs. Strictly generate each brief as a single sentence that contains all the necessary information.
+#     Strictly output your response in a list format, adhering to the following sample structure:""".format(json.dumps(text), json.dumps(count))
+#     comple_responce = chat_gpt_16k(prompt_prefix)
+#     print(comple_responce)
+#     return comple_responce
+
+
+
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def generate_story_illus(request):
+#     text=request.query_params.get('text',None)
+#     token = request.query_params.get('token',"SG_9362eeb10f212b60")
+#     style = request.query_params.get('style',"watercolor")
+#     if text:
+#         instance = IllustateGeneration.objects.create(user =request.user, text =text )
+#         comple_responce = eval(generate_prompt(text, count=1))
+#         generate_images(comple_responce['illustrations'],style,token,instance)
+#         story_instance = IllustateGeneration.objects.get(id = instance.id)
+#         serializer = IllustateGenerationSerializer(story_instance)
+#         return Response(serializer.data)
+
+
+
+# class IllustateGenerationViewset(viewsets.ViewSet,PageNumberPagination):
+#     permission_classes = [IsAuthenticated,]
+#     page_size=20
+#     def get_object(self, pk):
+#         try:
+#             user = self.request.user 
+#             return IllustateGeneration.objects.get(user=user,id=pk)
+#         except IllustateGeneration.DoesNotExist:
+#             raise Http404
+
+#     def list(self, request):
+#         queryset = IllustateGeneration.objects.filter(user=request.user).order_by("-id")
+#         # queryset = self.filter_queryset(queryset)
+#         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         serializer = IllustateGenerationSerializer(queryset,many=True)
+#         # response = self.get_paginated_response(serializer.data)
+#         return Response(serializer.data)
+    
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer = IllustateGenerationSerializer(obj)
+#         return Response(serializer.data)
+
+
+
 
 ############ wiktionary quick lookup ##################
 # @api_view(['GET', 'POST',])

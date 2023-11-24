@@ -217,7 +217,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if type(doc_data) == str:
 
             doc_data = json.loads(doc_data)
-        print("Doc------------->",doc_data.get('total_word_count'))
+        print("Doc------------->",doc_data)
         if doc_data['total_word_count'] == 0:
 
             return {'msg':'Empty File'}
@@ -349,27 +349,27 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
                 end_time_j = time.time()
                 print("Time taken to write doc from json file------------>",end_time_j-start_time_j)
-            # else:
-            #     doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-            #         "doc_req_params": json.dumps(params_data),
-            #         "doc_req_res_params": json.dumps(res_paths)
-            #     })
+            else:
+                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                    "doc_req_params": json.dumps(params_data),
+                    "doc_req_res_params": json.dumps(res_paths)
+                })
 
-            #     if doc.status_code == 200:
-            #         doc_data = doc.json()
-            #         print("Doc Data--------------------->",doc_data)
-            #         if doc_data.get('total_word_count') == 0:
-            #             return {'msg':'Empty File'}
-            #         serializer = (DocumentSerializerV2(data={**doc_data, \
-            #                                                  "file": task.file.id, "job": task.job.id, }, ))
+                if doc.status_code == 200:
+                    doc_data = doc.json()
+                    print("Doc Data--------------------->",doc_data)
+                    if doc_data.get('total_word_count') == 0:
+                        return {'msg':'Empty File'}
+                    serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                             "file": task.file.id, "job": task.job.id, }, ))
 
-            #         if serializer.is_valid(raise_exception=True):
-            #             document = serializer.save()
-            #             task.document = document
-            #             task.save()
-            #     else:
-            #         logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
-            #         raise ValueError("Sorry! Something went wrong with file processing.")
+                    if serializer.is_valid(raise_exception=True):
+                        document = serializer.save()
+                        task.document = document
+                        task.save()
+                else:
+                    logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                    raise ValueError("Sorry! Something went wrong with file processing.")
 
         return document
 
@@ -1033,7 +1033,7 @@ class MT_RawAndTM_View(views.APIView):
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
-
+        # initial_credit = 100
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)
@@ -1106,10 +1106,6 @@ class MT_RawAndTM_View(views.APIView):
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 
-                print(translation)
-                # translation=MT_RawAndTM_View.asset_replace(translation)
-
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
@@ -1118,11 +1114,8 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                
-                # translation=MT_RawAndTM_View.asset_replace(translation)
 
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
@@ -1234,7 +1227,7 @@ class MT_RawAndTM_View(views.APIView):
         return words
 
     # @staticmethod   
-    # def asset_replace(request,translation,project,lang): 
+    # def asset_replace(translation,project,lang): 
     #     choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language_id=lang)
     #     print("choice--------->",choice, choice.last())
     #     self_learn=SelflearningAsset.objects.filter(choice_list=choice.last().choice_list.id) if choice else None
@@ -1285,7 +1278,6 @@ class MT_RawAndTM_View(views.APIView):
 
             # For normal and merged segments
             if split_check(segment_id):
-
                 tm_data = self.get_tm_data(request, segment_id)
                 print("Tm data-------->",tm_data)
             
@@ -1301,9 +1293,9 @@ class MT_RawAndTM_View(views.APIView):
                 # replace asset auto
                 seg_obj = Segment.objects.get(id=segment_id)
                 target_lang = seg_obj.text_unit.document.job.target_language_id
-                #rep = data.get('mt_raw',None)
+                # rep = data.get('mt_raw',None)
                 # if rep:
-                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(rep,project,target_lang)
                 #     data['mt_raw']=asset_rep
                 #     data['options']=asset_list
 
@@ -1327,7 +1319,7 @@ class MT_RawAndTM_View(views.APIView):
                 target_lang = seg_obj.text_unit.document.job.target_language_id
                 #rep = data.get('mt_raw',None)
                 # if rep:
-                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(request,rep,project,target_lang)
+                #     asset_rep,asset_list=MT_RawAndTM_View.asset_replace(rep,project,target_lang)
                 #     data['mt_raw']=asset_rep
                 #     data['options']=asset_list
                 #     print('rep----------',asset_rep)
@@ -1335,24 +1327,6 @@ class MT_RawAndTM_View(views.APIView):
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
             
-"""
-
-
-
-def word_change():
-    # segment=request.POST.get('segment',None)
-    # tar_lang=request.POST.get('target_language',None)
-    segment="This apple size is small so he provide multiple apples"
-    tar_lang=17
-    word=word_tokenize(segment)
-    for word in word:
-        assets=SelflearningAsset.objects.filter(Q(target_language_id = tar_lang) & Q(user_id =946) & Q(source_word__iexact = word))
-        if assets:
-            edited_word=assets.last().edited_word
-            # print(edited_word)
-            segment=segment.replace(word,edited_word)         
-    print(segment)
-"""
         # return JsonResponse(result,status=status.HTTP_200_OK)
 
 
@@ -1617,9 +1591,63 @@ class DocumentToFile(views.APIView):
         workbook.close()
 
         return download_file(bilingual_file_path)
+    
+    @staticmethod
+    def json_key_manipulation(res_json_path): #### for federal
+        from ai_workspace.utils import LIST_KEYS_FEDARAL
+        print("######################")
+        to_rearrange_key = ['heading','story']
+        with open(res_json_path,"r") as fp:
+            fp = json.load(fp)
+            # fp = fp['news'][0]
+            
+        print("Fp------------->", fp.keys())
+        rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
+        rearraged_keys_dict.update(fp)
+        # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        res_json_path_text = res_json_path.split("json")[0]+"txt"
+        print(res_json_path_text)
+        # with open(res_json_path_text, 'w') as file:
+        #     file.write(rearraged_keys_dict)
+        #     file.close()
+
+        with open(res_json_path_text,'w') as fp:
+            for key,value in rearraged_keys_dict.items():
+                key = str(key)
+                value = str(value)
+                if key in list(LIST_KEYS_FEDARAL.keys()):
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    text = []
+                    for i in rearraged_keys_dict[key]:
+                        text.append(i[LIST_KEYS_FEDARAL[key][0]])
+                    fp.write(",".join(text))
+                    fp.write("\n")
+                else:
+                    fp.write(key.capitalize()+":")
+                    fp.write("\n")
+                    fp.write(value)
+                    fp.write("\n")
+                fp.write("---------")
+                fp.write("\n")
+                fp.write("\n")
+            fp.close()
+        return res_json_path_text
+ 
+    
+
+    def download_file_processing(self,file_path):
+        try:
+            if os.path.isfile(file_path):# if os.path.isfile(res.text):
+                if os.path.exists(file_path):
+                    file_res =  self.get_file_response(file_path)
+                    return file_res
+        except Exception as e:
+            print("Exception during file output------> ", e)
 
 
     def get(self, request, document_id):
+
         doc = DocumentToFile.get_object(document_id)
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
@@ -1664,30 +1692,41 @@ class DocumentToFile(views.APIView):
                 return self.download_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
 
             if output_type == "MTRAW":
+                print("output_type----->>>" , output_type)
                 mt_process = self.mt_pre_process(document_id)
                 if mt_process.get('status') == True:
+                    print("mt_process.get('status')",mt_process.get('status'))
+                    doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)
+                    if doc.job.project.project_type_id == 8:
+                        #res = self.document_data_to_file(request,document_id,True)
+                        res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
-                start_time_2 = time.time()
                 res = self.document_data_to_file(request, document_id)
-                end_time_2 = time.time()
-                tot_time_taken = end_time_2 - start_time_2
-                print("Tot Tim Tak---------------->",tot_time_taken)
-            if res.status_code in [200, 201]:
-                start_time_1 = time.time()
-                file_path = res.text
-                try:
-                    if os.path.isfile(res.text):
-                        if os.path.exists(file_path):
-                            file_res =  self.get_file_response(file_path)
-                            end_time_1 = time.time()
-                            time_taken_1 = end_time_1 - start_time_1
-                            print("Time Taken for download---------------->",time_taken_1)
-                            return file_res
-                except Exception as e:
-                    print("Exception during file output------> ", e)
+                if doc.job.project.project_type_id == 8:
+                   res = DocumentToFile.json_key_manipulation(res.text) 
+            
+            if isinstance(res, str):
+                return self.download_file_processing(res)
+                # print("downloaded")
+
+            elif  res.status_code in [200, 201]:
+                return self.download_file_processing(res.text)
+                # start_time_1 = time.time()
+                # file_path = res.text
+                # try:
+                #     if os.path.isfile(res.text):
+                #         if os.path.exists(file_path):
+                #             file_res =  self.get_file_response(file_path)
+                #             end_time_1 = time.time()
+                #             time_taken_1 = end_time_1 - start_time_1
+                #             print("Time Taken for download---------------->",time_taken_1)
+                #             return file_res
+                # except Exception as e:
+                #     print("Exception during file output------> ", e)
+            
             else:
                 logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
                 return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
@@ -2831,10 +2870,10 @@ def download_mt_file(request):
     state = mt_raw_update.AsyncResult(cel_task.celery_task_id).state
     print("st------>",state)
     if state == 'SUCCESS':
-        #if cel_task.error_type == 'Insufficient Credits':
-        #    return Response({'msg':'Insufficient Credits'},status=400)
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
+        if doc.job.project.project_type_id == 8:
+            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
             file_path = res.text
             try:
@@ -3206,29 +3245,11 @@ class SelflearningView(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     def create(self,request): 
-        doc_id=request.POST.get('document_id',None)
+        doc_id=request.POST.get('document',None)
         choice_list_id=request.POST.get('choice_list_id',None)
         source=request.POST.get('source_word',None)
         edited=request.POST.get('edited_word',None)
-        if doc_id:                                               
-            doc=get_object_or_404(Document,id=doc_id)
-            lang=get_object_or_404(Languages,id=doc.target_language_id)
-            user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-            choice_list_sld=ChoiceListSelected.objects.filter(project_id=doc.project).filter(choice_list__language=lang)
-            print(choice_list_sld,'------------')
-            if choice_list_sld:
-                choice_list=get_object_or_404(ChoiceLists,id=choice_list_sld.last().choice_list.id)
-            else:
-                choice_list,created=ChoiceLists.objects.get_or_create(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language)  
-                if created == False:
-                    choice_list= ChoiceLists.objects.get(is_default=True,user=user,language=lang)#,name="my choicelist_"+lang.language) 
-                # data = {"project":doc.project, "choice_list":choice_list.id} 
-                # serializer = ChoiceListSelectedSerializer(data=data,many=False)
-                # if serializer.is_valid():
-                #     serializer.save()  
-            ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list.id})
-        else:
-           ser = SelflearningAssetSerializer(data={'source_word':source,'edited_word':edited,'choice_list':choice_list_id}) 
+        ser = SelflearningAssetSerializer(data=request.POST.dict()) 
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
