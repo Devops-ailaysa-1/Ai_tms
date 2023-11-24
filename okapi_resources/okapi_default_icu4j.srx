@@ -12,7 +12,7 @@ Erode Venkata Krishnasamy Thiru. Sampath Elangovan is an Indian politician who w
 M. K. Stalin. 
 M.K.Stalin.
 
-Ananya . C
+Ananya .C
 
 &lt;p>As the ICC Cricket World Cup tournament is about to reach its ultimate summit clash on Sunday (November 19) at the Narendra Modi Stadium in Ahmadabad, Cricket Australia has come out with the World Cup 2023 team of the tournament.&lt;br>&lt;/p>&lt;p>However, the team has some notable misses which might have left many experts wondering if something was amiss with the selectors.\r\n&lt;/p>&lt;p>Rohit Sharma, who has won admirers for his sterling performance both as a batsman and as the captain of the Indian side, is conspicuous by his absence in the hypothetical team. The fact that the Indian skipper has scored 503 runs in nine matches which include three 50s and a 100, while leading his team to nine wins has completely lost on Cricket Australia.     \r\n&lt;/p>&lt;p>Among the four cricketers from India who have made it to the Cricket Australia team, which also includes a 12th man, are Virat Kohli, Ravindra Jadeja, Jasprit Bumrah, and Mohammed Shami. Here is the entire team: Quinton De Kock, David Warner, Rachin Ravindra, Virat Kohli (C), Aiden Markram, Glenn Maxwell, Marco Jansen, Ravindra Jadeja, Mohammed Shami, Adam Zampa, Jasprit Bumrah, Dilshan Madushanka (12th man).\r\n&lt;/p>&lt;p>Surprisingly, Kohli is captain of the team, although he has not captained the Indian side since his removal after the 2021 T20 World Cup debacle. Kohli has undoubtedly been prolific with his bat in this tournament and has equalled Sachin Tendulkar’s record of hitting the quickest-ever 49 ODI tons.\r\n&lt;/p>&lt;p>Another notable miss is KL Rahul. The Indian wicketkeeper has not only been impressive behind the stumps but has also performed well as a batsman, scoring 347 runs including a ton and an unbeaten 97.\r\n&lt;/p>&lt;p>Cricket Australia has made another bizarre choice in David Warner, who pales before Kohli in batting performance, as the second opener batsman alongside Quinton De Kock.\r\n&lt;/p>&lt;p>&lt;/p>
 
@@ -732,7 +732,7 @@ Ananya . C
 </rule>
 <rule break="yes">
 <beforebreak>\.</beforebreak>
-<afterbreak>(?=&lt;p>&lt;\/p>&lt;br>(?:&lt;br>|&lt;br\/>)?)|&lt;br>|&lt;br\/>|\\r\\n</afterbreak>
+<afterbreak>(?=(&lt;p>&lt;\/p>(?:&lt;br>|&lt;br\/>)?)?)|&lt;br>|&lt;br\/>|\\r\\n|&lt;p>&lt;\/p></afterbreak>
 </rule>
 </languagerule>
 <languagerule languagerulename="Spanish">
