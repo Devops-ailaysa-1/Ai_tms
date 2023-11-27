@@ -4778,6 +4778,7 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 def push_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     task_id = request.GET.get('task_id')
+    feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
     src_json,tar_json = {},{}
     headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
@@ -4806,16 +4807,15 @@ def push_translated_story(request):
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
     })
-    print("Payload------------------>",payload)
+
+    if feed_id:
+        payload.update({'feedId': feed_id})
     response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
-    print("Response------------>",response)
     if response.status_code == 200:
-        print("Inside")
         print("RR-------------->",response.json())
         feed = response.json().get('feedId')
         print("Feed------->",feed)
         task.news_task.update(feed_id=feed,pushed=True)
-        print(task.news_task.first().id)
         return Response({'msg':'pushed successfully'},status=200)
     return Response({'msg':"something went wrong"},status=400)
 
