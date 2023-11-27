@@ -126,3 +126,4 @@ admin.site.register(SocialMediaSize)
 admin.site.register(DesignShape)
 admin.site.register(DesignShapeCategory) 
 admin.site.register(DesignerOrientation)
+ 

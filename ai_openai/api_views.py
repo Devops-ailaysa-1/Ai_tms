@@ -202,9 +202,14 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
     return res
 
 
+
+
+
+
 from ai_auth.api_views import get_lang_code
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
+
 def customize_text_openai(request):
     from ai_exportpdf.models import Ai_PdfUpload
     document = request.POST.get('document_id')
@@ -215,7 +220,7 @@ def customize_text_openai(request):
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
     language =  request.POST.get('language',None)
-    customize = AiCustomize.objects.get(id =customize_id)
+    customize = AiCustomize.objects.get(id = customize_id)
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
     detector = Translator()
@@ -276,6 +281,7 @@ def customize_text_openai(request):
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
             #result_txt = response['choices'][0]['text']
+
             result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
@@ -911,29 +917,63 @@ from ai_openai.utils import get_prompt_gpt_turbo_1106
 from ai_openai.models import NewsPrompt
 
 
-
-import json
-
-@api_view(['GET'])
-def newscontentbuilder(request):
-    sentence =  request.query_params.get('sentence')
-    news_prompt = request.query_params.get('news_prompt')
-    news_prompt_instance = NewsPrompt.objects.get(id = news_prompt)
+def news_text_gen(sentence , prompt ,assistant ):
     prompt_template = """Context: {context}
 
     
     {prompt}
     """
+    prompt_template = prompt_template.format(context=sentence,prompt=prompt) 
+    messages = [{"role":"system","content":assistant},
+                    {"role": "user", "content":prompt_template}]
+    completion = get_prompt_gpt_turbo_1106(messages=messages)
+    result = completion['choices'][0]['message']['content']
+    return result
+
+
+import json
+from ai_nlp.utils import keyword_extract ,extract_entities
+@api_view(['GET'])
+def newscontentbuilder(request):
+    sentence =  request.query_params.get('sentence')
+    news_prompt = request.query_params.get('news_prompt')
+    no_of_words = request.query_params.get('no_of_words',None)
+    news_prompt_instance = NewsPrompt.objects.get(id = news_prompt)
+    assistant = news_prompt_instance.assistant
+    prompt = news_prompt_instance.prompt 
+
 
     if news_prompt_instance.name == "NER":
+        extracted_keywords = keyword_extract(sentence) #list:
+        extracted_ner = extract_entities(sentence)
+        result = {'keywords':extracted_keywords,'ner':extracted_ner}
+    
+    elif news_prompt_instance.name == "News_Item":
+        if no_of_words:
+            prompt = prompt.format(no_of_words)
+        result = news_text_gen(sentence,prompt ,assistant)
+    elif news_prompt_instance.name == "Audio":
+        pass
  
-        prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
-        messages = [{"role":"system","content":news_prompt_instance.assistant},
-                    {"role": "user", "content":prompt_template}]
-        completion = get_prompt_gpt_turbo_1106(messages=messages)
-        result = completion['choices'][0]['message']['content']
-        res = json.loads(result)
-    return Response({'id':news_prompt_instance.id ,'sentence':sentence , 'result':res})
+    else:
+        result = news_text_gen(sentence,prompt ,assistant)
+
+ 
+    return Response({'id':news_prompt_instance.id ,'sentence':sentence , 'result':result})
+
+
+
+ 
+# prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
+# messages = [{"role":"system","content":news_prompt_instance.assistant},
+#             {"role": "user", "content":prompt_template}]
+# completion = get_prompt_gpt_turbo_1106(messages=messages)
+# result = completion['choices'][0]['message']['content']
+# res = json.loads(result)
+
+
+
+    
     
 
 

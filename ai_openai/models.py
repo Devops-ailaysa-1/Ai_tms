@@ -348,6 +348,20 @@ class NewsPrompt(models.Model):
     prompt = models.CharField(max_length = 900, null=True, blank=True)
     assistant = models.CharField(max_length = 200, null=True, blank=True)
 
+# def user_directory_audio_report(instance, filename):
+#     return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
 
+# class NewsResults(models.Model):
+#     # user_prompt = models.TextField(null=True,blank=True)
+#     # user_prompt_mt = models.TextField(null=True,blank=True)
+#     # news_prompt = models.ForeignKey(NewsPrompt,on_delete=models.CASCADE,related_name='news_prompt_create')
+#     # news_result = models.TextField(null=True,blank=True) 
+#     # news_result_mt = models.TextField(null=True,blank=True) 
 
-    
+#     # keyword = models.CharField(max_length = 900, null=True, blank=True)
+#     # ner = models.JSONField(null=True)
+#     # result_lang = models.ForeignKey(Languages, on_delete = models.SET_NULL,related_name='prompt_language',null=True, blank=True)  
+#     # audio_file = models.FileField(upload_to=user_directory_audio_report,null=True,blank=True)
+ 
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
