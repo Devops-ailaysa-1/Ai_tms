@@ -1118,10 +1118,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",)
-
-	
-				
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id',)
+		
 
 	def get_push_detail(self,obj):
 		if obj.job.project.project_type_id == 8:

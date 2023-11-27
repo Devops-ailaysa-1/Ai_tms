@@ -147,6 +147,18 @@ class SegmentSerializerV2(SegmentSerializer):
                         i.task_assign.save()
         except:pass
 
+    def update_pushed_state(self,task_obj):
+        print("Inside")
+        if task_obj.job.project.project_type_id == 8:
+            if task_obj.news_task.exists():
+                news_obj = task_obj.news_task.first()
+                if news_obj.pushed != False:
+                    print("In inside")
+                    news_obj.pushed = False
+                    news_obj.save()
+                    print("news------------------>",news_obj)
+
+
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
@@ -200,6 +212,7 @@ class SegmentSerializerV2(SegmentSerializer):
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
+        self.update_pushed_state(task_obj)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
