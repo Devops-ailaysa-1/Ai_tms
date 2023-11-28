@@ -4880,7 +4880,10 @@ class AddStoriesView(viewsets.ModelViewSet):
             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name +str(count+1).zfill(3)
             files = self.get_json(news_json,name)
             if pr:
-                serializer =ProjectQuickSetupSerializer(pr,data={"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+                data = request.POST.dict()
+                print("Data--------->",data)
+                data.pop('target_languages')
+                serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
             else:
                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
             if serializer.is_valid(raise_exception=True):
