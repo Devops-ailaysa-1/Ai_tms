@@ -357,8 +357,9 @@ class Project(models.Model):
             return None
 
         else:
-            assigned_jobs = [i.job.id for i in tasks]
-            docs = Document.objects.filter(job__in=assigned_jobs).all()
+            task_jobs = [i.job.id for i in tasks]
+            task_files = [i.file.id for i in tasks]
+            docs = Document.objects.filter(job__in=task_jobs,file__in=task_files).all()
             print("Docs------------------->",docs)
             #docs = Document.objects.filter(job__project_id=self.id).all()
             #tasks = len(tasks)
@@ -1253,6 +1254,14 @@ class Task(models.Model):
         if self.job.project.file_translate == True:
             if self.task_file_detail.exists() == True:
                 res = True
+        return res
+
+    @property
+    def feed_id(self):
+        res = None
+        if self.job.project.project_type_id == 8:
+            if self.news_task.exists() == True:
+                res = self.news_task.first().feed_id
         return res
 	
     @property
