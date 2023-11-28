@@ -1131,7 +1131,21 @@ class PromptCategoriesViewset(viewsets.ViewSet):
         query_set = self.get_queryset()
         serializer = PromptCategoriesSerializer(query_set,many=True)
         return Response(serializer.data)  
-    
+
+class NewsCategoriesViewset(viewsets.ViewSet):
+    # permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = PromptCategories.objects.filter(category__icontains="News")
+        return queryset
+
+
+    def list(self,request):
+        query_set = self.get_queryset()
+        serializer = PromptCategoriesSerializer(query_set,many=True)
+        return Response(serializer.data)  
+
     
 class PromptTonesViewset(viewsets.ViewSet):
     # permission_classes = [AllowAny,]
