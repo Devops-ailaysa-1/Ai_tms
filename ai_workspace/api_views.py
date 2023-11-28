@@ -4823,7 +4823,7 @@ def push_translated_story(request):
 
 
 class AddStoriesView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+    permission_classes = [IsAuthenticated]#,IsEnterpriseUser]
 
 
     def pr_check(self,src_lang,tar_langs,user):
@@ -4865,7 +4865,7 @@ class AddStoriesView(viewsets.ModelViewSet):
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
-        din = AddStoriesView.check_user_dinamalar(request.user)
+        din = True#AddStoriesView.check_user_dinamalar(request.user)
         if din:
             news_json = request.POST.get('news_data')
             today_date = date.today()
