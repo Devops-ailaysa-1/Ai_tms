@@ -75,6 +75,16 @@ class AiPrompt(models.Model):
     @property
     def source_prompt_lang_code(self):
         return self.source_prompt_lang.locale.first().locale_code
+    
+
+class NewsPromptDetails(models.Model):
+    aiprompt = models.OneToOneField(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt_news_details')
+    no_of_words = models.CharField(max_length = 100, null=True, blank=True)
+    name_of_the_speaker = models.CharField(max_length = 100, null=True, blank=True)
+    position_of_the_speaker = models.CharField(max_length = 100, null=True, blank=True)
+    place_of_the_speech = models.CharField(max_length = 100, null=True, blank=True)
+ 
+
 
 class AiPromptResult(models.Model):
     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
@@ -327,6 +337,15 @@ class BookBackMatter(models.Model):
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='book_bm_tokens',null=True, blank=True)
 
 
+
+def user_directory_news_transcribe(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "news_audio",filename)
+class NewsTranscribe(models.Model):
+    audio_file = models.FileField(upload_to=user_directory_news_transcribe,blank=True ,null=True)
+    language =  models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='news_audio_lang',null=True, blank=True)
+
+ 
+
 # class InstantTranslation(models.Model):
 #     # InstantChoice=[
 #     #     ('Shorten' , 'Shorten'),
@@ -342,12 +361,26 @@ class BookBackMatter(models.Model):
 #     instant_result = models.CharField(max_length=800)
     
 
-class NewsPrompt(models.Model):
-    name = models.CharField(max_length = 200, null=True, blank=True)
-    news_modify_name = models.CharField(max_length = 200, null=True, blank=True)
-    prompt = models.CharField(max_length = 900, null=True, blank=True)
-    assistant = models.CharField(max_length = 200, null=True, blank=True)
+# class NewsPrompt(models.Model):
+#     name = models.CharField(max_length = 200, null=True, blank=True)
+#     news_modify_name = models.CharField(max_length = 200, null=True, blank=True)
+#     prompt = models.CharField(max_length = 900, null=True, blank=True)
+#     assistant = models.CharField(max_length = 200, null=True, blank=True)
 
+# def user_directory_audio_report(instance, filename):
+#     return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
 
+# class NewsResults(models.Model):
+#     # user_prompt = models.TextField(null=True,blank=True)
+#     # user_prompt_mt = models.TextField(null=True,blank=True)
+#     # news_prompt = models.ForeignKey(NewsPrompt,on_delete=models.CASCADE,related_name='news_prompt_create')
+#     # news_result = models.TextField(null=True,blank=True) 
+#     # news_result_mt = models.TextField(null=True,blank=True) 
 
-    
+#     # keyword = models.CharField(max_length = 900, null=True, blank=True)
+#     # ner = models.JSONField(null=True)
+#     # result_lang = models.ForeignKey(Languages, on_delete = models.SET_NULL,related_name='prompt_language',null=True, blank=True)  
+#     # audio_file = models.FileField(upload_to=user_directory_audio_report,null=True,blank=True)
+ 
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
