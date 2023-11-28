@@ -1145,14 +1145,21 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:return res
 
 	def get_news_detail(self,obj):
+		from bs4 import BeautifulSoup
+		punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
 		data = {}
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
 				try:
 					json_data = obj.news_task.first().source_json.get('news')[0]
+					heading = json_data.get('heading')
 				except:
 					json_data = obj.news_task.first().source_json
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading'),'maincat_name':json_data.get('maincat_name')}
+					story = json_data.get('story')
+					soup = BeautifulSoup(story, 'html.parser')
+					text = soup.get_text()
+					heading = text.split('.')[0].strip(punctuation)
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name')}
 		return data
 
 	# def get_image_translate_project(self,obj):
