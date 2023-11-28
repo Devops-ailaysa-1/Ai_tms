@@ -914,63 +914,48 @@ encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
 
 from ai_openai.models import MyDocuments
 from ai_openai.utils import get_prompt_gpt_turbo_1106
-from ai_openai.models import NewsPrompt
+# from ai_openai.models import NewsPrompt
 
 
-def news_text_gen(sentence , prompt ,assistant ):
-    prompt_template = """Context: {context}
-
-    
-    {prompt}
-    """
-    prompt_template = prompt_template.format(context=sentence,prompt=prompt) 
-    messages = [{"role":"system","content":assistant},
-                    {"role": "user", "content":prompt_template}]
-    completion = get_prompt_gpt_turbo_1106(messages=messages)
-    result = completion['choices'][0]['message']['content']
-    return result
+ 
 
 
 import json
 from ai_nlp.utils import keyword_extract ,extract_entities
 @api_view(['GET'])
-def newscontentbuilder(request):
+def ner_generate(request):
     sentence =  request.query_params.get('sentence')
-    news_prompt = request.query_params.get('news_prompt')
-    no_of_words = request.query_params.get('no_of_words',None)
-    news_prompt_instance = NewsPrompt.objects.get(id = news_prompt)
-    assistant = news_prompt_instance.assistant
-    prompt = news_prompt_instance.prompt 
+    extracted_keywords = keyword_extract(sentence) #list:
+    extracted_ner = extract_entities(sentence)
+    result = {'keywords':extracted_keywords,'ner':extracted_ner}
+    return Response({'sentence':sentence , 'result':result})
 
 
-    if news_prompt_instance.name == "NER":
-        extracted_keywords = keyword_extract(sentence) #list:
-        extracted_ner = extract_entities(sentence)
-        result = {'keywords':extracted_keywords,'ner':extracted_ner}
-    
-    elif news_prompt_instance.name == "News_Item":
-        if no_of_words:
-            prompt = prompt.format(no_of_words)
-        result = news_text_gen(sentence,prompt ,assistant)
-    elif news_prompt_instance.name == "Audio":
-        pass
- 
-    else:
-        result = news_text_gen(sentence,prompt ,assistant)
-
- 
-    return Response({'id':news_prompt_instance.id ,'sentence':sentence , 'result':result})
-
+from ai_openai.serializers import NewsTranscribeSerializer
+from ai_openai.models import NewsTranscribe
 
 
  
-# prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
-# messages = [{"role":"system","content":news_prompt_instance.assistant},
-#             {"role": "user", "content":prompt_template}]
-# completion = get_prompt_gpt_turbo_1106(messages=messages)
-# result = completion['choices'][0]['message']['content']
-# res = json.loads(result)
+class NewsTranscribeViewset(viewsets.ViewSet):
 
+    def list(self, request):
+        query_set=NewsTranscribe.objects.all()
+        serializer=NewsTranscribeSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = NewsTranscribe.objects.get(id=pk)
+        serializer=NewsTranscribeSerializer(query_set)
+        return Response(serializer.data)
+
+    def create(self,request):
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = NewsTranscribeSerializer(data={**request.POST.dict() ,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+ 
 
 
     
