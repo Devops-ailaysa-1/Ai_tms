@@ -18,7 +18,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libxslt-dev libxml2-dev libpam-dev libedit-dev libhunspell-dev ffmpeg\
-    libpoppler-cpp-dev pkg-config poppler-utils pandoc
+    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
 
 WORKDIR /ai_home
 COPY pyproject.toml poetry.lock /ai_home/
@@ -40,3 +40,4 @@ COPY . .
 EXPOSE 8000
 
 # ENTRYPOINT ["/ai_tms_web.entrypoint.sh"]
+

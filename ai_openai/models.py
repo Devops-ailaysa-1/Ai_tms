@@ -340,11 +340,14 @@ class BookBackMatter(models.Model):
 
 def user_directory_news_transcribe(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "news_audio",filename)
+
 class NewsTranscribe(models.Model):
     audio_file = models.FileField(upload_to=user_directory_news_transcribe,blank=True ,null=True)
     language =  models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='news_audio_lang',null=True, blank=True)
 
- 
+class NewsTranscribeResult(models.Model):
+    transcribe_result = models.TextField(null=True,blank=True)
+    
 
 # class InstantTranslation(models.Model):
 #     # InstantChoice=[
