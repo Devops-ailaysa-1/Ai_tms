@@ -545,7 +545,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def run_validation(self,data):
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
-				if pt not in [4 ,3] and data.get('target_languages')==None:
+				if pt not in [4 ,3, 8] and data.get('target_languages')==None:
 						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
@@ -1148,7 +1148,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		data = {}
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
-				json_data = obj.news_task.first().source_json.get('news')[0]
+				try:
+					json_data = obj.news_task.first().source_json.get('news')[0]
+				except:
+					json_data = obj.news_task.first().source_json
 				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading'),'maincat_name':json_data.get('maincat_name')}
 		return data
 

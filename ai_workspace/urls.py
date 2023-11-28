@@ -33,7 +33,7 @@ router.register(r'steps',api_views.StepsView,basename='steps')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
-
+router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
 router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
 
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
