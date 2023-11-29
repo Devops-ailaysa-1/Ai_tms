@@ -102,9 +102,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                         {"role": "user", "content":prompt_template}]
         return messages
 
-
- 
-
   
     def prompt_generation(self,ins,obj,ai_langs,targets,user):
         instance = AiPrompt.objects.get(id=ins)
@@ -1696,17 +1693,52 @@ def credits_to_check(book_ins):
         return 550
 
 
-from ai_openai.models import NewsTranscribe
-
-class NewsTranscribeSerializer(serializers.ModelSerializer):
+from ai_openai.models import NewsTranscribe,NewsTranscribeResult
+from ai_workspace.api_views import audio_read,transcribe_short_file
+from ai_workspace.utils import  get_consumable_credits_for_speech_to_text
+class NewsTranscribeResultSerializer(serializers.ModelSerializer):
  
     class Meta:
-        model = NewsTranscribe
+        model = NewsTranscribeResult
         fields = "__all__"
 
 
+class NewsTranscribeSerializer(serializers.ModelSerializer):
+    news_transcribe = NewsTranscribeResultSerializer(many=True,required=False)
+ 
+    class Meta:
+        model = NewsTranscribe
+        fields = ("id","news_transcribe","audio_file","language","user","audio_len","prompt_sub_category")
+
     def create(self,validated_data):
         instance = NewsTranscribe.objects.create(**validated_data)
+        try:
+            length,hertz = audio_read(instance.audio_file.path)
+        except:
+            length=None
+        print("Length in main----->",length)
+        if length==None:
+            raise serializers.ValidationError({'msg':'something wrong in input file'},status=400)
+        initial_credit = instance.user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_speech_to_text(length)
+        if initial_credit > consumable_credits:
+
+            if length and length<60:
+                res = transcribe_short_file(speech_file=instance.audio_file.path,source_code=instance.language.locale_code,
+                                            obj=None,length=length,user=instance.user,hertz=hertz)
+                print("res--->",res)
+                instance.audio_len = res.get("audio_file_length")
+                instance.save()
+                NewsTranscribeResult.objects.create(news_transcribe=instance , transcribe_result =res.get('transcripted_text') )
+                if res.get('msg') == None:
+                    consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
+
+            else:
+                print("not_short")
+        else:
+        
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+
         return instance
 
  

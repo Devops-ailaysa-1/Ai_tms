@@ -917,8 +917,6 @@ from ai_openai.utils import get_prompt_gpt_turbo_1106
 # from ai_openai.models import NewsPrompt
 
 
- 
-
 
 import json
 from ai_nlp.utils import keyword_extract ,extract_entities
@@ -931,11 +929,10 @@ def ner_generate(request):
     return Response({'sentence':sentence , 'result':result})
 
 
-from ai_openai.serializers import NewsTranscribeSerializer
-from ai_openai.models import NewsTranscribe
+from ai_openai.serializers import NewsTranscribeSerializer,AiPromptSerializer,NewsTranscribeResultSerializer ,openai_token_usage #news_text_gen_prompt_template ,
+from ai_openai.models import NewsTranscribe,NewsTranscribeResult
+from ai_openai.utils import get_prompt_gpt_turbo_1106
 
-
- 
 class NewsTranscribeViewset(viewsets.ViewSet):
 
     def list(self, request):
@@ -944,20 +941,42 @@ class NewsTranscribeViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def retrieve(self, request,pk=None):
-        query_set = NewsTranscribe.objects.get(id=pk)
+        query_set = NewsTranscribe.objects.get(user =request.user,id=pk)
         serializer=NewsTranscribeSerializer(query_set)
         return Response(serializer.data)
 
     def create(self,request):
         user = request.user.team.owner if request.user.team else request.user
-        serializer = NewsTranscribeSerializer(data={**request.POST.dict() ,'user':user.id} ) 
+        audio_file = request.FILES.get('audio_file')
+        if audio_file and str(audio_file).split('.')[-1] not in ['MP3', 'mp3']: 
+            return Response({'msg':'only MP3 ,mp3 suppported file'},status=400)
+        serializer = NewsTranscribeSerializer(data={**request.POST.dict() ,'audio_file':audio_file,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
  
+@api_view(['GET'])
+def transcribe_to_news_report_generate(request):
+    news_transcribe_id =  request.query_params.get('news_transcribe_id')
+    news_transcribe_res_inst = NewsTranscribeResult.objects.get(id = news_transcribe_id)
+    transcribe_result_context = news_transcribe_res_inst.transcribe_result
+    prompt  =news_transcribe_res_inst.news_transcribe.prompt_sub_category.prompt_sub_category.first()
+    message = AiPromptSerializer().news_text_gen_prompt_template(description=transcribe_result_context,prompt=prompt.start_phrase,assistant=prompt.assistant)
+    openai_response = get_prompt_gpt_turbo_1106(messages=message)
+    token_usage = openai_token_usage(openai_response)
+    token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+    print("Tokens for openai------------>",token_usage_to_reduce)
+    content = openai_response["choices"][0]["message"]["content"]
+    news_transcribe_res_inst.transcribed_news_report = content
+    news_transcribe_res_inst.save()
+    ser = NewsTranscribeResultSerializer(news_transcribe_res_inst)
+    return Response(ser.data)
+    # return Response({'sentence':sentence , 'result':result})
 
-
+        
+       
+            
     
     
 
