@@ -40,7 +40,8 @@ urlpatterns += [
     path('article_generate_test/',api_views.generate),
     path('book_chapter_generate/',api_views.generate_chapter),
     path('docx_merger/',api_views.docx_merger),
-    path('ner_generate',api_views.ner_generate)
+    path('ner_generate',api_views.ner_generate),
+    path('transcribe_to_news',api_views.transcribe_to_news_report_generate)
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 
