@@ -103,6 +103,7 @@ from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
 from .utils import merge_dict
 from ai_auth.access_policies import IsEnterpriseUser
+from datetime import date
 
 class IsCustomer(permissions.BasePermission):
 
@@ -4726,9 +4727,9 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             if response.status_code == 200:
                 TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':response.json()})
 
-            
-
+        
     def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
         allow = GetNewsFederalView.check_user_federal(request.user)
         if allow:
             news = request.POST.getlist('news_id')
@@ -4740,6 +4741,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 serializer.save()
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 NewsProjectSetupView.create_news_detail(pr)
+                ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_cms)
                 authorize(request,resource=pr,action="create",actor=self.request.user)
                 return Response(serializer.data)
             return Response(serializer.errors)
@@ -4837,6 +4839,80 @@ def push_translated_story(request):
     return Response({'msg':"something went wrong"},status=400)
 
 
+class AddStoriesView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+    def pr_check(self,src_lang,tar_langs,user):
+        today_date = date.today()
+        project_name = today_date.strftime("%b %d")
+        query = Project.objects.filter(ai_user=user).filter(project_name__icontains=project_name).\
+                filter(project_jobs_set__source_language_id = src_lang).\
+                filter(project_jobs_set__target_language_id__in = tar_langs)
+        if query:
+            return query.last()
+        return None
+
+    @staticmethod
+    def create_news_detail(pr):
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+            print("TT---------------->",tt)
+
+
+    @staticmethod
+    def check_user_dinamalar(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        try:
+            if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+                return True
+        except:
+            return False 
+
+    def get_json(self,json_data,name):
+        print("DT--------------->",json_data)
+        name = f"{name}.json"
+        im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+        files = [im_file]
+        return files
+
+    def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
+        din = AddStoriesView.check_user_dinamalar(request.user)
+        if din:
+            news_json = request.POST.get('news_data')
+            today_date = date.today()
+            project_name = today_date.strftime("%b %d")
+            news_json = json.loads(news_json) if news_json else None
+            src_lang = request.POST.get('source_language')
+            tar_langs = request.POST.getlist('target_languages')
+            user = self.request.user
+            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            pr = self.pr_check(src_lang,tar_langs,user_1)
+            count = pr.get_tasks.count() if pr else 1
+            name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name +str(count+1).zfill(3)
+            files = self.get_json(news_json,name)
+            if pr:
+                data = request.POST.dict()
+                print("Data--------->",data)
+                data.pop('target_languages')
+                serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+            else:
+                serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                pr = Project.objects.get(id=serializer.data.get('id'))
+                self.create_news_detail(pr)
+                ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+                authorize(request,resource=pr,action="create",actor=self.request.user)
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403) 
 
 # @api_view(["GET"])
 # @authentication_classes([APIAuthentication])
@@ -4899,26 +4975,28 @@ def push_translated_story(request):
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    allow = GetNewsFederalView.check_user_federal(request.user)
-    if allow:
-        task_id = request.GET.get('task_id')
-        obj = Task.objects.get(id=task_id)
-        target_json,source_json= {},{}
-        if obj.job.project.project_type_id == 8:
-            if obj.news_task.exists():
-                source_json = obj.news_task.first().source_json.get('news')[0]
-
-            if obj.document:
-                doc_to_file = DocumentToFile()
-                res = doc_to_file.document_data_to_file(request,obj.document.id)
-                with open(res.text,"r") as fp:
-                    json_data = json.load(fp)
-                trans_json = json_data	
+    #allow = GetNewsFederalView.check_user_federal(request.user)
+    #if allow:
+    task_id = request.GET.get('task_id')
+    obj = Task.objects.get(id=task_id)
+    target_json,source_json= {},{}
+    if obj.job.project.project_type_id == 8:
+        if obj.news_task.exists():
+            try: source_json = obj.news_task.first().source_json.get('news')[0]
+            except: source_json = obj.news_task.first().source_json
+        if obj.document:
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,obj.document.id)
+            with open(res.text,"r") as fp:
+                json_data = json.load(fp)
+            trans_json = json_data	
+            if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
                 target_json = merge_dict(trans_json,source_json)
-            
-        return Response({'source_json':source_json,'target_json':target_json})
-    else:
-        return Response({"detail": "You do not have permission to perform this action."},status=403)
+            else: target_json = trans_json
+        
+    return Response({'source_json':source_json,'target_json':target_json})
+    # else:
+    #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:

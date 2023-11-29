@@ -793,6 +793,8 @@ class ProjectFilesCreateType(models.Model):
         upload_file = 'upload', "Files from usual upload"
         integeration = "integeration", "Files from integerations"
         from_text   = "From insta text"
+        from_cms = 'From CMS'
+        from_stories = 'From add story'
 
     file_create_type = models.TextField(choices=FileType.choices,
         default=FileType.upload_file)
