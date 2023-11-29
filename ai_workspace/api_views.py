@@ -4823,7 +4823,7 @@ def push_translated_story(request):
 
 
 class AddStoriesView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]#,IsEnterpriseUser]
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
 
     def pr_check(self,src_lang,tar_langs,user):
@@ -4865,7 +4865,7 @@ class AddStoriesView(viewsets.ModelViewSet):
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
-        din = True#AddStoriesView.check_user_dinamalar(request.user)
+        din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
             news_json = request.POST.get('news_data')
             today_date = date.today()
@@ -4958,15 +4958,15 @@ class AddStoriesView(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    allow = GetNewsFederalView.check_user_federal(request.user)
+    #allow = GetNewsFederalView.check_user_federal(request.user)
     if allow:
         task_id = request.GET.get('task_id')
         obj = Task.objects.get(id=task_id)
         target_json,source_json= {},{}
         if obj.job.project.project_type_id == 8:
             if obj.news_task.exists():
-                source_json = obj.news_task.first().source_json.get('news')[0]
-
+                try: source_json = obj.news_task.first().source_json.get('news')[0]
+                except: source_json = obj.news_task.first().source_json
             if obj.document:
                 doc_to_file = DocumentToFile()
                 res = doc_to_file.document_data_to_file(request,obj.document.id)
