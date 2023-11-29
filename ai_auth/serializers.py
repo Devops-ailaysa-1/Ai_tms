@@ -339,6 +339,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
     is_campaign =  serializers.SerializerMethodField(source="get_is_campaign",read_only=True)
     is_enterprise = serializers.SerializerMethodField(source="get_is_enterprise",read_only=True)
     signup_method =  serializers.SerializerMethodField(source="get_signup_method",read_only=True)
+    enterprise_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         extra_fields = []
@@ -363,7 +364,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
 
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method','is_enterprise',*extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method','is_enterprise','enterprise_name',*extra_fields)
         read_only_fields = ('email',)
 
     def get_is_social(self,obj):
@@ -388,6 +389,15 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
                 return obj.team.owner.is_enterprise  
             else:
                 return False
+
+    def get_enterprise_name(self,obj):
+        user = obj.team.owner if obj.team else obj
+        try: 
+            if user.user_enterprise :
+                return user.user_enterprise.subscription_name
+            else:
+                return None
+        except:return None    
  
 
     def get_signup_method(self,obj):
