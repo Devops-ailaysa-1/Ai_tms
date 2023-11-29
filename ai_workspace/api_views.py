@@ -4959,25 +4959,25 @@ class AddStoriesView(viewsets.ModelViewSet):
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     #allow = GetNewsFederalView.check_user_federal(request.user)
-    if allow:
-        task_id = request.GET.get('task_id')
-        obj = Task.objects.get(id=task_id)
-        target_json,source_json= {},{}
-        if obj.job.project.project_type_id == 8:
-            if obj.news_task.exists():
-                try: source_json = obj.news_task.first().source_json.get('news')[0]
-                except: source_json = obj.news_task.first().source_json
-            if obj.document:
-                doc_to_file = DocumentToFile()
-                res = doc_to_file.document_data_to_file(request,obj.document.id)
-                with open(res.text,"r") as fp:
-                    json_data = json.load(fp)
-                trans_json = json_data	
-                target_json = merge_dict(trans_json,source_json)
-            
-        return Response({'source_json':source_json,'target_json':target_json})
-    else:
-        return Response({"detail": "You do not have permission to perform this action."},status=403)
+    #if allow:
+    task_id = request.GET.get('task_id')
+    obj = Task.objects.get(id=task_id)
+    target_json,source_json= {},{}
+    if obj.job.project.project_type_id == 8:
+        if obj.news_task.exists():
+            try: source_json = obj.news_task.first().source_json.get('news')[0]
+            except: source_json = obj.news_task.first().source_json
+        if obj.document:
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,obj.document.id)
+            with open(res.text,"r") as fp:
+                json_data = json.load(fp)
+            trans_json = json_data	
+            target_json = merge_dict(trans_json,source_json)
+        
+    return Response({'source_json':source_json,'target_json':target_json})
+    # else:
+    #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:
