@@ -342,11 +342,19 @@ def user_directory_news_transcribe(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "news_audio",filename)
 
 class NewsTranscribe(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     audio_file = models.FileField(upload_to=user_directory_news_transcribe,blank=True ,null=True)
     language =  models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='news_audio_lang',null=True, blank=True)
+    audio_len = models.CharField(max_length = 150, null=True, blank=True)
+    prompt_sub_category = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='news_transcribe')
+
 
 class NewsTranscribeResult(models.Model):
+    news_transcribe = models.ForeignKey(NewsTranscribe,on_delete=models.CASCADE,related_name='news_transcribe')
     transcribe_result = models.TextField(null=True,blank=True)
+    transcribed_news_report = models.TextField(null=True,blank=True)
+    
+    # mt_engine = 
     
 
 # class InstantTranslation(models.Model):

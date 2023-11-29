@@ -2310,7 +2310,12 @@ class ShowMTChoices(APIView):
 ###########################Transcribe Short File#####################################
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
-    ai_user = obj.job.project.ai_user
+    news_transcribe = False
+    if obj:
+        ai_user = obj.job.project.ai_user
+    else:
+        ai_user = user
+        news_transcribe = True
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -2330,6 +2335,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         file_length = int(response.total_billed_time.seconds)
         print("Length return from api--------->",file_length)
         record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
+        print("going to task transcription ser")
+        if news_transcribe:
+            return {"transcripted_text":transcript,"audio_file_length":file_length}
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -2395,6 +2403,14 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     return (ser.errors)
 
 
+def audio_read(speech_file):
+    audio = AudioSegment.from_file(speech_file)
+    length = int(audio.duration_seconds)###seconds####
+    hertz = audio.frame_rate
+    return length,hertz
+
+
+
 
 ################################speech-to-text############# working#############################3
 @api_view(["POST"])
@@ -2424,9 +2440,10 @@ def transcribe_file(request):
         filename = obj.file.filename
         speech_file = obj.file.file.path
         try:
-            audio = AudioSegment.from_file(speech_file)
-            length = int(audio.duration_seconds)###seconds####
-            hertz = audio.frame_rate
+            length,hertz = audio_read(speech_file)
+            # audio = AudioSegment.from_file(speech_file)
+            # length = int(audio.duration_seconds)###seconds####
+            # hertz = audio.frame_rate
         except:
             length=None
         print("Length in main----->",length)
