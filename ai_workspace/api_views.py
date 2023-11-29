@@ -4973,7 +4973,9 @@ def get_news_detail(request):
             with open(res.text,"r") as fp:
                 json_data = json.load(fp)
             trans_json = json_data	
-            target_json = merge_dict(trans_json,source_json)
+            if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+                target_json = merge_dict(trans_json,source_json)
+            else: target_json = trans_json
         
     return Response({'source_json':source_json,'target_json':target_json})
     # else:
