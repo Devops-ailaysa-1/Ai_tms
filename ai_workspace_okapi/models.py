@@ -461,7 +461,7 @@ class Document(models.Model):
 
     @property
     def segments_for_workspace(self):
-        return self.get_segments().exclude(Q(source__exact='').exclude(source__regex=r'^<[^>]*>\s*</[^>]*>$')|(Q(is_merged=True)
+        return self.get_segments().exclude(Q(source__exact='')| Q(source__regex=r'^<[^>]*>\s*</[^>]*>$')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
 
 
