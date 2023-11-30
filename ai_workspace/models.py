@@ -1510,12 +1510,15 @@ class Task(models.Model):
     def corrected_segment_count(self):
         cache_key = f'seg_progress_{self.document.pk}' if self.document else None
         cached_value = cache.get(cache_key)
+        print("CVVVV----------->",cached_value)
         if cached_value is None:
             confirm_list = [102, 104, 106, 110, 107]
             total_seg_count = 0
             confirm_count = 0
             doc = self.document
             segs = Segment.objects.filter(text_unit__document=doc)
+            if doc.job.project_type_id == 8:
+                segs = segs.exclude(Q(source__regex=r'^<[^>\s]+>[\s]*</[^>]+>$') | Q(source__regex=r'<[^>\s]+>[\s]*</[^>]+>'))
             for seg in segs:
 
                 if (seg.is_merged == True and seg.is_merge_start != True):
@@ -1536,7 +1539,7 @@ class Task(models.Model):
 
                 elif seg_new.status_id in confirm_list:
                     confirm_count += 1
-
+            print("TT----------------->",total_seg_count)
             cached_value ={"total_segments":total_seg_count,"confirmed_segments": confirm_count}
             cache.set(cache_key,cached_value)
         return cached_value
