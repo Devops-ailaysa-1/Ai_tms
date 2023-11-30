@@ -457,17 +457,27 @@ class Document(models.Model):
 
     @property
     def segments_without_blank(self):
-        return self.get_segments().exclude(source__exact='').exclude(source__regex=r'^<[^>]*>\s*</[^>]*>$').order_by("id")
+        if self.job.project.project_type_id != 8:
+            return self.get_segments().exclude(source__exact='').order_by("id")
+        else:
+            return self.get_segments().exclude(Q(source__exact='') | (Q(source__regex=r'^<[^>\s]+>[\s]*</[^>]+>$') | Q(source__regex=r'<[^>\s]+>[\s]*</[^>]+>'))).order_by("id")
 
     @property
     def segments_for_workspace(self):
-        return self.get_segments().exclude(Q(source__exact='')| Q(source__regex=r'^<[^>]*>\s*</[^>]*>$')|(Q(is_merged=True)
+        if self.job.project.project_type_id != 8:
+            return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
+        else:
+            return self.get_segments().exclude(Q(source__exact='')|(Q(source__regex=r'^<[^>\s]+>[\s]*</[^>]+>$') | Q(source__regex=r'<[^>\s]+>[\s]*</[^>]+>'))|
+                    (Q(is_merged=True) & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False))))
 
 
     @property
     def segments_for_find_and_replace(self):
-        return self.get_segments().exclude(Q(source__exact='')|Q(source__regex=r'^<[^>]*>\s*</[^>]*>$')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
+        if self.job.project.project_type_id != 8:
+            return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
+        else:
+            return self.get_segments().exclude(Q(source__exact='')|(Q(source__regex=r'^<[^>\s]+>[\s]*</[^>]+>$') | Q(source__regex=r'<[^>\s]+>[\s]*</[^>]+>'))|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
 
     @property
     def segments_with_blank(self):
