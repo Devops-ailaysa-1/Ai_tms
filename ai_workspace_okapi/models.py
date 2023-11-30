@@ -467,7 +467,7 @@ class Document(models.Model):
 
     @property
     def segments_for_find_and_replace(self):
-        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
+        return self.get_segments().exclude(Q(source__exact='')|Q(source__regex=r'^<[^>]*>\s*</[^>]*>$')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
 
     @property
     def segments_with_blank(self):
