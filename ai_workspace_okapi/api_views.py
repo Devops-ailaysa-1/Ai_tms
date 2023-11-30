@@ -1033,7 +1033,7 @@ class MT_RawAndTM_View(views.APIView):
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
-        # initial_credit = 100
+
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)
@@ -1593,46 +1593,56 @@ class DocumentToFile(views.APIView):
         return download_file(bilingual_file_path)
     
     @staticmethod
-    def json_key_manipulation(res_json_path): #### for federal
-        from ai_workspace.utils import LIST_KEYS_FEDARAL
-        print("######################")
-        to_rearrange_key = ['heading','story']
+    def json_key_manipulation(res_json_path): #### for enterprise
+        from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
+        res_json_path_text = res_json_path.split("json")[0]+".docx"
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
             # fp = fp['news'][0]
-            
-        print("Fp------------->", fp.keys())
-        rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
-        rearraged_keys_dict.update(fp)
-        # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
-        res_json_path_text = res_json_path.split("json")[0]+"txt"
+        html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
+        html_to_docx(html_data, res_json_path_text )  
+        add_additional_content_to_docx(res_json_path_text, fp)  
         print(res_json_path_text)
-        # with open(res_json_path_text, 'w') as file:
-        #     file.write(rearraged_keys_dict)
-        #     file.close()
-
-        with open(res_json_path_text,'w') as fp:
-            for key,value in rearraged_keys_dict.items():
-                key = str(key)
-                value = str(value)
-                if key in list(LIST_KEYS_FEDARAL.keys()):
-                    fp.write(key.capitalize()+":")
-                    fp.write("\n")
-                    text = []
-                    for i in rearraged_keys_dict[key]:
-                        text.append(i[LIST_KEYS_FEDARAL[key][0]])
-                    fp.write(",".join(text))
-                    fp.write("\n")
-                else:
-                    fp.write(key.capitalize()+":")
-                    fp.write("\n")
-                    fp.write(value)
-                    fp.write("\n")
-                fp.write("---------")
-                fp.write("\n")
-                fp.write("\n")
-            fp.close()
         return res_json_path_text
+        # from ai_workspace.utils import LIST_KEYS_FEDARAL
+        # print("######################")
+        # to_rearrange_key = ['heading','story']
+        # with open(res_json_path,"r") as fp:
+        #     fp = json.load(fp)
+        #     # fp = fp['news'][0]
+            
+        # print("Fp------------->", fp.keys())
+        # rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
+        # rearraged_keys_dict.update(fp)
+        # # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
+        # res_json_path_text = res_json_path.split("json")[0]+"txt"
+        # print(res_json_path_text)
+        # # with open(res_json_path_text, 'w') as file:
+        # #     file.write(rearraged_keys_dict)
+        # #     file.close()
+
+        # with open(res_json_path_text,'w') as fp:
+        #     for key,value in rearraged_keys_dict.items():
+        #         key = str(key)
+        #         value = str(value)
+        #         if key in list(LIST_KEYS_FEDARAL.keys()):
+        #             fp.write(key.capitalize()+":")
+        #             fp.write("\n")
+        #             text = []
+        #             for i in rearraged_keys_dict[key]:
+        #                 text.append(i[LIST_KEYS_FEDARAL[key][0]])
+        #             fp.write(",".join(text))
+        #             fp.write("\n")
+        #         else:
+        #             fp.write(key.capitalize()+":")
+        #             fp.write("\n")
+        #             fp.write(value)
+        #             fp.write("\n")
+        #         fp.write("---------")
+        #         fp.write("\n")
+        #         fp.write("\n")
+        #     fp.close()
+        # return res_json_path_text
  
     
 

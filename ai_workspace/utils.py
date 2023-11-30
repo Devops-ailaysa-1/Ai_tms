@@ -260,3 +260,39 @@ def merge_dict(translated_json,raw_json):
 	return raw_json_trans
 
 	 
+
+
+import json
+import pypandoc
+from docx import Document
+
+def html_to_docx(html_content, docx_filename):
+
+    pypandoc.pandoc_download.download_pandoc()
+
+    modified_html_content = f"<h1>Story: </h1>{html_content}"
+    # Convert HTML to DOCX using pypandoc
+    pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
+
+
+def add_additional_content_to_docx(docx_filename, additional_content):
+    # Open the existing DOCX file using python-docx
+    doc = Document(docx_filename)
+
+    # Add additional content
+    for key, value in additional_content.items():
+        if key!='story':
+            doc.add_paragraph(f'{key.capitalize()}: {value}')
+
+    # Save the modified document
+    doc.save(docx_filename)
+
+# # Example usage:
+# sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
+
+# # Convert HTML to DOCX
+# html_to_docx(sample_json_data['body'], 'output.docx')
+
+# # Add additional content to the DOCX file
+# add_additional_content_to_docx('output.docx', sample_json_data)
+

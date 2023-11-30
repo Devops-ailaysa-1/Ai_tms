@@ -4891,10 +4891,10 @@ class AddStoriesView(viewsets.ModelViewSet):
             src_lang = request.POST.get('source_language')
             tar_langs = request.POST.getlist('target_languages')
             user = self.request.user
-            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            user_1 = user.team.owner if user.team and (user in user.team.get_project_manager) else user
             pr = self.pr_check(src_lang,tar_langs,user_1)
             count = pr.get_tasks.count() if pr else 1
-            name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name +str(count+1).zfill(3)
+            name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
             files = self.get_json(news_json,name)
             if pr:
                 data = request.POST.dict()
