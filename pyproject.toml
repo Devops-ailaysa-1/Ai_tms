@@ -100,6 +100,7 @@ cohere = "^4.32"
 pycryptodome = "3.19.0"
 segmind = "^0.2.3"
 yake = "^0.4.8"
+bleach = "6.1.0"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
