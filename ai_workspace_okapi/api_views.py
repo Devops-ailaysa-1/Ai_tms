@@ -1597,14 +1597,14 @@ class DocumentToFile(views.APIView):
     @staticmethod
     def json_key_manipulation(res_json_path): #### for enterprise
         from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
-        res_json_path_text = res_json_path.split("json")[0]+".docx"
+        res_json_path_text = res_json_path.split("json")[0]+"docx"
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
             # fp = fp['news'][0]
         html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
         html_to_docx(html_data, res_json_path_text )  
         add_additional_content_to_docx(res_json_path_text, fp)  
-        print(res_json_path_text)
+        
         return res_json_path_text
         # from ai_workspace.utils import LIST_KEYS_FEDARAL
         # print("######################")
