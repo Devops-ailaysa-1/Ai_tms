@@ -641,9 +641,11 @@ class SegmentsView(views.APIView, PageNumberPagination):
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
         segments = document.segments_for_find_and_replace
+        print("Segments------------->",segments)
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
         final_segments = list(chain(segments, merge_segments, split_segments))
+        print("Final Segments------------->",final_segments)
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
