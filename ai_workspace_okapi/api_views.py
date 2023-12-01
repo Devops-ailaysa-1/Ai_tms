@@ -1602,9 +1602,6 @@ class DocumentToFile(views.APIView):
             fp = json.load(fp)
             # fp = fp['news'][0]
         html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
-        html_data = """<h1><img src=https://m.media-amazon.com/images/M/MV5BN2RjMTY2ODQtMDAxMi00OWVkLWIxOWUtMDY0MzlkMzAzMDM1XkEyXkFqcGdeQWFybm8@._V1_.jpg\" alt=\"DC League of Super-Pets (2022) - IMDb\" /><br /></h1><h1>The Brave Dog who saved 10 humans from slipping into the dirt.</h1><h2>the super story</h2><h3>saved by a dog</h3><p>on <a href=\"http://www.google.com\" target=\"_blank\">Monday 23/11/24</a></p><p>people are in shock, because of the strong <i>rainfalls</i> and <u>thunderstorms</u>, there is a sloping road where the people are slipping and about to be poured into the dirt. before the tragedy, even the Wonder Dog appeared as always, then saved the humans from the bad scenario. with his superpower and his name<b> Tittan.</b> </p><p>people call him <b>Superdog!</b></p><p><br /></p>"""
-        print("html_data-->",html_data)
-        print("hemanth")
         html_to_docx(html_data, res_json_path_text )  
         add_additional_content_to_docx(res_json_path_text, fp)  
         

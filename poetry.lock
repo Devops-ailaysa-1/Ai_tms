@@ -5395,14 +5395,14 @@ test = ["flaky", "pretend", "pytest (>=3.0.1)"]
 
 [[package]]
 name = "pypandoc"
-version = "1.10"
+version = "1.12"
 description = "Thin wrapper for pandoc."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pypandoc-1.10-py3-none-any.whl", hash = "sha256:ff9658cda18865a822695349a7c707756ecc454b59b71f920b554579ec54aaa7"},
-    {file = "pypandoc-1.10.tar.gz", hash = "sha256:101164d154f0b9957372cdbf285396153b74144fda47f531fb556de244efc86e"},
+    {file = "pypandoc-1.12-py3-none-any.whl", hash = "sha256:efb4f7d68ead8bec32e22b62f02d5608a1700978b51bfc4af286fd6acfe9d218"},
+    {file = "pypandoc-1.12.tar.gz", hash = "sha256:8f44740a9f074e121d81b489f073160421611d4ead62d1b306aeb11aab3c32df"},
 ]
 
 [[package]]
@@ -7952,4 +7952,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "50d406721c4de68299c65200fb9b0184bec6095be87b895cb21c3f8269853de3"
+content-hash = "96261b41f8161ff8eb77e83b99d4b728a777862e1e26ee2dbbc9af18c1f713f5"
