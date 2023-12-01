@@ -1517,8 +1517,8 @@ class Task(models.Model):
             confirm_count = 0
             doc = self.document
             segs = Segment.objects.filter(text_unit__document=doc)
-            if doc.job.project_type_id == 8:
-                segs = segs.exclude(Q(source__regex=r'^<[^>\s]+>[\s]*</[^>]+>$') | Q(source__regex=r'<[^>\s]+>[\s]*</[^>]+>'))
+            if doc.job.project.project_type_id == 8:
+                segs = segs.filter(id__in=doc.get_text_segments())
             for seg in segs:
 
                 if (seg.is_merged == True and seg.is_merge_start != True):
