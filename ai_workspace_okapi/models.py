@@ -457,7 +457,7 @@ class Document(models.Model):
 
 
     def get_text_segments(self):
-        return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True) != '']
+        return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True).strip() != '']
 
 
     @property
