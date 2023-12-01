@@ -265,26 +265,23 @@ def merge_dict(translated_json,raw_json):
 import json
 import pypandoc
 from docx import Document
-
+pypandoc.pandoc_download.download_pandoc()
+ 
 def html_to_docx(html_content, docx_filename):
-
-    pypandoc.pandoc_download.download_pandoc()
-
-    modified_html_content = f"<h1>Story: </h1>{html_content}"
+    # modified_html_content = f"<h1>Story: </h1>{html_content}"
     # Convert HTML to DOCX using pypandoc
-    pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
+	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
+    # pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
 
 
 def add_additional_content_to_docx(docx_filename, additional_content):
     # Open the existing DOCX file using python-docx
     doc = Document(docx_filename)
-
-    # Add additional content
     for key, value in additional_content.items():
+        print(key)
         if key!='story':
+            print("not_story")
             doc.add_paragraph(f'{key.capitalize()}: {value}')
-
-    # Save the modified document
     doc.save(docx_filename)
 
 # # Example usage:

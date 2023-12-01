@@ -4731,6 +4731,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
         allow = GetNewsFederalView.check_user_federal(request.user)
+        print("allow---->",allow)
         if allow:
             news = request.POST.getlist('news_id')
             files = self.get_files(news)
@@ -4867,6 +4868,7 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def check_user_dinamalar(request_user):
         user = request_user.team.owner if request_user.team else request_user
+        print("user--->",user)
         try:
             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
                 return True
