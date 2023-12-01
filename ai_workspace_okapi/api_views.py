@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import re
-import requests
+import requests, bleach
 import urllib.parse
 import urllib.parse
 import xlsxwriter
@@ -1532,6 +1532,10 @@ class DocumentToFile(views.APIView):
         else:return string
         # return string
 
+    def clean_text(self,string):
+        if string!=None:
+            return bleach.clean(string, tags=[], strip=True)
+
     def get_bilingual_filename(self, document_id):
         doc = DocumentToFile.get_object(document_id)
         task = doc.task_set.first()
@@ -1560,7 +1564,8 @@ class DocumentToFile(views.APIView):
         worksheet.write('B1', 'Target language' + '(' + target_lang + ')', title_format)
 
         row = 1
-
+        doc = Document.objects.get(id=document_id)
+        project_type = doc.job.project.project_type_id
         text_units = TextUnit.objects.filter(document_id=document_id)
 
         for text_unit in text_units:
@@ -1572,24 +1577,25 @@ class DocumentToFile(views.APIView):
                         continue
                     else:
                         segment_new = segment.get_active_object()
-                        worksheet.write(row, 0, segment_new.source.strip(), cell_format)
-                        worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
-                        row += 1
+                        source = segment_new.source.strip() if project_type !=8 else self.clean_text(segment_new.source.strip())
+                        target = self.remove_tags(segment_new.temp_target) if project_type !=8 else self.clean_text(self.remove_tags(segment_new.temp_target))
+
                 # If the segment is split
                 elif segment.is_split:
+                    source = segment.source.strip() if project_type !=8 else self.clean_text(segment.source.strip())
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
                         if split_seg.temp_target:
                             target += self.remove_tags(split_seg.temp_target)
-                    worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, target, cell_format)
-                    row += 1
+                    
                 # For normal segments
                 else:
-                    worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, self.remove_tags(segment.temp_target), cell_format)
-                    row += 1
+                    source = segment.source.strip() if project_type !=8 else self.clean_text(segment.source.strip())
+                    target = self.remove_tags(segment.temp_target) if project_type !=8 else self.clean_text(self.remove_tags(segment.temp_target))
+                worksheet.write(row, 0, source, cell_format)
+                worksheet.write(row, 1, target, cell_format)
+                row += 1
         workbook.close()
 
         return download_file(bilingual_file_path)
@@ -1606,46 +1612,7 @@ class DocumentToFile(views.APIView):
         add_additional_content_to_docx(res_json_path_text, fp)  
         print(res_json_path_text)
         return res_json_path_text
-        # from ai_workspace.utils import LIST_KEYS_FEDARAL
-        # print("######################")
-        # to_rearrange_key = ['heading','story']
-        # with open(res_json_path,"r") as fp:
-        #     fp = json.load(fp)
-        #     # fp = fp['news'][0]
-            
-        # print("Fp------------->", fp.keys())
-        # rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
-        # rearraged_keys_dict.update(fp)
-        # # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
-        # res_json_path_text = res_json_path.split("json")[0]+"txt"
-        # print(res_json_path_text)
-        # # with open(res_json_path_text, 'w') as file:
-        # #     file.write(rearraged_keys_dict)
-        # #     file.close()
-
-        # with open(res_json_path_text,'w') as fp:
-        #     for key,value in rearraged_keys_dict.items():
-        #         key = str(key)
-        #         value = str(value)
-        #         if key in list(LIST_KEYS_FEDARAL.keys()):
-        #             fp.write(key.capitalize()+":")
-        #             fp.write("\n")
-        #             text = []
-        #             for i in rearraged_keys_dict[key]:
-        #                 text.append(i[LIST_KEYS_FEDARAL[key][0]])
-        #             fp.write(",".join(text))
-        #             fp.write("\n")
-        #         else:
-        #             fp.write(key.capitalize()+":")
-        #             fp.write("\n")
-        #             fp.write(value)
-        #             fp.write("\n")
-        #         fp.write("---------")
-        #         fp.write("\n")
-        #         fp.write("\n")
-        #     fp.close()
-        # return res_json_path_text
- 
+        
     
 
     def download_file_processing(self,file_path):
