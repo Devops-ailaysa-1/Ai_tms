@@ -681,8 +681,9 @@ class Project(models.Model):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
         from .models import MTonlytaskCeleryStatus
-        from .api_views import analysed_true
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
+        from .api_views import analysed_true,GetNewsFederalView
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
+            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
