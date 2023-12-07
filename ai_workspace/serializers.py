@@ -1936,15 +1936,35 @@ from itertools import repeat
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 from ai_workspace.utils import federal_json_translate
 from concurrent.futures import ThreadPoolExecutor
+from ai_workspace.serializers import VendorDashBoardSerializer
+
 class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
 	source_json = serializers.JSONField(required=False )
 	target_json = serializers.JSONField(required=False )
+	edit_allowed = serializers.SerializerMethodField()
+	
 	class Meta:
 		model = TaskNewsDetails
-		fields = ("id","task","source_json","target_json","created_at","updated_at")
+		fields = ("id","task","edit_allowed","source_json","target_json","created_at","updated_at",)
 
-	
+	def get_edit_allowed(self,obj):
+		request_obj = self.context.get('request')
+		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+		doc_view_instance = DocumentViewByDocumentId(request_obj)
+		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+		return edit_allowed
+
+	# def get_task_assign_info(self,obj):
+	# 	serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+	# 	result = serializer_task.get_task_assign_info(obj.task)  # Call the method from VendorDashBoardSerializer
+	# 	return result
+
+    # def get_task_reassign_info(self,obj):  
+    #     serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+    #     result = serializer_task.get_task_reassign_info(obj.task)  # Call the method from VendorDashBoardSerializer
+    #     return result 
+
 	def create(self, validated_data):
 		task = validated_data.get('task')
 		instance,created = TaskNewsDetails.objects.get_or_create(task=task)
@@ -1971,15 +1991,29 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 			TaskNewsMT.objects.create(task=instance,mt_raw_json=json_data,mt_engine=mt_engine)
 		return instance
 
+
+	def update_pushed_state(self,task_obj):
+		print("Inside")
+		if task_obj.job.project.project_type_id == 8:
+			if task_obj.news_task.exists():
+				news_obj = task_obj.news_task.first()
+				if news_obj.pushed != False:
+					print("In inside")
+					news_obj.pushed = False
+					news_obj.save()
+					print("news------------------>",news_obj)
+
+
 	def update(self, instance, validated_data):
-		source_json = validated_data.get('source_json',None)
+		#source_json = validated_data.get('source_json',None)
+		from ai_workspace_okapi.serializers import SegmentSerializerV2
 		target_json = validated_data.get('target_json',None)
 
-		if source_json:
-			instance.source_json = source_json
 		if target_json:
 			instance.target_json = target_json
-
+			self.update_pushed_state(instance.task)
+			ser = SegmentSerializerV2(context=self.context)
+			ser.update_task_assign(instance.task,self.context.get('request').user,None)
 		return instance
 	
 
