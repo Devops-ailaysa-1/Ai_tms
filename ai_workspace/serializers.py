@@ -2011,6 +2011,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 
 		if target_json:
 			instance.target_json = target_json
+			instance.save()
 			self.update_pushed_state(instance.task)
 			ser = SegmentSerializerV2(context=self.context)
 			ser.update_task_assign(instance.task,self.context.get('request').user,None)
