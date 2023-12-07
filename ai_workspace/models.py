@@ -1516,11 +1516,12 @@ class Task(models.Model):
             confirm_list = [102, 104, 106, 110, 107]
             total_seg_count = 0
             confirm_count = 0
+            segs = None
             doc = self.document
             if doc:
-                segs = Segment.objects.filter(text_unit__document=doc)
-            if self.job.project.project_type_id == 8:
-                segs = segs.filter(id__in=doc.get_text_segments())
+                if self.job.project.project_type_id == 8:
+                    segs = segs.filter(id__in=doc.get_text_segments())
+                else:segs = Segment.objects.filter(text_unit__document=doc)
             if segs:
                 for seg in segs:
 
