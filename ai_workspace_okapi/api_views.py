@@ -2886,12 +2886,31 @@ def download_mt_file(request):
         return Response({'msg':'Pending','task':task.id},status=400)
 
 
+def json_bilingual(src_json,tar_json,split_dict,document_to_file):
+    import pandas as pd
+    source_data = split_dict(src_json)
+    target_data = split_dict(tar_json)
+    source_data.pop('newsId',None)
+    target_data.pop('newsId',None)
+    source_data['media'] = document_to_file.clean_text(source_data['media'][0]['caption'])
+    target_data['media'] = document_to_file.clean_text(target_data['media'][0]['caption'])
+    source_data['story'] =  document_to_file.clean_text(source_data['story'])
+    target_data['story'] =  document_to_file.clean_text(target_data['story'])
+    flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
+    flattened_data = pd.DataFrame(flattened_data).transpose()
+    csv_data = flattened_data.to_csv(index=False)
+    return csv_data
+
+
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
     from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
-    import pandas as pd
+
     task_id =request.query_params.get('task_id')
     output_type = request.query_params.get('output_type','ORIGINAL')
     print("OT------------>",output_type)
@@ -2910,14 +2929,10 @@ def download_federal(request):
         print("Inside Bilungal")
         source_json = obj.news_task.last().source_json  
         target_json = obj.news_task.last().target_json
-        # source_json = json.loads(source_json) 
-        # target_json = json.loads(target_json)
-        source_data = split_dict(source_json)
-        target_data = split_dict(target_json)
-
-        flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
-        flattened_data = pd.DataFrame(flattened_data).transpose()
-        csv_data = flattened_data.to_csv(index=False)
+ 
+ 
+        document_to_file = DocumentToFile()
+        csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,document_to_file=document_to_file)
         response = HttpResponse(csv_data, content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
         return response
