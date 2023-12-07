@@ -680,9 +680,10 @@ class Project(models.Model):
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
-        from .models import MTonlytaskCeleryStatus
-        from .api_views import analysed_true
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
+        from .api_views import analysed_true,GetNewsFederalView
+
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
+            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
@@ -1353,6 +1354,7 @@ class Task(models.Model):
  
     @property
     def open_in(self):
+        from .api_views import GetNewsFederalView
         cache_key = f'task_open_in_{self.pk}'
         cached_value = cache.get(cache_key)
         print("Cached Value---------->",cached_value)
@@ -1364,8 +1366,8 @@ class Task(models.Model):
                     cached_value = "Designer"
                 elif self.job.project.project_type_id == 7:
                     cached_value = "Book"
-                # elif self.job.project.project_type_id == 9:
-                #     cached_value = "News"
+                elif self.job.project.project_type_id == 8 and GetNewsFederalView.check_user_federal(self.job.project.ai_user):
+                    cached_value = "News"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:

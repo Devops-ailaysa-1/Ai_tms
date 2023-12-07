@@ -265,7 +265,7 @@ def merge_dict(translated_json,raw_json):
 import json
 import pypandoc
 from docx import Document
-pypandoc.pandoc_download.download_pandoc()
+#pypandoc.pandoc_download.download_pandoc()
  
 def html_to_docx(html_content, docx_filename):
     # modified_html_content = f"<h1>Story: </h1>{html_content}"
@@ -280,7 +280,6 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     for key, value in additional_content.items():
         print(key)
         if key!='story':
-            print("not_story")
             doc.add_paragraph(f'{key.capitalize()}: {value}')
     doc.save(docx_filename)
 
