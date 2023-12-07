@@ -4791,7 +4791,6 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def push_translated_story(request):
@@ -4805,16 +4804,23 @@ def push_translated_story(request):
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
-    doc = task.document
-    if doc:
-        src_json = task.news_task.first().source_json.get('news')[0]
-        doc_to_file = DocumentToFile()
-        res = doc_to_file.document_data_to_file(request,doc.id)
-        if res.status_code in [200, 201]:
-            with open(res.text,"r") as fp:
-                trans_json = json.load(fp)
-            tar_json = merge_dict(trans_json,src_json)
-          
+
+    tar_json = task.news_task.first().target_json
+    if not tar_json:
+        doc = task.document
+        if doc:
+            src_json = task.news_task.first().source_json.get('news')[0]
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,doc.id)
+            if res.status_code in [200, 201]:
+                with open(res.text,"r") as fp:
+                    trans_json = json.load(fp)
+                tar_json = merge_dict(trans_json,src_json)
+                tt = task.news_task.first()
+                tt.target_json = tar_json
+                tt.save()
+
+    #print("TAr json--------->",tar_json)  
     payload.update({
         'heading' : tar_json.get('heading'),
         'description' : tar_json.get('description'),
@@ -4825,8 +4831,11 @@ def push_translated_story(request):
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
+        # 'story_summary':tar_json.get('story_summary'),
+        # 'authorName': tar_json.get('authorName'),
+        # 'image_caption': tar_json.get('image_caption'),
     })
-
+    print("Payload------>",payload)
     if feed_id:
         payload.update({'feedId': feed_id})
     response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
@@ -4834,9 +4843,55 @@ def push_translated_story(request):
         print("RR-------------->",response.json())
         feed = response.json().get('feedId')
         print("Feed------->",feed)
-        task.news_task.update(feed_id=feed,pushed=True)
-        return Response({'msg':'pushed successfully'},status=200)
+        if feed:
+            task.news_task.update(feed_id=feed,pushed=True)
+            return Response({'msg':'pushed successfully'},status=200)
     return Response({'msg':"something went wrong"},status=400)
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def push_translated_story(request):
+#     from ai_workspace_okapi.api_views import DocumentToFile
+#     task_id = request.GET.get('task_id')
+#     feed_id = request.GET.get('feed_id')
+#     task = Task.objects.get(id=task_id)
+#     src_json,tar_json = {},{}
+#     headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
+#     CMS_create_url = "https://stagingfederalsite.hocalwire.in/dev/h-api/createFeedV2"
+#     payload={ 
+#             'sessionId':os.getenv("CMS-SESSION-ID"),
+#             }
+#     doc = task.document
+#     if doc:
+#         src_json = task.news_task.first().source_json.get('news')[0]
+#         doc_to_file = DocumentToFile()
+#         res = doc_to_file.document_data_to_file(request,doc.id)
+#         if res.status_code in [200, 201]:
+#             with open(res.text,"r") as fp:
+#                 trans_json = json.load(fp)
+#             tar_json = merge_dict(trans_json,src_json)
+          
+#     payload.update({
+#         'heading' : tar_json.get('heading'),
+#         'description' : tar_json.get('description'),
+#         'story':tar_json.get('story'),
+#         'location': tar_json.get('location'),
+#         'locationId' : tar_json.get('locationId'),
+#         #'categoryId': tar_json.get('maincategory'),
+#         'mediaIds': tar_json.get('mediaId'),
+#         'tags': tar_json.get('tags'),
+#         'keywords': tar_json.get('keywords'),
+#     })
+
+#     if feed_id:
+#         payload.update({'feedId': feed_id})
+#     response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
+#     if response.status_code == 200:
+#         print("RR-------------->",response.json())
+#         feed = response.json().get('feedId')
+#         print("Feed------->",feed)
+#         task.news_task.update(feed_id=feed,pushed=True)
+#         return Response({'msg':'pushed successfully'},status=200)
+#     return Response({'msg':"something went wrong"},status=400)
 
 
 
