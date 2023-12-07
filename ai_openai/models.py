@@ -42,7 +42,8 @@ class BookCreation(models.Model):
     def book_language_code(self):
         return self.book_language.locale.first().locale_code
 
-
+def user_directory_news_files(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "news_files",filename)
 
 class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -68,6 +69,7 @@ class AiPrompt(models.Model):
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='prompt_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    news_files = models.FileField(upload_to=user_directory_news_files,blank=True ,null=True)
 
     # def __str__(self) -> str:
     #     return self.description

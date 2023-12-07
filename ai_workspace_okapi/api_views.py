@@ -1610,9 +1610,7 @@ class DocumentToFile(views.APIView):
         html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
         html_to_docx(html_data, res_json_path_text )  
         add_additional_content_to_docx(res_json_path_text, fp)  
-        
-        return res_json_path_text
-        
+        return res_json_path_text    
     
 
     def download_file_processing(self,file_path):
@@ -1662,6 +1660,10 @@ class DocumentToFile(views.APIView):
 
             # FOR DOWNLOADING BILINGUAL FILE
             if output_type == "BILINGUAL":
+                # if doc.job.project.project_type_id == 8:
+                #     pass
+                # else:
+
                 return self.download_bilingual_file(document_id)
 
 
@@ -1677,7 +1679,7 @@ class DocumentToFile(views.APIView):
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)
-                    if doc.job.project.project_type_id == 8:
+                    if doc.job.project.project_type_id == 8:    ## 8 for news data
                         #res = self.document_data_to_file(request,document_id,True)
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
@@ -2887,11 +2889,13 @@ def download_mt_file(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
-    from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
+    from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
-    task_id =request.GET.get('task_id')
-    output_type = request.GET.get('output_type','ORIGINAL')
+    import pandas as pd
+    task_id =request.query_params.get('task_id')
+    output_type = request.query_params.get('output_type','ORIGINAL')
     print("OT------------>",output_type)
+    print("task_id----",task_id)
     obj = Task.objects.get(id=task_id)
     ser = TaskSerializer(obj)
     task_data = ser.data
@@ -2901,7 +2905,25 @@ def download_federal(request):
         target_json = obj.news_task.last().tasknews.last()
     elif output_type == "ORIGINAL":
         print("Inside original")
-        target_json = obj.news_task.last().target_json   
+        target_json = obj.news_task.last().target_json  
+    elif output_type == "BILINGUAL":
+        print("Inside Bilungal")
+        source_json = obj.news_task.last().source_json  
+        target_json = obj.news_task.last().target_json
+        # source_json = json.loads(source_json) 
+        # target_json = json.loads(target_json)
+        source_data = split_dict(source_json)
+        target_data = split_dict(target_json)
+
+        flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
+        flattened_data = pd.DataFrame(flattened_data).transpose()
+        csv_data = flattened_data.to_csv(index=False)
+        response = HttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
+        return response
+ 
+
+
     res_json_path_text = res_text.split("json")[0]+"docx"
     html_data = target_json.get('story') 
     html_to_docx(html_data, res_json_path_text )  
