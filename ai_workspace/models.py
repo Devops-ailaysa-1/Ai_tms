@@ -1366,7 +1366,7 @@ class Task(models.Model):
                     cached_value = "Designer"
                 elif self.job.project.project_type_id == 7:
                     cached_value = "Book"
-                elif self.job.project.project_type_id == 8 and GetNewsFederalView.check_user_federal(self.job.project.ai_user):
+                elif (self.job.project.project_type_id == 8 and GetNewsFederalView.check_user_federal(self.job.project.ai_user)):
                     cached_value = "News"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:

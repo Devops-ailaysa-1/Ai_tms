@@ -231,7 +231,9 @@ def split_dict(single_data):
     trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
     trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
     trans_keys_dict = {}
-    json_data = single_data.get('news')[0]
+    json_data = single_data.get('news')[0] if single_data.get('news') else None
+    if not json_data:
+        json_data = single_data
     for key,value in  json_data.items():
         if key in trans_keys:
             trans_keys_dict[key] = value

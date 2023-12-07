@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from rest_framework.response import Response
 import requests
 import regex as re
-from .models import Tbxfiles,Project,Job, TbxFile, TemplateTermsModel, TbxTemplateFiles
+from .models import Tbxfiles,Project,Job,Task,TbxFile, TemplateTermsModel, TbxTemplateFiles
 from ai_workspace_okapi.models import Document
 from ai_staff.models import Languages,LanguagesLocale
 from django.shortcuts import get_object_or_404
@@ -75,15 +75,27 @@ def TermSearch(request):
     data = request.POST.dict()
     user_input = data.get("user_input")
     doc_id = data.get("doc_id")
-    doc = Document.objects.get(id = doc_id)
-    if doc != None:
-        authorize(request, resource=doc, actor=request.user, action="read")
-    # LangName = getLanguageName(doc_id)
-    codesrc = doc.source_language_code
-    code = doc.target_language_code
+    task_id = data.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id = doc_id)
+        if doc != None:
+            authorize(request, resource=doc, actor=request.user, action="read")
+        # LangName = getLanguageName(doc_id)
+        codesrc = doc.source_language_code
+        code = doc.target_language_code
 
-    job_id = doc.job_id
-    project_id = doc.job.project_id
+        job_id = doc.job_id
+        project_id = doc.job.project_id
+    else:
+        task = Task.objects.get(id = task_id)
+        if task != None:
+            authorize(request, resource=task, actor=request.user, action="read")
+        # LangName = getLanguageName(doc_id)
+        codesrc = task.job.source_language_code
+        code = task.job.target_language_code
+
+        job_id = task.job_id
+        project_id = task.job.project_id
     output=[]
     files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None) & Q(project_id=project_id)).all()
     if files:
