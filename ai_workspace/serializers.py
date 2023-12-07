@@ -1947,7 +1947,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 	def create(self, validated_data):
 		task = validated_data.get('task')
-		instance = TaskNewsDetails.objects.get_or_create(task=task)
+		instance,created = TaskNewsDetails.objects.get_or_create(task=task)
 
 		file_path = instance.task.file.file.path
 		src_code = instance.task.job.source__language
