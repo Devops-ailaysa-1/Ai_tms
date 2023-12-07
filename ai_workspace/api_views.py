@@ -4827,7 +4827,7 @@ def push_translated_story(request):
         'story':tar_json.get('story'),
         'location': tar_json.get('location'),
         'locationId' : tar_json.get('locationId'),
-        #'categoryId': tar_json.get('maincategory'),
+        'categoryId': tar_json.get('maincategory'),
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
