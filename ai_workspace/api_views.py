@@ -4760,11 +4760,11 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
     def list(self,request):
         user = request.user
         task_news = TaskNewsDetails.objects.filter(task__file__project__ai_user=user)
-        serializer = TaskNewsDetailsSerializer(task_news, many=True)
+        serializer = TaskNewsDetailsSerializer(task_news, many=True,context={'request':request})
         return Response(serializer.data)
 
     def create(self,request):
-        serializer = TaskNewsDetailsSerializer(data=request.data)
+        serializer = TaskNewsDetailsSerializer(data=request.data,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -4772,15 +4772,15 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
     def update(self,request,pk):
         obj = TaskNewsDetails.objects.get(id=pk )  ##request filter
-        serializer = TaskNewsDetailsSerializer(obj,data=request.data,partial=True)
+        serializer = TaskNewsDetailsSerializer(obj,data=request.data,context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
     
     def retrieve(self, request, pk=None):
-        obj = TaskNewsDetails.objects.get(id=pk )
-        serializer = TaskNewsDetailsSerializer(obj)
+        obj = TaskNewsDetails.objects.get(task_id=pk )
+        serializer = TaskNewsDetailsSerializer(obj,context={'request':request})
         return Response(serializer.data)
 
     
@@ -5088,37 +5088,6 @@ def get_news_detail(request):
 	# 		else: return None
 	# 	else: return None
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def download_fedaral(request):
-    from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
-    from ai_workspace_okapi.api_views import DocumentToFile
-    task_id =request.GET.get('task_id')
-    obj = Task.objects.get(id=task_id)
-    ser = TaskSerializer(obj)
-    task_data = ser.data
-    res_text = task_data['output_file_path']
-    output_type = request.GET.get('output_type')
-    if output_type == "MTRAW":
-        target_json = obj.news_task.last().tasknews.last()
-    elif output_type == "ORIGINAL":
-        target_json = obj.news_task.last().target_json
-        
-    res_json_path_text = res_text.split("json")[0]+"docx"
-    html_data = target_json['news'][0]['story'] 
-    html_to_docx(html_data, res_json_path_text )  
-    add_additional_content_to_docx(res_json_path_text, target_json)  
-    doc_to_file = DocumentToFile()
-    file_path = res_json_path_text
-    try:
-        if os.path.isfile(res_json_path_text):
-            if os.path.exists(file_path):
-                return doc_to_file.get_file_response(file_path)
-    except Exception as e:
-        print("Exception during file output------> ", e)
-    return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
-                        status=409)
 
 
 # from django import core
