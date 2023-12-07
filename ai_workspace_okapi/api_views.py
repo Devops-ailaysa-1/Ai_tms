@@ -2896,7 +2896,6 @@ def download_federal(request):
     output_type = request.query_params.get('output_type','ORIGINAL')
     print("OT------------>",output_type)
     print("task_id----",task_id)
-    task_id = 1048
     obj = Task.objects.get(id=task_id)
     ser = TaskSerializer(obj)
     task_data = ser.data
@@ -2915,7 +2914,7 @@ def download_federal(request):
         # target_json = json.loads(target_json)
         source_data = split_dict(source_json)
         target_data = split_dict(target_json)
-        
+
         flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
         flattened_data = pd.DataFrame(flattened_data).transpose()
         csv_data = flattened_data.to_csv(index=False)
