@@ -111,8 +111,6 @@ class AiPromptResultViewset(generics.ListAPIView):
             queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
-            
-        
         return queryset
  
 
@@ -200,10 +198,6 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
             out = {'target_lang':i,'translation':"insufficient credits"}
             res.append(out)
     return res
-
-
-
-
 
 
 from ai_auth.api_views import get_lang_code
@@ -973,12 +967,6 @@ def transcribe_to_news_report_generate(request):
     ser = NewsTranscribeResultSerializer(news_transcribe_res_inst)
     return Response(ser.data)
     # return Response({'sentence':sentence , 'result':result})
-
-        
-       
-            
-    
-    
 
 
 def num_tokens_from_string(string) -> int:

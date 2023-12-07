@@ -245,9 +245,6 @@ import spacy
 import yake
 nlp = spacy.load('en_core_web_sm')
  
-
-
-
 def keyword_extract(text):
     language = "en"
     max_ngram_size = 3
