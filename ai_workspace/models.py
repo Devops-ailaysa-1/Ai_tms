@@ -1512,36 +1512,36 @@ class Task(models.Model):
     def corrected_segment_count(self):
         cache_key = f'seg_progress_{self.document.pk}' if self.document else None
         cached_value = cache.get(cache_key)
-        print("CVVVV----------->",cached_value)
         if cached_value is None:
             confirm_list = [102, 104, 106, 110, 107]
             total_seg_count = 0
             confirm_count = 0
             doc = self.document
-            segs = Segment.objects.filter(text_unit__document=doc)
-            if doc.job.project.project_type_id == 8:
+            if doc:
+                segs = Segment.objects.filter(text_unit__document=doc)
+            if self.job.project.project_type_id == 8:
                 segs = segs.filter(id__in=doc.get_text_segments())
-            for seg in segs:
+            if segs:
+                for seg in segs:
 
-                if (seg.is_merged == True and seg.is_merge_start != True):
-                    continue
+                    if (seg.is_merged == True and seg.is_merge_start != True):
+                        continue
 
-                elif seg.is_split == True:
-                    total_seg_count += 2
+                    elif seg.is_split == True:
+                        total_seg_count += 2
 
-                else:
-                    total_seg_count += 1
+                    else:
+                        total_seg_count += 1
 
-                seg_new = seg.get_active_object()
+                    seg_new = seg.get_active_object()
 
-                if seg_new.is_split == True:
-                    for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
-                        if split_seg.status_id in confirm_list:
-                            confirm_count += 1
+                    if seg_new.is_split == True:
+                        for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                            if split_seg.status_id in confirm_list:
+                                confirm_count += 1
 
-                elif seg_new.status_id in confirm_list:
-                    confirm_count += 1
-            print("TT----------------->",total_seg_count)
+                    elif seg_new.status_id in confirm_list:
+                        confirm_count += 1
             cached_value ={"total_segments":total_seg_count,"confirmed_segments": confirm_count}
             cache.set(cache_key,cached_value)
         return cached_value
