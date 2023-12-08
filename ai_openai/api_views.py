@@ -49,10 +49,19 @@ class AiPromptViewset(viewsets.ViewSet):
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
-        description = request.POST.get('description').rstrip(punctuation)
+        description = request.POST.get('description',None)
+        news_files = request.FILES.get('news_files',None)
+
+        if description:
+            description=description.rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
         user = request.user.team.owner if request.user.team else request.user
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+
+        print({**request.POST.dict(),'user':user.id,'description':description,'news_files':news_files,
+                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,'news_files':news_files,
+                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -949,24 +958,40 @@ class NewsTranscribeViewset(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
- 
+    
+    def update(self,request,pk):
+        query_set = NewsTranscribe.objects.get(id = pk)
+        serializer = NewsTranscribeSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
 @api_view(['GET'])
 def transcribe_to_news_report_generate(request):
     news_transcribe_id =  request.query_params.get('news_transcribe_id')
+    doc_id = request.query_params.get('doc',None)
     news_transcribe_res_inst = NewsTranscribeResult.objects.get(id = news_transcribe_id)
     transcribe_result_context = news_transcribe_res_inst.transcribe_result
     prompt  =news_transcribe_res_inst.news_transcribe.prompt_sub_category.prompt_sub_category.first()
-    message = AiPromptSerializer().news_text_gen_prompt_template(description=transcribe_result_context,prompt=prompt.start_phrase,assistant=prompt.assistant)
+    message = AiPromptSerializer().news_text_gen_prompt_template(description=transcribe_result_context,prompt=prompt.start_phrase,
+                                                                 assistant=prompt.assistant)
     openai_response = get_prompt_gpt_turbo_1106(messages=message)
     token_usage = openai_token_usage(openai_response)
     token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
     print("Tokens for openai------------>",token_usage_to_reduce)
     content = openai_response["choices"][0]["message"]["content"]
     news_transcribe_res_inst.transcribed_news_report = content
+
+    if doc_id:
+        doc_instance = MyDocuments.objects.get(id=doc_id)
+        news_transcribe_res_inst.document = doc_instance
+ 
     news_transcribe_res_inst.save()
     ser = NewsTranscribeResultSerializer(news_transcribe_res_inst)
     return Response(ser.data)
-    # return Response({'sentence':sentence , 'result':result})
+ 
 
 
 def num_tokens_from_string(string) -> int:

@@ -352,6 +352,7 @@ class NewsTranscribe(models.Model):
 
 
 class NewsTranscribeResult(models.Model):
+    document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, blank=True, null=True,related_name='news_transcribe_doc')
     news_transcribe = models.ForeignKey(NewsTranscribe,on_delete=models.CASCADE,related_name='news_transcribe')
     transcribe_result = models.TextField(null=True,blank=True)
     transcribed_news_report = models.TextField(null=True,blank=True)
