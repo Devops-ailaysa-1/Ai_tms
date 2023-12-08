@@ -1108,7 +1108,7 @@ def proz_list_send_email(projectpost_id):
             'limit':limit,
             'offset':offset
             }
-        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+        integration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response and response.get('success') == 1:
             uuids = []
@@ -1118,7 +1118,7 @@ def proz_list_send_email(projectpost_id):
         message = 'Customer Posted project with this language pair. project_title '+instance.proj_name+ ' with biddeadline '+instance.bid_deadline.date().strftime('%d-%m-%Y')+ '. You can bid the project and win. Visit Ailaysa for more details.'
         subject = request.POST.get('subject', 'Message from Ailaysa Test' )
         headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
-        url = "https://api.proz.com/v2/messages"
+        url = os.getenv("PROZ_URL")+"messages"
         payload = {'recipient_uuids': uuids,
                     'sender_email': user.email ,
                     'body': message,

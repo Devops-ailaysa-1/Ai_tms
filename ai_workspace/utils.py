@@ -111,6 +111,8 @@ HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
 LIST_KEYS_FEDARAL={'media':['caption']}# , 'news_tags':['name']}
 
+
+####Need to add credit check and function to get MT for each key####################
 def federal_json_translate(json_file,tar_code,src_code,translate=True):
 	from ai_workspace_okapi.utils import get_translation
 	
