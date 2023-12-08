@@ -429,7 +429,7 @@ def campaign_user_invite_email(user,gen_password):
     else:
         return True
     
-
+# BOOTCAMP_MARKETING_DEFAULT_MAIL=os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
 def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
     plain_msg = "Name: "+user_name+" Email: "+user_email
     Subject = "New Registration for Free BootCamp Marketing"
@@ -437,7 +437,7 @@ def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
     file_ext = {"doc":"application/msword",
                 "docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "pdf":"application/pdf"}
-    email = settings.BOOTCAMP_MARKETING_DEFAULT_MAIL
+    email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
     # print("email",email)
     # email = "hemanthmurugan21@gmail.com"
 
