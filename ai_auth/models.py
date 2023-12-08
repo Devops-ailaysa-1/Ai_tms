@@ -829,4 +829,19 @@ class AiTroubleshootData(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+
+
+
+class MarketingBootcamp(models.Model):
+    name = models.CharField(max_length=300)
+    email =models.EmailField(max_length=300)
+    description = models.TextField(null=True,blank=True)
+    job_interest =  models.BooleanField(default=True)
+    file = models.FileField(upload_to="bootcamp_marketing_resume_file",blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return "Name:"+self.name + "  Email:" +self.email
     
+
