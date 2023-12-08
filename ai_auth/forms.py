@@ -428,3 +428,30 @@ def campaign_user_invite_email(user,gen_password):
         return False
     else:
         return True
+    
+
+def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
+    plain_msg = "Name: "+user_name+" Email: "+user_email
+    Subject = "New Registration for Free BootCamp Marketing"
+
+    file_ext = {"doc":"application/msword",
+                "docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "pdf":"application/pdf"}
+    email = settings.BOOTCAMP_MARKETING_DEFAULT_MAIL
+    # print("email",email)
+    # email = "hemanthmurugan21@gmail.com"
+
+    email_message = EmailMessage(Subject, plain_msg, settings.DEFAULT_FROM_EMAIL, [email])
+    
+    if file_path:
+        file_name = file_path.split("/")[-1]
+        file = open(file_path,'rb')
+        email_message.attach(file_name,file.read(),file_ext[file_name.split(".")[-1]])
+
+    sent = email_message.send()
+    if sent:
+        return True
+    else:
+        return False
+
+    

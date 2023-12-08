@@ -5,7 +5,7 @@ from .models import (AiUser, UserAttribute,
                     VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,
                     AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage,SubscriptionOrder,
                     TroubleshootIssues,AiTroubleshootData,PurchasedUnits,PurchasedUnitsCount,
-                    EnterpriseUsers)
+                    EnterpriseUsers,MarketingBootcamp)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -227,3 +227,4 @@ admin.site.register(AiTroubleshootData)
 admin.site.register(TroubleshootIssues)
 admin.site.register(PurchasedUnits)
 admin.site.register(PurchasedUnitsCount)
+admin.site.register(MarketingBootcamp)
