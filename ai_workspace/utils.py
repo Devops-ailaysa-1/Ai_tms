@@ -130,7 +130,7 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 																			source_lang_code=src_code,format_=format_)			
 				else:
 					if translate:
-						json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+						json_file_copy[key] = get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
 															source_lang_code=src_code,format_=format_)
 	return  json_file_copy
 
