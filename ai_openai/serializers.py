@@ -155,18 +155,15 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if news_details.no_of_words:
                 query = query.format(news_details.no_of_words)
 
-            print("start_phrase",query)
-            print("assiant",assistant)
-            print('no_of_words',news_details.no_of_words)
-            print('name_of_the_speaker',news_details.name_of_the_speaker)
-            print('position_of_the_speaker',news_details.position_of_the_speaker)
-            print('place_of_the_speech',news_details.place_of_the_speech)
-            print('description',description)
+            # print("start_phrase",query)
+            # print("assiant",assistant)
+            # print('no_of_words',news_details.no_of_words)
+            # print('name_of_the_speaker',news_details.name_of_the_speaker)
+            # print('position_of_the_speaker',news_details.position_of_the_speaker)
+            # print('place_of_the_speech',news_details.place_of_the_speech)
+            # print('description',description)
             consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
             prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
-            print("prompt____from news")
-
-            print("promt")
             print(prompt)
 
 

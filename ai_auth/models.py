@@ -836,7 +836,7 @@ class MarketingBootcamp(models.Model):
     name = models.CharField(max_length=300)
     email =models.EmailField(max_length=300,unique=True)
     description = models.TextField(null=True,blank=True)
-    job_interest =  models.BooleanField(default=True)
+    job_interest = models.BooleanField(default=True)
     file = models.FileField(upload_to="bootcamp_marketing_resume_file",blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
