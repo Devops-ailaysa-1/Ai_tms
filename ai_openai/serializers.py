@@ -44,6 +44,24 @@ def lang_detector(user_text):
     return lang
 
 
+def news_file_read(file_path):
+    if file_path.endswith("txt"):
+        with open(file_path,'r') as fp:
+            fp = fp.read()
+        return fp
+    elif file_path.endswith("docx"):
+        fp=''
+        from docx import Document
+        f = open(file_path, 'rb')
+        document = Document(f)
+        for p in document.paragraphs:
+            fp = fp+" "+p.text
+        if fp:
+            fp = fp.strip()
+        return fp 
+
+
+
 def openai_token_usage(openai_response ):
     print("Response------------------->",openai_response)
     token_usage = openai_response.get("usage",None)
@@ -65,11 +83,12 @@ class AiPromptSerializer(serializers.ModelSerializer):
     name_of_the_speaker=serializers.CharField(required=False)
     position_of_the_speaker=serializers.CharField(required=False)
     place_of_the_speech=serializers.CharField(required=False)
+    news_files = serializers.FileField(required=False)
     class Meta:
         model = AiPrompt
         fields = ('id','user','prompt_string','description','book','document','task','pdf','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords','response_charecter_limit','targets','created_by','no_of_words',
-            'name_of_the_speaker','position_of_the_speaker','place_of_the_speech')
+            'name_of_the_speaker','position_of_the_speaker','place_of_the_speech','news_files')
 
     def run_validation(self,data):
         if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
@@ -121,11 +140,14 @@ class AiPromptSerializer(serializers.ModelSerializer):
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
             query = sub_catagories_instance.start_phrase
             assistant = sub_catagories_instance.assistant
-
+            description = ""
             if instance.description:
                 description = instance.description if lang in ai_langs else instance.description_mt
+            elif instance.news_files:
+                description = news_file_read(instance.news_files.path)
             else:
-                description=""
+  
+                raise serializers.ValidationError({'msg':'no description or file'},code=400)
 
             # if instance.sub_catagories.sub_category == "Named Entity and Keywords Extraction"
             news_details = instance.ai_prompt_news_details
@@ -139,6 +161,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             print('name_of_the_speaker',news_details.name_of_the_speaker)
             print('position_of_the_speaker',news_details.position_of_the_speaker)
             print('place_of_the_speech',news_details.place_of_the_speech)
+            print('description',description)
             consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
             prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
             print("prompt____from news")
@@ -255,6 +278,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         return credit
 
     def create(self, validated_data):
+        print("validated_data",validated_data)
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
         no_of_words = validated_data.pop('no_of_words',None)
@@ -1711,14 +1735,18 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
         fields = ("id","news_transcribe","audio_file","language","user","audio_len","prompt_sub_category")
 
     def create(self,validated_data):
+        language = validated_data.get('language',None)
+        if not language:
+            raise serializers.ValidationError({'msg':'language not given'},code=400)
         instance = NewsTranscribe.objects.create(**validated_data)
+
         try:
             length,hertz = audio_read(instance.audio_file.path)
         except:
             length=None
         print("Length in main----->",length)
         if length==None:
-            raise serializers.ValidationError({'msg':'something wrong in input file'},status=400)
+            raise serializers.ValidationError({'msg':'something wrong in input file'},code=400)
         initial_credit = instance.user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_speech_to_text(length)
         if initial_credit > consumable_credits:
@@ -1732,13 +1760,14 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
                 NewsTranscribeResult.objects.create(news_transcribe=instance , transcribe_result =res.get('transcripted_text') )
                 if res.get('msg') == None:
                     consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
-
             else:
                 print("not_short")
         else:
-        
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-
         return instance
+    
+    def update(self, instance, validated_data):
+        pass
+
 
  
