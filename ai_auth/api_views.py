@@ -2851,6 +2851,8 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
                                                    user_email=instance.email,
                                                    file_path=file_path)
+            auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
+                                                        user_email=instance.email)
             if sent:
 
                 return Response({'msg':'Mail sent Successfully'})
