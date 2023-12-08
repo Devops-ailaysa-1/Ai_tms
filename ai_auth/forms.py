@@ -462,7 +462,7 @@ def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
 
 
 def bootcamp_marketing_response_mail(user_name,user_email):
-    Subject = "Thank You for Registering for Our Free Bootcamp Sales and Digital Marketing Event"
+    Subject = "Thank You for Registering Our Free Bootcamp Sales and Digital Marketing Event"
     Body = """Dear {},\n\n
     Thank you registering for the one week pre-job bootcamp for
     "AI Jobs in Sales and Digital Marketing" with Ailaysa.
