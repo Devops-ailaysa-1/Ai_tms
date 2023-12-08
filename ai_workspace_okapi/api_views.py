@@ -2284,11 +2284,17 @@ def WiktionaryParse(request):
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
+    task_id = request.POST.get('task_id')
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
-    doc = Document.objects.get(id=doc_id)
-    sourceLanguage=doc.source_language
-    targetLanguage=doc.target_language
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        sourceLanguage=doc.source_language
+        targetLanguage=doc.target_language
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        sourceLanguage=task.job.source_language
+        targetLanguage=task.job.target_language
     if term_type=="source":
         src_lang=sourceLanguage
         tar_lang=targetLanguage

@@ -26,7 +26,7 @@ from django.db import transaction
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail,AiRoles,AiCustomize
+    Currencies, ProjectTypeDetail,AiRoles,AiCustomize,LanguageMetaDetails
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
 from .manager import AilzaManager
@@ -1287,6 +1287,11 @@ class Task(models.Model):
     def mt_only_credit_check(self):
         try:return self.document.doc_credit_check_open_alert
         except:return None
+
+    @property
+    def target_language_script(self):
+        target_lang_id = self.job.target_language.id
+        return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
 
     @property
     def transcribed(self):
