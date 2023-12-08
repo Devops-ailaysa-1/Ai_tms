@@ -649,13 +649,14 @@ class CampaignRegisterSerializer(serializers.Serializer):
     
 
 class MarketingBootcampSerializer(serializers.ModelSerializer):
+    job_interest = serializers.BooleanField(required=True)
     
     class Meta:
         model = MarketingBootcamp
         fields = ('id','name','email','file','job_interest','description')
 
      
-    REQUIRED_FIELDS = ['name', 'email', 'file','job_interest','description']
+    REQUIRED_FIELDS = ['name', 'email', 'file','description']
 
     def validate(self, data):
         for field_name in self.REQUIRED_FIELDS:
@@ -664,5 +665,6 @@ class MarketingBootcampSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        
         instance=MarketingBootcamp.objects.create(**validated_data)
         return instance
