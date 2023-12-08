@@ -1942,6 +1942,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
 	source_json = serializers.JSONField(required=False )
 	target_json = serializers.JSONField(required=False )
+	project = serializers.ReadOnlyField(source='task.job.project.id')
 	edit_allowed = serializers.SerializerMethodField()
 	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
 	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
@@ -1949,7 +1950,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = TaskNewsDetails
-		fields = ("id","task","edit_allowed","source_language","target_language","target_language_script","source_json","target_json","created_at","updated_at",)
+		fields = ("id","task","edit_allowed","project","source_language","target_language","target_language_script","source_json","target_json","created_at","updated_at",)
 
 	def get_edit_allowed(self,obj):
 		request_obj = self.context.get('request')
