@@ -655,7 +655,7 @@ class MarketingBootcampSerializer(serializers.ModelSerializer):
         fields = ('id','name','email','file','job_interest','description')
 
      
-    REQUIRED_FIELDS = ['name', 'email', 'file']
+    REQUIRED_FIELDS = ['name', 'email', 'file','job_interest','description']
 
     def validate(self, data):
         for field_name in self.REQUIRED_FIELDS:
