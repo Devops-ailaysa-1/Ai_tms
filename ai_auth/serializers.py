@@ -10,7 +10,7 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
-                            CampaignUsers,CoCreateForm,CoCreateFiles)
+                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -646,3 +646,25 @@ class CampaignRegisterSerializer(serializers.Serializer):
         campaign_user_invite_email(user=user,gen_password=password)
         camp = check_campaign(user)
         return user
+    
+
+class MarketingBootcampSerializer(serializers.ModelSerializer):
+    job_interest = serializers.BooleanField(required=True)
+    
+    class Meta:
+        model = MarketingBootcamp
+        fields = ('id','name','email','file','job_interest','description')
+
+     
+    REQUIRED_FIELDS = ['name', 'email', 'file','description']
+
+    def validate(self, data):
+        for field_name in self.REQUIRED_FIELDS:
+            if not data.get(field_name,None):
+                raise serializers.ValidationError(f"Please fill {field_name}.")
+        return data
+
+    def create(self, validated_data):
+        
+        instance=MarketingBootcamp.objects.create(**validated_data)
+        return instance

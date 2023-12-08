@@ -428,3 +428,51 @@ def campaign_user_invite_email(user,gen_password):
         return False
     else:
         return True
+    
+# BOOTCAMP_MARKETING_DEFAULT_MAIL=os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
+def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
+    plain_msg = "Name: "+user_name+" Email: "+user_email
+    Subject = "New Registration for Free BootCamp Marketing"
+
+    file_ext = {"doc":"application/msword",
+                "docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "pdf":"application/pdf"}
+    email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
+    # print("email",email)
+    # email = "hemanthmurugan21@gmail.com"
+
+    email_message = EmailMessage(Subject, plain_msg, settings.DEFAULT_FROM_EMAIL, [email])
+    
+    if file_path:
+        file_name = file_path.split("/")[-1]
+        file = open(file_path,'rb')
+        email_message.attach(file_name,file.read(),file_ext[file_name.split(".")[-1]])
+
+    sent = email_message.send()
+    if sent:
+        return True
+    else:
+        return False
+
+
+
+
+
+
+
+
+def bootcamp_marketing_response_mail(user_name,user_email):
+    Subject = "Thank You for Registering for Our Free Bootcamp Sales and Digital Marketing Event"
+    Body = """Dear {},\n\n
+    Thank you registering for the one week pre-job bootcamp for
+    "AI Jobs in Sales and Digital Marketing" with Ailaysa.
+    We will let you know about further updates soon.\n
+
+    Regards,
+    Team Ailaysa""".format(user_name)
+    
+    sent = send_mail(Subject, Body, settings.DEFAULT_FROM_EMAIL, [user_email])
+    if sent:
+        return True
+    else:
+        return False

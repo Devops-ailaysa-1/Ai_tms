@@ -4,7 +4,7 @@ from langdetect import detect
 import logging
 import re , requests, os
 from django.core.mail import send_mail
-from ai_auth import forms as auth_forms
+from ai_auth import forms as auth_forms  
 from ai_auth.soc_auth import GoogleLogin,ProzLogin
 from allauth.account.models import EmailAddress
 from dj_rest_auth.registration.serializers import SocialLoginSerializer
@@ -21,7 +21,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -34,7 +34,7 @@ from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionali
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
-                            PurchasedUnits,PurchasedUnitsCount)
+                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -2822,3 +2822,43 @@ class AilaysaPurchasedUnits:
                     carry_units = 0
             if to_deduct_units != 0:
                 raise ValueError ('deducting more than available credits')
+            
+
+
+
+
+
+class MarketingBootcampViewset(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def get_object(self, pk):
+        try:
+            return MarketingBootcamp.objects.get(id=pk)
+        except MarketingBootcamp.DoesNotExist:
+            raise Http404
+
+    def create(self,request):
+        file = request.FILES.get('file')
+        if file and str(file).split('.')[-1] not in ['docx','pdf','doc']: 
+            return Response({'msg':'only docx .pdf .doc suppported file'},status=400)
+        serializer = MarketingBootcampSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            instance = self.get_object(serializer.data.get('id',None))
+            if instance.file:
+                file_path = instance.file.path
+            else:
+                file_path = None
+            sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
+                                                   user_email=instance.email,
+                                                   file_path=file_path)
+            auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
+                                                        user_email=instance.email)
+            if sent:
+
+                return Response({'msg':'Mail sent Successfully'})
+            else:
+                return Response({'msg':'Mail Not sent'})
+        return Response(serializer.errors)
+    
+
+     
