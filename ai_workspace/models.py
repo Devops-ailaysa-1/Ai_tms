@@ -373,7 +373,7 @@ class Project(models.Model):
                     confirm_count  = 0
                     confirm_list = [102, 104, 106, 110, 107]
 
-                    segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                    segs = Segment.objects.filter(text_unit__document__in=docs)
 
                     for seg in segs:
 
