@@ -1972,7 +1972,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	def create(self, validated_data):
 		task = validated_data.get('task')
 		instance,created = TaskNewsDetails.objects.get_or_create(task=task)
-
+		user = instance.task.job.project.ai_user
 		file_path = instance.task.file.file.path
 		src_code = instance.task.job.source__language
 		tar_code = instance.task.job.target__language
@@ -1987,12 +1987,14 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
 		# executor.shutdown()
 		if instance.target_json == None:
-			translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code)
+			
+			translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code,user=user)
+
 			instance.source_json=json_data
 			instance.target_json=translated_json
 			instance.save()
 			mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
-			TaskNewsMT.objects.create(task=instance,mt_raw_json=json_data,mt_engine=mt_engine)
+			TaskNewsMT.objects.create(task=instance,mt_raw_json=translated_json,mt_engine=mt_engine)
 		return instance
 
 
