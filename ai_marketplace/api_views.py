@@ -1113,7 +1113,8 @@ class ProzVendorListView(generics.ListAPIView):
             params.update({'country_code':country_code})
         if fullname:
             params.update({'site_name':fullname})
-        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+
+        integeration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         print("Status---------->",integration_users_response)
         if integration_users_response.status_code == 500:
@@ -1196,7 +1197,7 @@ def proz_send_message(request):
     
     subject = request.POST.get('subject', 'Message from Ailaysa Test' )
     headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
-    url = "https://api.proz.com/v2/messages"
+    url = os.getenv('PROZ_URL')+"messages"
     payload = {'recipient_uuids': uuid,
                 'sender_email': user.email,
                 'body': body,
@@ -1252,7 +1253,7 @@ def proz_send_message(request):
 #         lang_pair = get_proz_lang_pair(source_lang,target_lang)
 #         print("LangPair-------->",lang_pair)
 
-#         integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+#         integration_api_url = ""
 #         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
 #         integration_users = integration_users_response.json()
 #         #print("IU---------------------->",integration_users)
@@ -1329,7 +1330,7 @@ def proz_send_message(request):
     #     headers = {
     #         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
     #         }
-    #     integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+    #     integration_api_url = ""
     #     integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
     #     integration_users = integration_users_response.json()
     #     common_users = []

@@ -4647,6 +4647,8 @@ class GetNewsFederalView(generics.ListAPIView):
         count = self.request.query_params.get('count', 20)
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
+        categoryIds = self.request.query_params.getlist('categoryId')
+        print("CategoryID------>",categoryIds)
         #contenttype = self.request.query_params.get('content')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
 
@@ -4664,7 +4666,9 @@ class GetNewsFederalView(generics.ListAPIView):
             params.update({'newsId':news_id})
         if search:
             params.update({'search':search})
-        integration_api_url = "https://thefederal.com/dev/h-api/news"
+        if categoryIds:
+            params.update({'categoryIds':categoryIds})
+        integration_api_url = os.getenv('FEDERAL_URL')+"news"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
             news_jsons = response.json().get('news')
@@ -4701,7 +4705,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         files =[]
         headers = { 's-id': os.getenv("FEDERAL-KEY"),}
         for i in news:
-            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            federal_api_url = os.getenv('FEDERAL_URL')+"news"
             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
             #translatable_data = split_dict(response.json()) 
             #print("Trans------------------->",translatable_data)
@@ -4721,10 +4725,6 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 json_data = json.load(fp)
             print("JsonData------------>",json_data)
             newsID = json_data.get('newsId')
-            # headers = { 's-id': os.getenv("FEDERAL-KEY"),}
-            # federal_api_url = "https://thefederal.com/dev/h-api/news"
-            # response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
-            # if response.status_code == 200:
             TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
         
@@ -4791,6 +4791,37 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_federal_categories(request):
+    page = request.query_params.get('page', 1)
+    count = request.query_params.get('count', 20)
+
+    headers = {
+        's-id': os.getenv("FEDERAL-KEY"),
+        }
+    
+    startIndex = (int(page) - 1) * int(count)
+   
+    params={ 
+        'startIndex':startIndex,
+        'count':count,
+        }
+
+    CMS_url = os.getenv('FEDERAL_URL')+"category"
+    payload={
+        'sessionId':os.getenv("CMS-SESSION-ID"),
+    }
+    response = requests.request("GET", CMS_url, headers=headers, params=params)
+    if response.status_code == 200:
+        return Response(response.json())
+    else:
+        return JsonResponse({'msg':'something went wrong'})
+            
+
+
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def push_translated_story(request):
@@ -4798,9 +4829,16 @@ def push_translated_story(request):
     task_id = request.GET.get('task_id')
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
+    # target_lang = task.job.target_language.language
+    # if target_lang == "Telugu":
+    #     federal_key = os.getenv("FEDERAL-KEY-Telugu")
+    # elif target_lang == "Kannada":
+    #     federal_key = os.getenv("FEDERAL-KEY-Kannada")
+    # else:
+    federal_key = os.getenv("STAGING-FEDERAL-KEY")
     src_json,tar_json = {},{}
-    headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
-    CMS_create_url = "https://stagingfederalsite.hocalwire.in/dev/h-api/createFeedV2"
+    headers = { 's-id': federal_key,'Content-Type': 'application/json'}
+    feed_url = os.getenv('CREATEFEED_URL')
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
@@ -4838,7 +4876,7 @@ def push_translated_story(request):
     print("Payload------>",payload)
     if feed_id:
         payload.update({'feedId': feed_id})
-    response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
+    response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
     if response.status_code == 200:
         print("RR-------------->",response.json())
         feed = response.json().get('feedId')
@@ -4856,7 +4894,7 @@ def push_translated_story(request):
 #     task = Task.objects.get(id=task_id)
 #     src_json,tar_json = {},{}
 #     headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
-#     CMS_create_url = "https://stagingfederalsite.hocalwire.in/dev/h-api/createFeedV2"
+#    
 #     payload={ 
 #             'sessionId':os.getenv("CMS-SESSION-ID"),
 #             }
@@ -4919,7 +4957,7 @@ def push_translated_story(request):
 #         files =[]
 #         headers = { 's-id': os.getenv("FEDERAL-KEY"),}
 #         for i in news:
-#             federal_api_url = "https://thefederal.com/dev/h-api/news"
+#          
 #             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
 #             translatable_data = split_dict(response.json()) 
 #             print("Trans------------------->",translatable_data)
@@ -4940,7 +4978,6 @@ def push_translated_story(request):
 #             print("JsonData------------>",json_data)
 #             newsID = json_data.get('newsId')
 #             headers = { 's-id': os.getenv("FEDERAL-KEY"),}
-#             federal_api_url = "https://thefederal.com/dev/h-api/news"
 #             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
 #             if response.status_code == 200:
 #                 TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':response.json()})
