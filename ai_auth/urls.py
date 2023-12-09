@@ -86,6 +86,6 @@ urlpatterns+= [
     path('campaign-register/',api_views.CampaignRegistrationView.as_view({'post':'create'}),name='campaign_register') ,
     # path('ai-soc/proz/', ProzLogin.as_view(), name='proz_login'),
     path('troubleshoot/',api_views.account_troubleshoot,name='account-troubleshoot'),
-     path('user-info/',api_views.user_info_update,name='user-info'),
-     path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register') 
+    path('user-info/',api_views.user_info_update,name='user-info'),
+    path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register') 
 ]
