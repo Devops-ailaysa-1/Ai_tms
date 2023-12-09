@@ -2837,6 +2837,7 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             raise Http404
 
     def create(self,request):
+        from .tasks import send_bootcamp_mail
         file = request.FILES.get('file')
         if file and str(file).split('.')[-1] not in ['docx','pdf','doc']: 
             return Response({'msg':'only docx .pdf .doc suppported file'},status=400)
@@ -2844,20 +2845,22 @@ class MarketingBootcampViewset(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             instance = self.get_object(serializer.data.get('id',None))
-            if instance.file:
-                file_path = instance.file.path
-            else:
-                file_path = None
-            sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
-                                                   user_email=instance.email,
-                                                   file_path=file_path)
-            auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
-                                                        user_email=instance.email)
-            if sent:
+            send_bootcamp_mail.apply_async((instance.id,),queue='low-priority')
+            return Response(serializer.data)
+            # if instance.file:
+            #     file_path = instance.file.path
+            # else:
+            #     file_path = None
+            # sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
+            #                                        user_email=instance.email,
+            #                                        file_path=file_path)
+            # auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
+            #                                             user_email=instance.email)
+            # if sent:
 
-                return Response({'msg':'Mail sent Successfully'})
-            else:
-                return Response({'msg':'Mail Not sent'})
+            #     return Response({'msg':'Mail sent Successfully'})
+            # else:
+            #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
 

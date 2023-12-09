@@ -241,6 +241,27 @@ def existing_vendor_onboard_check():
 
 
 @task(queue='low-priority')
+def send_bootcamp_mail(obj_id):
+    from .models import MarketingBootcamp
+    from ai_auth import forms as auth_forms
+    instance = MarketingBootcamp.objects.get(id=obj_id)
+    if instance.file:
+        file_path = instance.file.path
+    else:
+        file_path = None
+    sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
+                                            user_email=instance.email,
+                                            file_path=file_path)
+    auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
+                                                user_email=instance.email)
+    if sent:
+        print("Mail sent")
+    else:
+        print('Mail Not sent')
+
+
+
+@task(queue='low-priority')
 def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
