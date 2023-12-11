@@ -69,7 +69,7 @@ class AiPrompt(models.Model):
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='prompt_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    news_files = models.FileField(upload_to=user_directory_news_files,blank=True ,null=True)
+    # news_files = models.FileField(upload_to=user_directory_news_files,blank=True ,null=True)
 
     # def __str__(self) -> str:
     #     return self.description
