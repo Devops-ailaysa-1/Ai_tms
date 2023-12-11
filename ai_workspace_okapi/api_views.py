@@ -2898,10 +2898,12 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file):
     target_data = split_dict(tar_json)
     source_data.pop('newsId',None)
     target_data.pop('newsId',None)
-    source_data['media'] = document_to_file.clean_text(source_data['media'][0]['caption'])
-    target_data['media'] = document_to_file.clean_text(target_data['media'][0]['caption'])
-    source_data['story'] =  document_to_file.clean_text(source_data['story'])
-    target_data['story'] =  document_to_file.clean_text(target_data['story'])
+    if source_data.get('media'):
+        source_data['media'] = document_to_file.clean_text(source_data.get('media', [{}])[0].get('caption'))
+        target_data['media'] = document_to_file.clean_text(target_data.get('media', [{}])[0].get('caption'))
+    if source_data.get('story'):
+        source_data['story'] =  document_to_file.clean_text(source_data.get('story'))
+        target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
     flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
     flattened_data = pd.DataFrame(flattened_data).transpose()
     csv_data = flattened_data.to_csv(index=False)
