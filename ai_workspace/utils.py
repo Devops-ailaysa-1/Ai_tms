@@ -113,7 +113,7 @@ LIST_KEYS_FEDARAL={'media':['caption']}# , 'news_tags':['name']}
 
 
 ####Need to add credit check and function to get MT for each key####################
-def federal_json_translate(json_file,tar_code,src_code,translate=True):
+def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	from ai_workspace_okapi.utils import get_translation
 	
 	json_file = json_file['news']
@@ -129,11 +129,11 @@ def federal_json_translate(json_file,tar_code,src_code,translate=True):
 								if lists in list_names.keys():
 									if translate:
 										list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-																			source_lang_code=src_code,format_=format_)			
+																			source_lang_code=src_code,format_=format_,user_id=user.id)			
 				else:
 					if translate:
 						json_file_copy[key] = get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-															source_lang_code=src_code,format_=format_)
+															source_lang_code=src_code,format_=format_,user_id=user.id)
 	return  json_file_copy
 
 
@@ -284,7 +284,8 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     for key, value in additional_content.items():
         print(key)
         if key!='story':
-            doc.add_paragraph(f'{key.capitalize()}: {value}')
+            doc.add_paragraph(f'{key.capitalize()}:')# {value}')
+            doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
 # # Example usage:

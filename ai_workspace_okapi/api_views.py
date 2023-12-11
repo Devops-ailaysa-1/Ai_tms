@@ -2902,10 +2902,12 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file):
     target_data = split_dict(tar_json)
     source_data.pop('newsId',None)
     target_data.pop('newsId',None)
-    source_data['media'] = document_to_file.clean_text(source_data['media'][0]['caption'])
-    target_data['media'] = document_to_file.clean_text(target_data['media'][0]['caption'])
-    source_data['story'] =  document_to_file.clean_text(source_data['story'])
-    target_data['story'] =  document_to_file.clean_text(target_data['story'])
+    if source_data.get('media'):
+        source_data['media'] = document_to_file.clean_text(source_data.get('media', [{}])[0].get('caption'))
+        target_data['media'] = document_to_file.clean_text(target_data.get('media', [{}])[0].get('caption'))
+    if source_data.get('story'):
+        source_data['story'] =  document_to_file.clean_text(source_data.get('story'))
+        target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
     flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
     flattened_data = pd.DataFrame(flattened_data).transpose()
     csv_data = flattened_data.to_csv(index=False)
@@ -2920,6 +2922,7 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file):
 def download_federal(request):
     from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
+    from ai_workspace.serializers import TaskNewsDetailsSerializer
 
     task_id =request.query_params.get('task_id')
     output_type = request.query_params.get('output_type','ORIGINAL')
@@ -2929,12 +2932,21 @@ def download_federal(request):
     ser = TaskSerializer(obj)
     task_data = ser.data
     res_text = task_data['output_file_path']
+    if obj.news_task.last().target_json == None:
+        ser = TaskNewsDetailsSerializer(data={'task':task_id},context={"request": request})
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
     if output_type == "MTRAW":
         print("Inside Mt")
-        target_json = obj.news_task.last().tasknews.last()
+        target_json = obj.news_task.last().tasknews.last().mt_raw_json
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
     elif output_type == "ORIGINAL":
         print("Inside original")
         target_json = obj.news_task.last().target_json  
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
     elif output_type == "BILINGUAL":
         print("Inside Bilungal")
         source_json = obj.news_task.last().source_json  
@@ -2951,7 +2963,8 @@ def download_federal(request):
 
 
     res_json_path_text = res_text.split("json")[0]+"docx"
-    html_data = target_json.get('story') 
+    print("Tar--->",target_json)
+    html_data = target_json.get('story')
     html_to_docx(html_data, res_json_path_text )  
     add_additional_content_to_docx(res_json_path_text, target_json)  
     doc_to_file = DocumentToFile()
