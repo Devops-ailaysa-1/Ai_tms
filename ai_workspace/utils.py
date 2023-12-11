@@ -284,7 +284,8 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     for key, value in additional_content.items():
         print(key)
         if key!='story':
-            doc.add_paragraph(f'{key.capitalize()}: {value}')
+            doc.add_paragraph(f'{key.capitalize()}:')# {value}')
+            doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
 # # Example usage:
