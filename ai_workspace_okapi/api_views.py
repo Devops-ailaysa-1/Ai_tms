@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import re
-import requests, bleach
+import requests , bleach
 import urllib.parse
 import urllib.parse
 import xlsxwriter
@@ -1473,22 +1473,27 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
-    def get_file_response(self, file_path):
-        with open(file_path, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type= \
-                "application/vnd.ms-excel")
-            encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
-                                                  encoding='utf-8')
-            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
-                .format(encoded_filename)
-            # filename = os.path.basename(file_path)
-            # response['Content-Disposition'] = "attachment; filename=%s" % filename
-            response['X-Suggested-Filename'] = encoded_filename
-            response["Access-Control-Allow-Origin"] = "*"
-            response["Access-Control-Allow-Headers"] = "*"
-            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
-            # print("cont-disp--->", response.get("Content-Disposition"))
-            return response
+    def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
+        if pandas_dataframe:
+            response = HttpResponse(file_path, content_type= "application/vnd.ms-excel")
+            encoded_filename = filename
+            
+        else:
+            with open(file_path, 'rb') as fh:
+                response = HttpResponse(fh.read(), content_type= \
+                    "application/vnd.ms-excel")
+                encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                                encoding='utf-8')
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+            .format(encoded_filename)
+        # filename = os.path.basename(file_path)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        response['X-Suggested-Filename'] = encoded_filename
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "*"
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        # print("cont-disp--->", response.get("Content-Disposition"))
+        return response
 
     def get_source_file_path(self, document_id):
         doc = DocumentToFile.get_object(document_id)
@@ -2951,8 +2956,10 @@ def download_federal(request):
  
         document_to_file = DocumentToFile()
         csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,document_to_file=document_to_file)
-        response = HttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
+        filename=obj.file.filename.split(".")[0]+".csv"
+        response = document_to_file.get_file_response(csv_data,pandas_dataframe=True,filename=filename)
+        # response = HttpResponse(csv_data, content_type='text/csv')
+        # response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
         return response
  
 
