@@ -4724,8 +4724,9 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             print("JsonData------------>",json_data)
-            newsID = json_data.get('newsId')
-            TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
+            newsID = json_data.get('news')[0].get('newsId')
+            obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
+            print("Obj------------->",obj)
 
         
     def create(self, request):

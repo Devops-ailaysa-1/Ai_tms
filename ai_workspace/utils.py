@@ -259,7 +259,8 @@ def merge_dict(translated_json,raw_json):
 			for count,j in enumerate(raw_json_trans[key]):
 				if values[count] in j.keys():
 					j.update(translated_json_copy[key][count])
-		translated_json_copy.pop(key)
+		if key in translated_json_copy:
+			translated_json_copy.pop(key)
 	raw_json_trans.update(translated_json_copy)
 	return raw_json_trans
 
