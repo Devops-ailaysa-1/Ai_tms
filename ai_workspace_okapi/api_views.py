@@ -2934,9 +2934,13 @@ def download_federal(request):
     if output_type == "MTRAW":
         print("Inside Mt")
         target_json = obj.news_task.last().tasknews.last().mt_raw_json
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
     elif output_type == "ORIGINAL":
         print("Inside original")
         target_json = obj.news_task.last().target_json  
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
     elif output_type == "BILINGUAL":
         print("Inside Bilungal")
         source_json = obj.news_task.last().source_json  
