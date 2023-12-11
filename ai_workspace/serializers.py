@@ -1159,7 +1159,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					soup = BeautifulSoup(story, 'html.parser')
 					text = soup.get_text()
 					heading = text.split('.')[0].strip(punctuation)
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name')}
+				tar_json = True if obj.news_task.first().target_json else False
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
 		return data
 
 	# def get_image_translate_project(self,obj):

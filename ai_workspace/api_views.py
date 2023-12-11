@@ -5167,6 +5167,7 @@ def get_news_detail(request):
             else: target_json = trans_json
         else:
            target_json = obj.news_task.first().target_json 
+           if target_json == None: target_json = {}
         
     return Response({'source_json':source_json,'target_json':target_json})
     # else:
