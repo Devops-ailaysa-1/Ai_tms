@@ -2298,8 +2298,8 @@ def WiktionaryParse(request):
         targetLanguage=doc.target_language
     if task_id:
         task = Task.objects.get(id=task_id)
-        sourceLanguage=task.job.source_language
-        targetLanguage=task.job.target_language
+        sourceLanguage=task.job.source_language.language
+        targetLanguage=task.job.target_language.language
     if term_type=="source":
         src_lang=sourceLanguage
         tar_lang=targetLanguage

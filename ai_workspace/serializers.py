@@ -1992,6 +1992,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 				json_data = json.load(fp)
 
 		print("JSon--------->",json_data)
+		print("NewsId------------->",json_data.get('newsID'))
 
 		# json_data_list = json_data['news']
 		# with ThreadPoolExecutor() as executor:
@@ -2003,6 +2004,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 
 			instance.source_json=json_data
 			instance.target_json=translated_json
+			instance.news_id = json_data.get('news')[0].get('newsId')
 			instance.save()
 			mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
 			TaskNewsMT.objects.create(task=instance,mt_raw_json=translated_json,mt_engine=mt_engine)

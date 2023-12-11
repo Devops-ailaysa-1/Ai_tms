@@ -464,8 +464,8 @@ Thank you registering for the one week pre-job bootcamp for
 "AI Jobs in Sales and Digital Marketing" with Ailaysa.
 We will let you know about further updates soon.\n
 
-    Regards,
-    Team Ailaysa""".format(user_name)
+Regards,
+Team Ailaysa""".format(user_name)
     
     sent = send_mail(Subject, Body, settings.DEFAULT_FROM_EMAIL, [user_email])
     if sent:
