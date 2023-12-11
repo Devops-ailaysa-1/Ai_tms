@@ -2898,7 +2898,7 @@ def download_mt_file(request):
         return Response({'msg':'Pending','task':task.id},status=400)
 
 
-def json_bilingual(src_json,tar_json,split_dict,document_to_file):
+def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     import pandas as pd
     import io
     output = io.BytesIO()
@@ -2914,6 +2914,7 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file):
         target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
     flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
     flattened_data = pd.DataFrame(flattened_data).transpose()
+    flattened_data.columns = language_pair
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     flattened_data.to_excel(writer, sheet_name='Sheet1',index=False)
     writer.close()
@@ -2966,10 +2967,11 @@ def download_federal(request):
         print("Inside Bilungal")
         source_json = obj.news_task.last().source_json  
         target_json = obj.news_task.last().target_json
- 
+
  
         document_to_file = DocumentToFile()
-        csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,document_to_file=document_to_file)
+        csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,
+                                  document_to_file=document_to_file,language_pair=[obj.job.source_language.language,obj.job.target_language.language])
         filename=obj.file.filename.split(".")[0]+".xlsx"
         response = document_to_file.get_file_response(csv_data,pandas_dataframe=True,filename=filename)
         # response = HttpResponse(csv_data, content_type='text/csv')
