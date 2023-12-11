@@ -2824,6 +2824,7 @@ class AilaysaPurchasedUnits:
                 raise ValueError ('deducting more than available credits')
             
 
+ 
 
 
 
@@ -2848,6 +2849,7 @@ class MarketingBootcampViewset(viewsets.ViewSet):
                 file_path = instance.file.path
             else:
                 file_path = None
+
             sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
                                                    user_email=instance.email,
                                                    file_path=file_path)
