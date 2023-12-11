@@ -1473,10 +1473,11 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
-    def get_file_response(self, file_path,pandas_dataframe=False):
+    def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
         if pandas_dataframe:
             response = HttpResponse(file_path, content_type= "application/vnd.ms-excel")
-            encoded_filename = None
+            encoded_filename = filename
+            
         else:
             with open(file_path, 'rb') as fh:
                 response = HttpResponse(fh.read(), content_type= \
@@ -2955,7 +2956,8 @@ def download_federal(request):
  
         document_to_file = DocumentToFile()
         csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,document_to_file=document_to_file)
-        response = document_to_file.get_file_response(csv_data,pandas_dataframe=True)
+        filename=obj.file.filename.split(".")[0]+".csv"
+        response = document_to_file.get_file_response(csv_data,pandas_dataframe=True,filename=filename)
         # response = HttpResponse(csv_data, content_type='text/csv')
         # response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
         return response
