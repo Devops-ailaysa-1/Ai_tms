@@ -457,15 +457,9 @@ def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
 
 
 def bootcamp_marketing_response_mail(user_name,user_email):
-    Subject = "Ailaysa Pre-job bootcamp - Thank you for registering"
-    Body = """
-Dear {},\n
-Thank you registering for the one week pre-job bootcamp for
-"AI Jobs in Sales and Digital Marketing" with Ailaysa.
-We will let you know about further updates soon.\n
-
-    Regards,
-    Team Ailaysa""".format(user_name)
+    context = {'username':user_name}
+    Subject = render_to_string("accountbootcamp_sales_and_marketing_subject.txt")
+    Body = render_to_string("bootcamp_sales_and_marketing_body.txt",context)
     
     sent = send_mail(Subject, Body, settings.DEFAULT_FROM_EMAIL, [user_email])
     if sent:
