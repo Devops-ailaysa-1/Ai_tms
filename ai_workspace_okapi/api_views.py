@@ -2878,9 +2878,9 @@ def download_mt_file(request):
     if state == 'SUCCESS':
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
-        if doc.job.project.project_type_id == 8:
-            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
+            if doc.job.project.project_type_id == 8:
+                res = DocumentToFile.json_key_manipulation(res.text)
             file_path = res.text
             try:
                 if os.path.isfile(res.text):
