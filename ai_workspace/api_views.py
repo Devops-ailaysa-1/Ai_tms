@@ -5242,7 +5242,7 @@ def federal_segment_translate(request):
         initial_credit = request.user.credit_balance.get("total_left")
         if initial_credit > consumable_credit:
             trans_text = get_translation(mt_engine.id , source_string=text,source_lang_code=src_lang,
-                                        target_lang_code=tar_lang,user_id=request.user)
+                                        target_lang_code=tar_lang,user_id=request.user.id)
             return Response({'text':trans_text},status=200)
         else:
             return Response({'msg':'Insufficient Credits'},status=400)
