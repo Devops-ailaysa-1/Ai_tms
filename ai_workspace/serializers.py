@@ -1968,7 +1968,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 			return 'enable'
 		else:
 			return 'disable'
-
+	
 
 	# def get_task_assign_info(self,obj):
 	# 	serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
