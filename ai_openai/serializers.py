@@ -83,12 +83,12 @@ class AiPromptSerializer(serializers.ModelSerializer):
     name_of_the_speaker=serializers.CharField(required=False)
     position_of_the_speaker=serializers.CharField(required=False)
     place_of_the_speech=serializers.CharField(required=False)
-    news_files = serializers.FileField(required=False)
+    # news_files = serializers.FileField(required=False)
     class Meta:
         model = AiPrompt
         fields = ('id','user','prompt_string','description','book','document','task','pdf','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords','response_charecter_limit','targets','created_by','no_of_words',
-            'name_of_the_speaker','position_of_the_speaker','place_of_the_speech','news_files')
+            'name_of_the_speaker','position_of_the_speaker','place_of_the_speech') #news_files
 
     def run_validation(self,data):
         if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
@@ -135,36 +135,36 @@ class AiPromptSerializer(serializers.ModelSerializer):
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
             # prompt+=' Make sure to cover all relevant aspects within the token limit.' 
 
-        elif instance.catagories.category == "News":
-            sub_catagories_instance = instance.sub_catagories.prompt_sub_category.first()
-            start_phrase = instance.sub_catagories.prompt_sub_category.first()
-            query = sub_catagories_instance.start_phrase
-            assistant = sub_catagories_instance.assistant
-            description = ""
-            if instance.description:
-                description = instance.description if lang in ai_langs else instance.description_mt
-            elif instance.news_files:
-                description = news_file_read(instance.news_files.path)
-            else:
+        # elif instance.catagories.category == "News":
+        #     sub_catagories_instance = instance.sub_catagories.prompt_sub_category.first()
+        #     start_phrase = instance.sub_catagories.prompt_sub_category.first()
+        #     query = sub_catagories_instance.start_phrase
+        #     assistant = sub_catagories_instance.assistant
+        #     description = ""
+        #     if instance.description:
+        #         description = instance.description if lang in ai_langs else instance.description_mt
+        #     elif instance.news_files:
+        #         description = news_file_read(instance.news_files.path)
+        #     else:
   
-                raise serializers.ValidationError({'msg':'no description or file'},code=400)
+        #         raise serializers.ValidationError({'msg':'no description or file'},code=400)
 
-            # if instance.sub_catagories.sub_category == "Named Entity and Keywords Extraction"
-            news_details = instance.ai_prompt_news_details
+        #     # if instance.sub_catagories.sub_category == "Named Entity and Keywords Extraction"
+        #     news_details = instance.ai_prompt_news_details
 
-            if news_details.no_of_words:
-                query = query.format(news_details.no_of_words)
+        #     if news_details.no_of_words:
+        #         query = query.format(news_details.no_of_words)
 
-            # print("start_phrase",query)
-            # print("assiant",assistant)
-            # print('no_of_words',news_details.no_of_words)
-            # print('name_of_the_speaker',news_details.name_of_the_speaker)
-            # print('position_of_the_speaker',news_details.position_of_the_speaker)
-            # print('place_of_the_speech',news_details.place_of_the_speech)
-            # print('description',description)
-            consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
-            prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
-            print(prompt)
+        #     # print("start_phrase",query)
+        #     # print("assiant",assistant)
+        #     # print('no_of_words',news_details.no_of_words)
+        #     # print('name_of_the_speaker',news_details.name_of_the_speaker)
+        #     # print('position_of_the_speaker',news_details.position_of_the_speaker)
+        #     # print('place_of_the_speech',news_details.place_of_the_speech)
+        #     # print('description',description)
+        #     consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
+        #     prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
+        #     print(prompt)
 
 
         else:
