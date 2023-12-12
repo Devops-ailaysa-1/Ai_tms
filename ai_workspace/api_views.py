@@ -5095,7 +5095,8 @@ def get_task_count_report(request):
     #from ai_auth.models import Team
     user = request.user
     time_range = request.GET.get('time_range', 'today')
-    if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+    owner = request.user.team.owner if request.user.team else request.user
+    if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
         if time_range == 'today':
             start_date = today
@@ -5104,7 +5105,6 @@ def get_task_count_report(request):
         else:
             start_date = today
         managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
-        owner = request.user.team.owner if request.user.team else request.user
         #team = Team.objects.filter(owner=user).first()
         team_members = request.user.team.get_team_members if request.user.team else []
         team_members.append(owner)
