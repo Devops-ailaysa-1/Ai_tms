@@ -5092,6 +5092,7 @@ from datetime import datetime, timedelta
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
+    #from ai_auth.models import Team
     user = request.user
     time_range = request.GET.get('time_range', 'today')
     if user.user_enterprise.subscription_name == 'Enterprise - DIN':
@@ -5104,21 +5105,23 @@ def get_task_count_report(request):
             start_date = today
         managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
         owner = request.user.team.owner if request.user.team else request.user
+        #team = Team.objects.filter(owner=user).first()
         team_members = request.user.team.get_team_members if request.user.team else []
         team_members.append(owner)
         res =[]
-        additional_details = {}
         if request.user in managers  or request.user == owner:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to__in = team_members).distinct()
             if request.user in team_members:team_members.remove(request.user)
+            print("TM------------>",team_members)
             for i in team_members:
-                queryset = queryset.filter(assign_to=i)
+                additional_details = {}
+                query = queryset.filter(assign_to=i)
                 additional_details['user'] = i.fullname
-                additional_details['TotalAssigned'] = queryset.count()
-                additional_details['Inprogress']=queryset.filter(status=2).count()
-                additional_details['YetToStart']=queryset.filter(status=1).count()
-                additional_details['Completed']=queryset.filter(status=3).count()
-                additional_details['total_completed_words'] = queryset.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                additional_details['TotalAssigned'] = query.count()
+                additional_details['Inprogress']=query.filter(status=2).count()
+                additional_details['YetToStart']=query.filter(status=1).count()
+                additional_details['Completed']=query.filter(status=3).count()
+                additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
