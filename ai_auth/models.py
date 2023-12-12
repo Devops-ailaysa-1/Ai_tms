@@ -615,7 +615,7 @@ class Team(models.Model):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
     @property
-    def get_editor(self):
+    def get_editors(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
 
     @property
