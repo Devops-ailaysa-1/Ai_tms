@@ -5017,9 +5017,9 @@ class AddStoriesView(viewsets.ModelViewSet):
     def pr_check(self,src_lang,tar_langs,user):
         today_date = date.today()
         project_name = today_date.strftime("%b %d")
-        query = Project.objects.filter(ai_user=user).filter(project_type_id = 8).filter(project_name__icontains=project_name).\
-                .filter(project_jobs_set__source_language_id = src_lang).\
-                filter(project_jobs_set__target_language_id__in = tar_langs)
+        query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+                .filter(project_jobs_set__source_language_id = src_lang)\
+                .filter(project_jobs_set__target_language_id__in = tar_langs)
         if query:
             return query.last()
         return None
