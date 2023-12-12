@@ -50,18 +50,17 @@ class AiPromptViewset(viewsets.ViewSet):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description',None)
-        news_files = request.FILES.get('news_files',None)
+        # news_files = request.FILES.get('news_files',None)
 
         if description:
             description=description.rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
         user = request.user.team.owner if request.user.team else request.user
 
-        print({**request.POST.dict(),'user':user.id,'description':description,'news_files':news_files,
-                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+        
 
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,'news_files':news_files,
-                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,
+                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit}) #'news_files':news_files,
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
