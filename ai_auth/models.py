@@ -116,7 +116,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.team:
             return [i.internal_member for i in self.team.internal_member_team_info.all()]
             
-
+    
     # @property
     # def credit_balance(self):
     #     with transaction.atomic():
@@ -613,6 +613,10 @@ class Team(models.Model):
     @property
     def get_team_members(self):
         return [i.internal_member for i in self.internal_member_team_info.all()]
+
+    @property
+    def get_editor(self):
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
 
     @property
     def owner_pk(self):
