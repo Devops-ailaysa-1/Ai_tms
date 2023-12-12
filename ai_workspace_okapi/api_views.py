@@ -2880,8 +2880,9 @@ def download_mt_file(request):
         res = doc_to_file.document_data_to_file(request,document_id,True)
         if res.status_code in [200, 201]:
             if doc.job.project.project_type_id == 8:
-                res = DocumentToFile.json_key_manipulation(res.text)
-            file_path = res.text
+                file_path = DocumentToFile.json_key_manipulation(res.text)
+            else:
+                file_path = res.text
             try:
                 if os.path.isfile(res.text):
                     if os.path.exists(file_path):
@@ -3537,8 +3538,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-
+    
  
 
     # dictionary_path = dictionary_paths.get(lang)
