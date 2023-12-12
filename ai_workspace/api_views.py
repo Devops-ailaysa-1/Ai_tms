@@ -5102,7 +5102,7 @@ def get_task_count_report(request):
             start_date = today - timedelta(days=30)
         else:
             start_date = today
-        managers = request.user.get_project_manager if request.user.team and request.user.team.get_project_manager else []
+        managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
         owner = request.user.team.owner if request.user.team else request.user
         team_members = request.user.team.get_team_members if request.user.team else []
         team_members.append(owner)
