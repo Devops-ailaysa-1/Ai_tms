@@ -5118,7 +5118,7 @@ def get_task_count_report(request):
                 query = queryset.filter(assign_to=i)
                 additional_details['user'] = i.fullname
                 additional_details['TotalAssigned'] = query.count()
-                additional_details['Inprogress']=query.filter(status=2).count()
+                additional_details['Inprogress']=query.filter(status=2).filter(task_assign_info__isnull=False).count()
                 additional_details['YetToStart']=query.filter(status=1).count()
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
@@ -5128,7 +5128,7 @@ def get_task_count_report(request):
         print("QS--------->",queryset)
         print("Res---------->",res)
         total = queryset.count()
-        progress = queryset.filter(status=2).count()
+        progress = queryset.filter(status=2).filter(task_assign_info__isnull=False).count()
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
