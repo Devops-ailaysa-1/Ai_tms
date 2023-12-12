@@ -2927,13 +2927,6 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
 
 
 
-
-
-
-
-
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
@@ -3592,7 +3585,6 @@ def symspellcheck(request):
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'},status=400)
     
-
 
 
     # except:return JsonResponse({'msg':'something went wrong'})

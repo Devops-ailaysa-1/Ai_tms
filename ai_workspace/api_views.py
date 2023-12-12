@@ -5229,6 +5229,30 @@ def get_news_detail(request):
            if target_json == None: target_json = {}
         
     return Response({'source_json':source_json,'target_json':target_json})
+
+
+@api_view(['GET'])
+def federal_segment_translate(request):
+    task_id = request.query_params.get('task_id',None)
+    text =  request.query_params.get('text',None)
+    task_instance =  Task.objects.get(id=task_id)
+    if text:
+        mt_engine = task_instance.job.project.mt_engine
+        src_lang = task_instance.job.source_language.locale.first().locale_code
+        tar_lang = task_instance.job.target_language.locale.first().locale_code
+
+        consumable_credit = get_consumable_credits_for_text(text,target_lang=None,source_lang=src_lang)
+        initial_credit = request.user.credit_balance.get("total_left")
+        if initial_credit > consumable_credit:
+            trans_text = get_translation(mt_engine.id , source_string=text,source_lang_code=src_lang,
+                                        target_lang_code=tar_lang,user_id=request.user)
+            return Response({'text':trans_text},status=200)
+        else:
+            return Response({'msg':'Insufficient Credits'},status=400)
+    else:
+        return Response({'msg':'Text field empty'},status=400)
+    
+
     # else:
     #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
