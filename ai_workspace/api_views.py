@@ -5106,20 +5106,40 @@ def get_task_count_report(request):
         owner = request.user.team.owner if request.user.team else request.user
         team_members = request.user.team.get_team_members if request.user.team else []
         team_members.append(owner)
+        res =[]
+        additional_details = {}
         if request.user in managers  or request.user == owner:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to__in = team_members).distinct()
+            only_team_members = request.user.team.get_team_members if request.user.team else []
+            for i in only_team_members:
+                queryset = queryset.filter(assign_to=i)
+                additional_details['user'] = i.fullname
+                additional_details['TotalAssigned'] = queryset.count()
+                additional_details['Inprogress']=queryset.filter(status=2).count()
+                additional_details['YetToStart']=queryset.filter(status=1).count()
+                additional_details['Completed']=queryset.filter(status=3).count()
+                additional_details['total_completed_words'] = queryset.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
         print("QS--------->",queryset)
+        print("Res---------->",res)
         total = queryset.count()
         progress = queryset.filter(status=2).count()
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
             
-        return JsonResponse({'TotalAssigned':total,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words})
+        return JsonResponse({'TotalAssigned':total,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+# from datetime import datetime, timedelta
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated,IsEnterpriseUser])
+# def get_task_count_detailed_report(request):
+
+
 
 # @api_view(["GET"])
 # @authentication_classes([APIAuthentication])
