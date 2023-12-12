@@ -5058,7 +5058,7 @@ class AddStoriesView(viewsets.ModelViewSet):
         if din:
             news_json = request.POST.get('news_data')
             today_date = date.today()
-            project_name = today_date.strftime("%b %d")
+            project_name = today_date.strftime("%b %d, %Y")
             news_json = json.loads(news_json) if news_json else None
             src_lang = request.POST.get('source_language')
             tar_langs = request.POST.getlist('target_languages')
