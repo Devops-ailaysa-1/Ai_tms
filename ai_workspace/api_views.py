@@ -5110,7 +5110,8 @@ def get_task_count_report(request):
         team_members.append(owner)
         res =[]
         if request.user in managers  or request.user == owner:
-            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to__in = team_members).distinct()
+            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
+            filter(task_assign_info__isnull=False).filter(assign_to__in = team_members).distinct()
             editors = request.user.team.get_editors if request.user.team else []
             for i in editors:
                 additional_details = {}
