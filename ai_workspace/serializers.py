@@ -2004,7 +2004,8 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 
 			instance.source_json=json_data
 			instance.target_json=translated_json
-			instance.news_id = json_data.get('news')[0].get('newsId')
+			if json_data.get('news'):
+				instance.news_id = json_data.get('news')[0].get('newsId')  
 			instance.save()
 			mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
 			TaskNewsMT.objects.create(task=instance,mt_raw_json=translated_json,mt_engine=mt_engine)
