@@ -5111,9 +5111,8 @@ def get_task_count_report(request):
         res =[]
         if request.user in managers  or request.user == owner:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to__in = team_members).distinct()
-            if request.user in team_members:team_members.remove(request.user)
-            print("TM------------>",team_members)
-            for i in team_members:
+            editors = request.user.team.get_editors if request.user.team else []
+            for i in editors:
                 additional_details = {}
                 query = queryset.filter(assign_to=i)
                 additional_details['user'] = i.fullname
