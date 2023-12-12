@@ -2299,8 +2299,8 @@ def WiktionaryParse(request):
         targetLanguage=doc.target_language
     if task_id:
         task = Task.objects.get(id=task_id)
-        sourceLanguage=task.job.source_language
-        targetLanguage=task.job.target_language
+        sourceLanguage=task.job.source_language.language
+        targetLanguage=task.job.target_language.language
     if term_type=="source":
         src_lang=sourceLanguage
         tar_lang=targetLanguage
@@ -2878,10 +2878,11 @@ def download_mt_file(request):
     if state == 'SUCCESS':
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
-        if doc.job.project.project_type_id == 8:
-            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
-            file_path = res.text
+            if doc.job.project.project_type_id == 8:
+                file_path = DocumentToFile.json_key_manipulation(res.text)
+            else:
+                file_path = res.text
             try:
                 if os.path.isfile(res.text):
                     if os.path.exists(file_path):
@@ -3530,8 +3531,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-
+    
  
 
     # dictionary_path = dictionary_paths.get(lang)

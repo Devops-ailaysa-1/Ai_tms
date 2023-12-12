@@ -4724,8 +4724,9 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             print("JsonData------------>",json_data)
-            newsID = json_data.get('newsId')
-            TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
+            newsID = json_data.get('news')[0].get('newsId')
+            obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
+            print("Obj------------->",obj)
 
         
     def create(self, request):
@@ -5016,9 +5017,9 @@ class AddStoriesView(viewsets.ModelViewSet):
     def pr_check(self,src_lang,tar_langs,user):
         today_date = date.today()
         project_name = today_date.strftime("%b %d")
-        query = Project.objects.filter(ai_user=user).filter(project_name__icontains=project_name).\
-                filter(project_jobs_set__source_language_id = src_lang).\
-                filter(project_jobs_set__target_language_id__in = tar_langs)
+        query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+                .filter(project_jobs_set__source_language_id = src_lang)\
+                .filter(project_jobs_set__target_language_id__in = tar_langs)
         if query:
             return query.last()
         return None
@@ -5084,6 +5085,61 @@ class AddStoriesView(viewsets.ModelViewSet):
             return Response(serializer.errors)
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
+
+
+from datetime import datetime, timedelta
+@api_view(["GET"])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
+def get_task_count_report(request):
+    user = request.user
+    time_range = request.GET.get('time_range', 'today')
+    if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+        today = datetime.now().date()
+        if time_range == 'today':
+            start_date = today
+        elif time_range == '30days':
+            start_date = today - timedelta(days=30)
+        else:
+            start_date = today
+        managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
+        owner = request.user.team.owner if request.user.team else request.user
+        team_members = request.user.team.get_team_members if request.user.team else []
+        team_members.append(owner)
+        res =[]
+        additional_details = {}
+        if request.user in managers  or request.user == owner:
+            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to__in = team_members).distinct()
+            if request.user in team_members:team_members.remove(request.user)
+            for i in team_members:
+                queryset = queryset.filter(assign_to=i)
+                additional_details['user'] = i.fullname
+                additional_details['TotalAssigned'] = queryset.count()
+                additional_details['Inprogress']=queryset.filter(status=2).count()
+                additional_details['YetToStart']=queryset.filter(status=1).count()
+                additional_details['Completed']=queryset.filter(status=3).count()
+                additional_details['total_completed_words'] = queryset.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                res.append(additional_details)
+        else:
+            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
+        print("QS--------->",queryset)
+        print("Res---------->",res)
+        total = queryset.count()
+        progress = queryset.filter(status=2).count()
+        yts = queryset.filter(status=1).count()
+        completed = queryset.filter(status=3)
+        total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            
+        return JsonResponse({'TotalAssigned':total,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
+    else:
+        return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+# from datetime import datetime, timedelta
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated,IsEnterpriseUser])
+# def get_task_count_detailed_report(request):
+
+
 
 # @api_view(["GET"])
 # @authentication_classes([APIAuthentication])
