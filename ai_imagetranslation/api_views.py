@@ -229,7 +229,8 @@ def image_translation_project_view(request):
     file_format = file_format.replace(" ","-") if file_format else ""
     file_format = format_extension_change(file_format)
     image_download={}
-    image_instance=ImageTranslate.objects.get(user=request.user,id=image_id)
+    user =request.user.team.owner  if request.user.team  else request.user
+    image_instance=ImageTranslate.objects.get(user=user,id=image_id)
     project_name = image_instance.file_name
     if language==0:
         buffer=io.BytesIO()
