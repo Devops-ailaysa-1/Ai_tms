@@ -959,6 +959,9 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
         print("#######",tasks)
+        pr = get_object_or_404(Project.objects.all(),id=pk)
+        #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
+        tasks = tasks.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -5110,8 +5113,10 @@ def get_task_count_report(request):
         team_members.append(owner)
         res =[]
         if request.user in managers  or request.user == owner:
-            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
-            filter(task_assign_info__isnull=False).filter(assign_to__in = team_members).distinct()
+            tot_queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
+            filter(assign_to__in = team_members).distinct()
+            total = tot_queryset.count()
+            queryset = tot_queryset.filter(task_assign_info__isnull=False)
             editors = request.user.team.get_editors if request.user.team else []
             for i in editors:
                 additional_details = {}
@@ -5125,15 +5130,17 @@ def get_task_count_report(request):
                 res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
+            total = queryset.count()
         print("QS--------->",queryset)
         print("Res---------->",res)
-        total = queryset.count()
+        total = total
+        total_assigned = queryset.count()
         progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
             
-        return JsonResponse({'TotalAssigned':total,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
+        return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
 
