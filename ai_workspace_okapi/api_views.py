@@ -104,6 +104,14 @@ from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
+
+
+# import markdown
+
+# def text_to_html_markdown(text):
+#     html_content = markdown.markdown(text)
+#     return html_content
+
 #from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -3626,6 +3634,9 @@ def symspellcheck(request):
     #     return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
     # suggestions = spell_check_large_text(tar)
     # return JsonResponse({"result":suggestions},safe=False)
+
+
+
 
 
 
