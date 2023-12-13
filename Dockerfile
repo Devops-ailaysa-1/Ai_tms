@@ -28,7 +28,8 @@ RUN pip install "poetry==$POETRY_VERSION" && poetry --version
 # Install dependencies:
 RUN poetry install
 RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords')"
-RUN python -m spacy download en_core_web_sm
+# RUN pip install pip-system-certs
+# RUN python -m spacy download en_core_web_sm
 COPY . .
 
 # COPY --chmod=777 ./ai_tms_web.entrypoint.sh /
