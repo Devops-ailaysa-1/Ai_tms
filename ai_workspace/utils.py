@@ -277,9 +277,10 @@ from docx import Document
  
 def html_to_docx(html_content, docx_filename):
 	print("Html------------>",html_content)
-	html_content_with_br = html_content.replace('\n', '<br>')
+	if html_content is not None:
+		html_content = html_content.replace('\n', '<br>')
     # Convert HTML to DOCX using pypandoc
-	pypandoc.convert_text(html_content_with_br, 'docx', format='html',outputfile=docx_filename)
+	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
     # pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
 
 # def text_to_docx(text, docx_filename):
