@@ -2776,7 +2776,10 @@ from django.db.models import Sum
 
 class AilaysaPurchasedUnits:
     def __init__(self,user):
-        self.user = user
+        if user.is_internal_member == True:
+            self.user = getattr(user.team, 'owner', None) if user.team is not None else None
+        else:
+            self.user = user
 
     def get_units_objs(self,service_name):
         current_time = timezone.now()
