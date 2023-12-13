@@ -545,7 +545,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def run_validation(self,data):
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
-				if pt not in [4 ,3] and data.get('target_languages')==None:
+				if pt not in [4 ,3, 8] and data.get('target_languages')==None:
 						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
@@ -1118,10 +1118,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",)
-
-	
-				
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id',)
+		
 
 	def get_push_detail(self,obj):
 		if obj.job.project.project_type_id == 8:
@@ -1147,11 +1145,22 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:return res
 
 	def get_news_detail(self,obj):
+		from bs4 import BeautifulSoup
+		punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
 		data = {}
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
-				json_data = obj.news_task.first().source_json.get('news')[0]
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':json_data.get('heading'),'maincat_name':json_data.get('maincat_name')}
+				try:
+					json_data = obj.news_task.first().source_json.get('news')[0]
+					heading = json_data.get('heading')
+				except:
+					json_data = obj.news_task.first().source_json
+					story = json_data.get('story')
+					soup = BeautifulSoup(story, 'html.parser')
+					text = soup.get_text()
+					heading = text.split('.')[0].strip(punctuation)
+				tar_json = True if obj.news_task.first().target_json else False
+				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
 		return data
 
 	# def get_image_translate_project(self,obj):
@@ -1928,19 +1937,53 @@ from itertools import repeat
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 from ai_workspace.utils import federal_json_translate
 from concurrent.futures import ThreadPoolExecutor
+from ai_workspace.serializers import VendorDashBoardSerializer
+
 class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
 	source_json = serializers.JSONField(required=False )
 	target_json = serializers.JSONField(required=False )
+	project = serializers.ReadOnlyField(source='task.job.project.id')
+	edit_allowed = serializers.SerializerMethodField()
+	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+	updated_download = serializers.SerializerMethodField()
+	
 	class Meta:
 		model = TaskNewsDetails
-		fields = ("id","task","source_json","target_json","created_at","updated_at")
+		fields = ("id","task","edit_allowed","updated_download","project","source_language","target_language","target_language_script","source_json","target_json","created_at","updated_at",)
 
+	def get_edit_allowed(self,obj):
+		request_obj = self.context.get('request')
+		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+		doc_view_instance = DocumentViewByDocumentId(request_obj)
+		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+		return edit_allowed
+
+	def get_updated_download(self,obj):
+		user = self.context.get('request').user
+		managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+		if (user == obj.task.job.project.ai_user) or (user in managers):
+			return 'enable'
+		else:
+			return 'disable'
 	
+
+	# def get_task_assign_info(self,obj):
+	# 	serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+	# 	result = serializer_task.get_task_assign_info(obj.task)  # Call the method from VendorDashBoardSerializer
+	# 	return result
+
+    # def get_task_reassign_info(self,obj):  
+    #     serializer_task = VendorDashBoardSerializer(context=self.context)  # Create an instance of VendorDashBoardSerializer
+    #     result = serializer_task.get_task_reassign_info(obj.task)  # Call the method from VendorDashBoardSerializer
+    #     return result 
+
 	def create(self, validated_data):
 		task = validated_data.get('task')
-		instance = TaskNewsDetails.objects.create(task=task)
-
+		instance,created = TaskNewsDetails.objects.get_or_create(task=task)
+		user = instance.task.job.project.ai_user
 		file_path = instance.task.file.file.path
 		src_code = instance.task.job.source__language
 		tar_code = instance.task.job.target__language
@@ -1949,29 +1992,49 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 				json_data = json.load(fp)
 
 		print("JSon--------->",json_data)
+		print("NewsId------------->",json_data.get('newsID'))
 
 		# json_data_list = json_data['news']
 		# with ThreadPoolExecutor() as executor:
 		# 	translated_json = list(executor.map(federal_json_translate,json_data_list,repeat(tar_code),repeat(src_code)))
 		# executor.shutdown()
+		if instance.target_json == None:
+			
+			translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code,user=user)
 
-		translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code)
-		instance.source_json=json_data
-		instance.target_json=translated_json
-		instance.save()
-		mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
-		TaskNewsMT.objects.create(task=instance,mt_raw_json=json_data,mt_engine=mt_engine)
+			instance.source_json=json_data
+			instance.target_json=translated_json
+			if json_data.get('news'):
+				instance.news_id = json_data.get('news')[0].get('newsId')  
+			instance.save()
+			mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=1)
+			TaskNewsMT.objects.create(task=instance,mt_raw_json=translated_json,mt_engine=mt_engine)
 		return instance
 
+
+	def update_pushed_state(self,task_obj):
+		print("Inside")
+		if task_obj.job.project.project_type_id == 8:
+			if task_obj.news_task.exists():
+				news_obj = task_obj.news_task.first()
+				if news_obj.pushed != False:
+					print("In inside")
+					news_obj.pushed = False
+					news_obj.save()
+					print("news------------------>",news_obj)
+
+
 	def update(self, instance, validated_data):
-		source_json = validated_data.get('source_json',None)
+		#source_json = validated_data.get('source_json',None)
+		from ai_workspace_okapi.serializers import SegmentSerializerV2
 		target_json = validated_data.get('target_json',None)
 
-		if source_json:
-			instance.source_json = source_json
 		if target_json:
 			instance.target_json = target_json
-
+			instance.save()
+			self.update_pushed_state(instance.task)
+			ser = SegmentSerializerV2(context=self.context)
+			ser.update_task_assign(instance.task,self.context.get('request').user,None)
 		return instance
 	
 

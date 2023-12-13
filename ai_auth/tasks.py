@@ -241,6 +241,27 @@ def existing_vendor_onboard_check():
 
 
 @task(queue='low-priority')
+def send_bootcamp_mail(obj_id):
+    from .models import MarketingBootcamp
+    from ai_auth import forms as auth_forms
+    instance = MarketingBootcamp.objects.get(id=obj_id)
+    if instance.file:
+        file_path = instance.file.path
+    else:
+        file_path = None
+    sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
+                                            user_email=instance.email,
+                                            file_path=file_path)
+    auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
+                                                user_email=instance.email)
+    if sent:
+        print("Mail sent")
+    else:
+        print('Mail Not sent')
+
+
+
+@task(queue='low-priority')
 def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
@@ -1108,7 +1129,7 @@ def proz_list_send_email(projectpost_id):
             'limit':limit,
             'offset':offset
             }
-        integration_api_url = "https://api.proz.com/v2/freelancer-matches"
+        integration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response and response.get('success') == 1:
             uuids = []
@@ -1118,7 +1139,7 @@ def proz_list_send_email(projectpost_id):
         message = 'Customer Posted project with this language pair. project_title '+instance.proj_name+ ' with biddeadline '+instance.bid_deadline.date().strftime('%d-%m-%Y')+ '. You can bid the project and win. Visit Ailaysa for more details.'
         subject = request.POST.get('subject', 'Message from Ailaysa Test' )
         headers = {'X-Proz-API-Key': os.getenv("PROZ-KEY"),}
-        url = "https://api.proz.com/v2/messages"
+        url = os.getenv("PROZ_URL")+"messages"
         payload = {'recipient_uuids': uuids,
                     'sender_email': user.email ,
                     'body': message,

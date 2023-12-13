@@ -103,6 +103,7 @@ from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
 from .utils import merge_dict
 from ai_auth.access_policies import IsEnterpriseUser
+from datetime import date
 
 class IsCustomer(permissions.BasePermission):
 
@@ -958,6 +959,9 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
         print("#######",tasks)
+        #pr = get_object_or_404(Project.objects.all(),id=pk)
+        #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
+        tasks = tasks.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -2310,7 +2314,12 @@ class ShowMTChoices(APIView):
 ###########################Transcribe Short File#####################################
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
-    ai_user = obj.job.project.ai_user
+    news_transcribe = False
+    if obj:
+        ai_user = obj.job.project.ai_user
+    else:
+        ai_user = user
+        news_transcribe = True
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -2330,6 +2339,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         file_length = int(response.total_billed_time.seconds)
         print("Length return from api--------->",file_length)
         record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
+        print("going to task transcription ser")
+        if news_transcribe:
+            return {"transcripted_text":transcript,"audio_file_length":file_length}
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -2395,6 +2407,14 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     return (ser.errors)
 
 
+def audio_read(speech_file):
+    audio = AudioSegment.from_file(speech_file)
+    length = int(audio.duration_seconds)###seconds####
+    hertz = audio.frame_rate
+    return length,hertz
+
+
+
 
 ################################speech-to-text############# working#############################3
 @api_view(["POST"])
@@ -2424,9 +2444,10 @@ def transcribe_file(request):
         filename = obj.file.filename
         speech_file = obj.file.file.path
         try:
-            audio = AudioSegment.from_file(speech_file)
-            length = int(audio.duration_seconds)###seconds####
-            hertz = audio.frame_rate
+            length,hertz = audio_read(speech_file)
+            # audio = AudioSegment.from_file(speech_file)
+            # length = int(audio.duration_seconds)###seconds####
+            # hertz = audio.frame_rate
         except:
             length=None
         print("Length in main----->",length)
@@ -3143,7 +3164,7 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "extension":".txt"
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-        data={"segmentWordCountdata":json.dumps(seg_data)},timeout=3)
+        data={"segmentWordCountdata":json.dumps(seg_data)})#,timeout=3)
 
     if res.status_code == 200:
         print("Word count of the segment--->", res.json())
@@ -4629,6 +4650,8 @@ class GetNewsFederalView(generics.ListAPIView):
         count = self.request.query_params.get('count', 20)
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
+        categoryIds = self.request.query_params.getlist('categoryId')
+        print("CategoryID------>",categoryIds)
         #contenttype = self.request.query_params.get('content')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
 
@@ -4646,7 +4669,9 @@ class GetNewsFederalView(generics.ListAPIView):
             params.update({'newsId':news_id})
         if search:
             params.update({'search':search})
-        integration_api_url = "https://thefederal.com/dev/h-api/news"
+        if categoryIds:
+            params.update({'categoryIds':categoryIds})
+        integration_api_url = os.getenv('FEDERAL_URL')+"news"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
             news_jsons = response.json().get('news')
@@ -4683,13 +4708,13 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         files =[]
         headers = { 's-id': os.getenv("FEDERAL-KEY"),}
         for i in news:
-            federal_api_url = "https://thefederal.com/dev/h-api/news"
+            federal_api_url = os.getenv('FEDERAL_URL')+"news"
             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
-            translatable_data = split_dict(response.json()) 
-            print("Trans------------------->",translatable_data)
+            #translatable_data = split_dict(response.json()) 
+            #print("Trans------------------->",translatable_data)
             if response.status_code == 200:
                 name = f"{i}.json"
-                im_file = DJFile(ContentFile(json.dumps(translatable_data)),name=name)
+                im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
                 files.append(im_file)
         print("files---->" ,files)
         return files
@@ -4702,17 +4727,15 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             print("JsonData------------>",json_data)
-            newsID = json_data.get('newsId')
-            headers = { 's-id': os.getenv("FEDERAL-KEY"),}
-            federal_api_url = "https://thefederal.com/dev/h-api/news"
-            response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
-            if response.status_code == 200:
-                TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':response.json()})
+            newsID = json_data.get('news')[0].get('newsId')
+            obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
+            print("Obj------------->",obj)
 
-            
-
+        
     def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
         allow = GetNewsFederalView.check_user_federal(request.user)
+        print("allow---->",allow)
         if allow:
             news = request.POST.getlist('news_id')
             files = self.get_files(news)
@@ -4723,12 +4746,12 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 serializer.save()
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 NewsProjectSetupView.create_news_detail(pr)
+                ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_cms)
                 authorize(request,resource=pr,action="create",actor=self.request.user)
                 return Response(serializer.data)
             return Response(serializer.errors)
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
-
 
 
 
@@ -4741,11 +4764,11 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
     def list(self,request):
         user = request.user
         task_news = TaskNewsDetails.objects.filter(task__file__project__ai_user=user)
-        serializer = TaskNewsDetailsSerializer(task_news, many=True)
+        serializer = TaskNewsDetailsSerializer(task_news, many=True,context={'request':request})
         return Response(serializer.data)
 
     def create(self,request):
-        serializer = TaskNewsDetailsSerializer(data=request.data)
+        serializer = TaskNewsDetailsSerializer(data=request.data,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -4753,15 +4776,15 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 
     def update(self,request,pk):
         obj = TaskNewsDetails.objects.get(id=pk )  ##request filter
-        serializer = TaskNewsDetailsSerializer(obj,data=request.data,partial=True)
+        serializer = TaskNewsDetailsSerializer(obj,data=request.data,context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
     
     def retrieve(self, request, pk=None):
-        obj = TaskNewsDetails.objects.get(id=pk )
-        serializer = TaskNewsDetailsSerializer(obj)
+        obj = TaskNewsDetails.objects.get(task_id=pk )
+        serializer = TaskNewsDetailsSerializer(obj,context={'request':request})
         return Response(serializer.data)
 
     
@@ -4772,52 +4795,347 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_federal_categories(request):
+    page = request.query_params.get('page', 1)
+    count = request.query_params.get('count', 20)
+
+    headers = {
+        's-id': os.getenv("FEDERAL-KEY"),
+        }
+    
+    startIndex = (int(page) - 1) * int(count)
+   
+    params={ 
+        'startIndex':startIndex,
+        'count':count,
+        }
+
+    CMS_url = os.getenv('FEDERAL_URL')+"category"
+    payload={
+        'sessionId':os.getenv("CMS-SESSION-ID"),
+    }
+    response = requests.request("GET", CMS_url, headers=headers, params=params)
+    if response.status_code == 200:
+        return Response(response.json())
+    else:
+        return JsonResponse({'msg':'something went wrong'})
+            
+
+
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def push_translated_story(request):
     from ai_workspace_okapi.api_views import DocumentToFile
     task_id = request.GET.get('task_id')
+    feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
+    # target_lang = task.job.target_language.language
+    # if target_lang == "Telugu":
+    #     federal_key = os.getenv("FEDERAL-KEY-Telugu")
+    # elif target_lang == "Kannada":
+    #     federal_key = os.getenv("FEDERAL-KEY-Kannada")
+    # else:
+    federal_key = os.getenv("STAGING-FEDERAL-KEY")
     src_json,tar_json = {},{}
-    headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
-    CMS_create_url = "https://stagingfederalsite.hocalwire.in/dev/h-api/createFeedV2"
+    headers = { 's-id': federal_key,'Content-Type': 'application/json'}
+    feed_url = os.getenv('CREATEFEED_URL')
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
-    doc = task.document
-    if doc:
-        src_json = task.news_task.first().source_json.get('news')[0]
-        doc_to_file = DocumentToFile()
-        res = doc_to_file.document_data_to_file(request,doc.id)
-        if res.status_code in [200, 201]:
-            with open(res.text,"r") as fp:
-                trans_json = json.load(fp)
-            tar_json = merge_dict(trans_json,src_json)
-          
+
+    tar_json = task.news_task.first().target_json
+    if not tar_json:
+        doc = task.document
+        if doc:
+            src_json = task.news_task.first().source_json.get('news')[0]
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,doc.id)
+            if res.status_code in [200, 201]:
+                with open(res.text,"r") as fp:
+                    trans_json = json.load(fp)
+                tar_json = merge_dict(trans_json,src_json)
+                tt = task.news_task.first()
+                tt.target_json = tar_json
+                tt.save()
+
+    #print("TAr json--------->",tar_json)  
     payload.update({
         'heading' : tar_json.get('heading'),
         'description' : tar_json.get('description'),
         'story':tar_json.get('story'),
         'location': tar_json.get('location'),
         'locationId' : tar_json.get('locationId'),
-        #'categoryId': tar_json.get('maincategory'),
+        'categoryId': tar_json.get('maincategory'),
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
+        # 'story_summary':tar_json.get('story_summary'),
+        # 'authorName': tar_json.get('authorName'),
+        # 'image_caption': tar_json.get('image_caption'),
     })
-    print("Payload------------------>",payload)
-    response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
-    print("Response------------>",response)
+    print("Payload------>",payload)
+    if feed_id:
+        payload.update({'feedId': feed_id})
+    response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
     if response.status_code == 200:
-        print("Inside")
         print("RR-------------->",response.json())
         feed = response.json().get('feedId')
         print("Feed------->",feed)
-        task.news_task.update(feed_id=feed,pushed=True)
-        print(task.news_task.first().id)
-        return Response({'msg':'pushed successfully'},status=200)
+        if feed:
+            task.news_task.update(feed_id=feed,pushed=True)
+            return Response({'msg':'pushed successfully'},status=200)
     return Response({'msg':"something went wrong"},status=400)
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def push_translated_story(request):
+#     from ai_workspace_okapi.api_views import DocumentToFile
+#     task_id = request.GET.get('task_id')
+#     feed_id = request.GET.get('feed_id')
+#     task = Task.objects.get(id=task_id)
+#     src_json,tar_json = {},{}
+#     headers = { 's-id': os.getenv("STAGING-FEDERAL-KEY"),'Content-Type': 'application/json'}
+#    
+#     payload={ 
+#             'sessionId':os.getenv("CMS-SESSION-ID"),
+#             }
+#     doc = task.document
+#     if doc:
+#         src_json = task.news_task.first().source_json.get('news')[0]
+#         doc_to_file = DocumentToFile()
+#         res = doc_to_file.document_data_to_file(request,doc.id)
+#         if res.status_code in [200, 201]:
+#             with open(res.text,"r") as fp:
+#                 trans_json = json.load(fp)
+#             tar_json = merge_dict(trans_json,src_json)
+          
+#     payload.update({
+#         'heading' : tar_json.get('heading'),
+#         'description' : tar_json.get('description'),
+#         'story':tar_json.get('story'),
+#         'location': tar_json.get('location'),
+#         'locationId' : tar_json.get('locationId'),
+#         #'categoryId': tar_json.get('maincategory'),
+#         'mediaIds': tar_json.get('mediaId'),
+#         'tags': tar_json.get('tags'),
+#         'keywords': tar_json.get('keywords'),
+#     })
+
+#     if feed_id:
+#         payload.update({'feedId': feed_id})
+#     response = requests.request("POST", CMS_create_url, headers=headers, data=json.dumps(payload))
+#     if response.status_code == 200:
+#         print("RR-------------->",response.json())
+#         feed = response.json().get('feedId')
+#         print("Feed------->",feed)
+#         task.news_task.update(feed_id=feed,pushed=True)
+#         return Response({'msg':'pushed successfully'},status=200)
+#     return Response({'msg':"something went wrong"},status=400)
+
+
+
+
+
+# from django.core.files.base import ContentFile
+# from ai_workspace.utils import split_dict
+
+# class NewsProjectSetupView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+#     def get_files(self,news):
+#         files =[]
+#         headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+#         for i in news:
+#          
+#             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
+#             translatable_data = split_dict(response.json()) 
+#             print("Trans------------------->",translatable_data)
+#             if response.status_code == 200:
+#                 name = f"{i}.json"
+#                 im_file = DJFile(ContentFile(json.dumps(translatable_data)),name=name)
+#                 files.append(im_file)
+#         print("files---->" ,files)
+#         return files
+
+#     @staticmethod
+#     def create_news_detail(pr):
+#         tasks = pr.get_tasks
+#         for i in tasks:
+#             file_path = i.file.file.path
+#             with open(file_path, 'r') as fp:
+#                 json_data = json.load(fp)
+#             print("JsonData------------>",json_data)
+#             newsID = json_data.get('newsId')
+#             headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+#             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':newsID})
+#             if response.status_code == 200:
+#                 TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':response.json()})
+
+        
+#     def create(self, request):
+#         from ai_workspace.models import ProjectFilesCreateType
+#         allow = GetNewsFederalView.check_user_federal(request.user)
+#         print("allow---->",allow)
+#         if allow:
+#             news = request.POST.getlist('news_id')
+#             files = self.get_files(news)
+#             user = self.request.user
+#             user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+#             serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+#             if serializer.is_valid(raise_exception=True):
+#                 serializer.save()
+#                 pr = Project.objects.get(id=serializer.data.get('id'))
+#                 NewsProjectSetupView.create_news_detail(pr)
+#                 ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_cms)
+#                 authorize(request,resource=pr,action="create",actor=self.request.user)
+#                 return Response(serializer.data)
+#             return Response(serializer.errors)
+#         else:
+#             return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
+
+
+
+
+
+class AddStoriesView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+    def pr_check(self,src_lang,tar_langs,user):
+        today_date = date.today()
+        project_name = today_date.strftime("%b %d, %Y")
+        query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+                .filter(project_jobs_set__source_language_id = src_lang)\
+                .filter(project_jobs_set__target_language_id__in = tar_langs)
+        if query:
+            return query.last()
+        return None
+
+    @staticmethod
+    def create_news_detail(pr):
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+            print("TT---------------->",tt)
+
+
+    @staticmethod
+    def check_user_dinamalar(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        print("user--->",user)
+        try:
+            if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+                return True
+        except:
+            return False 
+
+    def get_json(self,json_data,name):
+        print("DT--------------->",json_data)
+        name = f"{name}.json"
+        im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+        files = [im_file]
+        return files
+
+    def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
+        din = AddStoriesView.check_user_dinamalar(request.user)
+        if din:
+            news_json = request.POST.get('news_data')
+            today_date = date.today()
+            project_name = today_date.strftime("%b %d, %Y")
+            news_json = json.loads(news_json) if news_json else None
+            src_lang = request.POST.get('source_language')
+            tar_langs = request.POST.getlist('target_languages')
+            user = self.request.user
+            user_1 = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+            pr = self.pr_check(src_lang,tar_langs,user_1)
+            count = pr.get_tasks.count() if pr else 1
+            name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
+            files = self.get_json(news_json,name)
+            if pr:
+                data = request.POST.dict()
+                print("Data--------->",data)
+                data.pop('target_languages')
+                serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+            else:
+                serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                pr = Project.objects.get(id=serializer.data.get('id'))
+                self.create_news_detail(pr)
+                ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+                authorize(request,resource=pr,action="create",actor=self.request.user)
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
+
+
+from datetime import datetime, timedelta
+@api_view(["GET"])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
+def get_task_count_report(request):
+    #from ai_auth.models import Team
+    user = request.user
+    time_range = request.GET.get('time_range', 'today')
+    owner = request.user.team.owner if request.user.team else request.user
+    if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
+        today = datetime.now().date()
+        if time_range == 'today':
+            start_date = today
+        elif time_range == '30days':
+            start_date = today - timedelta(days=30)
+        else:
+            start_date = today
+        managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
+        #team = Team.objects.filter(owner=user).first()
+        team_members = request.user.team.get_team_members if request.user.team else []
+        team_members.append(owner)
+        res =[]
+        if request.user in managers  or request.user == owner:
+            tot_queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
+            filter(assign_to__in = team_members).distinct()
+            total = tot_queryset.count()
+            queryset = tot_queryset.filter(task_assign_info__isnull=False)
+            editors = request.user.team.get_editors if request.user.team else []
+            for i in editors:
+                additional_details = {}
+                query = queryset.filter(assign_to=i)
+                additional_details['user'] = i.fullname
+                additional_details['TotalAssigned'] = query.count()
+                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
+                additional_details['YetToStart']=query.filter(status=1).count()
+                additional_details['Completed']=query.filter(status=3).count()
+                additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                res.append(additional_details)
+        else:
+            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
+            total = queryset.count()
+        print("QS--------->",queryset)
+        print("Res---------->",res)
+        total = total
+        total_assigned = queryset.count()
+        progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
+        yts = queryset.filter(status=1).count()
+        completed = queryset.filter(status=3)
+        total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            
+        return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
+    else:
+        return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+# from datetime import datetime, timedelta
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated,IsEnterpriseUser])
+# def get_task_count_detailed_report(request):
 
 
 
@@ -4882,26 +5200,56 @@ def push_translated_story(request):
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
     from ai_workspace_okapi.api_views import DocumentToFile
-    allow = GetNewsFederalView.check_user_federal(request.user)
-    if allow:
-        task_id = request.GET.get('task_id')
-        obj = Task.objects.get(id=task_id)
-        target_json,source_json= {},{}
-        if obj.job.project.project_type_id == 8:
-            if obj.news_task.exists():
-                source_json = obj.news_task.first().source_json.get('news')[0]
-
-            if obj.document:
-                doc_to_file = DocumentToFile()
-                res = doc_to_file.document_data_to_file(request,obj.document.id)
-                with open(res.text,"r") as fp:
-                    json_data = json.load(fp)
-                trans_json = json_data	
+    #allow = GetNewsFederalView.check_user_federal(request.user)
+    #if allow:
+    task_id = request.GET.get('task_id')
+    obj = Task.objects.get(id=task_id)
+    main_user = obj.job.project.ai_user
+    target_json,source_json= {},{}
+    if obj.job.project.project_type_id == 8:
+        if obj.news_task.exists():
+            try: source_json = obj.news_task.first().source_json.get('news')[0]
+            except: source_json = obj.news_task.first().source_json
+        if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
+            doc_to_file = DocumentToFile()
+            res = doc_to_file.document_data_to_file(request,obj.document.id)
+            with open(res.text,"r") as fp:
+                json_data = json.load(fp)
+            trans_json = json_data	
+            if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
                 target_json = merge_dict(trans_json,source_json)
-            
-        return Response({'source_json':source_json,'target_json':target_json})
+            else: target_json = trans_json
+        else:
+           target_json = obj.news_task.first().target_json 
+           if target_json == None: target_json = {}
+        
+    return Response({'source_json':source_json,'target_json':target_json})
+
+
+@api_view(['GET'])
+def federal_segment_translate(request):
+    task_id = request.query_params.get('task_id',None)
+    text =  request.query_params.get('text',None)
+    task_instance =  Task.objects.get(id=task_id)
+    if text:
+        mt_engine = task_instance.job.project.mt_engine
+        src_lang = task_instance.job.source_language.locale.first().locale_code
+        tar_lang = task_instance.job.target_language.locale.first().locale_code
+
+        consumable_credit = get_consumable_credits_for_text(text,target_lang=None,source_lang=src_lang)
+        initial_credit = request.user.credit_balance.get("total_left")
+        if initial_credit > consumable_credit:
+            trans_text = get_translation(mt_engine.id , source_string=text,source_lang_code=src_lang,
+                                        target_lang_code=tar_lang,user_id=request.user.id)
+            return Response({'text':trans_text},status=200)
+        else:
+            return Response({'msg':'Insufficient Credits'},status=400)
     else:
-        return Response({"detail": "You do not have permission to perform this action."},status=403)
+        return Response({'msg':'Text field empty'},status=400)
+    
+
+    # else:
+    #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
 	# def get_source_news_data(self,obj):
 	# 	if obj.job.project.project_type_id == 8:
@@ -4910,6 +5258,7 @@ def get_news_detail(request):
 	# 			return source_json
 	# 		else: return None
 	# 	else: return None
+
 
 
 # from django import core

@@ -4,7 +4,7 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
                     ImageGeneratorResolution,TranslateCustomizeDetails, CustomizationSettings,
                     BlogArticle,BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle,BlogOutlineSession,
-                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle)
+                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle,NewsPromptDetails)
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
@@ -22,7 +22,7 @@ from ai_workspace_okapi.utils import special_character_check
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
-from ai_openai.utils import blog_generator
+from ai_openai.utils import blog_generator,get_prompt_gpt_turbo_1106
 from django.db.models import Case, IntegerField, When, Value
 from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
@@ -44,6 +44,24 @@ def lang_detector(user_text):
     return lang
 
 
+def news_file_read(file_path):
+    if file_path.endswith("txt"):
+        with open(file_path,'r') as fp:
+            fp = fp.read()
+        return fp
+    elif file_path.endswith("docx"):
+        fp=''
+        from docx import Document
+        f = open(file_path, 'rb')
+        document = Document(f)
+        for p in document.paragraphs:
+            fp = fp+" "+p.text
+        if fp:
+            fp = fp.strip()
+        return fp 
+
+
+
 def openai_token_usage(openai_response ):
     print("Response------------------->",openai_response)
     token_usage = openai_response.get("usage",None)
@@ -61,13 +79,24 @@ class AiPromptSerializer(serializers.ModelSerializer):
     targets = serializers.ListField(allow_null=True,required=False)
     source_prompt_lang = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
+    no_of_words = serializers.CharField(required=False)
+    name_of_the_speaker=serializers.CharField(required=False)
+    position_of_the_speaker=serializers.CharField(required=False)
+    place_of_the_speech=serializers.CharField(required=False)
+    # news_files = serializers.FileField(required=False)
     class Meta:
         model = AiPrompt
         fields = ('id','user','prompt_string','description','book','document','task','pdf','model_gpt_name','catagories','sub_catagories',
-            'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
-            'response_charecter_limit','targets','created_by',)
+            'source_prompt_lang','Tone' ,'response_copies','product_name','keywords','response_charecter_limit','targets','created_by','no_of_words',
+            'name_of_the_speaker','position_of_the_speaker','place_of_the_speech') #news_files
 
-    
+    def run_validation(self,data):
+        if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
+            print("data__sub__cat",data.get('sub_catagories'))
+        return super().run_validation(data)
+ 
+
+
     # def to_internal_value(self, data):
     #     print("to_internal_value")
     #     print("before",type(data['catagories']))
@@ -81,6 +110,17 @@ class AiPromptSerializer(serializers.ModelSerializer):
     # #     data['response_copies'] = int(data['response_copies'])
     #     return data
 
+    def news_text_gen_prompt_template(self,description , prompt ,assistant ):
+        prompt_template = """Context: {context}
+
+        
+        {prompt}
+        """
+        prompt_template = prompt_template.format(context=description,prompt=prompt) 
+        messages = [{"role":"system","content":assistant},
+                        {"role": "user", "content":prompt_template}]
+        return messages
+
   
     def prompt_generation(self,ins,obj,ai_langs,targets,user):
         instance = AiPrompt.objects.get(id=ins)
@@ -88,8 +128,45 @@ class AiPromptSerializer(serializers.ModelSerializer):
         start_phrase = None
         prompt=''
         if not user: user = instance.user
+        initial_credit = user.credit_balance.get("total_left")
+        print("------>",instance.catagories.category)
         if instance.catagories.category == 'Free Style':
             prompt+= instance.description if lang in ai_langs else instance.description_mt + '.'
+            consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
+            # prompt+=' Make sure to cover all relevant aspects within the token limit.' 
+
+        # elif instance.catagories.category == "News":
+        #     sub_catagories_instance = instance.sub_catagories.prompt_sub_category.first()
+        #     start_phrase = instance.sub_catagories.prompt_sub_category.first()
+        #     query = sub_catagories_instance.start_phrase
+        #     assistant = sub_catagories_instance.assistant
+        #     description = ""
+        #     if instance.description:
+        #         description = instance.description if lang in ai_langs else instance.description_mt
+        #     elif instance.news_files:
+        #         description = news_file_read(instance.news_files.path)
+        #     else:
+  
+        #         raise serializers.ValidationError({'msg':'no description or file'},code=400)
+
+        #     # if instance.sub_catagories.sub_category == "Named Entity and Keywords Extraction"
+        #     news_details = instance.ai_prompt_news_details
+
+        #     if news_details.no_of_words:
+        #         query = query.format(news_details.no_of_words)
+
+        #     # print("start_phrase",query)
+        #     # print("assiant",assistant)
+        #     # print('no_of_words',news_details.no_of_words)
+        #     # print('name_of_the_speaker',news_details.name_of_the_speaker)
+        #     # print('position_of_the_speaker',news_details.position_of_the_speaker)
+        #     # print('place_of_the_speech',news_details.place_of_the_speech)
+        #     # print('description',description)
+        #     consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
+        #     prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
+        #     print(prompt)
+
+
         else:
             print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
@@ -101,28 +178,38 @@ class AiPromptSerializer(serializers.ModelSerializer):
             
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
-            prompt+=' in {} tone'.format(instance.Tone.tone)
+            prompt +=' in {} tone'.format(instance.Tone.tone)
             
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
 
-        prompt+=' Make sure to cover all relevant aspects within the token limit.' 
-        print("prompt-->",prompt)
-        initial_credit = user.credit_balance.get("total_left")
-        consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
+            prompt+=' Make sure to cover all relevant aspects within the token limit.' 
+            consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
+
+        print("consumable_credit",consumable_credit)
+        # consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
-        # openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
-        # generated_text = openai_response.get('choices' ,None)
-        openai_response =get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
-        generated_text =openai_response.get('choices',None)#["choices"][0]["message"]["content"]
+
+        if instance.catagories.category == "News":
+
+            openai_response=get_prompt_gpt_turbo_1106( prompt)
+            print(prompt)
+        else:
+            openai_response=get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
+
+         
+ 
+ 
+        # openai_response =get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
+        generated_text =openai_response.get('choices',None) #["choices"][0]["message"]["content"]
         response_id =openai_response.get('id' , None)
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
         total_tokens=token_usage['total_tokens']
         completion_tokens=token_usage.get('completion_tokens',None)
-        #print("CompletionTokens------->",completion_tokens)
+ 
         no_of_outcome = instance.response_copies
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
@@ -132,6 +219,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         
         if generated_text:
             print("generated_text" , generated_text)
+            print(start_phrase)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i["message"]["content"].strip()}) for j,i in enumerate(generated_text)]#'api_result':i['text'].strip().strip('\"')#'api_result':i["message"]["content"].strip().strip('\"')
@@ -187,8 +275,13 @@ class AiPromptSerializer(serializers.ModelSerializer):
         return credit
 
     def create(self, validated_data):
+        print("validated_data",validated_data)
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
+        no_of_words = validated_data.pop('no_of_words',None)
+        name_of_the_speaker=validated_data.pop('name_of_the_speaker',None)
+        position_of_the_speaker=validated_data.pop('position_of_the_speaker',None)
+        place_of_the_speech=validated_data.pop('place_of_the_speech',None)
         source_prompt_lang = validated_data.get('source_prompt_lang',None)
         if source_prompt_lang == None and targets == []:
             lng = lang_detector(validated_data.get('description'))
@@ -225,10 +318,20 @@ class AiPromptSerializer(serializers.ModelSerializer):
             tt = [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=j) for i in targets for j in range(instance.response_copies)]
         else:
             tt= [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=0) for i in targets]       
+
+        if instance.catagories.category == "News":
+            print("--------------------------------->>>>news content")
+            NewsPromptDetails.objects.create(aiprompt=instance,no_of_words=no_of_words,name_of_the_speaker=name_of_the_speaker,
+                                             position_of_the_speaker=position_of_the_speaker,place_of_the_speech=place_of_the_speech)
+
         pr_result = self.prompt_result_update(instance.id,prmt_res,openai_available_langs,targets,user) 
         if pr_result:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)        
         return instance
+
+
+
+
 
 
 
@@ -259,11 +362,11 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
         }
         
     def get_target_langs(self,obj):
-        return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
+        return [i.result_lang.language for i in obj.ai_prompt.all()]#.distinct('result_lang')]
 
     def get_prompt_results(self,obj):
         result_dict ={}
-        results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
+        results = AiPromptResult.objects.filter(prompt_id = obj.id)#.distinct('copy')
         for i in results:
             rr = AiPromptResult.objects.filter(prompt_id = obj.id).filter(copy=i.copy)
             result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
@@ -1609,3 +1712,59 @@ def credits_to_check(book_ins):
         return 50
     else:
         return 550
+
+
+from ai_openai.models import NewsTranscribe,NewsTranscribeResult
+from ai_workspace.api_views import audio_read,transcribe_short_file
+from ai_workspace.utils import  get_consumable_credits_for_speech_to_text
+class NewsTranscribeResultSerializer(serializers.ModelSerializer):
+ 
+    class Meta:
+        model = NewsTranscribeResult
+        fields = "__all__"
+
+
+class NewsTranscribeSerializer(serializers.ModelSerializer):
+    news_transcribe = NewsTranscribeResultSerializer(many=True,required=False)
+ 
+    class Meta:
+        model = NewsTranscribe
+        fields = ("id","news_transcribe","audio_file","language","user","audio_len","prompt_sub_category")
+
+    def create(self,validated_data):
+        language = validated_data.get('language',None)
+        if not language:
+            raise serializers.ValidationError({'msg':'language not given'},code=400)
+        instance = NewsTranscribe.objects.create(**validated_data)
+
+        try:
+            length,hertz = audio_read(instance.audio_file.path)
+        except:
+            length=None
+        print("Length in main----->",length)
+        if length==None:
+            raise serializers.ValidationError({'msg':'something wrong in input file'},code=400)
+        initial_credit = instance.user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_speech_to_text(length)
+        if initial_credit > consumable_credits:
+
+            if length and length<60:
+                res = transcribe_short_file(speech_file=instance.audio_file.path,source_code=instance.language.locale_code,
+                                            obj=None,length=length,user=instance.user,hertz=hertz)
+                print("res--->",res)
+                instance.audio_len = res.get("audio_file_length")
+                instance.save()
+                NewsTranscribeResult.objects.create(news_transcribe=instance , transcribe_result =res.get('transcripted_text') )
+                if res.get('msg') == None:
+                    consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
+            else:
+                print("not_short")
+        else:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        return instance
+    
+    def update(self, instance, validated_data):
+        pass
+
+
+ 

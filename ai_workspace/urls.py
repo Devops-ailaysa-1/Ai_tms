@@ -33,7 +33,7 @@ router.register(r'steps',api_views.StepsView,basename='steps')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
-
+router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
 router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
 
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
@@ -113,6 +113,9 @@ urlpatterns += [
 	path('get_stories/',api_views.GetNewsFederalView.as_view(),name='get-news-list'),
 	path('push_story/',api_views.push_translated_story),
 	path('news_detail/',api_views.get_news_detail),
+	path('get_federal_categories/',api_views.get_federal_categories),
+    path('translate_segment/',api_views.federal_segment_translate),
+	path('task_report/',api_views.get_task_count_report),
     # path("download_post/",api_views.download_fedaral)
     # path('json_trans/',api_views.fedaral_json)
 	#path('get_translate_file_detail/<int:project_id>/',api_views.get_translate_file_detail),

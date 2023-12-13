@@ -1,5 +1,5 @@
 import json
-import re
+import re ,bleach
 from django.db import transaction
 from django.db import models
 from django.db.models import Q
@@ -455,19 +455,37 @@ class Document(models.Model):
     def get_segments(self):
         return Segment.objects.filter(text_unit__document=self)
 
+
+    def get_text_segments(self):
+        return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True).strip() != '']
+
+
     @property
     def segments_without_blank(self):
-        return self.get_segments().exclude(source__exact='').order_by("id")
+        query = self.get_segments().exclude(source__exact='')
+        if self.job.project.project_type_id != 8:
+            return query.order_by("id")
+        else:
+            return query.filter(id__in=self.get_text_segments()).order_by("id")
 
     @property
     def segments_for_workspace(self):
-        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
-                    & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
+        query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
+                    & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False))))
+        if self.job.project.project_type_id != 8:
+            return query.order_by("id")
+        else:
+            return query.filter(id__in=self.get_text_segments()).order_by("id")
+            
 
 
     @property
     def segments_for_find_and_replace(self):
-        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
+        query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True))
+        if self.job.project.project_type_id != 8:
+            return query.order_by("id")
+        else:
+            return query.filter(id__in=self.get_text_segments()).order_by("id")
 
     @property
     def segments_with_blank(self):

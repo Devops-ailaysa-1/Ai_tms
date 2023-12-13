@@ -1007,7 +1007,8 @@ def DesignerDownload(request):
     export_size=request.query_params.get('export_size',1)
     all_page=request.query_params.get('all_page',False)
     language = int(language) if language else None
-    canvas=CanvasDesign.objects.get(user=request.user, id=canvas_id)
+    user =request.user.team.owner  if request.user.team  else request.user
+    canvas=CanvasDesign.objects.get(user=user, id=canvas_id)
     page_number_list=list(map(int,page_number_list)) if page_number_list else None
     page_src=[]
     file_format = file_format.replace(" ","-") if file_format else ""
@@ -1015,7 +1016,7 @@ def DesignerDownload(request):
     format_ext = format_extension_change(file_format=file_format)
     canvas_src_json=canvas.canvas_json_src.all()
     if not canvas.file_name:
-        can_obj=CanvasDesign.objects.filter(user=request.user.id,file_name__icontains='Untitled project')
+        can_obj=CanvasDesign.objects.filter(user=user,file_name__icontains='Untitled project')
         canvas.file_name='Untitled project ({})'.format(str(len(can_obj)+1)) if can_obj else 'Untitled project'
         canvas.save()
     if any(canvas.canvas_translate.all()):

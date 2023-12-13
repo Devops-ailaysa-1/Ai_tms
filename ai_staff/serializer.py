@@ -375,7 +375,7 @@ class PromptStartPhrasesSerializer(serializers.ModelSerializer):
 class PromptFieldsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PromptFields
-        fields = '__all__'
+        fields = ('id','fields','help_text','prompt_sub_categories')
 
 class PromptSubCategoriesSerializer(serializers.ModelSerializer):
     sub_category_fields = PromptFieldsSerializer(many=True)

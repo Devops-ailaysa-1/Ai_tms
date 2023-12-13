@@ -58,7 +58,7 @@ wiktionaryparser = "0.0.97"
 pdftotext = "2.2.2"
 pypdf2 = "2.11.1"
 pdf2image = "1.16.3"
-pypandoc = "1.10"
+pypandoc = "1.12"
 bcrypt = "^4.0.1"
 django-guardian = "2.4.0"
 openpyxl = "^3.0.10"
@@ -99,6 +99,8 @@ pdfminer-six = "^20221105"
 cohere = "^4.32"
 pycryptodome = "3.19.0"
 segmind = "^0.2.3"
+yake = "^0.4.8"
+bleach = "6.1.0"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
@@ -108,6 +110,8 @@ django-debug-toolbar = "^3.8.1"
 ptvsd = "^4.3.2"
 
 
+[tool.poetry.dependencies.en_core_web_sm]
+url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz"
 
 
 [build-system]

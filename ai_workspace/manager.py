@@ -73,6 +73,18 @@ class ProjectManager(models.Manager):
             )
          return project, contents, subjects, steps
 
+    def add_glossary_to_project(self,project):
+        from ai_glex.models import GlossarySelected
+        if project.project_type_id == 8:
+            jobs = project.project_jobs_set.all()
+            target_languages = [i.target_language_id for i in jobs if i.target_language]
+            gloss = Glossary.objects.filter(project__ai_user = project.ai_user).filter(project__project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id).filter(project__project_jobs_set__target_language__language__in = target_languages)
+            for glossary in gloss:
+                GlossarySelected.objects.get_or_create(project=project,glossary=glossary)
+        return None
+
+
+
     # def add_default_choice_list_for_project(self,project):
     #     if project.project_type_id not in [3,5]:
     #         from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
@@ -266,15 +278,7 @@ class TaskAssignManager(models.Manager):
         steps = project.get_steps
         copy_paste_enable = project.copy_paste_enable
         print("Inside Manager---------->",pre_translate)
-        print("Inside---->",steps)
-        # for task in tasks:
-        #     for step in steps:
-        #         obj,created = self.get_or_create(task=task,step=step,reassigned=False,\
-        #                  defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
-        #                  "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})
-        #         if not created:
-        #             self.filter(pk=obj.id).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
-        # return None       
+        print("Inside---->",steps)     
         task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
                          "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
@@ -285,40 +289,5 @@ class TaskAssignManager(models.Manager):
         self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
         print("tASK ASSIGN --> ", task_assign)
         return task_assign
-        #return obj
+ 
 
-    # def create_tasks_of_audio_files(self, files,jobs,klass,project = None):
-    #     if hasattr(project, "ai_user"):
-    #         assign_to = project.ai_user
-    #
-    #     files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.mp3']
-    #     audio_files = [file for file in files if  os.path.splitext(file.file.path)[1] == '.mp3']
-    #     additional_job = [job for job in jobs if job.target_language == None]
-    #     jobs_list = [job for job in jobs if job.target_language!=None]
-    #     if not assign_to:
-    #         raise ValueError("You should send parameter either project "
-    #                          "object or assign_to user")
-    #     if project.voice_proj_detail.project_type_sub_category_id == 1:
-    #         tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
-    #         additional_tasks = [self.get_or_create(file=file, job = job) for file in audio_files for job in additional_job]#version_id=1, defaults = {"assign_to": assign_to})
-    #     else:
-    #         tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
-    #         additional_tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in additional_job]#, version_id=1, defaults = {"assign_to": assign_to}
-    #     return tasks
-    #
-    # def create_tasks_of_audio_files_by_project(self, project):
-    #     files = project.project_files_set.all()
-    #     jobs = project.project_jobs_set.all()
-    #     print(files,jobs,project)
-    #     return self.create_tasks_of_audio_files(
-    #         files=files, jobs=jobs, klass=None, project=project
-    #     )
-            # query = [ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True) for i in target_languages]
-            # #query = ChoiceLists.objects.filter(user = project.ai_user).filter(language_id__in = target_languages).filter(is_default=True)
-            # print("Qr------------>",query)
-            # objects = [item[0] for item in query]
-            # if objects:
-            #     ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i) f
-            #     ch = [ChoiceListSelected.objects.get_or_create(project=project,choice_list=i) for i in objects]
-            #     print("Ch--------->",ch)
-            # return None
