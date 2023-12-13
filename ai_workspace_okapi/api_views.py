@@ -1692,14 +1692,14 @@ class DocumentToFile(views.APIView):
                 if mt_process.get('status') == True:
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
-                    res = self.document_data_to_file(request,document_id,True)
+                    res = self.document_data_to_file(request,document_id,True)  
                     if doc.job.project.project_type_id == 8:    ## 8 for news data
                         #res = self.document_data_to_file(request,document_id,True)
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
-                res = self.document_data_to_file(request, document_id)
+                res = self.document_data_to_file(request, document_id) 
                 if doc.job.project.project_type_id == 8:
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
