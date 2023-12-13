@@ -793,8 +793,8 @@ def QA_Check(request):
     #     out.append({'LetterCase':out1})
 
     ############PUNCTUATION AND Brackets######################
-    # source_ = remove_tags(source)
-    # target_ = remove_tags(target)
+    source_ = remove_tags(source)
+    target_ = remove_tags(target)
     # data_punc = punc_space_view(source_,target_)
     # if data_punc:
     #     out.append({'Punctuation':data_punc})

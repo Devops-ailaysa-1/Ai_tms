@@ -2625,7 +2625,7 @@ from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt_sent
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
-@api_view(['POST',])############### only available for english ###################
+@api_view(['POST',])############### available for non english ###################
 def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2633,10 +2633,16 @@ def paraphrasing_for_non_english(request):
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
     option = request.POST.get('option')
-    doc_obj = Document.objects.get(id=doc_id)
-    project = doc_obj.job.project
-    user = doc_obj.doc_credit_debit_user
+    if doc_id:
+        doc_obj = Document.objects.get(id=doc_id)
+        project = doc_obj.job.project
+        user = doc_obj.doc_credit_debit_user
+    if task_id:
+        task_obj = Task.objects.get(id=task_id)
+        project = task_obj.job.project
+        user = task_obj.job.project.ai_user
     #subj_fields =  [i.subject.name for i in project.proj_subject.all()]
     #content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
@@ -2688,9 +2694,14 @@ def paraphrasing(request):
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
     doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
     option = request.POST.get('option')
-    doc_obj = Document.objects.get(id=doc_id)
-    user = doc_obj.doc_credit_debit_user
+    if doc_id:
+        doc_obj = Document.objects.get(id=doc_id)
+        user = doc_obj.doc_credit_debit_user
+    if task_id:
+        task_obj = Task.objects.get(id=task_id)
+        user = task_obj.job.project.ai_user
     #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
