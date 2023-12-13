@@ -959,7 +959,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
         print("#######",tasks)
-        pr = get_object_or_404(Project.objects.all(),id=pk)
+        #pr = get_object_or_404(Project.objects.all(),id=pk)
         #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
         tasks = tasks.order_by('-id')
         user,pr_managers = self.get_user()
@@ -5007,7 +5007,7 @@ class AddStoriesView(viewsets.ModelViewSet):
 
     def pr_check(self,src_lang,tar_langs,user):
         today_date = date.today()
-        project_name = today_date.strftime("%b %d")
+        project_name = today_date.strftime("%b %d, %Y")
         query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
                 .filter(project_jobs_set__source_language_id = src_lang)\
                 .filter(project_jobs_set__target_language_id__in = tar_langs)
