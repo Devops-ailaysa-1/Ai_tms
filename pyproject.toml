@@ -110,6 +110,8 @@ django-debug-toolbar = "^3.8.1"
 ptvsd = "^4.3.2"
 
 
+[tool.poetry.dependencies.en_core_web_sm]
+url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz"
 
 
 [build-system]
