@@ -47,10 +47,11 @@ class ProjectboardDetails(models.Model):
 
     def save(self, *args, **kwargs):
         super().save()
-        cache_key = f'bid_job_detail_{self.project.pk}'
-        cache.delete(cache_key)
-        computed_key = f'bid_job_computed_{self.project.pk}'
-        cache.delete(computed_key)
+        if self.project:
+            cache_key = f'bid_job_detail_{self.project.pk}'
+            cache.delete(cache_key)
+            computed_key = f'bid_job_computed_{self.project.pk}'
+            cache.delete(computed_key)
 
     @property
     def get_postedjobs(self):
@@ -98,10 +99,11 @@ class ProjectPostJobDetails(models.Model):
 
     def save(self, *args, **kwargs):
         super().save()
-        cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
-        cache.delete(cache_key)
-        computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
-        cache.delete(computed_key)
+        if self.projectpost.project:
+            cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
+            cache.delete(cache_key)
+            computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
+            cache.delete(computed_key)
 
 post_save.connect(create_postjob_id, sender=ProjectPostJobDetails)
 
@@ -259,10 +261,11 @@ class BidPropasalDetails(models.Model):
 
     def save(self, *args, **kwargs):
         super().save()
-        cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
-        cache.delete(cache_key)
-        computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
-        cache.delete(computed_key)
+        if self.projectpost.project:
+            cache_key = f'bid_job_detail_{self.projectpost.project.pk}'
+            cache.delete(cache_key)
+            computed_key = f'bid_job_computed_{self.projectpost.project.pk}'
+            cache.delete(computed_key)
 
     @property
     def filename(self):

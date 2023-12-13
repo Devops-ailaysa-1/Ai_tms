@@ -1,0 +1,7 @@
+Dear {{username}},
+Thank you registering for the one week pre-job bootcamp for
+"AI Jobs in Sales and Digital Marketing" with Ailaysa.
+We will let you know about further updates soon.
+
+Regards,
+Team Ailaysa

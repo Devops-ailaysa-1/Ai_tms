@@ -49,10 +49,18 @@ class AiPromptViewset(viewsets.ViewSet):
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
-        description = request.POST.get('description').rstrip(punctuation)
+        description = request.POST.get('description',None)
+        # news_files = request.FILES.get('news_files',None)
+
+        if description:
+            description=description.rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
         user = request.user.team.owner if request.user.team else request.user
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+
+        
+
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,
+                                              'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit}) #'news_files':news_files,
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -111,8 +119,6 @@ class AiPromptResultViewset(generics.ListAPIView):
             queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
-            
-        
         return queryset
  
 
@@ -205,6 +211,7 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
 from ai_auth.api_views import get_lang_code
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
+
 def customize_text_openai(request):
     from ai_exportpdf.models import Ai_PdfUpload
     document = request.POST.get('document_id')
@@ -215,7 +222,7 @@ def customize_text_openai(request):
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
     language =  request.POST.get('language',None)
-    customize = AiCustomize.objects.get(id =customize_id)
+    customize = AiCustomize.objects.get(id = customize_id)
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
     detector = Translator()
@@ -276,6 +283,7 @@ def customize_text_openai(request):
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
             #result_txt = response['choices'][0]['text']
+
             result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
@@ -908,33 +916,81 @@ encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
 
 from ai_openai.models import MyDocuments
 from ai_openai.utils import get_prompt_gpt_turbo_1106
-from ai_openai.models import NewsPrompt
+# from ai_openai.models import NewsPrompt
 
 
 
 import json
-
+from ai_nlp.utils import keyword_extract ,extract_entities
 @api_view(['GET'])
-def newscontentbuilder(request):
+def ner_generate(request):
     sentence =  request.query_params.get('sentence')
-    news_prompt = request.query_params.get('news_prompt')
-    news_prompt_instance = NewsPrompt.objects.get(id = news_prompt)
-    prompt_template = """Context: {context}
+    extracted_keywords = keyword_extract(sentence) #list:
+    extracted_ner = extract_entities(sentence)
+    result = {'keywords':extracted_keywords,'ner':extracted_ner}
+    return Response({'sentence':sentence , 'result':result})
 
+
+from ai_openai.serializers import NewsTranscribeSerializer,AiPromptSerializer,NewsTranscribeResultSerializer ,openai_token_usage #news_text_gen_prompt_template ,
+from ai_openai.models import NewsTranscribe,NewsTranscribeResult
+from ai_openai.utils import get_prompt_gpt_turbo_1106
+
+class NewsTranscribeViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        query_set=NewsTranscribe.objects.all()
+        serializer=NewsTranscribeSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = NewsTranscribe.objects.get(user =request.user,id=pk)
+        serializer=NewsTranscribeSerializer(query_set)
+        return Response(serializer.data)
+
+    def create(self,request):
+        user = request.user.team.owner if request.user.team else request.user
+        audio_file = request.FILES.get('audio_file')
+        if audio_file and str(audio_file).split('.')[-1] not in ['MP3', 'mp3']: 
+            return Response({'msg':'only MP3 ,mp3 suppported file'},status=400)
+        serializer = NewsTranscribeSerializer(data={**request.POST.dict() ,'audio_file':audio_file,'user':user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
     
-    {prompt}
-    """
+    def update(self,request,pk):
+        query_set = NewsTranscribe.objects.get(id = pk)
+        serializer = NewsTranscribeSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+@api_view(['GET'])
+def transcribe_to_news_report_generate(request):
+    news_transcribe_id =  request.query_params.get('news_transcribe_id')
+    doc_id = request.query_params.get('doc',None)
+    news_transcribe_res_inst = NewsTranscribeResult.objects.get(id = news_transcribe_id)
+    transcribe_result_context = news_transcribe_res_inst.transcribe_result
+    prompt  =news_transcribe_res_inst.news_transcribe.prompt_sub_category.prompt_sub_category.first()
+    message = AiPromptSerializer().news_text_gen_prompt_template(description=transcribe_result_context,prompt=prompt.start_phrase,
+                                                                 assistant=prompt.assistant)
+    openai_response = get_prompt_gpt_turbo_1106(messages=message)
+    token_usage = openai_token_usage(openai_response)
+    token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+    print("Tokens for openai------------>",token_usage_to_reduce)
+    content = openai_response["choices"][0]["message"]["content"]
+    news_transcribe_res_inst.transcribed_news_report = content
 
-    if news_prompt_instance.name == "NER":
+    if doc_id:
+        doc_instance = MyDocuments.objects.get(id=doc_id)
+        news_transcribe_res_inst.document = doc_instance
  
-        prompt_template = prompt_template.format(context=sentence,prompt=news_prompt_instance.prompt)
-        messages = [{"role":"system","content":news_prompt_instance.assistant},
-                    {"role": "user", "content":prompt_template}]
-        completion = get_prompt_gpt_turbo_1106(messages=messages)
-        result = completion['choices'][0]['message']['content']
-        res = json.loads(result)
-    return Response({'id':news_prompt_instance.id ,'sentence':sentence , 'result':res})
-    
+    news_transcribe_res_inst.save()
+    ser = NewsTranscribeResultSerializer(news_transcribe_res_inst)
+    return Response(ser.data)
+ 
 
 
 def num_tokens_from_string(string) -> int:

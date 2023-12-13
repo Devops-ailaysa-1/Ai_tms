@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import re
-import requests
+import requests , bleach
 import urllib.parse
 import urllib.parse
 import xlsxwriter
@@ -641,9 +641,11 @@ class SegmentsView(views.APIView, PageNumberPagination):
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
         segments = document.segments_for_find_and_replace
+        print("Segments------------->",segments)
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
         final_segments = list(chain(segments, merge_segments, split_segments))
+        print("Final Segments------------->",final_segments)
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
@@ -1033,7 +1035,7 @@ class MT_RawAndTM_View(views.APIView):
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
-        # initial_credit = 100
+
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)
@@ -1471,22 +1473,28 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
-    def get_file_response(self, file_path):
-        with open(file_path, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type= \
-                "application/vnd.ms-excel")
-            encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
-                                                  encoding='utf-8')
-            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
-                .format(encoded_filename)
-            # filename = os.path.basename(file_path)
-            # response['Content-Disposition'] = "attachment; filename=%s" % filename
-            response['X-Suggested-Filename'] = encoded_filename
-            response["Access-Control-Allow-Origin"] = "*"
-            response["Access-Control-Allow-Headers"] = "*"
-            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
-            # print("cont-disp--->", response.get("Content-Disposition"))
-            return response
+    def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
+        if pandas_dataframe:
+             
+            response = HttpResponse(file_path, content_type= "application/vnd.ms-excel")
+            encoded_filename = filename
+            
+        else:
+            with open(file_path, 'rb') as fh:
+                response = HttpResponse(fh.read(), content_type= \
+                    "application/vnd.ms-excel")
+                encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                                encoding='utf-8')
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+            .format(encoded_filename)
+        # filename = os.path.basename(file_path)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        response['X-Suggested-Filename'] = encoded_filename
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "*"
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        # print("cont-disp--->", response.get("Content-Disposition"))
+        return response
 
     def get_source_file_path(self, document_id):
         doc = DocumentToFile.get_object(document_id)
@@ -1530,6 +1538,10 @@ class DocumentToFile(views.APIView):
         else:return string
         # return string
 
+    def clean_text(self,string):
+        if string!=None:
+            return bleach.clean(string, tags=[], strip=True)
+
     def get_bilingual_filename(self, document_id):
         doc = DocumentToFile.get_object(document_id)
         task = doc.task_set.first()
@@ -1558,7 +1570,8 @@ class DocumentToFile(views.APIView):
         worksheet.write('B1', 'Target language' + '(' + target_lang + ')', title_format)
 
         row = 1
-
+        doc = Document.objects.get(id=document_id)
+        project_type = doc.job.project.project_type_id
         text_units = TextUnit.objects.filter(document_id=document_id)
 
         for text_unit in text_units:
@@ -1570,70 +1583,40 @@ class DocumentToFile(views.APIView):
                         continue
                     else:
                         segment_new = segment.get_active_object()
-                        worksheet.write(row, 0, segment_new.source.strip(), cell_format)
-                        worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
-                        row += 1
+                        source = segment_new.source.strip() if project_type !=8 else self.clean_text(segment_new.source.strip())
+                        target = self.remove_tags(segment_new.temp_target) if project_type !=8 else self.clean_text(self.remove_tags(segment_new.temp_target))
+
                 # If the segment is split
                 elif segment.is_split:
+                    source = segment.source.strip() if project_type !=8 else self.clean_text(segment.source.strip())
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
                         if split_seg.temp_target:
                             target += self.remove_tags(split_seg.temp_target)
-                    worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, target, cell_format)
-                    row += 1
+                    
                 # For normal segments
                 else:
-                    worksheet.write(row, 0, segment.source.strip(), cell_format)
-                    worksheet.write(row, 1, self.remove_tags(segment.temp_target), cell_format)
-                    row += 1
+                    source = segment.source.strip() if project_type !=8 else self.clean_text(segment.source.strip())
+                    target = self.remove_tags(segment.temp_target) if project_type !=8 else self.clean_text(self.remove_tags(segment.temp_target))
+                worksheet.write(row, 0, source, cell_format)
+                worksheet.write(row, 1, target, cell_format)
+                row += 1
         workbook.close()
 
         return download_file(bilingual_file_path)
     
     @staticmethod
-    def json_key_manipulation(res_json_path): #### for federal
-        from ai_workspace.utils import LIST_KEYS_FEDARAL
-        print("######################")
-        to_rearrange_key = ['heading','story']
+    def json_key_manipulation(res_json_path): #### for enterprise
+        from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
+        res_json_path_text = res_json_path.split("json")[0]+"docx"
         with open(res_json_path,"r") as fp:
             fp = json.load(fp)
             # fp = fp['news'][0]
-            
-        print("Fp------------->", fp.keys())
-        rearraged_keys_dict = {i:j for i,j in fp.items() if i in to_rearrange_key}
-        rearraged_keys_dict.update(fp)
-        # rearraged_keys_dict = {'news':[rearraged_keys_dict]}
-        res_json_path_text = res_json_path.split("json")[0]+"txt"
-        print(res_json_path_text)
-        # with open(res_json_path_text, 'w') as file:
-        #     file.write(rearraged_keys_dict)
-        #     file.close()
-
-        with open(res_json_path_text,'w') as fp:
-            for key,value in rearraged_keys_dict.items():
-                key = str(key)
-                value = str(value)
-                if key in list(LIST_KEYS_FEDARAL.keys()):
-                    fp.write(key.capitalize()+":")
-                    fp.write("\n")
-                    text = []
-                    for i in rearraged_keys_dict[key]:
-                        text.append(i[LIST_KEYS_FEDARAL[key][0]])
-                    fp.write(",".join(text))
-                    fp.write("\n")
-                else:
-                    fp.write(key.capitalize()+":")
-                    fp.write("\n")
-                    fp.write(value)
-                    fp.write("\n")
-                fp.write("---------")
-                fp.write("\n")
-                fp.write("\n")
-            fp.close()
-        return res_json_path_text
- 
+        html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
+        html_to_docx(html_data, res_json_path_text )  
+        add_additional_content_to_docx(res_json_path_text, fp)  
+        return res_json_path_text    
     
 
     def download_file_processing(self,file_path):
@@ -1683,6 +1666,10 @@ class DocumentToFile(views.APIView):
 
             # FOR DOWNLOADING BILINGUAL FILE
             if output_type == "BILINGUAL":
+                # if doc.job.project.project_type_id == 8:
+                #     pass
+                # else:
+
                 return self.download_bilingual_file(document_id)
 
 
@@ -1697,14 +1684,14 @@ class DocumentToFile(views.APIView):
                 if mt_process.get('status') == True:
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
-                    res = self.document_data_to_file(request,document_id,True)
-                    if doc.job.project.project_type_id == 8:
+                    res = self.document_data_to_file(request,document_id,True)  
+                    if doc.job.project.project_type_id == 8:    ## 8 for news data
                         #res = self.document_data_to_file(request,document_id,True)
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
-                res = self.document_data_to_file(request, document_id)
+                res = self.document_data_to_file(request, document_id) 
                 if doc.job.project.project_type_id == 8:
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
@@ -2303,11 +2290,17 @@ def WiktionaryParse(request):
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
+    task_id = request.POST.get('task_id')
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
-    doc = Document.objects.get(id=doc_id)
-    sourceLanguage=doc.source_language
-    targetLanguage=doc.target_language
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        sourceLanguage=doc.source_language
+        targetLanguage=doc.target_language
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        sourceLanguage=task.job.source_language.language
+        targetLanguage=task.job.target_language.language
     if term_type=="source":
         src_lang=sourceLanguage
         tar_lang=targetLanguage
@@ -2872,10 +2865,11 @@ def download_mt_file(request):
     if state == 'SUCCESS':
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
-        if doc.job.project.project_type_id == 8:
-            DocumentToFile.json_key_manipulation(res.text)
         if res.status_code in [200, 201]:
-            file_path = res.text
+            if doc.job.project.project_type_id == 8:
+                file_path = DocumentToFile.json_key_manipulation(res.text)
+            else:
+                file_path = res.text
             try:
                 if os.path.isfile(res.text):
                     if os.path.exists(file_path):
@@ -2890,6 +2884,101 @@ def download_mt_file(request):
         return Response({'msg':'Failure','task':task.id},status=400)
     else:
         return Response({'msg':'Pending','task':task.id},status=400)
+
+
+def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
+    import pandas as pd
+    import io
+    output = io.BytesIO()
+    source_data = split_dict(src_json)
+    target_data = split_dict(tar_json)
+    source_data.pop('newsId',None)
+    target_data.pop('newsId',None)
+    if source_data.get('media'):
+        source_data['media'] = document_to_file.clean_text(source_data.get('media', [{}])[0].get('caption'))
+        target_data['media'] = document_to_file.clean_text(target_data.get('media', [{}])[0].get('caption'))
+    if source_data.get('story'):
+        source_data['story'] =  document_to_file.clean_text(source_data.get('story'))
+        target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
+    flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
+    flattened_data = pd.DataFrame(flattened_data).transpose()
+    flattened_data.columns = language_pair
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    flattened_data.to_excel(writer, sheet_name='Sheet1',index=False)
+    writer.close()
+    output.seek(0)
+    # print(flattened_data)
+    # print(len(flattened_data))
+    # csv_data = flattened_data.to_excel(index=False )
+    return output
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_federal(request):
+    from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
+    from ai_workspace_okapi.api_views import DocumentToFile
+    from ai_workspace.serializers import TaskNewsDetailsSerializer
+
+    task_id =request.query_params.get('task_id')
+    output_type = request.query_params.get('output_type','ORIGINAL')
+    print("OT------------>",output_type)
+    print("task_id----",task_id)
+    obj = Task.objects.get(id=task_id)
+    ser = TaskSerializer(obj)
+    task_data = ser.data
+    res_text = task_data['output_file_path']
+    if obj.news_task.last().target_json == None:
+        ser = TaskNewsDetailsSerializer(data={'task':task_id},context={"request": request})
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
+    if output_type == "MTRAW":
+        print("Inside Mt")
+        target_json = obj.news_task.last().tasknews.last().mt_raw_json
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
+    elif output_type == "ORIGINAL":
+        print("Inside original")
+        target_json = obj.news_task.last().target_json  
+        target_json = split_dict(target_json)
+        target_json.pop('newsId',None)
+    elif output_type == "BILINGUAL":
+        print("Inside Bilungal")
+        source_json = obj.news_task.last().source_json  
+        target_json = obj.news_task.last().target_json
+
+ 
+        document_to_file = DocumentToFile()
+        csv_data = json_bilingual(src_json=source_json,tar_json=target_json,split_dict=split_dict,
+                                  document_to_file=document_to_file,language_pair=[obj.job.source_language.language,obj.job.target_language.language])
+        filename=obj.file.filename.split(".")[0]+".xlsx"
+        response = document_to_file.get_file_response(csv_data,pandas_dataframe=True,filename=filename)
+        # response = HttpResponse(csv_data, content_type='text/csv')
+        # response['Content-Disposition'] = 'attachment; filename="news_data_bilingual.csv"'
+        return response
+ 
+
+
+    res_json_path_text = res_text.split("json")[0]+"docx"
+    print("Tar--->",target_json)
+    html_data = target_json.get('story')
+    html_to_docx(html_data, res_json_path_text )  
+    add_additional_content_to_docx(res_json_path_text, target_json)  
+    doc_to_file = DocumentToFile()
+    file_path = res_json_path_text
+    try:
+        if os.path.isfile(res_json_path_text):
+            if os.path.exists(file_path):
+                return doc_to_file.get_file_response(file_path)
+    except Exception as e:
+        print("Exception during file output------> ", e)
+    return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
+                        status=409)
+
+
+
 
 
 @api_view(['GET',])
@@ -3429,8 +3518,7 @@ class Choicelistselectedview(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-
+    
  
 
     # dictionary_path = dictionary_paths.get(lang)
@@ -3484,7 +3572,6 @@ def symspellcheck(request):
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'},status=400)
     
-
 
 
     # except:return JsonResponse({'msg':'something went wrong'})

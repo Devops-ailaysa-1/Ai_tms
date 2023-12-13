@@ -111,27 +111,31 @@ HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
 LIST_KEYS_FEDARAL={'media':['caption']}# , 'news_tags':['name']}
 
-def federal_json_translate(json_file,tar_code,src_code,translate=True):
+
+####Need to add credit check and function to get MT for each key####################
+def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	from ai_workspace_okapi.utils import get_translation
 	
-	json_file = json_file['news']
-	for json_data in json_file:
-		json_file_copy = copy.deepcopy(json_data)
-		for key,value in json_file_copy.items():
-			if key in TRANSLATABLE_KEYS_FEDARAL:
-				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-				if type(value) == list:
-					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-						for lists in LIST_KEYS_FEDARAL[key]:
-							for list_names in json_file_copy[key]:
-								if lists in list_names.keys():
-									if translate:
-										list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-																			source_lang_code=src_code,format_=format_)			
-				else:
-					if translate:
-						json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-															source_lang_code=src_code,format_=format_)
+	try:json_data = json_file['news'][0]
+	except: json_data = json_file
+	json_file_copy = copy.deepcopy(json_data)
+	# for json_data in json_file:
+	# 	json_file_copy = copy.deepcopy(json_data)
+	for key,value in json_file_copy.items():
+		if key in TRANSLATABLE_KEYS_FEDARAL:
+			format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
+			if type(value) == list:
+				if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
+					for lists in LIST_KEYS_FEDARAL[key]:
+						for list_names in json_file_copy[key]:
+							if lists in list_names.keys():
+								if translate:
+									list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
+																		source_lang_code=src_code,format_=format_,user_id=user.id)			
+			else:
+				if translate:
+					json_file_copy[key] = get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
+														source_lang_code=src_code,format_=format_,user_id=user.id)
 	return  json_file_copy
 
 
@@ -231,7 +235,9 @@ def split_dict(single_data):
     trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
     trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
     trans_keys_dict = {}
-    json_data = single_data.get('news')[0]
+    json_data = single_data.get('news')[0] if single_data.get('news') else None
+    if not json_data:
+        json_data = single_data
     for key,value in  json_data.items():
         if key in trans_keys:
             trans_keys_dict[key] = value
@@ -255,8 +261,49 @@ def merge_dict(translated_json,raw_json):
 			for count,j in enumerate(raw_json_trans[key]):
 				if values[count] in j.keys():
 					j.update(translated_json_copy[key][count])
-		translated_json_copy.pop(key)
+		if key in translated_json_copy:
+			translated_json_copy.pop(key)
 	raw_json_trans.update(translated_json_copy)
 	return raw_json_trans
 
 	 
+
+
+import json
+import pypandoc
+from docx import Document
+#import markdown
+#pypandoc.pandoc_download.download_pandoc()
+ 
+def html_to_docx(html_content, docx_filename):
+	print("Html------------>",html_content)
+	if html_content == None:
+		html_content = "<p>"
+	# if html_content is not None:
+	html_content = html_content.replace('\n', '<br>')
+    # Convert HTML to DOCX using pypandoc
+	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
+    # pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
+
+# def text_to_docx(text, docx_filename):
+# 	pypandoc.convert_text(text, 'docx', format='markdown',outputfile=docx_filename)
+
+def add_additional_content_to_docx(docx_filename, additional_content):
+    # Open the existing DOCX file using python-docx
+    doc = Document(docx_filename)
+    for key, value in additional_content.items():
+        print(key)
+        if key!='story':
+            doc.add_paragraph(f'{key.capitalize()}:')# {value}')
+            doc.add_paragraph(f'{value}')
+    doc.save(docx_filename)
+
+# # Example usage:
+# sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
+
+# # Convert HTML to DOCX
+# html_to_docx(sample_json_data['body'], 'output.docx')
+
+# # Add additional content to the DOCX file
+# add_additional_content_to_docx('output.docx', sample_json_data)
+

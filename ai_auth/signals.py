@@ -105,7 +105,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
     if sociallogin and instance.socialaccount_set.filter(provider='proz'):
         print("---------------In------------------------>")
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
-        url = "https://api.proz.com/v2/freelancer/{uuid}".format(uuid = uuid)
+        url = os.getenv('PROZ_URL')+"freelancer/{uuid}".format(uuid = uuid)
         headers = {
         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
         }

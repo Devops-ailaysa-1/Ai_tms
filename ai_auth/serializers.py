@@ -10,7 +10,7 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
-                            CampaignUsers,CoCreateForm,CoCreateFiles)
+                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -339,6 +339,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
     is_campaign =  serializers.SerializerMethodField(source="get_is_campaign",read_only=True)
     is_enterprise = serializers.SerializerMethodField(source="get_is_enterprise",read_only=True)
     signup_method =  serializers.SerializerMethodField(source="get_signup_method",read_only=True)
+    enterprise_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         extra_fields = []
@@ -363,7 +364,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
 
 
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method','is_enterprise',*extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', 'agency','first_login','is_social','is_campaign','signup_method','is_enterprise','enterprise_name',*extra_fields)
         read_only_fields = ('email',)
 
     def get_is_social(self,obj):
@@ -388,6 +389,15 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
                 return obj.team.owner.is_enterprise  
             else:
                 return False
+
+    def get_enterprise_name(self,obj):
+        user = obj.team.owner if obj.team else obj
+        try: 
+            if user.user_enterprise :
+                return user.user_enterprise.subscription_name
+            else:
+                return None
+        except:return None    
  
 
     def get_signup_method(self,obj):
@@ -636,3 +646,25 @@ class CampaignRegisterSerializer(serializers.Serializer):
         campaign_user_invite_email(user=user,gen_password=password)
         camp = check_campaign(user)
         return user
+    
+
+class MarketingBootcampSerializer(serializers.ModelSerializer):
+    job_interest = serializers.BooleanField(required=True)
+    
+    class Meta:
+        model = MarketingBootcamp
+        fields = ('id','name','email','file','job_interest','description')
+
+     
+    REQUIRED_FIELDS = ['name', 'email', 'file','description']
+
+    def validate(self, data):
+        for field_name in self.REQUIRED_FIELDS:
+            if not data.get(field_name,None):
+                raise serializers.ValidationError(f"Please fill {field_name}.")
+        return data
+
+    def create(self, validated_data):
+        
+        instance=MarketingBootcamp.objects.create(**validated_data)
+        return instance

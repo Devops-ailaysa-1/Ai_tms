@@ -16,7 +16,8 @@ router.register(r'bookbodymatter',api_views.BookBodyViewset ,basename='ai_book_b
 router.register(r'bookfrontmatter',api_views.BookFMViewset ,basename='ai_book_fm')
 router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm')
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
-router.register(r'bookbodydetail',api_views.BookBodyDetailsViewset ,basename='ai_bookbody_det')
+router.register(r'bookbodydetail',api_views.BookBodyDetailsViewset ,basename='ai_bookbody_det') 
+router.register(r'news_transcribe',api_views.NewsTranscribeViewset ,basename='news_transcribe')
 urlpatterns = router.urls
 
  
@@ -39,7 +40,8 @@ urlpatterns += [
     path('article_generate_test/',api_views.generate),
     path('book_chapter_generate/',api_views.generate_chapter),
     path('docx_merger/',api_views.docx_merger),
-    path('news-content-build',api_views.newscontentbuilder)
+    path('ner_generate',api_views.ner_generate),
+    path('transcribe_to_news',api_views.transcribe_to_news_report_generate)
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

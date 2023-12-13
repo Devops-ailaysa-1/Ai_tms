@@ -239,6 +239,67 @@ def remove_number_from_sentence(sentence):
     cleaned_sentence = re.sub(pattern, '', sentence)
     return cleaned_sentence
 
+
+
+import spacy
+import yake
+nlp = spacy.load('en_core_web_sm')
+ 
+def keyword_extract(text):
+    language = "en"
+    max_ngram_size = 3
+    deduplication_thresold = 0.5
+    deduplication_algo = 'seqm'
+    windowSize = 1
+    numOfKeywords = 20
+    custom_kw_extractor = yake.KeywordExtractor(lan=language, n=max_ngram_size, dedupLim=deduplication_thresold, 
+                                                dedupFunc=deduplication_algo, windowsSize=windowSize, top=numOfKeywords, features=None)
+    keywords = custom_kw_extractor.extract_keywords(text)
+    return [kw[0] for kw in keywords]
+
+
+entity = {'CARDINAL':'cardinal',
+ 'DATE':'data',
+ 'EVENT':'event',
+ 'FAC':'Buildings, airports, highways, bridges',
+ 'GPE':'Countries, cities, states.',
+ 'LANGUAGE':'language',
+ 'LAW':'law',
+ 'LOC':'location',
+ 'MONEY':'money',
+ 'NORP':'Nationalities or religious or political groups',
+ 'ORDINAL':'first,second etc',
+ 'ORG':'Organization',
+ 'PERCENT':'Percent',
+ 'PERSON':'Person',
+ 'PRODUCT':'Product',
+ 'QUANTITY':'Quantity',
+ 'TIME':'Time',
+ 'WORK_OF_ART':'Word_of_Art'}
+
+
+ 
+
+def extract_entities(sentence):
+    doc = nlp(sentence)
+    # ner_dict = {ent.text: get_entity_description(ent.label_) for ent in doc.ents}
+    ner_dict = {}
+    for ent in doc.ents: 
+        if ent.label_ in entity.keys():
+            
+            if entity[ent.label_] in  ner_dict.keys():
+                
+                ner_dict[entity[ent.label_]].append(ent.text)
+            else:
+    
+                ner_dict[entity[ent.label_]] = [ent.text]
+    return ner_dict
+
+
+
+
+
+
 # def thumbnail_create(path) -> core :
 #     img_io = io.BytesIO()
 #     images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]

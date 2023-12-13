@@ -116,7 +116,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.team:
             return [i.internal_member for i in self.team.internal_member_team_info.all()]
             
-
+    
     # @property
     # def credit_balance(self):
     #     with transaction.atomic():
@@ -615,6 +615,10 @@ class Team(models.Model):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
     @property
+    def get_editors(self):
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
+
+    @property
     def owner_pk(self):
         return self.owner.id
 
@@ -829,4 +833,19 @@ class AiTroubleshootData(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+
+
+
+class MarketingBootcamp(models.Model):
+    name = models.CharField(max_length=300)
+    email =models.EmailField(max_length=300,unique=True)
+    description = models.TextField(null=True,blank=True)
+    job_interest = models.BooleanField(default=True)
+    file = models.FileField(upload_to="bootcamp_marketing_resume_file",blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return "Name:"+self.name + "  Email:" +self.email
     
+

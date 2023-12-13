@@ -18,7 +18,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libxslt-dev libxml2-dev libpam-dev libedit-dev libhunspell-dev ffmpeg\
-    libpoppler-cpp-dev pkg-config poppler-utils pandoc
+    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
 
 WORKDIR /ai_home
 COPY pyproject.toml poetry.lock /ai_home/
@@ -28,7 +28,7 @@ RUN pip install "poetry==$POETRY_VERSION" && poetry --version
 # Install dependencies:
 RUN poetry install
 RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords')"
-
+RUN python -m spacy download en_core_web_sm
 COPY . .
 
 # COPY --chmod=777 ./ai_tms_web.entrypoint.sh /
@@ -40,3 +40,4 @@ COPY . .
 EXPOSE 8000
 
 # ENTRYPOINT ["/ai_tms_web.entrypoint.sh"]
+

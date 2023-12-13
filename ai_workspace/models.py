@@ -26,7 +26,7 @@ from django.db import transaction
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail,AiRoles,AiCustomize
+    Currencies, ProjectTypeDetail,AiRoles,AiCustomize,LanguageMetaDetails
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
 from .manager import AilzaManager
@@ -357,8 +357,9 @@ class Project(models.Model):
             return None
 
         else:
-            assigned_jobs = [i.job.id for i in tasks]
-            docs = Document.objects.filter(job__in=assigned_jobs).all()
+            task_jobs = [i.job.id for i in tasks]
+            task_files = [i.file.id for i in tasks]
+            docs = Document.objects.filter(job__in=task_jobs,file__in=task_files).all()
             print("Docs------------------->",docs)
             #docs = Document.objects.filter(job__project_id=self.id).all()
             #tasks = len(tasks)
@@ -372,7 +373,7 @@ class Project(models.Model):
                     confirm_count  = 0
                     confirm_list = [102, 104, 106, 110, 107]
 
-                    segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                    segs = Segment.objects.filter(text_unit__document__in=docs)
 
                     for seg in segs:
 
@@ -679,9 +680,10 @@ class Project(models.Model):
     def project_analysis(self,tasks):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
-        from .models import MTonlytaskCeleryStatus
-        from .api_views import analysed_true
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
+        from .api_views import analysed_true,GetNewsFederalView
+
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
+            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
@@ -792,6 +794,8 @@ class ProjectFilesCreateType(models.Model):
         upload_file = 'upload', "Files from usual upload"
         integeration = "integeration", "Files from integerations"
         from_text   = "From insta text"
+        from_cms = 'From CMS'
+        from_stories = 'From add story'
 
     file_create_type = models.TextField(choices=FileType.choices,
         default=FileType.upload_file)
@@ -1254,6 +1258,14 @@ class Task(models.Model):
             if self.task_file_detail.exists() == True:
                 res = True
         return res
+
+    @property
+    def feed_id(self):
+        res = None
+        if self.job.project.project_type_id == 8:
+            if self.news_task.exists() == True:
+                res = self.news_task.first().feed_id
+        return res
 	
     @property
     def is_task_translated(self):
@@ -1275,6 +1287,11 @@ class Task(models.Model):
     def mt_only_credit_check(self):
         try:return self.document.doc_credit_check_open_alert
         except:return None
+
+    @property
+    def target_language_script(self):
+        target_lang_id = self.job.target_language.id
+        return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
 
     @property
     def transcribed(self):
@@ -1342,6 +1359,7 @@ class Task(models.Model):
  
     @property
     def open_in(self):
+        from .api_views import GetNewsFederalView
         cache_key = f'task_open_in_{self.pk}'
         cached_value = cache.get(cache_key)
         print("Cached Value---------->",cached_value)
@@ -1353,8 +1371,8 @@ class Task(models.Model):
                     cached_value = "Designer"
                 elif self.job.project.project_type_id == 7:
                     cached_value = "Book"
-                # elif self.job.project.project_type_id == 9:
-                #     cached_value = "News"
+                elif (self.job.project.project_type_id == 8 and GetNewsFederalView.check_user_federal(self.job.project.ai_user)):
+                    cached_value = "News"
                 elif self.job.project.project_type_id == 4:
                     if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                         if self.job.target_language==None:
@@ -1503,29 +1521,35 @@ class Task(models.Model):
             confirm_list = [102, 104, 106, 110, 107]
             total_seg_count = 0
             confirm_count = 0
+            segs = None
             doc = self.document
-            segs = Segment.objects.filter(text_unit__document=doc)
-            for seg in segs:
+            if doc:
+                if self.job.project.project_type_id == 8:
+                    total_segs = Segment.objects.filter(text_unit__document=doc)
+                    segs = total_segs.filter(id__in=doc.get_text_segments())
+                else:segs = Segment.objects.filter(text_unit__document=doc)
+            print("Segs------------->",segs)
+            if segs:
+                for seg in segs:
 
-                if (seg.is_merged == True and seg.is_merge_start != True):
-                    continue
+                    if (seg.is_merged == True and seg.is_merge_start != True):
+                        continue
 
-                elif seg.is_split == True:
-                    total_seg_count += 2
+                    elif seg.is_split == True:
+                        total_seg_count += 2
 
-                else:
-                    total_seg_count += 1
+                    else:
+                        total_seg_count += 1
 
-                seg_new = seg.get_active_object()
+                    seg_new = seg.get_active_object()
 
-                if seg_new.is_split == True:
-                    for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
-                        if split_seg.status_id in confirm_list:
-                            confirm_count += 1
+                    if seg_new.is_split == True:
+                        for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                            if split_seg.status_id in confirm_list:
+                                confirm_count += 1
 
-                elif seg_new.status_id in confirm_list:
-                    confirm_count += 1
-
+                    elif seg_new.status_id in confirm_list:
+                        confirm_count += 1
             cached_value ={"total_segments":total_seg_count,"confirmed_segments": confirm_count}
             cache.set(cache_key,cached_value)
         return cached_value

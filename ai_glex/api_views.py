@@ -398,12 +398,21 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 def glossary_search(request):
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
-    doc = Document.objects.get(id=doc_id)
-    authorize(request, resource=doc, actor=request.user, action="read")
+    task_id = request.POST.get("task_id")
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        target_language = doc.job.target_language
+        source_language = doc.job.source_language
+        pr = doc.job.project
+        authorize(request, resource=doc, actor=request.user, action="read")
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        target_language = task.job.target_language
+        source_language = task.job.source_language
+        pr = task.job.project
+        authorize(request, resource=task, actor=request.user, action="read")
     user = request.user.team.owner if request.user.team else request.user
-    glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
-    target_language = doc.job.target_language
-    source_language = doc.job.source_language
+    glossary_selected = GlossarySelected.objects.filter(project = pr).values('glossary_id')
     queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))

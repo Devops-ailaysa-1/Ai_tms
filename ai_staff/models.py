@@ -477,11 +477,11 @@ class ImageGeneratorResolution(models.Model):
         return self.image_resolution 
  
 class PromptStartPhrases(models.Model):
-    sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
-                                 on_delete = models.CASCADE,blank=True, null=True)
-    start_phrase =  models.TextField(null=True, blank=True)   
-    punctuation = models.CharField(max_length=5 , null=True,blank=True)
-    max_token = models.CharField(max_length=10 , null=True,blank=True)
+    sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',on_delete = models.CASCADE,blank=True, null=True)
+    start_phrase =  models.TextField(null=True,blank=True)   
+    punctuation = models.CharField(max_length=5,null=True,blank=True)
+    assistant =  models.CharField(max_length=200,null=True,blank=True)
+    max_token = models.CharField(max_length=10,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
@@ -496,7 +496,12 @@ class DocumentType(models.Model):
     def __str__(self) -> str:
         return  self.type
 
- 
+
+# class AiCustomCategory(models.Model):
+#     category_name = models.CharField(max_length =200, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 class AiCustomize(models.Model):
     # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -504,6 +509,7 @@ class AiCustomize(models.Model):
     prompt =   models.CharField(max_length =200, null=True, blank=True)
     instruct = models.CharField(max_length =300, null=True, blank=True)
     grouping = models.CharField(max_length =200, null=True, blank=True)  
+    # category = models.ForeignKey(AiCustomCategory , related_name='custom_category_name', on_delete=models.CASCADE,null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
