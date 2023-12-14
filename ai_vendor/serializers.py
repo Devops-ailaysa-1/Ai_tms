@@ -268,9 +268,11 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('currency' , None):
-            representation['price'] = float(instance.service.all()[0].mtpe_rate)
-            representation['mtpe_hourly_rate'] = float(instance.service.all()[0].mtpe_hourly_rates)
-            representation['mtpe_count_unit'] = instance.service.all()[0].mtpe_count_unit.unit
-            representation['is_active'] = instance.service.all()[0].mtpe_count_unit.is_active
+            service_info_instance = instance.service.all()[0]
+            representation['price'] = float(service_info_instance.mtpe_rate)
+            representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rates)
+            representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
+            representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
+
         return representation
  
