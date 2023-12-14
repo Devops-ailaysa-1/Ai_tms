@@ -252,3 +252,23 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
 
     def save_update(self):
         return super().save()
+
+
+
+
+class AMSLangpairSerializer(serializers.ModelSerializer):
+    source_lang = serializers.ReadOnlyField(source='source_lang.language')
+    target_lang = serializers.ReadOnlyField(source='target_lang.language')
+    currency = serializers.ReadOnlyField(source='currency.currency_code')
+    class Meta:
+        model=VendorLanguagePair
+        fields=('id','user','source_lang','target_lang','currency')
+
+    
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if representation.get('currency' , None):
+            representation['price'] = float(instance.service.all()[0].mtpe_rate)
+ 
+        return representation
+ 
