@@ -268,7 +268,7 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation=super().to_representation(instance)
         if representation.get('currency' , None):
-            representation['price'] = instance.service.all[0].mtpe_rate
+            representation['price'] = float(instance.service.all()[0].mtpe_rate)
  
         return representation
  
