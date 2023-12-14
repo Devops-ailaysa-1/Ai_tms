@@ -1114,7 +1114,7 @@ class ProzVendorListView(generics.ListAPIView):
         if fullname:
             params.update({'site_name':fullname})
 
-        integeration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
+        integration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         print("Status---------->",integration_users_response)
         if integration_users_response.status_code == 500:
