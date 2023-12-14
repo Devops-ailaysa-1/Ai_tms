@@ -270,7 +270,7 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
         if representation.get('currency' , None):
             service_info_instance = instance.service.all()[0]
             representation['price'] = float(service_info_instance.mtpe_rate)
-            representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rates)
+            # representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rates)
             representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
             representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
 
