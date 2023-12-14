@@ -262,7 +262,7 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
     currency = serializers.ReadOnlyField(source='currency.currency_code')
     class Meta:
         model=VendorLanguagePair
-        fields=('id','user','source_lang','target_lang','currency','primary_pair')
+        fields=('id','user','source_lang','target_lang','currency')#,'primary_pair')
 
     
     def to_representation(self, instance):
@@ -270,8 +270,8 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
         if representation.get('currency' , None):
             service_info_instance = instance.service.all()[0]
             representation['price'] = float(service_info_instance.mtpe_rate)
-            representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rates)
+            representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rate)
             representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
-            representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
+            # representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
         return representation
  
