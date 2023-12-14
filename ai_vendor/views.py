@@ -779,8 +779,8 @@ def get_vendor_settings_filled(request):
 @api_view(['GET',])
 @permission_classes([AllowAny])
 def get_ams_agency_lang_pair_price(request):
-    user = AiUser.objects.get(email=own_agency_email)
     own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
+    user = AiUser.objects.get(email=own_agency_email)
     obj = VendorLanguagePair.objects.filter(user = user)
     serializer = AMSLangpairSerializer(obj,many=True)
     return Response(serializer.data)
