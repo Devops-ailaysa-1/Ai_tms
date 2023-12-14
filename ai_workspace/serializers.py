@@ -37,6 +37,10 @@ from django.conf import settings
 from django.core.cache import cache
 from ai_canvas.models import CanvasTranslatedJson
 from ai_imagetranslation.models import ImageInpaintCreation
+from itertools import repeat
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.utils import federal_json_translate
+from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -1895,6 +1899,12 @@ class TaskTranslatedFileSerializer(serializers.ModelSerializer):
 		model = TaskTranslatedFile
 		fields = "__all__"
 
+class TaskNewsMTSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskNewsMT
+		fields = ('id','mt_raw_json')
+
+
 class MyDocumentSerializerNew(serializers.Serializer):
 	id = serializers.IntegerField(read_only=True)
 	word_count = serializers.IntegerField(read_only=True)
@@ -1932,14 +1942,10 @@ class AssertSerializer(ProjectQuickSetupSerializer):
             data.update(ch_data)
         return data
 
-from itertools import repeat
 
-from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
-from ai_workspace.utils import federal_json_translate
-from concurrent.futures import ThreadPoolExecutor
-from ai_workspace.serializers import VendorDashBoardSerializer
 
 class TaskNewsDetailsSerializer(serializers.ModelSerializer):
+	mt_json = TaskNewsMTSerializer(many=True,required=False,source='tasknews')
 	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
 	source_json = serializers.JSONField(required=False )
 	target_json = serializers.JSONField(required=False )
@@ -1954,7 +1960,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = TaskNewsDetails
-		fields = ("id","task","edit_allowed","updated_download","project","source_language_id","target_language_id","source_language","target_language","target_language_script","source_json","target_json","created_at","updated_at",)
+		fields = ("id","task","edit_allowed","updated_download","project","source_language_id","target_language_id","source_language","target_language","target_language_script","source_json","target_json","mt_json","created_at","updated_at",)
 
 	def get_edit_allowed(self,obj):
 		request_obj = self.context.get('request')
@@ -2030,7 +2036,6 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		#source_json = validated_data.get('source_json',None)
 		from ai_workspace_okapi.serializers import SegmentSerializerV2
 		target_json = validated_data.get('target_json',None)
-
 		if target_json:
 			instance.target_json = target_json
 			instance.save()
