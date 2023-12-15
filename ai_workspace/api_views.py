@@ -5088,6 +5088,7 @@ def get_task_count_report(request):
     time_range = request.GET.get('time_range', 'today')
     from_date = request.GET.get('from_date',None)
     to_date = request.GET.get('to_date',None) 
+    download_report = request.GET.get('download_report',False) 
     owner = request.user.team.owner if request.user.team else request.user
     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
@@ -5124,6 +5125,11 @@ def get_task_count_report(request):
         else:
             queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
             total = queryset.count()
+        
+        if download_report:
+            response = download_editors_report(res)
+            return response
+
         print("QS--------->",queryset)
         print("Res---------->",res)
         total = total
@@ -5132,10 +5138,27 @@ def get_task_count_report(request):
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
-            
+
         return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+
+def download_editors_report(res):
+    from ai_workspace_okapi.api_views import  DocumentToFile
+    import pandas as pd
+    output = io.BytesIO()
+    data = pd.DataFrame(res)
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    data.to_excel(writer, sheet_name='Sheet1',index=False)
+    writer.close()
+    output.seek(0)
+    filename = "editors_report.xlsx"
+    response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
+    return response
+
+
+
 
 # from datetime import datetime, timedelta
 # @api_view(["GET"])
