@@ -5128,7 +5128,7 @@ def get_task_count_report(request):
             total = queryset.count()
         
         if download_report:
-            response = download_editors_report(res)
+            response = download_editors_report(res,today,start_date) #need date details. today or last month or (from_date, to_date)
             return response
 
         print("QS--------->",queryset)
@@ -5145,13 +5145,17 @@ def get_task_count_report(request):
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
 
 
-def download_editors_report(res):
+def download_editors_report(res,today,start_date):
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()
     data = pd.DataFrame(res)
+    date_details = pd.DataFrame([{'today':today,'start_date':start_date}])
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
+     
     data.to_excel(writer, sheet_name='Sheet1',index=False)
+    writer = pd.ExcelWriter(output, engine='xlsxwriter',mode='a')
+    date_details.to_excel(writer, sheet_name='Sheet1',index=False)
     writer.close()
     output.seek(0)
     filename = "editors_report.xlsx"
