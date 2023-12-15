@@ -5157,8 +5157,17 @@ def download_editors_report(res,today,start_date):
         data.to_excel(writer, sheet_name='Report', startrow=0, index=False)
 
         # Write the second DataFrame to the same Excel file below the first DataFrame
-        date_details.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False)
-
+        date_details.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False )
+        for column in writer.sheets['Sheet1'].columns:
+                max_length = 0
+                for cell in writer.sheets['Sheet1'][column]:
+                    try:  # Necessary to avoid error on empty cells
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(cell.value)
+                    except:
+                        pass
+                adjusted_width = (max_length + 2)  # Add some extra space
+                writer.sheets['Sheet1'].column_dimensions[column].width = adjusted_width
 
     # writer = pd.ExcelWriter(output, engine='xlsxwriter')
     # data.to_excel(writer, sheet_name='Sheet1',index=False)
