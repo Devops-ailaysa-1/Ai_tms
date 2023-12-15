@@ -5085,7 +5085,7 @@ from datetime import datetime, timedelta
 #@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
     #user = request.user
-    user = AiUser.objects.get(id=109)
+    user = AiUser.objects.get(email='thenmozhivijay20+222@gmail.com')
     time_range = request.GET.get('time_range', 'today')
     from_date = request.GET.get('from_date',None)
     to_date = request.GET.get('to_date',None) 
