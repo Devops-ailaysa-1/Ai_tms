@@ -5152,7 +5152,6 @@ def download_editors_report(res,today,start_date):
     data = pd.DataFrame(res)
     date_details = pd.DataFrame([{'today':today,'start_date':start_date}])
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
-     
     data.to_excel(writer, sheet_name='Sheet1',index=False)
     writer = pd.ExcelWriter(output, engine='xlsxwriter',mode='a')
     date_details.to_excel(writer, sheet_name='Sheet1',index=False)
