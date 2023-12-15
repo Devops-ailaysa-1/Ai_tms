@@ -5151,10 +5151,19 @@ def download_editors_report(res,today,start_date):
     output = io.BytesIO()
     data = pd.DataFrame(res)
     date_details = pd.DataFrame([{'today':today,'start_date':start_date}])
-    writer = pd.ExcelWriter(output, engine='xlsxwriter')
-    data.to_excel(writer, sheet_name='Sheet1',index=False)
-    writer = pd.ExcelWriter(output, engine='xlsxwriter',mode='a')
-    date_details.to_excel(writer, sheet_name='Sheet1',index=False)
+
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write the first DataFrame to the Excel file at cell A1
+        data.to_excel(writer, sheet_name='Report', startrow=0, index=False)
+
+        # Write the second DataFrame to the same Excel file below the first DataFrame
+        date_details.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False)
+
+
+    # writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    # data.to_excel(writer, sheet_name='Sheet1',index=False)
+    # writer = pd.ExcelWriter(output, engine='xlsxwriter',mode='a')
+    # date_details.to_excel(writer, sheet_name='Sheet1',index=False)
     writer.close()
     output.seek(0)
     filename = "editors_report.xlsx"
