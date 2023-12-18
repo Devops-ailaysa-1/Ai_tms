@@ -687,9 +687,11 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
+    assign_status = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status')
+    stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
     class Meta:
         model = Project
-        fields = ('project', 'team','type')
+        fields = ('project', 'team','type','stat')
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -699,7 +701,12 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    
+    def filter_xx_in(self, queryset, name, value):
+        # Split the input string into a list of integers
+        ids = [int(id_) for id_ in value.split(',') if id_.isdigit()]
+
+        # Filter the queryset based on the list of IDs
+        return queryset.filter(**{f'{name}__in': ids})
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -5048,6 +5055,7 @@ class AddStoriesView(viewsets.ModelViewSet):
         din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
             news_json = request.POST.get('news_data')
+            file_data = request.POST.get('files')
             today_date = date.today()
             project_name = today_date.strftime("%b %d, %Y")
             news_json = json.loads(news_json) if news_json else None
@@ -5059,6 +5067,8 @@ class AddStoriesView(viewsets.ModelViewSet):
             count = pr.get_tasks.count() if pr else 1
             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
             files = self.get_json(news_json,name)
+            if file_data:
+                files.append(file_data)
             if pr:
                 data = request.POST.dict()
                 print("Data--------->",data)
