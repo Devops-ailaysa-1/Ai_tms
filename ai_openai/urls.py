@@ -37,7 +37,7 @@ urlpatterns += [
  
     # path('stream_article/',api_views.PostStreamView.as_view()),
     path('credit_blog_check/',api_views.credit_check_blog),
-    path('article_generate_test/',api_views.generate),
+    # path('article_generate_test/',api_views.generate),
     path('book_chapter_generate/',api_views.generate_chapter),
     path('docx_merger/',api_views.docx_merger),
     path('ner_generate',api_views.ner_generate),
