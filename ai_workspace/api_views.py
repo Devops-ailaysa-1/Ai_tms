@@ -5008,6 +5008,85 @@ def push_translated_story(request):
 
 
 
+# class AddStoriesView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+#     def pr_check(self,src_lang,tar_langs,user):
+#         today_date = date.today()
+#         project_name = today_date.strftime("%b %d, %Y")
+#         query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+#                 .filter(project_jobs_set__source_language_id = src_lang)\
+#                 .filter(project_jobs_set__target_language_id__in = tar_langs)
+#         if query:
+#             return query.last()
+#         return None
+
+#     @staticmethod
+#     def create_news_detail(pr):
+#         tasks = pr.get_tasks
+#         for i in tasks:
+#             file_path = i.file.file.path
+#             with open(file_path, 'r') as fp:
+#                 json_data = json.load(fp)
+#             tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+#             print("TT---------------->",tt)
+
+
+#     @staticmethod
+#     def check_user_dinamalar(request_user):
+#         user = request_user.team.owner if request_user.team else request_user
+#         print("user--->",user)
+#         try:
+#             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+#                 return True
+#         except:
+#             return False 
+
+#     def get_json(self,json_data,name):
+#         print("DT--------------->",json_data)
+#         name = f"{name}.json"
+#         im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+#         files = [im_file]
+#         return files
+
+#     def create(self, request):
+#         from ai_workspace.models import ProjectFilesCreateType
+#         din = AddStoriesView.check_user_dinamalar(request.user)
+#         if din:
+#             news_json = request.POST.get('news_data')
+#             file_data = request.POST.get('files')
+#             today_date = date.today()
+#             project_name = today_date.strftime("%b %d, %Y")
+#             news_json = json.loads(news_json) if news_json else None
+#             src_lang = request.POST.get('source_language')
+#             tar_langs = request.POST.getlist('target_languages')
+#             user = self.request.user
+#             user_1 = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+#             pr = self.pr_check(src_lang,tar_langs,user_1)
+#             count = pr.get_tasks.count() if pr else 1
+#             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
+#             files = self.get_json(news_json,name)
+#             if file_data:
+#                 files.append(file_data)
+#             if pr:
+#                 data = request.POST.dict()
+#                 print("Data--------->",data)
+#                 data.pop('target_languages')
+#                 serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+#             else:
+#                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+#             if serializer.is_valid(raise_exception=True):
+#                 serializer.save()
+#                 pr = Project.objects.get(id=serializer.data.get('id'))
+#                 self.create_news_detail(pr)
+#                 ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+#                 authorize(request,resource=pr,action="create",actor=self.request.user)
+#                 return Response(serializer.data)
+#             return Response(serializer.errors)
+#         else:
+#             return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
 class AddStoriesView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
@@ -5025,11 +5104,12 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def create_news_detail(pr):
         tasks = pr.get_tasks
+        #tasks_ = [i for i in pr.get_tasks if i.news_task.exists()]  
         for i in tasks:
-            file_path = i.file.file.path
-            with open(file_path, 'r') as fp:
-                json_data = json.load(fp)
-            tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+            # file_path = i.file.file.path
+            # with open(file_path, 'r') as fp:
+            #     json_data = json.load(fp)
+            tt = TaskNewsDetails.objects.get_or_create(task=i)
             print("TT---------------->",tt)
 
 
@@ -5043,22 +5123,22 @@ class AddStoriesView(viewsets.ModelViewSet):
         except:
             return False 
 
-    def get_json(self,json_data,name):
-        print("DT--------------->",json_data)
-        name = f"{name}.json"
-        im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
-        files = [im_file]
-        return files
+    def get_file(self,text_data,name):
+        print("DT--------------->",text_data)
+        name = f"{name}.txt"
+        im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        #im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+        return im_file
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
         din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
-            news_json = request.POST.get('news_data')
-            file_data = request.POST.get('files')
+            text_data = request.POST.get('news_data')
+            files = request.FILES.getlist('files')
             today_date = date.today()
             project_name = today_date.strftime("%b %d, %Y")
-            news_json = json.loads(news_json) if news_json else None
+            #news_json = json.loads(news_json) if news_json else None
             src_lang = request.POST.get('source_language')
             tar_langs = request.POST.getlist('target_languages')
             user = self.request.user
@@ -5066,9 +5146,10 @@ class AddStoriesView(viewsets.ModelViewSet):
             pr = self.pr_check(src_lang,tar_langs,user_1)
             count = pr.get_tasks.count() if pr else 1
             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
-            files = self.get_json(news_json,name)
-            if file_data:
-                files.append(file_data)
+            if text_data:
+                file = self.get_file(text_data,name)
+                if files:files.append(file)
+                else: files=[file]
             if pr:
                 data = request.POST.dict()
                 print("Data--------->",data)
@@ -5086,8 +5167,6 @@ class AddStoriesView(viewsets.ModelViewSet):
             return Response(serializer.errors)
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
-
-
 
 from datetime import datetime, timedelta
 @api_view(["GET"])
@@ -5263,24 +5342,34 @@ def get_news_detail(request):
     obj = Task.objects.get(id=task_id)
     main_user = obj.job.project.ai_user
     target_json,source_json= {},{}
+    target_file_path,source_file_path = None,None
     if obj.job.project.project_type_id == 8:
         if obj.news_task.exists():
             try: source_json = obj.news_task.first().source_json.get('news')[0]
-            except: source_json = obj.news_task.first().source_json
+            except: 
+                source_json = obj.news_task.first().source_json
+                source_file_path = obj.news_task.first().task.file.file.path
         if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
             doc_to_file = DocumentToFile()
             res = doc_to_file.document_data_to_file(request,obj.document.id)
-            with open(res.text,"r") as fp:
-                json_data = json.load(fp)
+            print("RR-------------->",res.text)
+            try:
+                with open(res.text,"r") as fp:
+                    json_data = json.load(fp)
+            except:
+                json_data = {}
             trans_json = json_data	
             if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
                 target_json = merge_dict(trans_json,source_json)
-            else: target_json = trans_json
+            else: 
+                target_json = trans_json
+                target_file_path = res.text
         else:
            target_json = obj.news_task.first().target_json 
            if target_json == None: target_json = {}
         
-    return Response({'source_json':source_json,'target_json':target_json})
+    return Response({'source_json':source_json,'target_json':target_json,\
+                      'source_file_path':source_file_path,'target_file_path':target_file_path})
 
 
 @api_view(['GET'])

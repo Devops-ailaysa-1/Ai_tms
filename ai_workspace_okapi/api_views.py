@@ -1618,14 +1618,15 @@ class DocumentToFile(views.APIView):
     def json_key_manipulation(res_json_path): #### for enterprise
         from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
         res_json_path_text = res_json_path.split("json")[0]+"docx"
-        with open(res_json_path,"r") as fp:
-            fp = json.load(fp)
-            # fp = fp['news'][0]
-        html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
-        html_to_docx(html_data, res_json_path_text )  
-        add_additional_content_to_docx(res_json_path_text, fp)  
-        return res_json_path_text    
-    
+        try:
+            with open(res_json_path,"r") as fp:
+                fp = json.load(fp)
+            html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
+            html_to_docx(html_data, res_json_path_text )  
+            add_additional_content_to_docx(res_json_path_text, fp)  
+            return res_json_path_text    
+        except:
+            return res_json_path    
 
     def download_file_processing(self,file_path):
         try:
@@ -1638,7 +1639,7 @@ class DocumentToFile(views.APIView):
 
 
     def get(self, request, document_id):
-
+        from ai_workspace.api_views import GetNewsFederalView
         doc = DocumentToFile.get_object(document_id)
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
@@ -1693,14 +1694,14 @@ class DocumentToFile(views.APIView):
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)  
-                    if doc.job.project.project_type_id == 8:    ## 8 for news data
+                    if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):   ## 8 for news data
                         #res = self.document_data_to_file(request,document_id,True)
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
                 res = self.document_data_to_file(request, document_id) 
-                if doc.job.project.project_type_id == 8:
+                if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
             if isinstance(res, str):
@@ -2898,7 +2899,7 @@ def download_mt_file(request):
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
         if res.status_code in [200, 201]:
-            if doc.job.project.project_type_id == 8:
+            if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):
                 file_path = DocumentToFile.json_key_manipulation(res.text)
             else:
                 file_path = res.text
