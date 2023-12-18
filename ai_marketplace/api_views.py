@@ -997,14 +997,6 @@ def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         return download_file(sample_file.path)
-        # fl_path = sample_file.path
-        # filename = os.path.basename(fl_path)
-        # # print(os.path.dirname(fl_path))
-        # fl = open(fl_path, 'rb')
-        # mime_type, _ = mimetypes.guess_type(fl_path)
-        # response = HttpResponse(fl, content_type=mime_type)
-        # response['Content-Disposition'] = "attachment; filename=%s" % filename
-        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
