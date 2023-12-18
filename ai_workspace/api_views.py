@@ -5138,7 +5138,7 @@ def get_task_count_report(request):
             total = queryset.count()
         
         if download_report:
-            response = download_editors_report(res)
+            response = download_editors_report(res,today,start_date) #need date details. today or last month or (from_date, to_date)
             return response
 
         print("QS--------->",queryset)
@@ -5155,13 +5155,31 @@ def get_task_count_report(request):
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
 
 
-def download_editors_report(res):
+def download_editors_report(res,today,start_date):
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()
     data = pd.DataFrame(res)
-    writer = pd.ExcelWriter(output, engine='xlsxwriter')
-    data.to_excel(writer, sheet_name='Sheet1',index=False)
+    date_details = pd.DataFrame([{'today':today,'start_date':start_date}])
+
+    with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
+        # Write the first DataFrame to the Excel file at cell A1
+        date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
+
+        # Write the second DataFrame to the same Excel file below the first DataFrame
+        data.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False ) #
+        # for column in writer.sheets['Report'].columns:
+        #         max_length = 0
+        #         for cell in writer.sheets['Report'][column]:
+        #             try:  # Necessary to avoid error on empty cells
+        #                 if len(str(cell.value)) > max_length:
+        #                     max_length = len(cell.value)
+        #             except:
+        #                 pass
+        #         adjusted_width = (max_length + 2)  # Add some extra space
+        #         writer.sheets['Report'].column_dimensions[column].width = adjusted_width
+
+ 
     writer.close()
     output.seek(0)
     filename = "editors_report.xlsx"
