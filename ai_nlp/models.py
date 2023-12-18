@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 
 from ai_auth.models import AiUser
-
+from ai_staff.models import Languages  
 
 # class ChatEmbeddingLLMModel(models.Model):
 #     model_name = models.CharField(max_length=200,null=True,blank=True)
@@ -41,6 +41,7 @@ class PdffileUpload(models.Model):
     status = models.CharField(max_length=200,null=True,blank=True)
     text_file =  models.FileField(upload_to=user_directory_path_pdf_upload,null=True,blank=True)
     website = models.TextField(null=True,blank=True)
+    language  = models.ForeignKey(Languages,related_name='pdf_chat_lang', on_delete=models.CASCADE,null=True,blank=True)
     # embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
 
 
@@ -48,6 +49,8 @@ class PdffileChatHistory(models.Model):
     pdf_file =models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
     question =models.CharField(max_length=2000,null=True,blank=True)
     answer = models.CharField(max_length=2000,null=True,blank=True)
+    question_mt = models.CharField(max_length=2000,null=True,blank=True)
+    answer_mt = models.CharField(max_length=2000,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     token_usage = models.CharField(max_length=2000,null=True,blank=True)
