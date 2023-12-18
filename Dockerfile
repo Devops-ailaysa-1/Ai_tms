@@ -12,13 +12,13 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
   POETRY_VERSION=1.5.0 \
   POETRY_VIRTUALENVS_CREATE=false \
   POETRY_CACHE_DIR='/var/cache/pypoetry'
-
+RUN apt-get update
 # System deps:
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libxslt-dev libxml2-dev libpam-dev libedit-dev libhunspell-dev ffmpeg\
-    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
+    libpoppler-cpp-dev pkg-config poppler-utils 
 
 WORKDIR /ai_home
 COPY pyproject.toml poetry.lock /ai_home/
@@ -31,7 +31,7 @@ RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords')"
 # RUN pip install pip-system-certs
 # RUN python -m spacy download en_core_web_sm
 COPY . .
-
+#pandoc libreoffice
 # COPY --chmod=777 ./ai_tms_web.entrypoint.sh /
 # # RUN chmod +x ai_tms_web.entrypoint.sh
 # RUN ls
