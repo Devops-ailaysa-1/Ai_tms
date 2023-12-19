@@ -5349,6 +5349,7 @@ def get_news_detail(request):
             except: 
                 source_json = obj.news_task.first().source_json
                 source_file_path = obj.news_task.first().task.file.file.path
+        if source_json == None: source_json = {}
         if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
             doc_to_file = DocumentToFile()
             res = doc_to_file.document_data_to_file(request,obj.document.id)
@@ -5367,6 +5368,7 @@ def get_news_detail(request):
         else:
            target_json = obj.news_task.first().target_json 
            if target_json == None: target_json = {}
+
         
     return Response({'source_json':source_json,'target_json':target_json,\
                       'source_file_path':source_file_path,'target_file_path':target_file_path})
