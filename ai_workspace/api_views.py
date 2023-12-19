@@ -4846,21 +4846,25 @@ def push_translated_story(request):
     task_id = request.GET.get('task_id')
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
-    # target_lang = task.job.target_language.language
-    # if target_lang == "Telugu":
-    #     federal_key = os.getenv("FEDERAL-KEY-Telugu")
-    # elif target_lang == "Kannada":
-    #     federal_key = os.getenv("FEDERAL-KEY-Kannada")
-    # else:
-    federal_key = os.getenv("STAGING-FEDERAL-KEY")
+    target_lang = task.job.target_language.language
+    if target_lang == "Telugu":
+        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
+        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+    elif target_lang == "Kannada":
+        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
+    else:
+        federal_key = os.getenv("STAGING-FEDERAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
     src_json,tar_json = {},{}
     headers = { 's-id': federal_key,'Content-Type': 'application/json'}
-    feed_url = os.getenv('CREATEFEED_URL')
+    feed_url = base_url+'createFeedV2'
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
 
     tar_json = task.news_task.first().target_json
+    print("Tar--------->",tar_json)
     if not tar_json:
         doc = task.document
         if doc:
