@@ -1207,7 +1207,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 								heading = file.readline().strip()
 						else:heading = name
 				tar_json = True if obj.news_task.first().target_json else False
-				data = {'source_file_path':file_path,\
+				data = {'source_file_path':obj.file.file.url,\
 				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
 				'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
 		return data

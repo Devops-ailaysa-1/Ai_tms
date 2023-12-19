@@ -687,11 +687,11 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
-    assign_status = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status')
-    stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
+    assign_status = django_filters.CharFilter(method='filter_status')
+    #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
     class Meta:
         model = Project
-        fields = ('project', 'team','type','stat')
+        fields = ('project', 'team','type','assign_status')
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -701,12 +701,15 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    def filter_xx_in(self, queryset, name, value):
-        # Split the input string into a list of integers
-        ids = [int(id_) for id_ in value.split(',') if id_.isdigit()]
-
-        # Filter the queryset based on the list of IDs
-        return queryset.filter(**{f'{name}__in': ids})
+    def filter_status(self, queryset, name, value):
+        if value == 'inprogress':
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+            Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+        elif value == 'submitted':
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+        elif value == 'approved':
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -5348,7 +5351,7 @@ def get_news_detail(request):
             try: source_json = obj.news_task.first().source_json.get('news')[0]
             except: 
                 source_json = obj.news_task.first().source_json
-                source_file_path = obj.news_task.first().task.file.file.path
+                source_file_path = obj.news_task.first().task.file.file.url
         if source_json == None: source_json = {}
         if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
             doc_to_file = DocumentToFile()
