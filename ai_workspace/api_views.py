@@ -966,11 +966,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
-        #print("%%%%")
+        status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        print("#######",tasks)
-        #pr = get_object_or_404(Project.objects.all(),id=pk)
-        #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
+        if status == 'inprogress':
+            tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif status == 'submitted':
+            tasks = tasks.filter(Q(task_info__status = 3))
+        elif status =='approved':
+            tasks = tasks.filter(Q(task_info__client_response = 1)) 
         tasks = tasks.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
