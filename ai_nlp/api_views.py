@@ -164,16 +164,16 @@ def pdf_chat(request):
     if chat_text:
         # unit_chk['total_units_left'] =90
         if unit_chk['total_units_left']>0: 
-            lang = detector.detect(chat_text).lang
+            # lang = detector.detect(chat_text).lang
             #consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
-            if lang!= 'en':
-                chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,
-                                        source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
+            # if lang!= 'en':
+                # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,
+                                        # source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
                 
             chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            if language.id not in openai_available_langs:
-                chat_QA_res = get_translation(mt_engine_id=1 , source_string = chat_QA_res,
-                                        source_lang_code=lang , target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
+            # if language.id not in openai_available_langs:
+                # chat_QA_res = get_translation(mt_engine_id=1 , source_string = chat_QA_res,
+                                        # source_lang_code=lang , target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
 
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
