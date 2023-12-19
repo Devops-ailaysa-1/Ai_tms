@@ -5335,8 +5335,10 @@ def download_editors_report(res,from_date,to_date):
 #                             data.append(final_json)
 #         res = {'success': True, 'result': data}
 #         return Response({'result':res},status = 200)
-
-
+def get_file_url(path):
+    media_url = settings.MEDIA_URL.rstrip('/')
+    url = path.replace(settings.MEDIA_ROOT,media_url)
+    return url
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
@@ -5370,7 +5372,7 @@ def get_news_detail(request):
                 target_json = merge_dict(trans_json,source_json)
             else: 
                 target_json = trans_json
-                target_file_path = res.text
+                target_file_path = get_file_url(res.text)
         else:
            target_json = obj.news_task.first().target_json 
            if target_json == None: target_json = {}
