@@ -3177,7 +3177,7 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "extension":".txt"
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-        data={"segmentWordCountdata":json.dumps(seg_data)})#,timeout=3)
+        data={"segmentWordCountdata":json.dumps(seg_data)},timeout=3)
 
     if res.status_code == 200:
         print("Word count of the segment--->", res.json())
