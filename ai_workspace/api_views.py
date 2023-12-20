@@ -5208,7 +5208,7 @@ def get_task_count_report(request):
         team_members.append(owner)
         res =[]
         if user in managers  or user == owner:
-            tot_queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
+            tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
             filter(assign_to__in = team_members).distinct()
             total = tot_queryset.count()
             queryset = tot_queryset.filter(task_assign_info__isnull=False)
