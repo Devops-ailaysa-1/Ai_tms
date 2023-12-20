@@ -4897,6 +4897,8 @@ def push_translated_story(request):
     print("Payload------>",payload)
     if feed_id:
         payload.update({'feedId': feed_id})
+    print("Fee----------------->", feed_url)
+    print("headers---------------->",headers)
     response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
     if response.status_code == 200:
         print("RR-------------->",response.json())
