@@ -1524,11 +1524,8 @@ class Task(models.Model):
             segs = None
             doc = self.document
             if doc:
-                if self.job.project.project_type_id == 8:
-                    total_segs = Segment.objects.filter(text_unit__document=doc)
-                    segs = total_segs.filter(id__in=doc.get_text_segments())
-                else:segs = Segment.objects.filter(text_unit__document=doc)
-            print("Segs------------->",segs)
+                segs = Segment.objects.filter(text_unit__document=doc)
+                print("Segs------------->",segs)
             if segs:
                 for seg in segs:
 
