@@ -5182,12 +5182,11 @@ class AddStoriesView(viewsets.ModelViewSet):
 
 from datetime import datetime, timedelta
 @api_view(["GET"])
-@permission_classes([AllowAny])
-#@permission_classes([IsAuthenticated,IsEnterpriseUser])
+#@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
-    #user = request.user
-    user = AiUser.objects.get(email='thenmozhivijay20+222@gmail.com')
-    time_range = request.GET.get('time_range', 'today')
+    user = request.user
+    time_range = request.GET.get('time_range', None)
     from_date = request.GET.get('from_date',None)
     to_date = request.GET.get('to_date',None) 
     download_report = request.GET.get('download_report',False) 
