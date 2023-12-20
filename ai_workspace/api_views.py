@@ -5185,7 +5185,6 @@ from datetime import datetime, timedelta
 @permission_classes([AllowAny])
 #@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
-    #user = request.user
     user = AiUser.objects.get(id=109)
     time_range = request.GET.get('time_range', None)
     from_date = request.GET.get('from_date',None)
