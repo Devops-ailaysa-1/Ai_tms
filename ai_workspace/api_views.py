@@ -706,7 +706,7 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
         elif value == 'submitted':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         return queryset
