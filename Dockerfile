@@ -12,7 +12,6 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
   POETRY_VERSION=1.5.0 \
   POETRY_VIRTUALENVS_CREATE=false \
   POETRY_CACHE_DIR='/var/cache/pypoetry'
-
 # System deps:
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \

@@ -256,22 +256,22 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
 
 
 
-# class AMSLangpairSerializer(serializers.ModelSerializer):
-#     source_lang = serializers.ReadOnlyField(source='source_lang.language')
-#     target_lang = serializers.ReadOnlyField(source='target_lang.language')
-#     currency = serializers.ReadOnlyField(source='currency.currency_code')
-#     class Meta:
-#         model=VendorLanguagePair
-#         fields=('id','user','source_lang','target_lang','currency','primary_pair')
+class AMSLangpairSerializer(serializers.ModelSerializer):
+    source_lang = serializers.ReadOnlyField(source='source_lang.language')
+    target_lang = serializers.ReadOnlyField(source='target_lang.language')
+    currency = serializers.ReadOnlyField(source='currency.currency_code')
+    class Meta:
+        model=VendorLanguagePair
+        fields=('id','user','source_lang','target_lang','currency')#,'primary_pair')
 
     
-#     def to_representation(self, instance):
-#         representation=super().to_representation(instance)
-#         if representation.get('currency' , None):
-#             service_info_instance = instance.service.all()[0]
-#             representation['price'] = float(service_info_instance.mtpe_rate)
-#             # representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rates)
-#             representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
-#             representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
-#         return representation
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if representation.get('currency' , None):
+            service_info_instance = instance.service.all()[0]
+            representation['price'] = float(service_info_instance.mtpe_rate)
+            representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rate)
+            representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
+            # representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
+        return representation
  

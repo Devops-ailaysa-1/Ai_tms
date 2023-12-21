@@ -1088,6 +1088,38 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     #     # data['assigned_by'] = instance.task.job.project.ai_user.fullname
     #     return data
 
+# import os
+# from docx import Document
+# from odf import text, teletype
+# from odf.opendocument import load
+# import io
+# def read_file(file_path):
+#     _, file_extension = os.path.splitext(file_path.lower())
+
+#     with open(file_path, 'rb') as f:
+#         content = None
+
+#         if file_extension == '.txt':
+#             content = f.read().decode('utf-8')
+#         elif file_extension == '.docx':
+#             with open(file_path, 'rb') as f:
+#                 content = f.read()
+#             doc = Document(io.BytesIO(content))
+#             #doc = Document(io.BytesIO(f.read()))
+#             content = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+#         elif file_extension == '.odt':
+#             doc = load(io.BytesIO(f.read()))
+#             text_content = ""
+#             for element in doc.getElementsByType(text.P):
+#                 text_content += teletype.extractText(element)
+#             content = text_content
+#         else:
+#             raise ValueError(f"Unsupported file type: {file_extension}")
+
+#         return content
+
+
+
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
@@ -1152,6 +1184,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		from bs4 import BeautifulSoup
 		punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
 		data = {}
+		file_path = None
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
 				try:
@@ -1159,12 +1192,24 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					heading = json_data.get('heading')
 				except:
 					json_data = obj.news_task.first().source_json
-					story = json_data.get('story')
-					soup = BeautifulSoup(story, 'html.parser')
-					text = soup.get_text()
-					heading = text.split('.')[0].strip(punctuation)
+					if json_data:
+						story = json_data.get('story')
+						soup = BeautifulSoup(story, 'html.parser')
+						text = soup.get_text()
+						heading = text.split('.')[0].strip(punctuation)
+					else:
+						json_data = {}
+						file_path = obj.file.file.path
+						name = os.path.basename(file_path)
+						ext = os.path.splitext(name)[1]
+						if ext == '.txt':
+							with open(file_path, 'r', encoding='utf-8') as file:
+								heading = file.readline().strip()
+						else:heading = name
 				tar_json = True if obj.news_task.first().target_json else False
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
+				data = {'source_file_path':obj.file.file.url,\
+				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
+				'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
 		return data
 
 	# def get_image_translate_project(self,obj):

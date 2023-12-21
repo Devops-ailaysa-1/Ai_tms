@@ -607,9 +607,13 @@ class GlossaryListView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
+        task = request.GET.get('task_id')
         user = request.user.team.owner if request.user.team else request.user
         queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
                     .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
+        if task:
+            task_obj = Task.objects.get(id=task)
+            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language))
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
 

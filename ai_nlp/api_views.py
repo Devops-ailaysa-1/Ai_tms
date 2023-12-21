@@ -145,6 +145,8 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 from ai_auth.api_views import AilaysaPurchasedUnits
+from ai_workspace_okapi.utils import get_translation
+from googletrans import Translator
 from rest_framework import serializers
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -155,10 +157,24 @@ def pdf_chat(request):
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
+    language = pdf_file.language 
+    openai_available_langs = [17]
+    detector = Translator()
+    user = request.user
     if chat_text:
         # unit_chk['total_units_left'] =90
         if unit_chk['total_units_left']>0: 
-            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text)
+            # lang = detector.detect(chat_text).lang
+            #consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
+            # if lang!= 'en':
+                # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,
+                                        # source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
+                
+            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
+            # if language.id not in openai_available_langs:
+                # chat_QA_res = get_translation(mt_engine_id=1 , source_string = chat_QA_res,
+                                        # source_lang_code=lang , target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
+
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
