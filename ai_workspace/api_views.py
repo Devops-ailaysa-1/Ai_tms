@@ -5222,8 +5222,8 @@ def get_task_count_report(request):
                 query = queryset.filter(assign_to=i)
                 additional_details['user'] = i.fullname
                 additional_details['TotalAssigned'] = query.count()
-                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['YetToStart']=query.filter(status=1).count()
+                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
@@ -5257,7 +5257,9 @@ def download_editors_report(res,from_date,to_date):
     output = io.BytesIO()
     data = pd.DataFrame(res)
     date_details = pd.DataFrame([{'from_date':from_date,'to_date':to_date}])
-
+    data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
+                                'YetToStart':'Yet to start','Inprogress':'In progress',\
+                                'Completed':'Completed','total_completed_words':'Total words completed'})
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
         date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
