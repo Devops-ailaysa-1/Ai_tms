@@ -687,9 +687,11 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
+    assign_status = django_filters.CharFilter(method='filter_status')
+    #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
     class Meta:
         model = Project
-        fields = ('project', 'team','type')
+        fields = ('project', 'team','type','assign_status')
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -699,7 +701,19 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    
+    def filter_status(self, queryset, name, value):
+        if value == 'inprogress':
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+            Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+        elif value == 'submitted':
+            qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+            filtered_qs = [i.id for i in qs if i.get_tasks.count() == i.get_tasks.filter(task_info__client_response=1).count()]
+            queryset = qs.exclude(id__in=filtered_qs)
+            # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+            #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        elif value == 'approved':
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -956,11 +970,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
-        #print("%%%%")
+        status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        print("#######",tasks)
-        #pr = get_object_or_404(Project.objects.all(),id=pk)
-        #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
+        if status == 'inprogress':
+            tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif status == 'submitted':
+            tasks = tasks.filter(task_info__status = 3).exclude(task_info__client_response=1)
+        elif status =='approved':
+            tasks = tasks.filter(Q(task_info__client_response = 1)) 
         tasks = tasks.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
@@ -3164,7 +3181,7 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "extension":".txt"
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-        data={"segmentWordCountdata":json.dumps(seg_data)})#,timeout=3)
+        data={"segmentWordCountdata":json.dumps(seg_data)},timeout=3)
 
     if res.status_code == 200:
         print("Word count of the segment--->", res.json())
@@ -4833,21 +4850,25 @@ def push_translated_story(request):
     task_id = request.GET.get('task_id')
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
-    # target_lang = task.job.target_language.language
-    # if target_lang == "Telugu":
-    #     federal_key = os.getenv("FEDERAL-KEY-Telugu")
-    # elif target_lang == "Kannada":
-    #     federal_key = os.getenv("FEDERAL-KEY-Kannada")
-    # else:
-    federal_key = os.getenv("STAGING-FEDERAL-KEY")
+    target_lang = task.job.target_language.language
+    if target_lang == "Telugu":
+        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
+        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+    elif target_lang == "Kannada":
+        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
+    else:
+        federal_key = os.getenv("STAGING-FEDERAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
     src_json,tar_json = {},{}
     headers = { 's-id': federal_key,'Content-Type': 'application/json'}
-    feed_url = os.getenv('CREATEFEED_URL')
+    feed_url = base_url+'createFeedV2'
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
 
     tar_json = task.news_task.first().target_json
+    print("Tar--------->",tar_json)
     if not tar_json:
         doc = task.document
         if doc:
@@ -4880,6 +4901,8 @@ def push_translated_story(request):
     print("Payload------>",payload)
     if feed_id:
         payload.update({'feedId': feed_id})
+    print("Fee----------------->", feed_url)
+    print("headers---------------->",headers)
     response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
     if response.status_code == 200:
         print("RR-------------->",response.json())
@@ -5001,6 +5024,85 @@ def push_translated_story(request):
 
 
 
+# class AddStoriesView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+#     def pr_check(self,src_lang,tar_langs,user):
+#         today_date = date.today()
+#         project_name = today_date.strftime("%b %d, %Y")
+#         query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+#                 .filter(project_jobs_set__source_language_id = src_lang)\
+#                 .filter(project_jobs_set__target_language_id__in = tar_langs)
+#         if query:
+#             return query.last()
+#         return None
+
+#     @staticmethod
+#     def create_news_detail(pr):
+#         tasks = pr.get_tasks
+#         for i in tasks:
+#             file_path = i.file.file.path
+#             with open(file_path, 'r') as fp:
+#                 json_data = json.load(fp)
+#             tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+#             print("TT---------------->",tt)
+
+
+#     @staticmethod
+#     def check_user_dinamalar(request_user):
+#         user = request_user.team.owner if request_user.team else request_user
+#         print("user--->",user)
+#         try:
+#             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+#                 return True
+#         except:
+#             return False 
+
+#     def get_json(self,json_data,name):
+#         print("DT--------------->",json_data)
+#         name = f"{name}.json"
+#         im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+#         files = [im_file]
+#         return files
+
+#     def create(self, request):
+#         from ai_workspace.models import ProjectFilesCreateType
+#         din = AddStoriesView.check_user_dinamalar(request.user)
+#         if din:
+#             news_json = request.POST.get('news_data')
+#             file_data = request.POST.get('files')
+#             today_date = date.today()
+#             project_name = today_date.strftime("%b %d, %Y")
+#             news_json = json.loads(news_json) if news_json else None
+#             src_lang = request.POST.get('source_language')
+#             tar_langs = request.POST.getlist('target_languages')
+#             user = self.request.user
+#             user_1 = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+#             pr = self.pr_check(src_lang,tar_langs,user_1)
+#             count = pr.get_tasks.count() if pr else 1
+#             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
+#             files = self.get_json(news_json,name)
+#             if file_data:
+#                 files.append(file_data)
+#             if pr:
+#                 data = request.POST.dict()
+#                 print("Data--------->",data)
+#                 data.pop('target_languages')
+#                 serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+#             else:
+#                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+#             if serializer.is_valid(raise_exception=True):
+#                 serializer.save()
+#                 pr = Project.objects.get(id=serializer.data.get('id'))
+#                 self.create_news_detail(pr)
+#                 ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+#                 authorize(request,resource=pr,action="create",actor=self.request.user)
+#                 return Response(serializer.data)
+#             return Response(serializer.errors)
+#         else:
+#             return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
 class AddStoriesView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
@@ -5018,11 +5120,12 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def create_news_detail(pr):
         tasks = pr.get_tasks
+        #tasks_ = [i for i in pr.get_tasks if i.news_task.exists()]  
         for i in tasks:
-            file_path = i.file.file.path
-            with open(file_path, 'r') as fp:
-                json_data = json.load(fp)
-            tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+            # file_path = i.file.file.path
+            # with open(file_path, 'r') as fp:
+            #     json_data = json.load(fp)
+            tt = TaskNewsDetails.objects.get_or_create(task=i)
             print("TT---------------->",tt)
 
 
@@ -5036,21 +5139,22 @@ class AddStoriesView(viewsets.ModelViewSet):
         except:
             return False 
 
-    def get_json(self,json_data,name):
-        print("DT--------------->",json_data)
-        name = f"{name}.json"
-        im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
-        files = [im_file]
-        return files
+    def get_file(self,text_data,name):
+        print("DT--------------->",text_data)
+        name = f"{name}.txt"
+        im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        #im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+        return im_file
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
         din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
-            news_json = request.POST.get('news_data')
+            text_data = request.POST.get('news_data')
+            files = request.FILES.getlist('files')
             today_date = date.today()
             project_name = today_date.strftime("%b %d, %Y")
-            news_json = json.loads(news_json) if news_json else None
+            #news_json = json.loads(news_json) if news_json else None
             src_lang = request.POST.get('source_language')
             tar_langs = request.POST.getlist('target_languages')
             user = self.request.user
@@ -5058,7 +5162,10 @@ class AddStoriesView(viewsets.ModelViewSet):
             pr = self.pr_check(src_lang,tar_langs,user_1)
             count = pr.get_tasks.count() if pr else 1
             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
-            files = self.get_json(news_json,name)
+            if text_data:
+                file = self.get_file(text_data,name)
+                if files:files.append(file)
+                else: files=[file]
             if pr:
                 data = request.POST.dict()
                 print("Data--------->",data)
@@ -5077,18 +5184,17 @@ class AddStoriesView(viewsets.ModelViewSet):
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
 
-
-
 from datetime import datetime, timedelta
 @api_view(["GET"])
+#@permission_classes([AllowAny])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
-    #from ai_auth.models import Team
     user = request.user
-    time_range = request.GET.get('time_range', 'today')
+    time_range = request.GET.get('time_range', None)
     from_date = request.GET.get('from_date',None)
     to_date = request.GET.get('to_date',None) 
-    owner = request.user.team.owner if request.user.team else request.user
+    download_report = request.GET.get('download_report',False) 
+    owner = user.team.owner if user.team else user
     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
         if time_range == 'today':
@@ -5100,30 +5206,38 @@ def get_task_count_report(request):
             today = datetime.strptime(to_date, '%Y-%m-%d').date()
         else:
             start_date = today
-        managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
+        managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
         #team = Team.objects.filter(owner=user).first()
-        team_members = request.user.team.get_team_members if request.user.team else []
+        team_members = user.team.get_team_members if user.team else []
         team_members.append(owner)
         res =[]
-        if request.user in managers  or request.user == owner:
-            tot_queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
+        if user in managers  or user == owner:
+            tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
             filter(assign_to__in = team_members).distinct()
             total = tot_queryset.count()
             queryset = tot_queryset.filter(task_assign_info__isnull=False)
-            editors = request.user.team.get_editors if request.user.team else []
+            editors = user.team.get_editors if user.team else []
             for i in editors:
                 additional_details = {}
                 query = queryset.filter(assign_to=i)
                 additional_details['user'] = i.fullname
                 additional_details['TotalAssigned'] = query.count()
-                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['YetToStart']=query.filter(status=1).count()
+                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
-            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
+            queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+                        filter(task__job__project__created_at__date__range=(start_date,today)).\
+                        filter(assign_to = user).distinct()
             total = queryset.count()
+        
+        if download_report:
+            print("FR----->",start_date,today)
+            response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+            return response
+
         print("QS--------->",queryset)
         print("Res---------->",res)
         total = total
@@ -5132,10 +5246,48 @@ def get_task_count_report(request):
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
-            
+
         return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+
+def download_editors_report(res,from_date,to_date):
+    from ai_workspace_okapi.api_views import  DocumentToFile
+    import pandas as pd
+    output = io.BytesIO()
+    data = pd.DataFrame(res)
+    data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
+                                'YetToStart':'Yet to start','Inprogress':'In progress',\
+                                'Completed':'Completed','total_completed_words':'Total words completed'})
+    print("RR------------>",from_date,to_date)
+    date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
+    with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
+        # Write the first DataFrame to the Excel file at cell A1
+        date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
+
+        # Write the second DataFrame to the same Excel file below the first DataFrame
+        data.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False ) #
+        # for column in writer.sheets['Report'].columns:
+        #         max_length = 0
+        #         for cell in writer.sheets['Report'][column]:
+        #             try:  # Necessary to avoid error on empty cells
+        #                 if len(str(cell.value)) > max_length:
+        #                     max_length = len(cell.value)
+        #             except:
+        #                 pass
+        #         adjusted_width = (max_length + 2)  # Add some extra space
+        #         writer.sheets['Report'].column_dimensions[column].width = adjusted_width
+
+ 
+    writer.close()
+    output.seek(0)
+    filename = "editors_report.xlsx"
+    response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
+    return response
+
+
+
 
 # from datetime import datetime, timedelta
 # @api_view(["GET"])
@@ -5198,8 +5350,10 @@ def get_task_count_report(request):
 #                             data.append(final_json)
 #         res = {'success': True, 'result': data}
 #         return Response({'result':res},status = 200)
-
-
+def get_file_url(path):
+    media_url = settings.MEDIA_URL.rstrip('/')
+    url = path.replace(settings.MEDIA_ROOT,media_url)
+    return url
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
@@ -5211,24 +5365,36 @@ def get_news_detail(request):
     obj = Task.objects.get(id=task_id)
     main_user = obj.job.project.ai_user
     target_json,source_json= {},{}
+    target_file_path,source_file_path = None,None
     if obj.job.project.project_type_id == 8:
         if obj.news_task.exists():
             try: source_json = obj.news_task.first().source_json.get('news')[0]
-            except: source_json = obj.news_task.first().source_json
+            except: 
+                source_json = obj.news_task.first().source_json
+                source_file_path = obj.news_task.first().task.file.file.url
+        if source_json == None: source_json = {}
         if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
             doc_to_file = DocumentToFile()
             res = doc_to_file.document_data_to_file(request,obj.document.id)
-            with open(res.text,"r") as fp:
-                json_data = json.load(fp)
+            print("RR-------------->",res.text)
+            try:
+                with open(res.text,"r") as fp:
+                    json_data = json.load(fp)
+            except:
+                json_data = {}
             trans_json = json_data	
             if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
                 target_json = merge_dict(trans_json,source_json)
-            else: target_json = trans_json
+            else: 
+                target_json = trans_json
+                target_file_path = get_file_url(res.text)
         else:
            target_json = obj.news_task.first().target_json 
            if target_json == None: target_json = {}
+
         
-    return Response({'source_json':source_json,'target_json':target_json})
+    return Response({'source_json':source_json,'target_json':target_json,\
+                      'source_file_path':source_file_path,'target_file_path':target_file_path})
 
 
 @api_view(['GET'])
