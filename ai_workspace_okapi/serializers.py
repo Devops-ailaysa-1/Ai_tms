@@ -136,6 +136,7 @@ class SegmentSerializerV2(SegmentSerializer):
             obj = task_assign_obj.task_assign
             if obj.status != 2:
                 obj.status = 2
+                obj.client_response = None
                 obj.save()
             if task_assign_obj.task_assign.reassigned == True:
                 assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__step=obj.step).filter(task_assign__reassigned=False)
@@ -144,6 +145,7 @@ class SegmentSerializerV2(SegmentSerializer):
                     print(i.task_assign)
                     if i.task_assign.status != 2:
                         i.task_assign.status = 2
+                        i.task_assign.client_response = None
                         i.task_assign.save()
         except:pass
 
