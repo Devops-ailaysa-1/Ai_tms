@@ -706,7 +706,11 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
         elif value == 'submitted':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+            qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+            filtered_qs = [i.id for i in qs if i.get_tasks.count() == i.get_tasks.filter(task_info__client_response=1).count()]
+            queryset = qs.exclude(id__in=filtered_qs)
+            # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+            #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         return queryset
@@ -971,7 +975,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         if status == 'inprogress':
             tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
         elif status == 'submitted':
-            tasks = tasks.filter(Q(task_info__status = 3))
+            tasks = tasks.filter(task_info__status = 3).exclude(task_info__client_response=1)
         elif status =='approved':
             tasks = tasks.filter(Q(task_info__client_response = 1)) 
         tasks = tasks.order_by('-id')
