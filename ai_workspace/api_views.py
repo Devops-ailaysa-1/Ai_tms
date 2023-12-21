@@ -5224,7 +5224,9 @@ def get_task_count_report(request):
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
-            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
+            queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+                        filter(task__job__project__created_at__date__range=(start_date,today)).\
+                        filter(assign_to = user).distinct()
             total = queryset.count()
         
         if download_report:
