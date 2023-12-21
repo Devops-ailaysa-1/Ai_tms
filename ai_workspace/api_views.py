@@ -5234,8 +5234,8 @@ def get_task_count_report(request):
             total = queryset.count()
         
         if download_report:
-            print("FR----->",from_date,to_date)
-            response = download_editors_report(res,from_date,to_date) #need date details. today or last month or (from_date, to_date)
+            print("FR----->",start_date,today)
+            response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
             return response
 
         print("QS--------->",queryset)
