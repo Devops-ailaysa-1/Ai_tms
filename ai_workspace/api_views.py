@@ -707,7 +707,7 @@ class ProjectFilter(django_filters.FilterSet):
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
         elif value == 'submitted':
             qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
-            filtered_qs = [i.id for i in qs if i.get_tasks.count() == i.get_tasks.filter(task_info__client_response=1).count()]
+            filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
             queryset = qs.exclude(id__in=filtered_qs)
             # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
             #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
@@ -5226,6 +5226,10 @@ def get_task_count_report(request):
                 additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                if user == owner:
+                    additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                else:
+                    additional_details['total_approved_words'] = query.filter(client_response=1).fiter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
@@ -5259,7 +5263,7 @@ def download_editors_report(res,from_date,to_date):
     data = pd.DataFrame(res)
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
-                                'Completed':'Completed','total_completed_words':'Total words completed'})
+                                'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
     print("RR------------>",from_date,to_date)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
