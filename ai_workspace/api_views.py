@@ -5226,6 +5226,10 @@ def get_task_count_report(request):
                 additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                if user in managers:
+                    additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                else:
+                    additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
@@ -5265,6 +5269,7 @@ def download_editors_report(res,from_date,to_date):
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
     print("RR------------>",from_date,to_date)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
+    print("DDDD---------------->",data)
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
         date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
