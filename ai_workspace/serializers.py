@@ -1203,7 +1203,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 						name = os.path.basename(file_path)
 						ext = os.path.splitext(name)[1]
 						if ext == '.txt':
-							with open(file_path, 'r', encoding='utf-8') as file:
+							with open(file_path, 'r', encoding='utf-8', errors = 'replace') as file:
 								heading = file.readline().strip()
 						else:heading = name
 				tar_json = True if obj.news_task.first().target_json else False
