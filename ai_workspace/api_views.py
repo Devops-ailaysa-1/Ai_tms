@@ -4920,7 +4920,7 @@ def push_translated_story(request):
         if feed:
             task.news_task.update(feed_id=feed,pushed=True)
             return Response({'msg':'pushed successfully'},status=200)
-    return Response({'msg':"something went wrong"},status=400)
+    return Response({'msg':"something went wrong with CMS"},status=400)
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
 # def push_translated_story(request):
