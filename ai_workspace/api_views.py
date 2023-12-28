@@ -4895,8 +4895,17 @@ def push_translated_story(request):
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
         # 'story_summary':tar_json.get('story_summary'),
-        # 'authorName': tar_json.get('authorName'),
         # 'image_caption': tar_json.get('image_caption'),
+        'author': tar_json.get('authorName'),
+        'custom_params':[{
+            'name':'image_caption',
+            'value':tar_json.get('image_caption')
+        },{
+            'name':'story_summary',
+            'value':tar_json.get('story_summary') 
+        }
+        ]
+        
     })
     print("Payload------>",payload)
     if feed_id:
