@@ -104,6 +104,8 @@ from rest_framework.decorators import authentication_classes
 from .utils import merge_dict
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
+import spacy
+nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
 
@@ -5415,6 +5417,7 @@ def get_news_detail(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def federal_segment_translate(request):
     task_id = request.query_params.get('task_id',None)
     text =  request.query_params.get('text',None)
@@ -5435,7 +5438,20 @@ def federal_segment_translate(request):
     else:
         return Response({'msg':'Text field empty'},status=400)
     
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_ner(request):
+    text = request.POST.get('text')
+    # seg_id = request.query_params.get('segment_id')
+    # segment = Segment.objects.get(id=seg_id)
+    doc = nlp(text)
+    ner = []
+    for ent in doc.ents:
+        ner.append(ent.text)   
+    return JsonResponse({"ner": ner}, safe=False)
 
+
+    
     # else:
     #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
