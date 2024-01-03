@@ -502,6 +502,8 @@ def adding_term_to_glossary_from_workspace(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def clone_source_terms_from_multiple_to_single_task(request):
