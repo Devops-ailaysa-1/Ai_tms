@@ -258,11 +258,20 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
 
         # Resetting the raw MT for normal segments once merged
+        merged_seg = ''
         for segment in segments:
-            try:
-                MT_RawTranslation.objects.get(segment_id = segment.id).delete()
-            except:
-                print(f"No raw MT available for this segment --> {segment.id}")
+            if segment.target or segment.temp_target:
+                merged_seg+=segment.target
+        if merged_seg != '':
+            segments[0].temp_target = merged_seg
+            segments[0].target = merged_seg
+            segments[0].save()
+            print("SEG[0]--------------->",segments[0])
+        #for segment in segments:
+            # try:
+            #     MT_RawTranslation.objects.get(segment_id = segment.id).delete()
+            # except:
+            #     print(f"No raw MT available for this segment --> {segment.id}")
 
         text_unit = data["text_unit"]
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):

@@ -700,6 +700,7 @@ class MergeSegmentView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
                 obj =  serlzr.instance
+                print("####################")
                 obj.update_segments(serlzr.validated_data.get("segments"))
                 return Response(MergeSegmentSerializer(obj).data)
 
