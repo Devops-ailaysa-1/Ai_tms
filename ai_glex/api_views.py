@@ -40,6 +40,7 @@ from ai_staff.models import LanguageMetaDetails
 from django.db.models import Value, IntegerField, CharField
 from django_oso.auth import authorize
 from ai_workspace.signals import invalidate_cache_on_save
+from django.shortcuts import get_object_or_404
 
 # from ai_workspace.serializers import ProjectListSerializer
 
@@ -435,7 +436,7 @@ class GetTranslation(APIView):#############Mt update need to work###############
     permission_classes = [IsAuthenticated]
 
     @staticmethod
-    def word_count(self, string):
+    def word_count(string):
         punctuations = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
         tokens = word_tokenize(string)
         tokens_new = [word for word in tokens if word not in punctuations]
@@ -461,7 +462,7 @@ class GetTranslation(APIView):#############Mt update need to work###############
 
         credit_balance = user.credit_balance.get("total_left")
         #print("SOURCE---------->",source)
-        word_count = GetTranslation.word_count(self,source)
+        word_count = GetTranslation.word_count(source)
 
         if credit_balance > word_count:
 
@@ -645,3 +646,86 @@ def glossary_task_simple_download(request):
         return response
     else:
         return Response({'msg':'No terms'},status=400)
+
+
+
+
+class MyGlossaryView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        user = request.user.team.owner if request.user.team else request.user 
+        queryset = MyGlossary.objects.filter(user=user).all()
+        serializer = MyGlossarySerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        sl_term = request.POST.get('source')
+        tl_term = request.POST.get('target',"")
+        doc_id = request.POST.get("doc_id")
+        doc = Document.objects.get(id=doc_id)
+        glossary_id = request.POST.get('glossary',None)
+        if glossary_id:
+            glossary = Glossary.objects.get(id = glossary_id)
+            job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+            serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+                    "tl_language":doc.job.target_language.id,"project":doc.project,"user":request.user.id}
+            serializer = MyGlossarySerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        user = request.user.team.owner if request.user.team else request.user 
+        instance = MyGlossary.objects.get(id=pk,user=user)
+        data = request.POST.dict()
+        serializer = MyGlossarySerializer(instance,data=data,partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        user = request.user.team.owner if request.user.team else request.user 
+        obj = MyGlossary.objects.get(Q(user=user) & Q(id=pk))
+        print("Obj----->",obj)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['POST',])
+def get_word_mt(request):
+    user = request.user.team.owner if request.user.team else request.user
+    task_id = request.POST.get("task_id",None)
+    source = request.POST.get("source", "")
+    task_obj = get_object_or_404(Task.objects.all(),id=task_id)
+    sl_code = task_obj.job.source_language_code
+    tl_code = task_obj.job.target_language_code
+    mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
+    target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id)).first()
+    if target_mt:
+        return Response(GlossaryMtSerializer(target_mt).data,status=200)
+
+    credit_balance = user.credit_balance.get("total_left")
+    
+    word_count = GetTranslation.word_count(source)
+    print("Task------------>",task_obj)
+
+    if credit_balance > word_count:
+
+        # get translation
+        translation = get_translation(mt_engine_id, source, sl_code, tl_code,user_id=user.id,cc=word_count)
+        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
+        tt = GlossaryMt.objects.create(source = source,task=None,target_mt = translation,mt_engine_id=mt_engine_id)
+        print(tt)
+        return Response(GlossaryMtSerializer(tt).data,status=201)
+        #return Response({"res": translation}, status=200)
+
+    else:
+        return Response({"res": "Insufficient credits"}, status=424)
