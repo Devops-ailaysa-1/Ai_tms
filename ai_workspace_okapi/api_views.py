@@ -1025,6 +1025,7 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment_id, mt_params):
 
+        
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 

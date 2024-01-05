@@ -101,7 +101,7 @@ from ai_canvas.serializers import CanvasDesignSerializer
 from rest_framework.authentication import TokenAuthentication
 from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
-from .utils import merge_dict
+from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy
@@ -2519,22 +2519,24 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     #final_audio = final_name + '.mp3'
     #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
-    dir_1 = os.path.join('/ai_home/',"output")
+    dir_1 = os.path.join('/ai_home/',"output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
-    split = Split(file,dir_1)
-    split.bysize(size_limit,True)
+    # split = Split(file,dir_1)
+    # split.bysize(size_limit,True)
+    split_file_by_size(file, dir_1, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt'):
             name,ext = os.path.splitext(file)
-            dir = os.path.join('/ai_home/',"OutputAudio")
+            dir = os.path.join('/ai_home/',"outputAudio_"+str(obj.id))
             if not os.path.exists(dir):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
             text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1]))]
+    #list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2544,7 +2546,8 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     file_obj = DJFile(f2,name=os.path.basename(final_audio))
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
-    #os.remove(final_audio)
+    os.remove(final_audio)
+    os.remove(out_filename)
     return file_obj,f2
 
 
@@ -2584,8 +2587,9 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
                 if count > size_limit:
                     outfile.write('\n')
                     count=0
-    split = Split(out_filename,dir_1)
-    split.bysize(size_limit,True)
+    # split = Split(out_filename,dir_1)
+    # split.bysize(size_limit,True)
+    split_file_by_size(out_filename, dir_1, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt') :
@@ -2598,7 +2602,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
             rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
             #print("RR------------------------>",rr.status_code)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2611,7 +2615,6 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     os.remove(final_audio)
     os.remove(out_filename)
     return file_obj,f2
-
 
 
 @api_view(["GET"])
