@@ -139,97 +139,33 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	return  json_file_copy
 
 
+def split_file_by_size(input_file, output_dir, max_size):
+    with open(input_file, 'r') as input_file:
+        part_number = 1
+        current_size = 0
+        current_content = []
 
+        for line in input_file:
+            line_size = len(line.encode('utf-8'))
 
-# def federal_json(json_data,tar_code,src_code):
-#     from ai_workspace_okapi.utils import get_translation
-#     translated_json_list = []
-#     json_data = json_data['news']
-#     for i in json_data:
-#         json_file_copy = copy.deepcopy(i)
-#         for key,value in json_file_copy.items():
-#             if key in TRANSLATABLE_KEYS_FEDARAL:
-#                 format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-                 
-#                 if type(value) == list:
-#                     if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-#                         for lists in LIST_KEYS_FEDARAL[key]:
-#                             for list_names in json_file_copy[key]:
-#                                 if lists in list_names.keys():
-#                                     list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-# 																	source_lang_code=src_code,format_=format_)
-#                 else:
-#                     json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-# 														source_lang_code=src_code,format_=format_)
-#         translated_json_list.append(json_file_copy)
-#     return  {'news': translated_json_list}
+            if current_size + line_size > max_size and current_content:
+                output_file = f"{output_dir}/out_{part_number}.txt"
+                with open(output_file, 'w') as output:
+                    output.writelines(current_content)
+                part_number += 1
+                current_content = []
+                current_size = 0
 
+            current_content.append(line)
+            current_size += line_size
 
-
-# def fedaral_json_translate(json_file,tar_code,src_code):
-#     with open(json_file,'r') as fp:
-#         jf = json.load(fp)
-# 	translated_json_list = []
-# 	json_files = jf['news']
-# 	for json_file in json_files:
-# 		json_file_copy=copy.deepcopy(json_file)
-# 		for key,value in json_file_copy.items():
-# 			if key in TRANSLATABLE_KEYS_FEDARAL:
-# 				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-# 				if type(value) == list:
-# 					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-# 						for lists in LIST_KEYS_FEDARAL[key]:
-# 							for list_names in json_file_copy[key]:
-# 								list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-# 																	source_lang_code=src_code,format_=format_)
-# 				else:
-# 					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-# 														source_lang_code=src_code,format_=format_)
-# 		translated_json_list.append(json_file_copy)
-#     return {'news':translated_json_list}
-
-
-# def generate_list_cache_key(user):
-#     print("R---->",user)
-#     user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-#     return f'pr_list:{user_1.id}'
-
-
-# from functools import wraps
-# from django.core.cache import cache
-
-
-# def custom_cache_page(timeout, key_func):
-#     def decorator(view_func):
-#         @wraps(view_func)
-#         def _wrapped_view(request, *args, **kwargs):
-#             cache_key = key_func(request.user)
-#             response = cache.get(cache_key)
-#             if response is None:
-#                 response = view_func(request, *args, **kwargs)
-#                 cache.set(cache_key, response, timeout)
-#             return response
-#         return _wrapped_view
-#     return decorator
+        if current_content:
+            output_file = f"{output_dir}/out_{part_number}.txt"
+            with open(output_file, 'w') as output:
+                output.writelines(current_content)
 
 
 
-# from functools import wraps
-# from django.core.cache import cache
-# def custom_cache_page(timeout):
-#     def decorator(view_func):
-#         @wraps(view_func)
-#         def _wrapped_view(request, *args, **kwargs):
-#             user = request.user
-#             cache_key = get_pr_list_cache_key(user)
-#             cached_data = cache.get(cache_key)
-#             if cached_data is not None:
-#                 return cached_data
-#             response = view_func(request, *args, **kwargs)
-#             cache.set(cache_key, response, timeout)
-#             return response
-#         return _wrapped_view
-#     return decorator
 
 def split_dict(single_data):
     trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
@@ -279,14 +215,12 @@ def html_to_docx(html_content, docx_filename):
 	print("Html------------>",html_content)
 	if html_content == None:
 		html_content = "<p>"
-	# if html_content is not None:
+
 	html_content = html_content.replace('\n', '<br>')
     # Convert HTML to DOCX using pypandoc
 	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
-    # pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
+   
 
-# def text_to_docx(text, docx_filename):
-# 	pypandoc.convert_text(text, 'docx', format='markdown',outputfile=docx_filename)
 
 def add_additional_content_to_docx(docx_filename, additional_content):
     # Open the existing DOCX file using python-docx
@@ -306,4 +240,6 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 # # Add additional content to the DOCX file
 # add_additional_content_to_docx('output.docx', sample_json_data)
+
+
 
