@@ -2547,7 +2547,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
     os.remove(final_audio)
-    os.remove(out_filename)
+    #os.remove(out_filename)
     return file_obj,f2
 
 
