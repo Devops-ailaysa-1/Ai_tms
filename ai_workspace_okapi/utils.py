@@ -362,7 +362,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     path, name = os.path.split(ssml_file)
     
     client = texttospeech.TextToSpeechClient()
-    with open(ssml_file, "r") as f:
+    with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     #print("Len of input text in API---------------->",len(input_text))
@@ -437,7 +437,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
-    with open(ssml_file, "r") as f:
+    with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     #print("File----------->",ssml_file)

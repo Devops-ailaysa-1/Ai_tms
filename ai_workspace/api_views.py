@@ -2515,16 +2515,13 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
-    size_limit = 4000 #if obj.job.target_language_code in ['ta','ja'] else 3500
-    #final_audio = final_name + '.mp3'
-    #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
+    size_limit = 4500 
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
     dir_1 = os.path.join('/ai_home/',"output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
-    # split = Split(file,dir_1)
-    # split.bysize(size_limit,True)
-    split_file_by_size(file, dir_1, size_limit)
+    lang=language if language else obj.job.target_language_code 
+    split_file_by_size(file, dir_1, lang, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt'):
@@ -2576,20 +2573,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     count=0
     out_filename = final_name + '_out.txt'
     size_limit = 4000 #if obj.job.source_language_code in ['ta','ja'] else 3500
-    with open(file) as infile, open(out_filename, 'w') as outfile:
-        lines = infile.readlines()
-        for line in lines:
-            if obj.job.source_language_code in lang_list:sents = sentence_split(line, obj.job.source_language_code, delim_pat='auto')
-            else:sents = nltk.sent_tokenize(line)
-            for i in sents:
-                outfile.write(i)
-                count = count+len(i.encode("utf8"))
-                if count > size_limit:
-                    outfile.write('\n')
-                    count=0
-    # split = Split(out_filename,dir_1)
-    # split.bysize(size_limit,True)
-    split_file_by_size(out_filename, dir_1, size_limit)
+    lang = language if language else obj.job.source_language_code
+    split_file_by_size(file, dir_1, lang, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt') :
@@ -2613,7 +2598,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
     os.remove(final_audio)
-    os.remove(out_filename)
+    #os.remove(out_filename)
     return file_obj,f2
 
 
@@ -5496,4 +5481,16 @@ def get_ner(request):
     #     return Response({"msg":"no output type"})
  
         
-     
+       # with open(file) as infile, open(out_filename, 'w') as outfile:
+    #     lines = infile.readlines()
+    #     for line in lines:
+    #         if obj.job.source_language_code in lang_list:sents = sentence_split(line, obj.job.source_language_code, delim_pat='auto')
+    #         else:sents = nltk.sent_tokenize(line)
+    #         for i in sents:
+    #             outfile.write(i)
+    #             count = count+len(i.encode("utf8"))
+    #             if count > size_limit:
+    #                 outfile.write('\n')
+    #                 count=0
+    # split = Split(out_filename,dir_1)
+    # split.bysize(size_limit,True) 
