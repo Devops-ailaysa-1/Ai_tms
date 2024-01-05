@@ -4,6 +4,9 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO, BytesIO
 import sys
 import string
+import re
+from indicnlp.tokenize.sentence_tokenize import sentence_split
+import nltk
 
 
 class DjRestUtils:
@@ -139,30 +142,46 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	return  json_file_copy
 
 
-def split_file_by_size(input_file, output_dir, max_size):
-    with open(input_file, 'r') as input_file:
-        part_number = 1
-        current_size = 0
-        current_content = []
+def split_file_by_size(input_file, output_directory, lang_code, max_size):
+    from .api_views import cust_split
+    with open(input_file, 'r', encoding='utf-8') as file:
+        content = file.read()
 
-        for line in input_file:
-            line_size = len(line.encode('utf-8'))
+    if lang_code in ['zh-Hans', 'zh-Hant', 'ja']:
+        sentences = cust_split(content)
+    elif lang_code in ['hi', 'bn', 'or', 'ne', 'pa']:
+        sentences = sentence_split(content, lang_code, delim_pat='auto')
+    else:
+        sentences = nltk.sent_tokenize(content)
 
-            if current_size + line_size > max_size and current_content:
-                output_file = f"{output_dir}/out_{part_number}.txt"
-                with open(output_file, 'w') as output:
-                    output.writelines(current_content)
-                part_number += 1
-                current_content = []
-                current_size = 0
+    part_number = 1
+    current_size = 0
+    current_content = []
 
-            current_content.append(line)
-            current_size += line_size
+    for sentence in sentences:
+        sentence_size = len(sentence.encode('utf-8'))
 
-        if current_content:
-            output_file = f"{output_dir}/out_{part_number}.txt"
-            with open(output_file, 'w') as output:
-                output.writelines(current_content)
+        if current_size + sentence_size > max_size and current_content:
+            output_file = f"{output_directory}/output_{part_number}.txt"
+            with open(output_file, 'w', encoding='utf-8') as output:
+                output.write("\n".join(current_content))
+            print(f"File {output_file} created with {current_size} bytes")
+            part_number += 1
+            current_content = []
+            current_size = 0
+
+        current_content.append(sentence)
+        current_size += sentence_size
+
+    if current_content:
+        output_file = f"{output_directory}/output_{part_number}.txt"
+        with open(output_file, 'w', encoding='utf-8') as output:
+            output.write("\n".join(current_content))
+        print(f"File {output_file} created with {current_size} bytes")
+
+
+
+
 
 
 
