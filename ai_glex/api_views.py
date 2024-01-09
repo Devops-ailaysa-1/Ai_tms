@@ -650,18 +650,34 @@ def glossary_task_simple_download(request):
 
 
 
-class MyGlossaryView(viewsets.ViewSet):
+class MyGlossaryView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    serializer_class = MyGlossarySerializer
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
+    ordering_fields = ['created_date','id','sl_term','tl_term']
+    search_fields = ['sl_term','tl_term']
+    ordering = ('-id')
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
 
-    def list(self,request):
-        user = request.user.team.owner if request.user.team else request.user 
-        queryset = MyGlossary.objects.filter(user=user).all()
-        serializer = MyGlossarySerializer(queryset, many=True)
-        return Response(serializer.data)
+
+    def get_queryset(self):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user 
+        query = MyGlossary.objects.filter(user=user).all()
+        return query
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        print("QR------------>",queryset)
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = MyGlossarySerializer(pagin_tc, many=True)
+        response = self.get_paginated_response(serializer.data)
+        return  response
+
 
     def create(self, request):
-        sl_term = request.POST.get('source')
-        tl_term = request.POST.get('target',"")
+        sl_term = request.POST.get('sl_term')
+        tl_term = request.POST.get('tl_term',"")
         doc_id = request.POST.get("doc_id")
         doc = Document.objects.get(id=doc_id)
         glossary_id = request.POST.get('glossary',None)
@@ -692,7 +708,7 @@ class MyGlossaryView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self,request,pk):
+    def destroy(self,request,pk):
         user = request.user.team.owner if request.user.team else request.user 
         obj = MyGlossary.objects.get(Q(user=user) & Q(id=pk))
         print("Obj----->",obj)
@@ -732,10 +748,12 @@ def get_word_mt(request):
 
         # get translation
         translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
-        source = translation if target else source
-        target = translation if source else target
+        source_new = translation if target else source
+        target_new = translation if source else target
+        print("SRC----------------->",source)
+        print("TAR------------------>",target)
         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
-        tt = GlossaryMt.objects.create(source = source,task=None,target_mt = target,mt_engine_id=mt_engine_id)
+        tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
         print(tt)
         return Response(GlossaryMtSerializer(tt).data,status=201)
         #return Response({"res": translation}, status=200)
