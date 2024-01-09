@@ -5249,10 +5249,10 @@ def get_task_count_report(request):
         yts = queryset.filter(status=1).count()
         completed = queryset.filter(status=3)
         total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
-        if user in managers:
-            total_approved_words = queryset.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-        else:
-            total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+        # if user in managers:
+        #     total_approved_words = queryset.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+        # else:
+        total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
         return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
