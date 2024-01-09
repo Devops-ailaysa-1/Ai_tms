@@ -668,7 +668,6 @@ class MyGlossaryView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        print("QR------------>",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = MyGlossarySerializer(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
@@ -679,8 +678,16 @@ class MyGlossaryView(viewsets.ModelViewSet):
         sl_term = request.POST.get('sl_term')
         tl_term = request.POST.get('tl_term',"")
         doc_id = request.POST.get("doc_id")
-        doc = Document.objects.get(id=doc_id)
         glossary_id = request.POST.get('glossary',None)
+        doc = None
+        if doc_id:
+            doc = Document.objects.get(id=doc_id)
+            target_lang = doc.job.target_language.id
+            source_lang = doc.job.source_language.id
+        else:
+            #Default lang-pair for dinamalar
+            target_lang = 77 
+            source_lang = 17 
         if glossary_id:
             glossary = Glossary.objects.get(id = glossary_id)
             job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
@@ -690,8 +697,8 @@ class MyGlossaryView(viewsets.ModelViewSet):
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                    "tl_language":doc.job.target_language.id,"project":doc.project,"user":request.user.id}
+            data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":source_lang,\
+                    "tl_language":target_lang,"project":doc.project if doc else None,"user":request.user.id}
             serializer = MyGlossarySerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
