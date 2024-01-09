@@ -5225,10 +5225,10 @@ def get_task_count_report(request):
                 additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
                 additional_details['Completed']=query.filter(status=3).count()
                 additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                if user in managers:
-                    additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                else:
-                    additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                # if user in managers:
+                #     additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+                # else:
+                additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
         else:
             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
