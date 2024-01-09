@@ -704,13 +704,24 @@ def get_word_mt(request):
     user = request.user.team.owner if request.user.team else request.user
     task_id = request.POST.get("task_id",None)
     source = request.POST.get("source", "")
+    target = request.POST.get("target", "")
     task_obj = get_object_or_404(Task.objects.all(),id=task_id)
-    sl_code = task_obj.job.source_language_code
-    tl_code = task_obj.job.target_language_code
     mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
-    target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id)).first()
-    if target_mt:
-        return Response(GlossaryMtSerializer(target_mt).data,status=200)
+    if source:
+        sl_code = task_obj.job.source_language_code
+        tl_code = task_obj.job.target_language_code
+        text = source
+        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id)).last()
+        if target_mt:
+            return Response(GlossaryMtSerializer(target_mt).data,status=200)
+    elif target:
+        sl_code = task_obj.job.target_language_code
+        tl_code = task_obj.job.source_language_code
+        text = target
+        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id)).last()
+        if source_mt:
+            return Response(GlossaryMtSerializer(source_mt).data,status=200)
+    
 
     credit_balance = user.credit_balance.get("total_left")
     
@@ -720,9 +731,11 @@ def get_word_mt(request):
     if credit_balance > word_count:
 
         # get translation
-        translation = get_translation(mt_engine_id, source, sl_code, tl_code,user_id=user.id,cc=word_count)
+        translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
+        source = translation if target else source
+        target = translation if source else target
         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
-        tt = GlossaryMt.objects.create(source = source,task=None,target_mt = translation,mt_engine_id=mt_engine_id)
+        tt = GlossaryMt.objects.create(source = source,task=None,target_mt = target,mt_engine_id=mt_engine_id)
         print(tt)
         return Response(GlossaryMtSerializer(tt).data,status=201)
         #return Response({"res": translation}, status=200)

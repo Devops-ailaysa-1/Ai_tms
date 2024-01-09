@@ -5430,13 +5430,11 @@ def federal_segment_translate(request):
 @permission_classes([IsAuthenticated])
 def get_ner(request):
     text = request.POST.get('text')
-    # seg_id = request.query_params.get('segment_id')
-    # segment = Segment.objects.get(id=seg_id)
     doc = nlp(text)
-    ner = []
-    for ent in doc.ents:
-        ner.append(ent.text)   
-    return JsonResponse({"ner": ner}, safe=False)
+    exclude_labels = ['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL']
+    ner = [ent.text for ent in doc.ents if ent.label_ not in exclude_labels]
+    ner_new = list(set(ner))
+    return JsonResponse({"ner": ner_new}, safe=False)
 
 
     

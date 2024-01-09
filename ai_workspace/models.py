@@ -1713,6 +1713,9 @@ class TaskAssign(models.Model):
     client_reason = models.TextField(null=True, blank=True)
     return_request_reason = models.TextField(null=True, blank=True)
     user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
     
     objects = TaskAssignManager()
 
@@ -1720,6 +1723,7 @@ class TaskAssign(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        
 
     def generate_cache_keys(self):
         cache_keys = [
@@ -1752,6 +1756,17 @@ pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssign)
     #     Q(step_id=1)
     # ).first()
     # return TaskAssignSerializer(task_assign_obj).data
+
+
+class TaskAssignStatusChangeHistory(models.Model):
+    task_assign = models.ForeignKey(TaskAssign, on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_assign_status_history")
+    field_name = models.CharField(max_length=255)
+    new_status = models.IntegerField()  
+    timestamp = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+
+    class Meta:
+        ordering = ['-timestamp']
 
 class TaskAssignInfo(models.Model):
     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
