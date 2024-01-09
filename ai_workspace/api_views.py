@@ -5431,7 +5431,7 @@ def federal_segment_translate(request):
 def get_ner(request):
     text = request.POST.get('text')
     doc = nlp(text)
-    exclude_labels = ['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL']
+    exclude_labels = ['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'LANGUAGE']
     ner = [ent.text for ent in doc.ents if ent.label_ not in exclude_labels]
     ner_new = list(set(ner))
     return JsonResponse({"ner": ner_new}, safe=False)
