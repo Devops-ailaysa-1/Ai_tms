@@ -5243,6 +5243,7 @@ def billing_report(user,owner,start_date,today):
             for i in editors:
                 additional_details = {}
                 query = queryset.filter(assign_to=i)
+                additional_details['user'] = i.fullname
                 additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
                 res.append(additional_details)
     else:
