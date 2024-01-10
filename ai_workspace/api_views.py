@@ -709,7 +709,9 @@ class ProjectFilter(django_filters.FilterSet):
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
         elif value == 'submitted':
             qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+            print("QS------------------->",qs)
             filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
+            print("Filtered---------------->",filtered_qs)
             queryset = qs.exclude(id__in=filtered_qs)
             # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
             #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
