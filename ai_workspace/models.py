@@ -1738,13 +1738,16 @@ class TaskAssign(models.Model):
         super().save(*args, **kwargs)
 
     def _create_status_change_history(self, field_name, old_status):
-        TaskAssignStatusChangeHistory.objects.create(
-            task_assign=self,
-            field_name=field_name,
-            new_status=getattr(self, field_name),
-            #timestamp=timezone.now()
-        )
-        print("-------------------Created-----------")
+        new_status = getattr(self, field_name)
+        print("New Status---------------->",new_status)
+        if new_status:
+            TaskAssignStatusChangeHistory.objects.create(
+                task_assign=self,
+                field_name=field_name,
+                new_status=getattr(self, field_name),
+                #timestamp=timezone.now()
+            )
+            print("-------------------Created-----------")
         
 
     def generate_cache_keys(self):
