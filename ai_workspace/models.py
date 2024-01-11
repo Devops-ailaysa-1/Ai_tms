@@ -1713,13 +1713,42 @@ class TaskAssign(models.Model):
     client_reason = models.TextField(null=True, blank=True)
     return_request_reason = models.TextField(null=True, blank=True)
     user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
     
     objects = TaskAssignManager()
 
 
 
     def save(self, *args, **kwargs):
+        
+        # Check if status has changed
+        if self.pk:
+            existing_status = TaskAssign.objects.get(pk=self.pk).status
+            if existing_status != self.status:
+                self._create_status_change_history('status', existing_status)
+
+        # Check if client_response has changed
+        if self.pk:
+            existing_cr = TaskAssign.objects.get(pk=self.pk).client_response
+            if existing_cr != self.client_response:
+                self._create_status_change_history('client_response', existing_cr)
+        
         super().save(*args, **kwargs)
+
+    def _create_status_change_history(self, field_name, old_status):
+        new_status = getattr(self, field_name)
+        print("New Status---------------->",new_status)
+        if new_status:
+            TaskAssignStatusChangeHistory.objects.create(
+                task_assign=self,
+                field_name=field_name,
+                new_status=getattr(self, field_name),
+                #timestamp=timezone.now()
+            )
+            print("-------------------Created-----------")
+        
 
     def generate_cache_keys(self):
         cache_keys = [
@@ -1752,6 +1781,17 @@ pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssign)
     #     Q(step_id=1)
     # ).first()
     # return TaskAssignSerializer(task_assign_obj).data
+
+
+class TaskAssignStatusChangeHistory(models.Model):
+    task_assign = models.ForeignKey(TaskAssign, on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_assign_status_history")
+    field_name = models.CharField(max_length=255)
+    new_status = models.IntegerField()  
+    timestamp = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+
+    class Meta:
+        ordering = ['-timestamp']
 
 class TaskAssignInfo(models.Model):
     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,

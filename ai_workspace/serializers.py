@@ -1913,7 +1913,10 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					po_update.append('change_request')
 				task_ven_status = data.get('task_assign_info').get('task_ven_status')
 				ws_forms.task_assign_ven_status_mail(instance,task_ven_status,change_request_reason)
-				try:msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
+				try:
+					from .api_views import AddStoriesView
+					if not AddStoriesView.check_user_dinamalar(instance.job.project.ai_user):
+						msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
 				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:

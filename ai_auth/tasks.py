@@ -182,20 +182,22 @@ def delete_hired_editors():
 
 @task(queue='low-priority')
 def send_notification_email_for_unread_messages():
+    from ai_workspace.api_views import AddStoriesView
     query = Notification.objects.filter(Q(unread = True) & Q(emailed = False) & Q(verb= "Message"))
     try:
         queryset = query.order_by('recipient_id').distinct('recipient_id')
         email_list=[]
         for i in queryset:
-           q1 = Notification.objects.filter(Q(unread=True)&Q(verb="Message")&Q(emailed=False)&Q(recipient_id = i.recipient_id))
-           q2 = q1.order_by('actor_object_id').distinct('actor_object_id')
-           details=[]
-           for j in q2:
-               actor_obj = AiUser.objects.get(id = j.actor_object_id)
-               recent_message = striphtml(j.description) if j.description else None
-               details.append({"From":actor_obj.fullname,"Message":recent_message})
-           email = AiUser.objects.get(id = i.recipient_id).email
-           email_list.append({"email":email,"details":details})
+            q1 = Notification.objects.filter(Q(unread=True)&Q(verb="Message")&Q(emailed=False)&Q(recipient_id = i.recipient_id))
+            q2 = q1.order_by('actor_object_id').distinct('actor_object_id')
+            if not AddStoriesView.check_user_dinamalar(i.recipient):
+                details=[]
+                for j in q2:
+                    actor_obj = AiUser.objects.get(id = j.actor_object_id)
+                    recent_message = striphtml(j.description) if j.description else None
+                    details.append({"From":actor_obj.fullname,"Message":recent_message})
+                email = AiUser.objects.get(id = i.recipient_id).email
+                email_list.append({"email":email,"details":details})
         auth_forms.unread_notification_mail(email_list)
         for k in query:
             k.emailed = True
@@ -800,6 +802,10 @@ def mt_raw_update(task_id,segments):
         try:
             if (type(seg) is Segment) or (type(seg) is MergeSegment):
                 mt_raw = seg.seg_mt_raw
+            # if (type(seg) is Segment): 
+            #     mt_raw = seg.seg_mt_raw
+            # elif (type(seg) is MergeSegment):
+            #     mt_raw = seg.segments.first().seg_mt_raw
             else:
                 if seg.mt_raw_split_segment.exists() == False:
                     mt_raw = None
@@ -807,6 +813,7 @@ def mt_raw_update(task_id,segments):
                     mt_raw = seg.mt_raw_split_segment.first().mt_raw
         except:
             mt_raw = None
+        print("MTRAW------------->",mt_raw)
         if mt_raw == None:
             if seg.target == '' or seg.target==None:
                 initial_credit = user.credit_balance.get("total_left")
