@@ -7,6 +7,7 @@ router = DefaultRouter()
 router.register(r'glossary_file_upload',api_views.GlossaryFileView, basename="glossary_file_upload")
 router.register(r'term_upload',api_views.TermUploadView, basename="term_upload")
 router.register(r'glossary_selected',api_views.GlossarySelectedCreateView, basename='glossary-selected')
+router.register(r'default_glossary',api_views.MyGlossaryView, basename="my_glossary")
 urlpatterns = router.urls
 
 
@@ -22,5 +23,6 @@ urlpatterns += [
     path('term_save/',api_views.adding_term_to_glossary_from_workspace,name='adding-term-to-glossary-from-workspace'),
     path('whole_glossary_term_search/',api_views.whole_glossary_term_search),
     path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
-    path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" )
+    path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" ),
+    path('term_mt/',api_views.get_word_mt)
 ]

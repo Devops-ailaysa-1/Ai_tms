@@ -360,9 +360,9 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
-
+    
     client = texttospeech.TextToSpeechClient()
-    with open(ssml_file, "r") as f:
+    with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     #print("Len of input text in API---------------->",len(input_text))
@@ -375,8 +375,9 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
     )
-    with open(filename,"wb") as out:
-        out.write(response.audio_content)
+    if len(response.audio_content) != 0:
+        with open(filename,"wb") as out:
+            out.write(response.audio_content)
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
     return file_obj,f2
@@ -436,7 +437,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
-    with open(ssml_file, "r") as f:
+    with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     #print("File----------->",ssml_file)
