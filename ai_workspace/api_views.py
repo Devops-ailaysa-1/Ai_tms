@@ -5298,17 +5298,17 @@ def download_editors_report(res,from_date,to_date):
     import pandas as pd
     output = io.BytesIO()
     data = pd.DataFrame(res)
+    print("Data------------->",data)
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
-    
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
         date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
 
         # Write the second DataFrame to the same Excel file below the first DataFrame
-        data.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False ) #
+        data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False ) #
         
     writer.close()
     output.seek(0)
