@@ -221,14 +221,14 @@ class Segment(BaseSegment):
     def get_merge_segment_count(self):
         count = 0
         if self.is_merged and self.is_merge_start:
-            count = self.segments_merge_segments_set.all().count() - 1
-            #count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
+            #count = self.segments_merge_segments_set.all().count() - 1
+            count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
         return count
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            return self.segments_merge_segments_set.first()
-            #return MergeSegment.objects.get(id=self.id)
+            #return self.segments_merge_segments_set.first()
+            return MergeSegment.objects.get(id=self.id)
         return self
 
     @property
