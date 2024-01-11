@@ -679,6 +679,7 @@ class MyGlossaryView(viewsets.ModelViewSet):
         tl_term = request.POST.get('tl_term',"")
         doc_id = request.POST.get("doc_id")
         glossary_id = request.POST.get('glossary',None)
+        user = request.user.team.owner if request.user.team else request.user 
         doc = None
         if doc_id:
             doc = Document.objects.get(id=doc_id)
@@ -698,7 +699,7 @@ class MyGlossaryView(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":source_lang,\
-                    "tl_language":target_lang,"project":doc.project if doc else None,"user":request.user.id}
+                    "tl_language":target_lang,"project":doc.project if doc else None,"user":user.id}
             serializer = MyGlossarySerializer(data=data)
             if serializer.is_valid():
                 serializer.save()

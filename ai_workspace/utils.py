@@ -143,11 +143,12 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 
 
 def split_file_by_size(input_file, output_directory, lang_code, max_size):
+    print("LangCode------------->",lang_code.split('-')[0])
     from .api_views import cust_split
     with open(input_file, 'r', encoding='utf-8') as file:
         content = file.read()
-
-    if lang_code in ['zh-Hans', 'zh-Hant', 'ja']:
+    lang_code = lang_code.split('-')[0]
+    if lang_code in ['zh','ja']:
         sentences = cust_split(content)
     elif lang_code in ['hi', 'bn', 'or', 'ne', 'pa']:
         sentences = sentence_split(content, lang_code, delim_pat='auto')
