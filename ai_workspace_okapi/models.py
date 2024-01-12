@@ -260,13 +260,13 @@ class MergeSegment(BaseSegment):
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
-        self.target = ""
+        self.target = "".join([seg.target for seg in segs if seg.target])
         self.coded_source = "".join([seg.coded_source for seg in segs])
-        self.temp_target = ""
+        self.temp_target = "".join([seg.temp_target for seg in segs if seg.temp_target])
         self.target_tags = "".join([seg.target_tags for seg in segs])
         self.tagged_source = "".join([seg.tagged_source for seg in segs])
         self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
-        self.status_id = None
+        self.status_id = 103
         ids_seq = []
         for seg in segs:
             ids_seq+=json.loads(seg.coded_ids_sequence)
