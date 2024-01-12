@@ -267,6 +267,17 @@ class MergeSegment(BaseSegment):
         self.tagged_source = "".join([seg.tagged_source for seg in segs])
         self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
         self.status_id = 103
+
+        merged_seg_mt_raw = ''
+        for seg in segs:
+            if hasattr(seg,'seg_mt_raw'):
+                merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
+        print("Merr------------->",merged_seg_mt_raw)
+        if merged_seg_mt_raw != '':
+            obj = self.segments.first().seg_mt_raw
+            obj.mt_raw = merged_seg_mt_raw
+            obj.save()
+            
         ids_seq = []
         for seg in segs:
             ids_seq+=json.loads(seg.coded_ids_sequence)
@@ -315,15 +326,15 @@ class MergeSegment(BaseSegment):
     #     self.target_tags = "".join([seg.target_tags for seg in segs])
     #     self.tagged_source = "".join([seg.tagged_source for seg in segs])
     #     self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
-    #     merged_seg_mt_raw = ''
-    #     for seg in segs:
-    #         if hasattr(seg,'seg_mt_raw'):
-    #             merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
-    #     print("Merr------------->",merged_seg_mt_raw)
-    #     if merged_seg_mt_raw != '':
-    #         obj = self.segments.first().seg_mt_raw
-    #         obj.mt_raw = merged_seg_mt_raw
-    #         obj.save()
+        # merged_seg_mt_raw = ''
+        # for seg in segs:
+        #     if hasattr(seg,'seg_mt_raw'):
+        #         merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
+        # print("Merr------------->",merged_seg_mt_raw)
+        # if merged_seg_mt_raw != '':
+        #     obj = self.segments.first().seg_mt_raw
+        #     obj.mt_raw = merged_seg_mt_raw
+        #     obj.save()
     #     self.status_id = 103
     #     ids_seq = []
     #     for seg in segs:
