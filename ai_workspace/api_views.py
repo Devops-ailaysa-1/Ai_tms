@@ -5238,14 +5238,14 @@ def billing_report(user,owner,start_date,today):
                     filter(assign_to__in = team_members).distinct()
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
-        if queryset:
-            editors = user.team.get_editors if user.team else []
-            for i in editors:
-                additional_details = {}
-                query = queryset.filter(assign_to=i)
-                additional_details['user'] = i.fullname
-                additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                res.append(additional_details)
+        #if queryset:
+        editors = user.team.get_editors if user.team else []
+        for i in editors:
+            additional_details = {}
+            query = queryset.filter(assign_to=i)
+            additional_details['user'] = i.fullname
+            additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            res.append(additional_details)
     else:
         queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
                     Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
