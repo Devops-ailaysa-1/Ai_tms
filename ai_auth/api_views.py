@@ -1628,9 +1628,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def get_queryset(self):
         team = self.request.query_params.get('team')
         if team:
-            queryset=InternalMember.objects.filter(team__name = team).distinct()
+            queryset=InternalMember.objects.filter(team__name = team).exclude(role_id=4).distinct()
         else:
-            queryset =InternalMember.objects.filter(team=self.request.user.team).distinct()
+            queryset =InternalMember.objects.filter(team=self.request.user.team).exclude(role_id=4).distinct()
         return queryset
 
     def filter_queryset(self, queryset):
