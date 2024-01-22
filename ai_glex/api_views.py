@@ -656,7 +656,7 @@ class MyGlossaryView(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
     ordering_fields = ['created_date','id','sl_term','tl_term']
     search_fields = ['sl_term','tl_term']
-    ordering = ('-id')
+    ordering = ('-sl_term')
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
