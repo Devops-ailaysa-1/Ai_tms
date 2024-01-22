@@ -1842,7 +1842,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
-    receivers =  user.team.get_project_manager if user.team else []
+    receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
     print("Receivers------------->",receivers)
     for i in receivers:

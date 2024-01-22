@@ -576,12 +576,21 @@ class Team(models.Model):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1)]
 
     @property
+    def get_project_manager_only(self):
+        hrs = [i.internal_member_id for i in self.internal_member_team_info.filter(role_id=4)]
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1).exclude(internal_member_id__in=hrs)]
+
+    @property
     def get_team_members(self):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
     @property
     def get_editors(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
+
+    @property
+    def get_finance(self):
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=4)]
 
     @property
     def owner_pk(self):
