@@ -96,7 +96,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def team(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.get(internal_member_id = self.id)
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()
             plan = get_plan_name(obj.team.owner)
             return obj.team if plan in settings.TEAM_PLANS else None
         else:
