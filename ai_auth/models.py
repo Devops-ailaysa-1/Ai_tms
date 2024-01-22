@@ -84,7 +84,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def internal_member_team_detail(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.get(internal_member_id = self.id)
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()  ###Need to change with dynamic roles and permissions
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
             if plan in settings.TEAM_PLANS:
