@@ -1628,9 +1628,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def get_queryset(self):
         team = self.request.query_params.get('team')
         if team:
-            queryset=InternalMember.objects.filter(team__name = team)
+            queryset=InternalMember.objects.filter(team__name = team).exclude(role_id=4).distinct()
         else:
-            queryset =InternalMember.objects.filter(team=self.request.user.team)
+            queryset =InternalMember.objects.filter(team=self.request.user.team).exclude(role_id=4).distinct()
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1842,7 +1842,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
-    receivers =  user.team.get_project_manager if user.team else []
+    receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
     print("Receivers------------->",receivers)
     for i in receivers:
