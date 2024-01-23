@@ -802,8 +802,6 @@ def mt_raw_update(task_id,segments):
         try:
             if (type(seg) is Segment):# or (type(seg) is MergeSegment):
                 mt_raw = seg.seg_mt_raw
-            if (type(seg) is Segment): 
-                mt_raw = seg.seg_mt_raw
             elif (type(seg) is MergeSegment):
                 mt_raw = seg.segments.first().seg_mt_raw
             else:
