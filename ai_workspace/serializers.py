@@ -1661,7 +1661,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
     sender = task_assign.assign_to
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
-    receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
     print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
     receivers.append(task_assign.task_assign_info.assigned_by)
     if receiver.team:
@@ -1694,7 +1694,7 @@ def msg_send_customer_rate_change(task_assign):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team and receiver.team.owner.is_agency else []
     receivers.append(task_assign.assign_to)
     print("Receivers in ratechange--------->",receivers)
     for i in receivers: 
@@ -1731,7 +1731,7 @@ def notify_client_status(task_assign,response,reason):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency  else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team and receiver.team.owner.is_agency  else []
     receivers.append(task_assign.assign_to)
     print("Receivers in client accept--------->",receivers)
     for i in receivers: 
@@ -1777,7 +1777,7 @@ def notify_task_status(task_assign,status,reason):
             assigned_user = already_assigned.first().assign_to
             print("AssignedUser--------->",assigned_user)
             print("team owner------------->",assigned_user.team.owner)
-            receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+            receivers = assigned_user.team.get_project_manager_only if assigned_user.team and assigned_user.team.owner.is_agency else []
 			#receivers.append(assigned_user)
             print("Receivers task completion------------>",receivers)
             if assigned_user.team:
@@ -1787,7 +1787,7 @@ def notify_task_status(task_assign,status,reason):
         try:
             team = task_assign.task.job.project.ai_user.team
             print("user---------->",task_assign.task.job.project.ai_user)
-            receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+            receivers =  team.get_project_manager_only if team else [task_assign.task_assign_info.assigned_by]
             if team:receivers.append(task_assign.task.job.project.ai_user)
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
