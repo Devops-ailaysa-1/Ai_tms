@@ -705,8 +705,9 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_status(self, queryset, name, value):
         user = self.request.user
+        editors = False
         if user.team and user in user.team.get_editors:
-            queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to = user)
+            editors = True
         if value == 'inprogress':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
@@ -720,7 +721,8 @@ class ProjectFilter(django_filters.FilterSet):
             #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-
+        if editors:
+            queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to = user)
         print("Final QR-------->",queryset)
         return queryset
 
