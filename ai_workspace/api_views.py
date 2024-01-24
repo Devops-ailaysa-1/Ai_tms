@@ -704,19 +704,31 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        user = self.request.user
+        editors = False
+        if user.team and user in user.team.get_editors:
+            editors = True
         if value == 'inprogress':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-            Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+            if editors:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
+            else:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+                Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
         elif value == 'submitted':
-            qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+            if editors:
+                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
+            else:
+                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
             print("QS------------------->",qs)
             filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
             print("Filtered---------------->",filtered_qs)
             queryset = qs.exclude(id__in=filtered_qs)
-            # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
-            #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+            if editors:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to = user)
+            else:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        print("Final QR-------->",queryset)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -780,11 +792,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        print("User------------->",user)
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        print("QRR--------------->",queryset)
         return queryset
 
     def get_user(self):
