@@ -704,6 +704,10 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        print("REQ USER----------->",self.request.user)
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to = user)
         if value == 'inprogress':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
             Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
