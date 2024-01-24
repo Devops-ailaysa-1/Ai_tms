@@ -721,8 +721,11 @@ class ProjectFilter(django_filters.FilterSet):
             #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
             queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        print("Editors----------->",editors)
         if editors:
-            queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to = user)
+            filtered = [i.id for i in queryset if i.get_tasks.filter(task_info__assign_to=user).count() == 0]
+            print("Editor filtered---------->",filtered)
+            queryset = queryset.exclude(id__in = filtered)
         print("Final QR-------->",queryset)
         return queryset
 
