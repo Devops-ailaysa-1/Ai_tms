@@ -709,23 +709,25 @@ class ProjectFilter(django_filters.FilterSet):
         if user.team and user in user.team.get_editors:
             editors = True
         if value == 'inprogress':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-            Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+            if editors:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
+            else:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+                Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
         elif value == 'submitted':
-            qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+            if editors:
+                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
+            else:
+                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
             print("QS------------------->",qs)
             filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
             print("Filtered---------------->",filtered_qs)
             queryset = qs.exclude(id__in=filtered_qs)
-            # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
-            #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         elif value == 'approved':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-        print("Editors----------->",editors)
-        if editors:
-            filtered = [i.id for i in queryset if i.get_tasks.filter(task_info__assign_to=user).count() == 0]
-            print("Editor filtered---------->",filtered)
-            queryset = queryset.exclude(id__in = filtered)
+            if editors:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to = user)
+            else:
+                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
         print("Final QR-------->",queryset)
         return queryset
 
