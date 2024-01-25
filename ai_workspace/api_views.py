@@ -753,6 +753,24 @@ class ProjectFilter(django_filters.FilterSet):
         print("QRF-->",queryset)
 
         return queryset
+    
+    def filter_queryset(self, queryset):
+        """
+        Apply a chain of filters to the queryset.
+        """
+        queryset = super().filter_queryset(queryset)
+        
+        # Apply assign_status filter
+        field1_value = self.request.query_params.get('assign_status')
+        if field1_value:
+            queryset = self.filter_status(queryset, 'assign_status', field1_value)
+        
+        # Apply assign_to filter
+        field2_value = self.request.query_params.get('assign_to')
+        if field2_value:
+            queryset = self.filter_assign_to(queryset, 'assign_to', field2_value)
+        
+        return queryset
 
 #@never_cache
 #from django.utils.decorators import method_decorator
@@ -939,10 +957,51 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+class VendorDashBoardFilter(django_filters.FilterSet):
+    status = django_filters.CharFilter(method='filter_status')
+    assign_to = django_filters.CharFilter(method='filter_assign_to')
+   
+    class Meta:
+        model = Task
+        fields = ('status','assign_to')
+
+    def filter_status(self, queryset, name, value):
+        if value == 'inprogress':
+            queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif value == 'submitted':
+            queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+        elif value =='approved':
+            queryset = queryset.filter(Q(task_info__client_response = 1)) 
+        return queryset
+    
+    def filter_assign_to(self, queryset, name, value):
+        assign_to_list = value.split(',')
+        return queryset.filter(task_info__assign_to_id__in = assign_to_list)
+
+    def filter_queryset(self, queryset):
+        """
+        Apply a chain of filters to the queryset.
+        """
+        queryset = super().filter_queryset(queryset)
+        
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = self.filter_status(queryset, 'status', status_filter)
+        
+       
+        assign_filter = self.request.query_params.get('assign_to')
+        if assign_filter:
+            queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
+        
+        return queryset
+
+
 class VendorDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+    filterset_class = VendorDashBoardFilter
 
     @staticmethod
     #@cached(timeout=60 * 15)
@@ -989,13 +1048,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        if status == 'inprogress':
-            tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
-        elif status == 'submitted':
-            tasks = tasks.filter(task_info__status = 3).exclude(task_info__client_response=1)
-        elif status =='approved':
-            tasks = tasks.filter(Q(task_info__client_response = 1)) 
-        tasks = tasks.order_by('-id')
+        queryset = self.filter_queryset(tasks)
+        tasks = queryset.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -1005,7 +1059,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
-
+    
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
