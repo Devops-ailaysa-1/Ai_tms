@@ -595,7 +595,7 @@ class InternalMemberSerializer(serializers.ModelSerializer):
         fields = ('id','team','team_name','added_by','role','functional_identity','professional_identity',
                 'status','current_status','internal_member','internal_member_detail',)
         extra_kwargs = {
-            'internal_member':{'write_only':True},
+            #'internal_member':{'write_only':True},
             'added_by':{'write_only':True},
             'status':{'write_only':True},
             }
