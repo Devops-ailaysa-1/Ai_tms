@@ -690,10 +690,16 @@ class ProjectFilter(django_filters.FilterSet):
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     assign_status = django_filters.CharFilter(method='filter_status')
+    assign_to = django_filters.CharFilter(method='filter_assign_to')
+    #assign_to = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__assign_to_id')
     #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status')
+        fields = ('project', 'team','type','assign_status','assign_to')
+
+    def filter_assign_to(self,queryset,name,value):
+        assign_to_list = value.split(',')
+        return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -719,9 +725,7 @@ class ProjectFilter(django_filters.FilterSet):
                 qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
             else:
                 qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
-            print("QS------------------->",qs)
             filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
-            print("Filtered---------------->",filtered_qs)
             queryset = qs.exclude(id__in=filtered_qs)
         elif value == 'approved':
             if editors:
@@ -747,12 +751,7 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
-            #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
-        #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        # elif value == "assigned":
-        #     queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
-        # elif value == "express":
-        #     queryset = queryset.filter(project_type_id=5)
+
         return queryset
 
 #@never_cache

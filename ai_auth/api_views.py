@@ -2870,5 +2870,15 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
-
-     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def internal_editors_list(request):
+    user = request.user
+    owner = request.user.team.owner if request.user.team else None
+    if owner:
+        team_obj = Team.objects.get(owner = owner)
+        queryset = InternalMember.objects.filter(team=owner.team,role_id=2).order_by('internal_member__fullname')
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
+    else:
+        return JsonResponse({'msg':'you are having no team'},status=400)
