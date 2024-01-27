@@ -722,7 +722,7 @@ class ProjectFilter(django_filters.FilterSet):
             assign_to_list = [user]
         elif assign_to:
             assign_to_list = assign_to.split(',')
-        else: assign_to_list = None
+        else: assign_to_list = []
         print("Editors--------->",assign_to_list)
         print("List--------------->",assign_to_list)
         queryset = progress_filter(queryset,value,assign_to_list)
@@ -949,41 +949,53 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 class VendorDashBoardFilter(django_filters.FilterSet):
     status = django_filters.CharFilter(method='filter_status')
-    assign_to = django_filters.CharFilter(method='filter_assign_to')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
    
     class Meta:
         model = Task
-        fields = ('status','assign_to')
+        fields = ('status',)#'assign_to')
 
     def filter_status(self, queryset, name, value):
+        assign_filter = self.request.query_params.get('assign_to')
+        users = assign_filter.split(',') if assign_filter else None
+        print("Users------------->",users)
         if value == 'inprogress':
-            queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+            if users:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+            else:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
         elif value == 'submitted':
-            queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+            if users:
+                queryset = queryset.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+            else:
+                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
         elif value =='approved':
-            queryset = queryset.filter(Q(task_info__client_response = 1)) 
+            if users:
+                queryset = queryset.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+            else:
+                queryset = queryset.filter(Q(task_info__client_response = 1))
         return queryset
     
-    def filter_assign_to(self, queryset, name, value):
-        assign_to_list = value.split(',')
-        return queryset.filter(task_info__assign_to_id__in = assign_to_list)
+    # def filter_assign_to(self, queryset, name, value):
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(task_info__assign_to_id__in = assign_to_list)
 
-    def filter_queryset(self, queryset):
-        """
-        Apply a chain of filters to the queryset.
-        """
-        queryset = super().filter_queryset(queryset)
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
         
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = self.filter_status(queryset, 'status', status_filter)
+    #     status_filter = self.request.query_params.get('status')
+    #     if status_filter:
+    #         queryset = self.filter_status(queryset, 'status', status_filter)
         
        
-        assign_filter = self.request.query_params.get('assign_to')
-        if assign_filter:
-            queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
+    #     assign_filter = self.request.query_params.get('assign_to')
+    #     if assign_filter:
+    #         queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
         
-        return queryset
+    #     return queryset
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
