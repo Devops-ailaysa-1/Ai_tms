@@ -691,24 +691,21 @@ class ProjectFilter(django_filters.FilterSet):
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     assign_status = django_filters.CharFilter(method='filter_status')
-    assign_to = django_filters.CharFilter(method='filter_assign_to')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
 
 
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status','assign_to')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
 
-    def filter_assign_to(self,queryset,name,value):
-        field1_value = self.request.query_params.get('assign_status')
-        if field1_value:
-            queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
-        count = queryset.count()
-        assign_to_list = value.split(',')
-        pr = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
-        cc = pr.count()
-        print("Count--------->",count)
-        print("CC----------->",cc)
-        return pr
+    # def filter_assign_to(self,queryset,name,value):
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     if field1_value:
+    #         queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
+    #     count = queryset.count()
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
+
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -718,18 +715,17 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    def filter_status(self, queryset, name, value, inside=False):
-        print("Inside----------->",inside)
+    def filter_status(self, queryset, name, value):
         user = self.request.user
         assign_to = self.request.query_params.get('assign_to')
-        if not inside and assign_to:
-            print("$$$$$$$$$$$")
-            return queryset
-        editors = False
         if user.team and user in user.team.get_editors:
-            editors = True
-        print("Editors--------->",editors)
-        queryset = progress_filter(queryset,value,editors)
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = None
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
