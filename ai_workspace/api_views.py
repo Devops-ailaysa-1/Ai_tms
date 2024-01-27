@@ -104,7 +104,7 @@ from rest_framework.decorators import authentication_classes
 from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
-import spacy
+import spacy, time
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -690,19 +690,19 @@ class ProjectFilter(django_filters.FilterSet):
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     assign_status = django_filters.CharFilter(method='filter_status')
-    assign_to = django_filters.CharFilter(method='filter_assign_to')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
     #assign_to = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__assign_to_id')
     #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status','assign_to')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
 
-    def filter_assign_to(self,queryset,name,value):
-        field1_value = self.request.query_params.get('assign_status')
-        if field1_value:
-            queryset = self.filter_status(queryset, 'assign_status', field1_value)
-        assign_to_list = value.split(',')
-        return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
+    # def filter_assign_to(self,queryset,name,value):
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     if field1_value:
+    #         queryset = self.filter_status(queryset, 'assign_status', field1_value)
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -713,10 +713,7 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
-        field1_value = self.request.query_params.get('assign_status')
-        field2_value = self.request.query_params.get('assign_to')
-        if field1_value and field2_value:
-            return queryset
+        #queryset = queryset.select_related('project_jobs_set__job_tasks_set__task_info')
         user = self.request.user
         editors = False
         if user.team and user in user.team.get_editors:
@@ -740,7 +737,6 @@ class ProjectFilter(django_filters.FilterSet):
                 queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to = user)
             else:
                 queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-        print("Final QR-------->",queryset)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -811,13 +807,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        print("User------------->",user)
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+        
+        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
+                    'project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        print("QRR--------------->",queryset)
+        
         return queryset
 
     def get_user(self):
@@ -829,8 +826,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        print("QR------------>",queryset)
+        assign_to_list = self.request.query_params.get('assign_to')
+        if assign_to_list:
+            assignees = assign_to_list.split(',')
+            queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assignees)
         user_1 = self.get_user()
+        print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
