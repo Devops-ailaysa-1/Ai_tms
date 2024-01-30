@@ -4482,6 +4482,7 @@ def translate_file(request):
         for obj in task_objs:
             if obj.task_file_detail.first() == None: #need to change for different mt_engines
                 conversion = translate_file_task(obj.id)
+                print("Con--------------->",conversion)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
@@ -4543,7 +4544,9 @@ def translate_file_task(task_id):
         print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
-        if state == 'PENDING' or state == 'STARTED':
+        if state == 'SUCCESS':
+            return {'status':200}
+        elif state == 'PENDING' or state == 'STARTED':
             return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
         elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
             if state == "FAILURE":
