@@ -37,6 +37,10 @@ from django.conf import settings
 from django.core.cache import cache
 from ai_canvas.models import CanvasTranslatedJson
 from ai_imagetranslation.models import ImageInpaintCreation
+from itertools import repeat
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.utils import federal_json_translate
+from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -1084,6 +1088,38 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     #     # data['assigned_by'] = instance.task.job.project.ai_user.fullname
     #     return data
 
+# import os
+# from docx import Document
+# from odf import text, teletype
+# from odf.opendocument import load
+# import io
+# def read_file(file_path):
+#     _, file_extension = os.path.splitext(file_path.lower())
+
+#     with open(file_path, 'rb') as f:
+#         content = None
+
+#         if file_extension == '.txt':
+#             content = f.read().decode('utf-8')
+#         elif file_extension == '.docx':
+#             with open(file_path, 'rb') as f:
+#                 content = f.read()
+#             doc = Document(io.BytesIO(content))
+#             #doc = Document(io.BytesIO(f.read()))
+#             content = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+#         elif file_extension == '.odt':
+#             doc = load(io.BytesIO(f.read()))
+#             text_content = ""
+#             for element in doc.getElementsByType(text.P):
+#                 text_content += teletype.extractText(element)
+#             content = text_content
+#         else:
+#             raise ValueError(f"Unsupported file type: {file_extension}")
+
+#         return content
+
+
+
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
@@ -1148,6 +1184,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		from bs4 import BeautifulSoup
 		punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
 		data = {}
+		file_path = None
 		if obj.job.project.project_type_id == 8:
 			if obj.news_task.exists():
 				try:
@@ -1155,12 +1192,24 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					heading = json_data.get('heading')
 				except:
 					json_data = obj.news_task.first().source_json
-					story = json_data.get('story')
-					soup = BeautifulSoup(story, 'html.parser')
-					text = soup.get_text()
-					heading = text.split('.')[0].strip(punctuation)
+					if json_data:
+						story = json_data.get('story')
+						soup = BeautifulSoup(story, 'html.parser')
+						text = soup.get_text()
+						heading = text.split('.')[0].strip(punctuation)
+					else:
+						json_data = {}
+						file_path = obj.file.file.path
+						name = os.path.basename(file_path)
+						ext = os.path.splitext(name)[1]
+						if ext == '.txt':
+							with open(file_path, 'r', encoding='utf-8', errors = 'replace') as file:
+								heading = file.readline().strip()
+						else:heading = name
 				tar_json = True if obj.news_task.first().target_json else False
-				data = {'thumbUrl':json_data.get('thumbUrl'),'heading':heading,'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
+				data = {'source_file_path':obj.file.file.url,\
+				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
+				'maincat_name':json_data.get('maincat_name'),'tar_json_exists':tar_json}
 		return data
 
 	# def get_image_translate_project(self,obj):
@@ -1612,7 +1661,7 @@ def msg_send_vendor_accept(task_assign,input,reason):
     sender = task_assign.assign_to
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
-    receivers =  receiver.team.get_project_manager if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team else [] #and receiver.team.owner.is_agency) or receiver.is_agency else []
     print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
     receivers.append(task_assign.task_assign_info.assigned_by)
     if receiver.team:
@@ -1645,7 +1694,7 @@ def msg_send_customer_rate_change(task_assign):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team and receiver.team.owner.is_agency else []
     receivers.append(task_assign.assign_to)
     print("Receivers in ratechange--------->",receivers)
     for i in receivers: 
@@ -1682,7 +1731,7 @@ def notify_client_status(task_assign,response,reason):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency  else []
+    receivers =  receiver.team.get_project_manager_only if receiver.team and receiver.team.owner.is_agency  else []
     receivers.append(task_assign.assign_to)
     print("Receivers in client accept--------->",receivers)
     for i in receivers: 
@@ -1728,7 +1777,7 @@ def notify_task_status(task_assign,status,reason):
             assigned_user = already_assigned.first().assign_to
             print("AssignedUser--------->",assigned_user)
             print("team owner------------->",assigned_user.team.owner)
-            receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+            receivers = assigned_user.team.get_project_manager_only if assigned_user.team and assigned_user.team.owner.is_agency else []
 			#receivers.append(assigned_user)
             print("Receivers task completion------------>",receivers)
             if assigned_user.team:
@@ -1738,7 +1787,7 @@ def notify_task_status(task_assign,status,reason):
         try:
             team = task_assign.task.job.project.ai_user.team
             print("user---------->",task_assign.task.job.project.ai_user)
-            receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+            receivers =  team.get_project_manager_only if team else [task_assign.task_assign_info.assigned_by]
             if team:receivers.append(task_assign.task.job.project.ai_user)
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
@@ -1864,7 +1913,10 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					po_update.append('change_request')
 				task_ven_status = data.get('task_assign_info').get('task_ven_status')
 				ws_forms.task_assign_ven_status_mail(instance,task_ven_status,change_request_reason)
-				try:msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
+				try:
+					from .api_views import AddStoriesView
+					if not AddStoriesView.check_user_dinamalar(instance.job.project.ai_user):
+						msg_send_vendor_accept(instance,task_ven_status,change_request_reason)
 				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:
@@ -1894,6 +1946,12 @@ class TaskTranslatedFileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TaskTranslatedFile
 		fields = "__all__"
+
+class TaskNewsMTSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskNewsMT
+		fields = ('id','mt_raw_json')
+
 
 class MyDocumentSerializerNew(serializers.Serializer):
 	id = serializers.IntegerField(read_only=True)
@@ -1932,19 +1990,17 @@ class AssertSerializer(ProjectQuickSetupSerializer):
             data.update(ch_data)
         return data
 
-from itertools import repeat
 
-from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
-from ai_workspace.utils import federal_json_translate
-from concurrent.futures import ThreadPoolExecutor
-from ai_workspace.serializers import VendorDashBoardSerializer
 
 class TaskNewsDetailsSerializer(serializers.ModelSerializer):
+	mt_json = TaskNewsMTSerializer(many=True,required=False,source='tasknews')
 	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
 	source_json = serializers.JSONField(required=False )
 	target_json = serializers.JSONField(required=False )
 	project = serializers.ReadOnlyField(source='task.job.project.id')
 	edit_allowed = serializers.SerializerMethodField()
+	source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+	target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
 	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
 	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
 	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
@@ -1952,7 +2008,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = TaskNewsDetails
-		fields = ("id","task","edit_allowed","updated_download","project","source_language","target_language","target_language_script","source_json","target_json","created_at","updated_at",)
+		fields = ("id","task","edit_allowed","updated_download","project","source_language_id","target_language_id","source_language","target_language","target_language_script","source_json","target_json","mt_json","created_at","updated_at",)
 
 	def get_edit_allowed(self,obj):
 		request_obj = self.context.get('request')
@@ -2028,7 +2084,6 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		#source_json = validated_data.get('source_json',None)
 		from ai_workspace_okapi.serializers import SegmentSerializerV2
 		target_json = validated_data.get('target_json',None)
-
 		if target_json:
 			instance.target_json = target_json
 			instance.save()

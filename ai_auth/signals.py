@@ -311,7 +311,7 @@ def add_internal_member_group(user) -> bool:
 def update_internal_member_status(sender, instance, *args, **kwargs):
     if instance.is_internal_member:
         if instance.last_login:
-            obj = auth_model.InternalMember.objects.get(internal_member = instance)
+            obj = auth_model.InternalMember.objects.filter(internal_member = instance).exclude(role_id=4).first()
             obj.status = 2
             obj.save()
             # add_internal_member_group(user=instance.internal_member)
@@ -430,7 +430,7 @@ def expiry_yearly_sub(billing_date):
 
 def add_purchase_units(sender, instance,created, *args, **kwargs):
     from ai_auth.Aiwebhooks import update_purchaseunits
-    if created:
+    if created and instance.is_internal_member == False:
         pack = auth_model.CreditPack.objects.get(name=os.getenv("CHATBOOK_FREE_PLAN"))
         update_purchaseunits(instance,None,None,1,None,None,pack,purchased=False)
 

@@ -1628,9 +1628,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def get_queryset(self):
         team = self.request.query_params.get('team')
         if team:
-            queryset=InternalMember.objects.filter(team__name = team)
+            queryset=InternalMember.objects.filter(team__name = team).exclude(role_id=4).distinct()
         else:
-            queryset =InternalMember.objects.filter(team=self.request.user.team)
+            queryset =InternalMember.objects.filter(team=self.request.user.team).exclude(role_id=4).distinct()
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1695,11 +1695,14 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         email = data.get('email')
         team_name = Team.objects.get(id=data.get('team')).name
         role_name = Role.objects.get(id=data.get('role')).name
+        enterprise_plans = os.getenv("ENTERPRISE_PLANS")
         existing = self.check_user(email,team_name)
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
-        # if InternalMember.objects.filter(team = self.request.user.team).count()>20:
-        #     return Response({'msg':'internal member count execeeded'},status=400)
+        print("plan_name----------->",get_plan_name(self.request.user.team.owner))
+        if not get_plan_name(self.request.user.team.owner) in enterprise_plans:
+            if InternalMember.objects.filter(team = self.request.user.team).count()>=20:
+                return Response({'msg':'internal member count execeeded'},status=400)
         user,password = self.create_internal_user(data.get('name'),email)
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
         serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
@@ -1839,7 +1842,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
-    receivers =  user.team.get_project_manager if user.team else []
+    receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
     print("Receivers------------->",receivers)
     for i in receivers:
@@ -2867,5 +2870,15 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
-
-     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def internal_editors_list(request):
+    user = request.user
+    owner = request.user.team.owner if request.user.team else None
+    if owner:
+        team_obj = Team.objects.get(owner = owner)
+        queryset = InternalMember.objects.filter(team=owner.team,role_id=2).order_by('internal_member__fullname')
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
+    else:
+        return JsonResponse({'msg':'you are having no team'},status=400)

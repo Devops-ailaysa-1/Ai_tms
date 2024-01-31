@@ -221,14 +221,14 @@ class Segment(BaseSegment):
     def get_merge_segment_count(self):
         count = 0
         if self.is_merged and self.is_merge_start:
-            count = self.segments_merge_segments_set.all().count() - 1
-            #count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
+            #count = self.segments_merge_segments_set.all().count() - 1
+            count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
         return count
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            return self.segments_merge_segments_set.first()
-            #return MergeSegment.objects.get(id=self.id)
+            #return self.segments_merge_segments_set.first()
+            return MergeSegment.objects.get(id=self.id)
         return self
 
     @property
@@ -260,13 +260,24 @@ class MergeSegment(BaseSegment):
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
-        self.target = ""
+        self.target = "".join([seg.target for seg in segs if seg.target])
         self.coded_source = "".join([seg.coded_source for seg in segs])
-        self.temp_target = ""
+        self.temp_target = "".join([seg.temp_target for seg in segs if seg.temp_target])
         self.target_tags = "".join([seg.target_tags for seg in segs])
         self.tagged_source = "".join([seg.tagged_source for seg in segs])
         self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
-        self.status_id = None
+        self.status_id = 103
+
+        merged_seg_mt_raw = ''
+        for seg in segs:
+            if hasattr(seg,'seg_mt_raw'):
+                merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
+        print("Merr------------->",merged_seg_mt_raw)
+        if merged_seg_mt_raw != '':
+            obj = self.segments.first().seg_mt_raw
+            obj.mt_raw = merged_seg_mt_raw
+            obj.save()
+            
         ids_seq = []
         for seg in segs:
             ids_seq+=json.loads(seg.coded_ids_sequence)
@@ -305,6 +316,64 @@ class MergeSegment(BaseSegment):
             keep_parents=keep_parents)
 
     # objects = MergeSegmentManager()
+
+    # def update_segments(self, segs):
+    #     print("SEGS------------>",segs)
+    #     self.source = "".join([seg.source for seg in segs])
+    #     self.target = "".join([seg.target for seg in segs if seg.target])
+    #     self.coded_source = "".join([seg.coded_source for seg in segs])
+    #     self.temp_target = "".join([seg.temp_target for seg in segs if seg.temp_target])
+    #     self.target_tags = "".join([seg.target_tags for seg in segs])
+    #     self.tagged_source = "".join([seg.tagged_source for seg in segs])
+    #     self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
+        # merged_seg_mt_raw = ''
+        # for seg in segs:
+        #     if hasattr(seg,'seg_mt_raw'):
+        #         merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
+        # print("Merr------------->",merged_seg_mt_raw)
+        # if merged_seg_mt_raw != '':
+        #     obj = self.segments.first().seg_mt_raw
+        #     obj.mt_raw = merged_seg_mt_raw
+        #     obj.save()
+    #     self.status_id = 103
+    #     ids_seq = []
+    #     for seg in segs:
+    #         ids_seq+=json.loads(seg.coded_ids_sequence)
+    #     self.coded_ids_sequence = json.dumps(ids_seq)
+
+    #     random_ids = []
+    #     for seg in segs:
+    #         random_ids+=json.loads(seg.random_tag_ids)
+    #     self.random_tag_ids = json.dumps(random_ids)
+
+    #     self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
+    #     self.save()
+    #     self.update_segment_is_merged_true(segs=segs)
+    #     return self
+
+        
+
+    # def delete(self, using=None, keep_parents=False):
+    #     for seg in self.segments.all():
+    #         seg.is_merged = False
+    #         seg.is_merge_start = False
+    #         seg.status_id = 103
+    #         seg.temp_target = ""
+    #         seg.target = ""
+    #         seg.save()
+
+    #     # Resetting the raw MT once a merged segment is restored
+    #     first_seg_in_merge = self.segments.all().first()
+    #     try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
+    #     except: print("No translation done for merged segment yet !!!")
+
+    #     # Clearing the relations between MergeSegment and Segment
+    #     self.segments.clear()
+
+    #     return  super(MergeSegment, self).delete(using=using,
+    #         keep_parents=keep_parents)
+
+    # # objects = MergeSegmentManager()
 
     @property
     def is_merged(self):
@@ -456,36 +525,39 @@ class Document(models.Model):
         return Segment.objects.filter(text_unit__document=self)
 
 
-    def get_text_segments(self):
-        return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True).strip() != '']
+    # def get_text_segments(self):
+    #     return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True).strip() != '']
 
 
     @property
     def segments_without_blank(self):
         query = self.get_segments().exclude(source__exact='')
-        if self.job.project.project_type_id != 8:
-            return query.order_by("id")
-        else:
-            return query.filter(id__in=self.get_text_segments()).order_by("id")
+        return query.order_by("id")
+        # if self.job.project.project_type_id != 8:
+        #     return query.order_by("id")
+        # else:
+        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
 
     @property
     def segments_for_workspace(self):
         query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False))))
-        if self.job.project.project_type_id != 8:
-            return query.order_by("id")
-        else:
-            return query.filter(id__in=self.get_text_segments()).order_by("id")
+        return query.order_by("id")
+        # if self.job.project.project_type_id != 8:
+        #     return query.order_by("id")
+        # else:
+        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
             
 
 
     @property
     def segments_for_find_and_replace(self):
         query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True))
-        if self.job.project.project_type_id != 8:
-            return query.order_by("id")
-        else:
-            return query.filter(id__in=self.get_text_segments()).order_by("id")
+        return query.order_by("id")
+        # if self.job.project.project_type_id != 8:
+        #     return query.order_by("id")
+        # else:
+        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
 
     @property
     def segments_with_blank(self):

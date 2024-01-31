@@ -4,6 +4,9 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO, BytesIO
 import sys
 import string
+import re
+from indicnlp.tokenize.sentence_tokenize import sentence_split
+import nltk
 
 
 class DjRestUtils:
@@ -139,97 +142,50 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	return  json_file_copy
 
 
+def split_file_by_size(input_file, output_directory, lang_code, max_size):
+    print("LangCode------------->",lang_code.split('-')[0])
+    from .api_views import cust_split
+    with open(input_file, 'r', encoding='utf-8') as file:
+        content = file.read()
+    lang_code = lang_code.split('-')[0]
+    if lang_code in ['zh','ja']:
+        sentences = cust_split(content)
+    elif lang_code in ['hi', 'bn', 'or', 'ne', 'pa']:
+        sentences = sentence_split(content, lang_code, delim_pat='auto')
+    else:
+        sentences = nltk.sent_tokenize(content)
 
+    part_number = 1
+    current_size = 0
+    current_content = []
 
-# def federal_json(json_data,tar_code,src_code):
-#     from ai_workspace_okapi.utils import get_translation
-#     translated_json_list = []
-#     json_data = json_data['news']
-#     for i in json_data:
-#         json_file_copy = copy.deepcopy(i)
-#         for key,value in json_file_copy.items():
-#             if key in TRANSLATABLE_KEYS_FEDARAL:
-#                 format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-                 
-#                 if type(value) == list:
-#                     if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-#                         for lists in LIST_KEYS_FEDARAL[key]:
-#                             for list_names in json_file_copy[key]:
-#                                 if lists in list_names.keys():
-#                                     list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-# 																	source_lang_code=src_code,format_=format_)
-#                 else:
-#                     json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-# 														source_lang_code=src_code,format_=format_)
-#         translated_json_list.append(json_file_copy)
-#     return  {'news': translated_json_list}
+    for sentence in sentences:
+        sentence_size = len(sentence.encode('utf-8'))
 
+        if current_size + sentence_size > max_size and current_content:
+            output_file = f"{output_directory}/output_{part_number}.txt"
+            with open(output_file, 'w', encoding='utf-8') as output:
+                output.write("\n".join(current_content))
+            print(f"File {output_file} created with {current_size} bytes")
+            part_number += 1
+            current_content = []
+            current_size = 0
 
+        current_content.append(sentence)
+        current_size += sentence_size
 
-# def fedaral_json_translate(json_file,tar_code,src_code):
-#     with open(json_file,'r') as fp:
-#         jf = json.load(fp)
-# 	translated_json_list = []
-# 	json_files = jf['news']
-# 	for json_file in json_files:
-# 		json_file_copy=copy.deepcopy(json_file)
-# 		for key,value in json_file_copy.items():
-# 			if key in TRANSLATABLE_KEYS_FEDARAL:
-# 				format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
-# 				if type(value) == list:
-# 					if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
-# 						for lists in LIST_KEYS_FEDARAL[key]:
-# 							for list_names in json_file_copy[key]:
-# 								list_names[lists] = get_translation(mt_engine_id=1,source_string=list_names[lists],target_lang_code=tar_code,
-# 																	source_lang_code=src_code,format_=format_)
-# 				else:
-# 					json_file_copy[key] =  get_translation(mt_engine_id=1,source_string=json_file_copy[key],target_lang_code=tar_code,
-# 														source_lang_code=src_code,format_=format_)
-# 		translated_json_list.append(json_file_copy)
-#     return {'news':translated_json_list}
-
-
-# def generate_list_cache_key(user):
-#     print("R---->",user)
-#     user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-#     return f'pr_list:{user_1.id}'
-
-
-# from functools import wraps
-# from django.core.cache import cache
-
-
-# def custom_cache_page(timeout, key_func):
-#     def decorator(view_func):
-#         @wraps(view_func)
-#         def _wrapped_view(request, *args, **kwargs):
-#             cache_key = key_func(request.user)
-#             response = cache.get(cache_key)
-#             if response is None:
-#                 response = view_func(request, *args, **kwargs)
-#                 cache.set(cache_key, response, timeout)
-#             return response
-#         return _wrapped_view
-#     return decorator
+    if current_content:
+        output_file = f"{output_directory}/output_{part_number}.txt"
+        with open(output_file, 'w', encoding='utf-8') as output:
+            output.write("\n".join(current_content))
+        print(f"File {output_file} created with {current_size} bytes")
 
 
 
-# from functools import wraps
-# from django.core.cache import cache
-# def custom_cache_page(timeout):
-#     def decorator(view_func):
-#         @wraps(view_func)
-#         def _wrapped_view(request, *args, **kwargs):
-#             user = request.user
-#             cache_key = get_pr_list_cache_key(user)
-#             cached_data = cache.get(cache_key)
-#             if cached_data is not None:
-#                 return cached_data
-#             response = view_func(request, *args, **kwargs)
-#             cache.set(cache_key, response, timeout)
-#             return response
-#         return _wrapped_view
-#     return decorator
+
+
+
+
 
 def split_dict(single_data):
     trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
@@ -279,14 +235,12 @@ def html_to_docx(html_content, docx_filename):
 	print("Html------------>",html_content)
 	if html_content == None:
 		html_content = "<p>"
-	# if html_content is not None:
+
 	html_content = html_content.replace('\n', '<br>')
     # Convert HTML to DOCX using pypandoc
 	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
-    # pypandoc.convert_text(modified_html_content,'docx', format='html',outputfile=docx_filename)
+   
 
-# def text_to_docx(text, docx_filename):
-# 	pypandoc.convert_text(text, 'docx', format='markdown',outputfile=docx_filename)
 
 def add_additional_content_to_docx(docx_filename, additional_content):
     # Open the existing DOCX file using python-docx
@@ -298,6 +252,29 @@ def add_additional_content_to_docx(docx_filename, additional_content):
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
+from django.db.models import Q
+def progress_filter(queryset,value,users):
+	print("BE------------------------->",queryset.count())
+	if value == 'inprogress':
+		if users:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+	elif value == 'submitted':
+		if users:
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+		filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
+		queryset = qs.exclude(id__in=filtered_qs)
+	elif value == 'approved':
+		if users:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+	print("Af---------------------->",queryset.count())
+	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
 
@@ -306,4 +283,6 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 # # Add additional content to the DOCX file
 # add_additional_content_to_docx('output.docx', sample_json_data)
+
+
 

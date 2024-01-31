@@ -24,12 +24,12 @@ from .serializers import (ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,VendorLanguagePairCloneSerializer,
                           VendorLanguagePairSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
-                          SavedVendorSerializer)
+                          SavedVendorSerializer,AMSLangpairSerializer) #
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
 from ai_auth.models import AiUser, Professionalidentity,VendorOnboarding
-import json,requests
+import json,requests,os
 from django.http import JsonResponse,HttpResponse
 # from django.core.mail import EmailMessage
 # from django.template import Context
@@ -772,3 +772,16 @@ def get_vendor_settings_filled(request):
         return Response({'incomplete status':incomplete})
     else:
         return Response({'msg':'user is not a vendor'},status=400)
+    
+
+
+
+@api_view(['GET',])
+@permission_classes([AllowAny])
+def get_ams_agency_lang_pair_price(request):
+    own_agency_email = os.getenv("AILAYSA_AGENCY_EMAIL")
+    user = AiUser.objects.get(email=own_agency_email)
+    obj = VendorLanguagePair.objects.filter(user = user)
+    serializer = AMSLangpairSerializer(obj,many=True)
+    return Response(serializer.data)
+ 

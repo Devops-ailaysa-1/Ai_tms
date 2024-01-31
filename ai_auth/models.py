@@ -84,7 +84,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def internal_member_team_detail(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.get(internal_member_id = self.id)
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()  ###Need to change with dynamic roles and permissions
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
             if plan in settings.TEAM_PLANS:
@@ -96,7 +96,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def team(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.get(internal_member_id = self.id)
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()
             plan = get_plan_name(obj.team.owner)
             return obj.team if plan in settings.TEAM_PLANS else None
         else:
@@ -281,41 +281,6 @@ class UserAttribute(models.Model):
         return self.user.id
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
-
-# class PersonalInformation(models.Model):
-#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
-#     #address = models.CharField(max_length=255, blank=True, null=True)
-#
-#     #country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
-#     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
-#     phonenumber=models.CharField(max_length=255, blank=True, null=True)
-#     mobilenumber=models.CharField(max_length=255, blank=True, null=True)
-#     linkedin=models.CharField(max_length=255, blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-#     # created_at = models.CharField(max_length=200,blank=True, null=True)
-#     # updated_at = models.CharField(max_length=200,blank=True, null=True)
-#     class Meta:
-#         managed=False
-#         db_table = 'personal_info'
-
-
-# class OfficialInformation(models.Model):
-#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
-#     company_name = models.CharField(max_length=255, blank=True, null=True)
-#    # address = models.CharField(max_length=255, blank=True, null=True)
-#     designation = models.CharField(max_length=255, blank=True, null=True)
-#     industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     #country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     website=models.CharField(max_length=255, blank=True, null=True)
-#     linkedin=models.CharField(max_length=255, blank=True, null=True)
-#     billing_email=models.EmailField(blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-#     class Meta:
-#         managed=False
-#         db_table = 'official_info'
 
 
 def user_directory_path(instance, filename):
@@ -611,12 +576,21 @@ class Team(models.Model):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1)]
 
     @property
+    def get_project_manager_only(self):
+        hrs = [i.internal_member_id for i in self.internal_member_team_info.filter(role_id=4)]
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1).exclude(internal_member_id__in=hrs)]
+
+    @property
     def get_team_members(self):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
     @property
     def get_editors(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
+
+    @property
+    def get_finance(self):
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=4)]
 
     @property
     def owner_pk(self):

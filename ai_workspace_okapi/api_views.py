@@ -104,6 +104,14 @@ from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
+
+
+# import markdown
+
+# def text_to_html_markdown(text):
+#     html_content = markdown.markdown(text)
+#     return html_content
+
 #from symspellpy import SymSpell, Verbosity
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -692,6 +700,7 @@ class MergeSegmentView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
                 obj =  serlzr.instance
+                print("####################")
                 obj.update_segments(serlzr.validated_data.get("segments"))
                 return Response(MergeSegmentSerializer(obj).data)
 
@@ -1016,6 +1025,7 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment_id, mt_params):
 
+        
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
@@ -1610,14 +1620,15 @@ class DocumentToFile(views.APIView):
     def json_key_manipulation(res_json_path): #### for enterprise
         from ai_workspace.utils import html_to_docx, add_additional_content_to_docx
         res_json_path_text = res_json_path.split("json")[0]+"docx"
-        with open(res_json_path,"r") as fp:
-            fp = json.load(fp)
-            # fp = fp['news'][0]
-        html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
-        html_to_docx(html_data, res_json_path_text )  
-        add_additional_content_to_docx(res_json_path_text, fp)  
-        return res_json_path_text    
-    
+        try:
+            with open(res_json_path,"r") as fp:
+                fp = json.load(fp)
+            html_data = fp['news'][0]['story'] if fp.get('news') else fp.get('story')
+            html_to_docx(html_data, res_json_path_text )  
+            add_additional_content_to_docx(res_json_path_text, fp)  
+            return res_json_path_text    
+        except:
+            return res_json_path    
 
     def download_file_processing(self,file_path):
         try:
@@ -1630,7 +1641,7 @@ class DocumentToFile(views.APIView):
 
 
     def get(self, request, document_id):
-
+        from ai_workspace.api_views import GetNewsFederalView
         doc = DocumentToFile.get_object(document_id)
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
@@ -1685,14 +1696,14 @@ class DocumentToFile(views.APIView):
                     print("mt_process.get('status')",mt_process.get('status'))
                     doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)  
-                    if doc.job.project.project_type_id == 8:    ## 8 for news data
+                    if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):   ## 8 for news data
                         #res = self.document_data_to_file(request,document_id,True)
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
                 res = self.document_data_to_file(request, document_id) 
-                if doc.job.project.project_type_id == 8:
+                if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
             if isinstance(res, str):
@@ -2625,7 +2636,7 @@ from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt_sent
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
-@api_view(['POST',])############### only available for english ###################
+@api_view(['POST',])############### available for non english ###################
 def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2633,10 +2644,16 @@ def paraphrasing_for_non_english(request):
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
     option = request.POST.get('option')
-    doc_obj = Document.objects.get(id=doc_id)
-    project = doc_obj.job.project
-    user = doc_obj.doc_credit_debit_user
+    if doc_id:
+        doc_obj = Document.objects.get(id=doc_id)
+        project = doc_obj.job.project
+        user = doc_obj.doc_credit_debit_user
+    if task_id:
+        task_obj = Task.objects.get(id=task_id)
+        project = task_obj.job.project
+        user = task_obj.job.project.ai_user
     #subj_fields =  [i.subject.name for i in project.proj_subject.all()]
     #content_fields = [i.content_type.name for i in project.proj_content_type.all()]
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
@@ -2688,9 +2705,14 @@ def paraphrasing(request):
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
     doc_id = request.POST.get('doc_id')
+    task_id = request.POST.get('task_id')
     option = request.POST.get('option')
-    doc_obj = Document.objects.get(id=doc_id)
-    user = doc_obj.doc_credit_debit_user
+    if doc_id:
+        doc_obj = Document.objects.get(id=doc_id)
+        user = doc_obj.doc_credit_debit_user
+    if task_id:
+        task_obj = Task.objects.get(id=task_id)
+        user = task_obj.job.project.ai_user
     #user = request.user.team.owner if request.user.team else request.user ##Need to revise this and this must be changed to doc_debit user
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -2879,7 +2901,7 @@ def download_mt_file(request):
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
         if res.status_code in [200, 201]:
-            if doc.job.project.project_type_id == 8:
+            if doc.job.project.project_type_id == 8:# and GetNewsFederalView.check_user_federal(document_user):
                 file_path = DocumentToFile.json_key_manipulation(res.text)
             else:
                 file_path = res.text
@@ -3615,6 +3637,9 @@ def symspellcheck(request):
     #     return JsonResponse({"result":[],'msg':'spellcheck not available'},status=400)
     # suggestions = spell_check_large_text(tar)
     # return JsonResponse({"result":suggestions},safe=False)
+
+
+
 
 
 

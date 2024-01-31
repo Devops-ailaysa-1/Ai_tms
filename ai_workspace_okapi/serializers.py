@@ -136,6 +136,7 @@ class SegmentSerializerV2(SegmentSerializer):
             obj = task_assign_obj.task_assign
             if obj.status != 2:
                 obj.status = 2
+                obj.client_response = None
                 obj.save()
             if task_assign_obj.task_assign.reassigned == True:
                 assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__step=obj.step).filter(task_assign__reassigned=False)
@@ -144,6 +145,7 @@ class SegmentSerializerV2(SegmentSerializer):
                     print(i.task_assign)
                     if i.task_assign.status != 2:
                         i.task_assign.status = 2
+                        i.task_assign.client_response = None
                         i.task_assign.save()
         except:pass
 
@@ -256,11 +258,20 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
 
         # Resetting the raw MT for normal segments once merged
-        for segment in segments:
-            try:
-                MT_RawTranslation.objects.get(segment_id = segment.id).delete()
-            except:
-                print(f"No raw MT available for this segment --> {segment.id}")
+        # merged_seg = ''
+        # for segment in segments:
+        #     if segment.target or segment.temp_target:
+        #         merged_seg+=segment.target
+        # if merged_seg != '':
+        #     segments[0].temp_target = merged_seg
+        #     segments[0].target = merged_seg
+        #     segments[0].save()
+        #     print("SEG[0]--------------->",segments[0])
+        # for segment in segments:
+        #     try:
+        #         MT_RawTranslation.objects.get(segment_id = segment.id).delete()
+        #     except:
+        #         print(f"No raw MT available for this segment --> {segment.id}")
 
         text_unit = data["text_unit"]
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):

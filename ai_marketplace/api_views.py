@@ -997,14 +997,6 @@ def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         return download_file(sample_file.path)
-        # fl_path = sample_file.path
-        # filename = os.path.basename(fl_path)
-        # # print(os.path.dirname(fl_path))
-        # fl = open(fl_path, 'rb')
-        # mime_type, _ = mimetypes.guess_type(fl_path)
-        # response = HttpResponse(fl, content_type=mime_type)
-        # response['Content-Disposition'] = "attachment; filename=%s" % filename
-        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
@@ -1114,7 +1106,7 @@ class ProzVendorListView(generics.ListAPIView):
         if fullname:
             params.update({'site_name':fullname})
 
-        integeration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
+        integration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
         print("Status---------->",integration_users_response)
         if integration_users_response.status_code == 500:

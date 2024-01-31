@@ -89,7 +89,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
-from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
+from .utils import get_consumable_credits_for_text_to_speech,\
+                   get_consumable_credits_for_speech_to_text, progress_filter
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -101,9 +102,11 @@ from ai_canvas.serializers import CanvasDesignSerializer
 from rest_framework.authentication import TokenAuthentication
 from ai_auth.authentication import APIAuthentication
 from rest_framework.decorators import authentication_classes
-from .utils import merge_dict
+from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
+import spacy, time
+nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
 
@@ -687,9 +690,22 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
+    assign_status = django_filters.CharFilter(method='filter_status')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+
+
     class Meta:
         model = Project
-        fields = ('project', 'team','type')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
+
+    # def filter_assign_to(self,queryset,name,value):
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     if field1_value:
+    #         queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
+    #     count = queryset.count()
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
+
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -699,7 +715,18 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    
+    def filter_status(self, queryset, name, value):
+        user = self.request.user
+        assign_to = self.request.query_params.get('assign_to')
+        if user.team and user in user.team.get_editors:
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = []
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
+        return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -717,13 +744,20 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
-            #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
-        #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        # elif value == "assigned":
-        #     queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
-        # elif value == "express":
-        #     queryset = queryset.filter(project_type_id=5)
+
         return queryset
+    
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     field2_value = self.request.query_params.get('assign_to')
+    #     if field1_value and field2_value:
+    #         queryset_1 = self.filter_status(queryset, 'assign_status', field1_value)
+    #         queryset = self.filter_assign_to(queryset_1, 'assign_to', field2_value)
+    #     return queryset
 
 #@never_cache
 #from django.utils.decorators import method_decorator
@@ -746,8 +780,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
-        # if project_type == 4:
-        #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -762,11 +794,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+        
+        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
+                    'project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        
         return queryset
 
     def get_user(self):
@@ -777,12 +812,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
+        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
-        print("QR------------>",queryset)
         user_1 = self.get_user()
+        print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
+        et_time = time.time()
+        print("Time Taken-------------------->",et_time-st_time)
         return  response
 
     
@@ -908,10 +946,64 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+class VendorDashBoardFilter(django_filters.FilterSet):
+    status = django_filters.CharFilter(method='filter_status')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+   
+    class Meta:
+        model = Task
+        fields = ('status',)#'assign_to')
+
+    def filter_status(self, queryset, name, value):
+        assign_filter = self.request.query_params.get('assign_to')
+        users = assign_filter.split(',') if assign_filter else None
+        print("Users------------->",users)
+        if value == 'inprogress':
+            if users:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                print("QR------------->",queryset)
+            else:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif value == 'submitted':
+            if users:
+                queryset = queryset.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+            else:
+                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+        elif value =='approved':
+            if users:
+                queryset = queryset.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+            else:
+                queryset = queryset.filter(Q(task_info__client_response = 1))
+        return queryset
+    
+    # def filter_assign_to(self, queryset, name, value):
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(task_info__assign_to_id__in = assign_to_list)
+
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
+        
+    #     status_filter = self.request.query_params.get('status')
+    #     if status_filter:
+    #         queryset = self.filter_status(queryset, 'status', status_filter)
+        
+       
+    #     assign_filter = self.request.query_params.get('assign_to')
+    #     if assign_filter:
+    #         queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
+        
+    #     return queryset
+
+
 class VendorDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+    filterset_class = VendorDashBoardFilter
 
     @staticmethod
     #@cached(timeout=60 * 15)
@@ -956,12 +1048,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
-        #print("%%%%")
+        status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        print("#######",tasks)
-        pr = get_object_or_404(Project.objects.all(),id=pk)
-        #if pr.project_type_id == 8 and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
-        tasks = tasks.order_by('-id')
+        queryset = self.filter_queryset(tasks)
+        tasks = queryset.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -971,7 +1061,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
-
+    
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -2496,26 +2586,25 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
-    size_limit = 4000 #if obj.job.target_language_code in ['ta','ja'] else 3500
-    #final_audio = final_name + '.mp3'
-    #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
+    size_limit = 4500 
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
-    dir_1 = os.path.join('/ai_home/',"output")
+    dir_1 = os.path.join('/ai_home/',"output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
-    split = Split(file,dir_1)
-    split.bysize(size_limit,True)
+    lang=language if language else obj.job.target_language_code 
+    split_file_by_size(file, dir_1, lang, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt'):
             name,ext = os.path.splitext(file)
-            dir = os.path.join('/ai_home/',"OutputAudio")
+            dir = os.path.join('/ai_home/',"outputAudio_"+str(obj.id))
             if not os.path.exists(dir):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
             text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1]))]
+    #list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2525,7 +2614,8 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     file_obj = DJFile(f2,name=os.path.basename(final_audio))
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
-    #os.remove(final_audio)
+    os.remove(final_audio)
+    #os.remove(out_filename)
     return file_obj,f2
 
 
@@ -2554,19 +2644,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     count=0
     out_filename = final_name + '_out.txt'
     size_limit = 4000 #if obj.job.source_language_code in ['ta','ja'] else 3500
-    with open(file) as infile, open(out_filename, 'w') as outfile:
-        lines = infile.readlines()
-        for line in lines:
-            if obj.job.source_language_code in lang_list:sents = sentence_split(line, obj.job.source_language_code, delim_pat='auto')
-            else:sents = nltk.sent_tokenize(line)
-            for i in sents:
-                outfile.write(i)
-                count = count+len(i.encode("utf8"))
-                if count > size_limit:
-                    outfile.write('\n')
-                    count=0
-    split = Split(out_filename,dir_1)
-    split.bysize(size_limit,True)
+    lang = language if language else obj.job.source_language_code
+    split_file_by_size(file, dir_1, lang, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt') :
@@ -2579,7 +2658,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
             rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
             #print("RR------------------------>",rr.status_code)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2590,9 +2669,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
     os.remove(final_audio)
-    os.remove(out_filename)
+    #os.remove(out_filename)
     return file_obj,f2
-
 
 
 @api_view(["GET"])
@@ -4405,6 +4483,7 @@ def translate_file(request):
         for obj in task_objs:
             if obj.task_file_detail.first() == None: #need to change for different mt_engines
                 conversion = translate_file_task(obj.id)
+                print("Con--------------->",conversion)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
@@ -4466,7 +4545,9 @@ def translate_file_task(task_id):
         print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
-        if state == 'PENDING' or state == 'STARTED':
+        if state == 'SUCCESS':
+            return {'status':200}
+        elif state == 'PENDING' or state == 'STARTED':
             return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
         elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
             if state == "FAILURE":
@@ -4833,21 +4914,25 @@ def push_translated_story(request):
     task_id = request.GET.get('task_id')
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
-    # target_lang = task.job.target_language.language
-    # if target_lang == "Telugu":
-    #     federal_key = os.getenv("FEDERAL-KEY-Telugu")
-    # elif target_lang == "Kannada":
-    #     federal_key = os.getenv("FEDERAL-KEY-Kannada")
-    # else:
-    federal_key = os.getenv("STAGING-FEDERAL-KEY")
+    target_lang = task.job.target_language.language
+    if target_lang == "Telugu":
+        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
+        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+    elif target_lang == "Kannada":
+        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
+    else:
+        federal_key = os.getenv("STAGING-FEDERAL-KEY")
+        base_url = os.getenv('STAGINGFEDERAL_URL')
     src_json,tar_json = {},{}
     headers = { 's-id': federal_key,'Content-Type': 'application/json'}
-    feed_url = os.getenv('CREATEFEED_URL')
+    feed_url = base_url+'createFeedV2'
     payload={ 
             'sessionId':os.getenv("CMS-SESSION-ID"),
             }
 
     tar_json = task.news_task.first().target_json
+    print("Tar--------->",tar_json)
     if not tar_json:
         doc = task.document
         if doc:
@@ -4874,12 +4959,23 @@ def push_translated_story(request):
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
         # 'story_summary':tar_json.get('story_summary'),
-        # 'authorName': tar_json.get('authorName'),
         # 'image_caption': tar_json.get('image_caption'),
+        'author': tar_json.get('authorName'),
+        'custom_params':[{
+            'name':'image_caption',
+            'value':tar_json.get('image_caption')
+        },{
+            'name':'story_summary',
+            'value':tar_json.get('story_summary') 
+        }
+        ]
+        
     })
     print("Payload------>",payload)
     if feed_id:
         payload.update({'feedId': feed_id})
+    print("Fee----------------->", feed_url)
+    print("headers---------------->",headers)
     response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
     if response.status_code == 200:
         print("RR-------------->",response.json())
@@ -4888,7 +4984,7 @@ def push_translated_story(request):
         if feed:
             task.news_task.update(feed_id=feed,pushed=True)
             return Response({'msg':'pushed successfully'},status=200)
-    return Response({'msg':"something went wrong"},status=400)
+    return Response({'msg':"something went wrong with CMS"},status=400)
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
 # def push_translated_story(request):
@@ -4934,18 +5030,6 @@ def push_translated_story(request):
 #         task.news_task.update(feed_id=feed,pushed=True)
 #         return Response({'msg':'pushed successfully'},status=200)
 #     return Response({'msg':"something went wrong"},status=400)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -5013,13 +5097,92 @@ def push_translated_story(request):
 
 
 
+# class AddStoriesView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated,IsEnterpriseUser]
+
+
+#     def pr_check(self,src_lang,tar_langs,user):
+#         today_date = date.today()
+#         project_name = today_date.strftime("%b %d, %Y")
+#         query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
+#                 .filter(project_jobs_set__source_language_id = src_lang)\
+#                 .filter(project_jobs_set__target_language_id__in = tar_langs)
+#         if query:
+#             return query.last()
+#         return None
+
+#     @staticmethod
+#     def create_news_detail(pr):
+#         tasks = pr.get_tasks
+#         for i in tasks:
+#             file_path = i.file.file.path
+#             with open(file_path, 'r') as fp:
+#                 json_data = json.load(fp)
+#             tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+#             print("TT---------------->",tt)
+
+
+#     @staticmethod
+#     def check_user_dinamalar(request_user):
+#         user = request_user.team.owner if request_user.team else request_user
+#         print("user--->",user)
+#         try:
+#             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
+#                 return True
+#         except:
+#             return False 
+
+#     def get_json(self,json_data,name):
+#         print("DT--------------->",json_data)
+#         name = f"{name}.json"
+#         im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+#         files = [im_file]
+#         return files
+
+#     def create(self, request):
+#         from ai_workspace.models import ProjectFilesCreateType
+#         din = AddStoriesView.check_user_dinamalar(request.user)
+#         if din:
+#             news_json = request.POST.get('news_data')
+#             file_data = request.POST.get('files')
+#             today_date = date.today()
+#             project_name = today_date.strftime("%b %d, %Y")
+#             news_json = json.loads(news_json) if news_json else None
+#             src_lang = request.POST.get('source_language')
+#             tar_langs = request.POST.getlist('target_languages')
+#             user = self.request.user
+#             user_1 = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+#             pr = self.pr_check(src_lang,tar_langs,user_1)
+#             count = pr.get_tasks.count() if pr else 1
+#             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
+#             files = self.get_json(news_json,name)
+#             if file_data:
+#                 files.append(file_data)
+#             if pr:
+#                 data = request.POST.dict()
+#                 print("Data--------->",data)
+#                 data.pop('target_languages')
+#                 serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
+#             else:
+#                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+#             if serializer.is_valid(raise_exception=True):
+#                 serializer.save()
+#                 pr = Project.objects.get(id=serializer.data.get('id'))
+#                 self.create_news_detail(pr)
+#                 ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+#                 authorize(request,resource=pr,action="create",actor=self.request.user)
+#                 return Response(serializer.data)
+#             return Response(serializer.errors)
+#         else:
+#             return Response({"detail": "You do not have permission to perform this action."},status=403) 
+
 class AddStoriesView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
 
     def pr_check(self,src_lang,tar_langs,user):
         today_date = date.today()
-        project_name = today_date.strftime("%b %d")
+        project_name = today_date.strftime("%b %d, %Y")
         query = Project.objects.filter(ai_user=user).filter(project_type_id=8).filter(project_name__icontains=project_name)\
                 .filter(project_jobs_set__source_language_id = src_lang)\
                 .filter(project_jobs_set__target_language_id__in = tar_langs)
@@ -5030,11 +5193,12 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def create_news_detail(pr):
         tasks = pr.get_tasks
+        #tasks_ = [i for i in pr.get_tasks if i.news_task.exists()]  
         for i in tasks:
-            file_path = i.file.file.path
-            with open(file_path, 'r') as fp:
-                json_data = json.load(fp)
-            tt = TaskNewsDetails.objects.get_or_create(task=i,defaults = {'source_json':json_data})
+            # file_path = i.file.file.path
+            # with open(file_path, 'r') as fp:
+            #     json_data = json.load(fp)
+            tt = TaskNewsDetails.objects.get_or_create(task=i)
             print("TT---------------->",tt)
 
 
@@ -5048,21 +5212,22 @@ class AddStoriesView(viewsets.ModelViewSet):
         except:
             return False 
 
-    def get_json(self,json_data,name):
-        print("DT--------------->",json_data)
-        name = f"{name}.json"
-        im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
-        files = [im_file]
-        return files
+    def get_file(self,text_data,name):
+        print("DT--------------->",text_data)
+        name = f"{name}.txt"
+        im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        #im_file = DJFile(ContentFile(json.dumps(json_data)),name=name)
+        return im_file
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
         din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
-            news_json = request.POST.get('news_data')
+            text_data = request.POST.get('news_data')
+            files = request.FILES.getlist('files')
             today_date = date.today()
             project_name = today_date.strftime("%b %d, %Y")
-            news_json = json.loads(news_json) if news_json else None
+            #news_json = json.loads(news_json) if news_json else None
             src_lang = request.POST.get('source_language')
             tar_langs = request.POST.getlist('target_languages')
             user = self.request.user
@@ -5070,7 +5235,10 @@ class AddStoriesView(viewsets.ModelViewSet):
             pr = self.pr_check(src_lang,tar_langs,user_1)
             count = pr.get_tasks.count() if pr else 1
             name = pr.project_name + ' - ' + str(count).zfill(3) if pr else project_name + ' - ' + str(count).zfill(3)
-            files = self.get_json(news_json,name)
+            if text_data:
+                file = self.get_file(text_data,name)
+                if files:files.append(file)
+                else: files=[file]
             if pr:
                 data = request.POST.dict()
                 print("Data--------->",data)
@@ -5089,60 +5257,198 @@ class AddStoriesView(viewsets.ModelViewSet):
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
 
+##########################################Dinamalar Report########################################################################################
 
+def task_count_report(user,owner,start_date,today):
+    managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    team_members = user.team.get_team_members if user.team else []
+    team_members.append(owner)
+    res =[]
+    if user in managers  or user == owner:
+        tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
+        filter(assign_to__in = team_members).distinct()
+        total = tot_queryset.count()
+        queryset = tot_queryset.filter(task_assign_info__isnull=False)
+        editors = user.team.get_editors if user.team else []
+        for i in editors:
+            additional_details = {}
+            query = queryset.filter(assign_to=i)
+            additional_details['user'] = i.fullname
+            additional_details['TotalAssigned'] = query.count()
+            additional_details['YetToStart']=query.filter(status=1).count()
+            additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
+            additional_details['Completed']=query.filter(status=3).count()
+            additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            res.append(additional_details)
+    else:
+        queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+                    filter(task__job__project__created_at__date__range=(start_date,today)).\
+                    filter(assign_to = user).distinct()
+        total = queryset.count()
+
+    print("QS--------->",queryset)
+    print("Res---------->",res)
+    total = total
+    total_assigned = queryset.count()
+    progress = queryset.filter(status=2).count()
+    yts = queryset.filter(status=1).count()
+    completed = queryset.filter(status=3)
+    total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    data = {'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    return data,res
+
+def billing_report(user,owner,start_date,today):
+    managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    team_members = user.team.get_team_members if user.team else []
+    team_members.append(owner)
+    res =[]
+    if user in managers  or user == owner:
+        tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+                    Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+                    filter(assign_to__in = team_members).distinct()
+        total = tot_queryset.count()
+        queryset = tot_queryset.filter(task_assign_info__isnull=False)
+        #if queryset:
+        editors = user.team.get_editors if user.team else []
+        for i in editors:
+            additional_details = {}
+            query = queryset.filter(assign_to=i)
+            additional_details['user'] = i.fullname
+            additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            res.append(additional_details)
+    else:
+        queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+                    Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+                    filter(assign_to = user).distinct()
+    total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    data = {"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    return data,res
 
 from datetime import datetime, timedelta
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
-    #from ai_auth.models import Team
     user = request.user
-    time_range = request.GET.get('time_range', 'today')
-    owner = request.user.team.owner if request.user.team else request.user
+    time_range = request.GET.get('time_range', None)
+    from_date = request.GET.get('from_date',None)
+    to_date = request.GET.get('to_date',None) 
+    download_report = request.GET.get('download_report',False) 
+    billing = request.GET.get('billing',False) 
+    owner = user.team.owner if user.team else user
     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
         if time_range == 'today':
             start_date = today
         elif time_range == '30days':
             start_date = today - timedelta(days=30)
+        elif from_date and to_date:
+            start_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+            today = datetime.strptime(to_date, '%Y-%m-%d').date()
         else:
             start_date = today
-        managers = request.user.team.get_project_manager if request.user.team and request.user.team.get_project_manager else []
-        #team = Team.objects.filter(owner=user).first()
-        team_members = request.user.team.get_team_members if request.user.team else []
-        team_members.append(owner)
-        res =[]
-        if request.user in managers  or request.user == owner:
-            tot_queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).\
-            filter(assign_to__in = team_members).distinct()
-            total = tot_queryset.count()
-            queryset = tot_queryset.filter(task_assign_info__isnull=False)
-            editors = request.user.team.get_editors if request.user.team else []
-            for i in editors:
-                additional_details = {}
-                query = queryset.filter(assign_to=i)
-                additional_details['user'] = i.fullname
-                additional_details['TotalAssigned'] = query.count()
-                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
-                additional_details['YetToStart']=query.filter(status=1).count()
-                additional_details['Completed']=query.filter(status=3).count()
-                additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                res.append(additional_details)
+        if billing == False:
+            data,res = task_count_report(user,owner,start_date,today)
         else:
-            queryset = TaskAssign.objects.filter(task__job__project__created_at__date__range=(start_date,today)).filter(assign_to = user).distinct()
-            total = queryset.count()
-        print("QS--------->",queryset)
-        print("Res---------->",res)
-        total = total
-        total_assigned = queryset.count()
-        progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
-        yts = queryset.filter(status=1).count()
-        completed = queryset.filter(status=3)
-        total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
-            
-        return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"Additional_info":res})
+            data,res = billing_report(user,owner,start_date,today)
+        if download_report:
+            if res:
+                print("FR----->",start_date,today)
+                response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+                return response
+
+        return JsonResponse(data)
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+    
+ 
+
+
+def download_editors_report(res,from_date,to_date):
+    from ai_workspace_okapi.api_views import  DocumentToFile
+    import pandas as pd
+    output = io.BytesIO()
+    data = pd.DataFrame(res)
+    print("Data------------->",data)
+    data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
+                                'YetToStart':'Yet to start','Inprogress':'In progress',\
+                                'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
+    date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
+    with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
+        # Write the first DataFrame to the Excel file at cell A1
+        date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
+
+        # Write the second DataFrame to the same Excel file below the first DataFrame
+        data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False ) #
+        
+    writer.close()
+    output.seek(0)
+    filename = "editors_report.xlsx"
+    response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
+    return response
+
+
+
+# from datetime import datetime, timedelta
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated,IsEnterpriseUser])
+# def get_billing_report(request):
+#     user = request.user
+#     time_range = request.GET.get('time_range', None)
+#     from_date = request.GET.get('from_date',None)
+#     to_date = request.GET.get('to_date',None) 
+#     download_report = request.GET.get('download_report',False) 
+#     owner = user.team.owner if user.team else user
+#     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
+#         today = datetime.now().date()
+#         if time_range == 'today':
+#             start_date = today
+#         elif time_range == '30days':
+#             start_date = today - timedelta(days=30)
+#         elif from_date and to_date:
+#             start_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+#             today = datetime.strptime(to_date, '%Y-%m-%d').date()
+#         else:
+#             start_date = today
+#         managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+#         #team = Team.objects.filter(owner=user).first()
+#         team_members = user.team.get_team_members if user.team else []
+#         team_members.append(owner)
+#         res =[]
+#         if user in managers  or user == owner:
+#             tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+#                         filter(assign_to__in = team_members).distinct()
+#             total = tot_queryset.count()
+#             queryset = tot_queryset.filter(task_assign_info__isnull=False)
+#             editors = user.team.get_editors if user.team else []
+#             for i in editors:
+#                 additional_details = {}
+#                 query = queryset.filter(assign_to=i)
+#                 additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+#                 res.append(additional_details)
+#         else:
+#             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+#                         filter(assign_to = user).distinct()
+
+        
+#         if download_report:
+#             print("FR----->",start_date,today)
+#             response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+#             return response
+
+#         print("QS--------->",queryset)
+#         print("Res---------->",res)
+#         total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+#         return JsonResponse({"TotalApprovedWords":total_approved_words,"Additional_info":res})
+#     else:
+#         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+
+
+
 
 # from datetime import datetime, timedelta
 # @api_view(["GET"])
@@ -5205,8 +5511,10 @@ def get_task_count_report(request):
 #                             data.append(final_json)
 #         res = {'success': True, 'result': data}
 #         return Response({'result':res},status = 200)
-
-
+def get_file_url(path):
+    media_url = settings.MEDIA_URL.rstrip('/')
+    url = path.replace(settings.MEDIA_ROOT,media_url)
+    return url
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
@@ -5218,27 +5526,40 @@ def get_news_detail(request):
     obj = Task.objects.get(id=task_id)
     main_user = obj.job.project.ai_user
     target_json,source_json= {},{}
+    target_file_path,source_file_path = None,None
     if obj.job.project.project_type_id == 8:
         if obj.news_task.exists():
             try: source_json = obj.news_task.first().source_json.get('news')[0]
-            except: source_json = obj.news_task.first().source_json
+            except: 
+                source_json = obj.news_task.first().source_json
+                source_file_path = obj.news_task.first().task.file.file.url
+        if source_json == None: source_json = {}
         if obj.document:# and AddStoriesView.check_user_dinamalar(main_user):
             doc_to_file = DocumentToFile()
             res = doc_to_file.document_data_to_file(request,obj.document.id)
-            with open(res.text,"r") as fp:
-                json_data = json.load(fp)
+            print("RR-------------->",res.text)
+            try:
+                with open(res.text,"r") as fp:
+                    json_data = json.load(fp)
+            except:
+                json_data = {}
             trans_json = json_data	
             if obj.job.project.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
                 target_json = merge_dict(trans_json,source_json)
-            else: target_json = trans_json
+            else: 
+                target_json = trans_json
+                target_file_path = get_file_url(res.text)
         else:
            target_json = obj.news_task.first().target_json 
            if target_json == None: target_json = {}
+
         
-    return Response({'source_json':source_json,'target_json':target_json})
+    return Response({'source_json':source_json,'target_json':target_json,\
+                      'source_file_path':source_file_path,'target_file_path':target_file_path})
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated,IsEnterpriseUser])
 def federal_segment_translate(request):
     task_id = request.query_params.get('task_id',None)
     text =  request.query_params.get('text',None)
@@ -5259,7 +5580,18 @@ def federal_segment_translate(request):
     else:
         return Response({'msg':'Text field empty'},status=400)
     
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_ner(request):
+    text = request.POST.get('text')
+    doc = nlp(text)
+    exclude_labels = ['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'LANGUAGE']
+    ner = [ent.text for ent in doc.ents if ent.label_ not in exclude_labels]
+    ner_new = list(set(ner))
+    return JsonResponse({"ner": ner_new}, safe=False)
 
+
+    
     # else:
     #     return Response({"detail": "You do not have permission to perform this action."},status=403)
 
@@ -5301,4 +5633,69 @@ def federal_segment_translate(request):
     #     return Response({"msg":"no output type"})
  
         
-     
+       # with open(file) as infile, open(out_filename, 'w') as outfile:
+    #     lines = infile.readlines()
+    #     for line in lines:
+    #         if obj.job.source_language_code in lang_list:sents = sentence_split(line, obj.job.source_language_code, delim_pat='auto')
+    #         else:sents = nltk.sent_tokenize(line)
+    #         for i in sents:
+    #             outfile.write(i)
+    #             count = count+len(i.encode("utf8"))
+    #             if count > size_limit:
+    #                 outfile.write('\n')
+    #                 count=0
+    # split = Split(out_filename,dir_1)
+    # split.bysize(size_limit,True) 
+
+
+   #     managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    #     #team = Team.objects.filter(owner=user).first()
+    #     team_members = user.team.get_team_members if user.team else []
+    #     team_members.append(owner)
+    #     res =[]
+    #     if user in managers  or user == owner:
+    #         tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
+    #         filter(assign_to__in = team_members).distinct()
+    #         total = tot_queryset.count()
+    #         queryset = tot_queryset.filter(task_assign_info__isnull=False)
+    #         editors = user.team.get_editors if user.team else []
+    #         for i in editors:
+    #             additional_details = {}
+    #             query = queryset.filter(assign_to=i)
+    #             additional_details['user'] = i.fullname
+    #             additional_details['TotalAssigned'] = query.count()
+    #             additional_details['YetToStart']=query.filter(status=1).count()
+    #             additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
+    #             additional_details['Completed']=query.filter(status=3).count()
+    #             additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             # if user in managers:
+    #             #     additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             # else:
+    #             additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             res.append(additional_details)
+    #     else:
+    #         queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+    #                     filter(task__job__project__created_at__date__range=(start_date,today)).\
+    #                     filter(assign_to = user).distinct()
+    #         total = queryset.count()
+        
+    #     if download_report:
+    #         print("FR----->",start_date,today)
+    #         response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+    #         return response
+
+    #     print("QS--------->",queryset)
+    #     print("Res---------->",res)
+    #     total = total
+    #     total_assigned = queryset.count()
+    #     progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
+    #     yts = queryset.filter(status=1).count()
+    #     completed = queryset.filter(status=3)
+    #     total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     # if user in managers:
+    #     #     total_approved_words = queryset.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     # else:
+    #     total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
+    # else:
+    #     return JsonResponse({'msg':'you are not allowed to access this details'},status=400)

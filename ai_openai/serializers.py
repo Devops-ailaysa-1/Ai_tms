@@ -1150,13 +1150,13 @@ class BookCreationSerializer(serializers.ModelSerializer):
             instance.save()
 
         lang_detect_title = lang_detector(instance.title) 
-        if lang_detect_author_info !='en':
+        if lang_detect_title !='en':
             consumable_credits = get_consumable_credits_for_text(instance.title,instance.book_language_code,'en')
 
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits','book_id':instance.id}, code=400)
             
-            instance.author_info_mt=get_translation(1,instance.title,lang_detect_author_info,"en",user_id=instance.user.id) if instance.title else None
+            instance.title_mt=get_translation(1,instance.title,lang_detect_title,"en",user_id=instance.user.id) if instance.title else None
             instance.save()
 
         project_type = ProjectType.objects.get(id=7) #Writer Project creation
