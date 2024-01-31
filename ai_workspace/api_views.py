@@ -962,6 +962,7 @@ class VendorDashBoardFilter(django_filters.FilterSet):
         if value == 'inprogress':
             if users:
                 queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                print("QR------------->",queryset)
             else:
                 queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
         elif value == 'submitted':
