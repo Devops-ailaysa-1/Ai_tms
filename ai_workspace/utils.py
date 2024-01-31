@@ -255,23 +255,25 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 from django.db.models import Q
 def progress_filter(queryset,value,users):
 	print("BE------------------------->",queryset.count())
-	queryset_1 = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
 	if value == 'inprogress':
 		if users:
-			queryset = queryset_1.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			queryset_1 = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			queryset = queryset_1.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
 		else:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
 	elif value == 'submitted':
 		if users:
-			qs = queryset_1.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			qs_1 = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			qs = qs_1.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
 		else:
 			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
 		filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
 		queryset = qs.exclude(id__in=filtered_qs)
 	elif value == 'approved':
 		if users:
-			queryset = queryset_1.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			queryset_1 = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			queryset = queryset_1.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
 		else:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
 	print("Af---------------------->",queryset.count())
