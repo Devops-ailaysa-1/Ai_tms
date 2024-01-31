@@ -174,10 +174,17 @@ def pdf_chat(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat_remaining_units(request):
-    chat_unit_obj = AilaysaPurchasedUnits(user=request.user)
-    unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
-    unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
-    return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
+    if request.user.is_internal_member == True:
+        user = getattr(user.team, 'owner', None) if user.team is not None else None
+    else:
+        user = request.user
+    if user == None:
+        chat_unit_obj = AilaysaPurchasedUnits(user=user)
+        unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
+        unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
+        return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
+    else:
+        return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
 
 
 
