@@ -254,7 +254,6 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 from django.db.models import Q
 def progress_filter(queryset,value,users):
-	print("BE------------------------->",queryset.count())
 	if value == 'inprogress':
 		if users:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
@@ -280,7 +279,7 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 		else:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-	print("Af---------------------->",queryset.count())
+	
 	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
