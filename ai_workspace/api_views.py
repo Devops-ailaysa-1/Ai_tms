@@ -958,21 +958,22 @@ class VendorDashBoardFilter(django_filters.FilterSet):
     def filter_status(self, queryset, name, value):
         assign_filter = self.request.query_params.get('assign_to')
         users = assign_filter.split(',') if assign_filter else None
+        queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
         print("Users------------->",users)
         if value == 'inprogress':
             if users:
-                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
-                print("QR------------->",queryset)
+                queryset = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                #print("QR------------->",queryset)
             else:
                 queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
         elif value == 'submitted':
             if users:
-                queryset = queryset.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+                queryset = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
             else:
                 queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
         elif value =='approved':
             if users:
-                queryset = queryset.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+                queryset = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
             else:
                 queryset = queryset.filter(Q(task_info__client_response = 1))
         return queryset
