@@ -89,7 +89,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
-from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
+from .utils import get_consumable_credits_for_text_to_speech,\
+                   get_consumable_credits_for_speech_to_text, progress_filter
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -104,7 +105,7 @@ from rest_framework.decorators import authentication_classes
 from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
-import spacy
+import spacy, time
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -690,10 +691,21 @@ class ProjectFilter(django_filters.FilterSet):
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     assign_status = django_filters.CharFilter(method='filter_status')
-    #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+
+
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
+
+    # def filter_assign_to(self,queryset,name,value):
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     if field1_value:
+    #         queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
+    #     count = queryset.count()
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
+
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -705,30 +717,15 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_status(self, queryset, name, value):
         user = self.request.user
-        editors = False
+        assign_to = self.request.query_params.get('assign_to')
         if user.team and user in user.team.get_editors:
-            editors = True
-        if value == 'inprogress':
-            if editors:
-                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
-            else:
-                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-                Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
-        elif value == 'submitted':
-            if editors:
-                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),project_jobs_set__job_tasks_set__task_info__assign_to = user).distinct()
-            else:
-                qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
-            print("QS------------------->",qs)
-            filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
-            print("Filtered---------------->",filtered_qs)
-            queryset = qs.exclude(id__in=filtered_qs)
-        elif value == 'approved':
-            if editors:
-                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),project_jobs_set__job_tasks_set__task_info__assign_to = user)
-            else:
-                queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-        print("Final QR-------->",queryset)
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = []
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -747,13 +744,20 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
-            #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
-        #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        # elif value == "assigned":
-        #     queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
-        # elif value == "express":
-        #     queryset = queryset.filter(project_type_id=5)
+
         return queryset
+    
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     field2_value = self.request.query_params.get('assign_to')
+    #     if field1_value and field2_value:
+    #         queryset_1 = self.filter_status(queryset, 'assign_status', field1_value)
+    #         queryset = self.filter_assign_to(queryset_1, 'assign_to', field2_value)
+    #     return queryset
 
 #@never_cache
 #from django.utils.decorators import method_decorator
@@ -776,8 +780,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
-        # if project_type == 4:
-        #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -792,13 +794,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        print("User------------->",user)
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+        
+        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
+                    'project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        print("QRR--------------->",queryset)
+        
         return queryset
 
     def get_user(self):
@@ -809,12 +812,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
+        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
-        print("QR------------>",queryset)
         user_1 = self.get_user()
+        print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
+        et_time = time.time()
+        print("Time Taken-------------------->",et_time-st_time)
         return  response
 
     
@@ -940,10 +946,65 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+class VendorDashBoardFilter(django_filters.FilterSet):
+    status = django_filters.CharFilter(method='filter_status')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+   
+    class Meta:
+        model = Task
+        fields = ('status',)#'assign_to')
+
+    def filter_status(self, queryset, name, value):
+        assign_filter = self.request.query_params.get('assign_to')
+        users = assign_filter.split(',') if assign_filter else None
+        queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
+        print("Users------------->",users)
+        if value == 'inprogress':
+            if users:
+                queryset = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                #print("QR------------->",queryset)
+            else:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif value == 'submitted':
+            if users:
+                queryset = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+            else:
+                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+        elif value =='approved':
+            if users:
+                queryset = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+            else:
+                queryset = queryset.filter(Q(task_info__client_response = 1))
+        return queryset
+    
+    # def filter_assign_to(self, queryset, name, value):
+    #     assign_to_list = value.split(',')
+    #     return queryset.filter(task_info__assign_to_id__in = assign_to_list)
+
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
+        
+    #     status_filter = self.request.query_params.get('status')
+    #     if status_filter:
+    #         queryset = self.filter_status(queryset, 'status', status_filter)
+        
+       
+    #     assign_filter = self.request.query_params.get('assign_to')
+    #     if assign_filter:
+    #         queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
+        
+    #     return queryset
+
+
 class VendorDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+    filterset_class = VendorDashBoardFilter
 
     @staticmethod
     #@cached(timeout=60 * 15)
@@ -990,13 +1051,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        if status == 'inprogress':
-            tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
-        elif status == 'submitted':
-            tasks = tasks.filter(task_info__status = 3).exclude(task_info__client_response=1)
-        elif status =='approved':
-            tasks = tasks.filter(Q(task_info__client_response = 1)) 
-        tasks = tasks.order_by('-id')
+        queryset = self.filter_queryset(tasks)
+        tasks = queryset.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -1006,7 +1062,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
-
+    
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -4428,6 +4484,7 @@ def translate_file(request):
         for obj in task_objs:
             if obj.task_file_detail.first() == None: #need to change for different mt_engines
                 conversion = translate_file_task(obj.id)
+                print("Con--------------->",conversion)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
@@ -4489,7 +4546,9 @@ def translate_file_task(task_id):
         print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
-        if state == 'PENDING' or state == 'STARTED':
+        if state == 'SUCCESS':
+            return {'status':200}
+        elif state == 'PENDING' or state == 'STARTED':
             return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
         elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
             if state == "FAILURE":

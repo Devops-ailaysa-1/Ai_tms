@@ -1193,6 +1193,9 @@ def generate_chapter(request):
         book_level = book_body_instance.book_creation.level.level
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
         author_info =book_body_instance.book_creation.author_info_mt if book_body_instance.book_creation.author_info_mt else book_body_instance.book_creation.author_info
+        #query = BookBody.objects.filter(book_creation = book_body_instance.book_creation).filter(custom_order__lt = book_body_instance.custom_order ).order_by('custom_order')
+        #gen_content = query.last().html_data if query else None
+        #chapter_summary = gen_content.split('Summary:') if gen_content and 'Summary' in gen_content else None 
         print("-------",book_title)
         print(generated_content)
         print(book_level)
