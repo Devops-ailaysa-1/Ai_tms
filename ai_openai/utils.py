@@ -165,3 +165,24 @@ def replace_hex_colors_with_rgb(html):
 
 
 
+
+def get_summarize(text,bb_instance):
+    from .serializers import AiPromptSerializer
+    from ai_openai.serializers import openai_token_usage
+    prompt = '''Input text: {}
+Instructions:
+1. Summarize the input text in a concise manner while capturing key points and main ideas.
+2. Extract up to 10 keywords or key phrases that represent important concepts or topics discussed in the input text.
+3. Please ensure that the summary is no longer than 200 words and that the keywords are relevant and representative of the input text.
+
+Summary:
+'''.format(text)
+
+    response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =200,n=1)
+    summary = response["choices"][0]["message"]["content"]
+    token_usage = openai_token_usage(response)
+    token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+    print("TUR--------------->",token_usage_to_reduce)
+    AiPromptSerializer().customize_token_deduction(bb_instance,token_usage_to_reduce,user=bb_instance.book_creation.user)
+    print("Summary---------------->",summary)
+    return summary 

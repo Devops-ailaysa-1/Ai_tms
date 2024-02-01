@@ -1180,8 +1180,10 @@ def generate_article(request):
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
+
 from ai_openai.models import BookBody
 from ai_staff.models import PromptStartPhrases
+from .utils import get_summarize
 @api_view(["GET"])
 def generate_chapter(request):
     if request.method=='GET':
@@ -1193,15 +1195,18 @@ def generate_chapter(request):
         book_level = book_body_instance.book_creation.level.level
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
         author_info =book_body_instance.book_creation.author_info_mt if book_body_instance.book_creation.author_info_mt else book_body_instance.book_creation.author_info
-        #query = BookBody.objects.filter(book_creation = book_body_instance.book_creation).filter(custom_order__lt = book_body_instance.custom_order ).order_by('custom_order')
-        #gen_content = query.last().html_data if query else None
+        query = BookBody.objects.filter(book_creation = book_body_instance.book_creation).filter(custom_order__lt = book_body_instance.custom_order ).order_by('custom_order')
+        gen_content = query.last().html_data if query else None
+        print("GenContent------------------->",gen_content)
+        context = get_summarize(gen_content,book_body_instance) if gen_content else None
+        print("Ctxt----------------->",context)
         #chapter_summary = gen_content.split('Summary:') if gen_content and 'Summary' in gen_content else None 
         print("-------",book_title)
         print(generated_content)
         print(book_level)
         print(book_description)
         print(author_info)
-        sub_cat = 71
+        sub_cat = 69#71
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
         prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info)
         print(prompt)
@@ -1215,7 +1220,10 @@ def generate_chapter(request):
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         language_code = book_body_instance.book_creation.book_language_code
         if language_code == 'en':
-            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            if context:
+                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
+            else:
+                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
                 str_con=""
                 for chunk in completion:
@@ -1234,7 +1242,10 @@ def generate_chapter(request):
                         print("token_usage---------->>",token_usage)
             return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
         else:
-            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            if context:
+                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
+            else:
+                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang(title):
                 arr=[]
                 str_cont=''
