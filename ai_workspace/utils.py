@@ -252,6 +252,36 @@ def add_additional_content_to_docx(docx_filename, additional_content):
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
+from django.db.models import Q
+def progress_filter(queryset,value,users):
+	if value == 'inprogress':
+		if users:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
+			|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
+	elif value == 'submitted':
+		if users:
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3,task_info__assign_to__in=users).count() == i.get_tasks.filter(task_info__client_response=1,task_info__assign_to__in=users).count()]
+		else:
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
+		queryset = qs.exclude(id__in=filtered_qs)
+	elif value == 'approved':
+		if users:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+	
+	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
 
