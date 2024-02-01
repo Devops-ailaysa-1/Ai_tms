@@ -1206,7 +1206,7 @@ def generate_chapter(request):
         print(book_level)
         print(book_description)
         print(author_info)
-        sub_cat = 69#71
+        sub_cat = 71
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
         prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info)
         print(prompt)
