@@ -128,6 +128,7 @@ async def generate_outline_response(prompt,n):
     return response 
  
 async def outline_co(prompt,n):
+    print("N-------------------------->",n)
     coroutines=[]
     prompt = [prompt]#+" and every outline should be less than three words."]
     coroutines.append(generate_outline_response(prompt,n))
