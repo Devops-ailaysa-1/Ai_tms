@@ -124,7 +124,7 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
 ############
 async def generate_outline_response(prompt,n):
     response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
-                                                   n=n,max_tokens=170)
+                                                   n=n,max_tokens=1200)
     return response 
  
 async def outline_co(prompt,n):
@@ -187,3 +187,41 @@ Summary:
     AiPromptSerializer().customize_token_deduction(bb_instance,token_usage_to_reduce,user=bb_instance.book_creation.user)
     print("Summary---------------->",summary)
     return summary 
+
+
+def get_chapters(pr_response):
+    data = pr_response
+    print("DT------------>",data)
+    print("Type---------->",type(data))
+    try:
+        data = json.loads(data)
+    except json.JSONDecodeError as e:
+        print("JSON decoding error:", e)
+    chapters = []
+    for title in data:
+        chapters.append(title)
+    print("Chapters------------->",chapters)
+    return chapters 
+
+def get_sub_headings(title, pr_response):
+    value = None
+    data = pr_response
+    #json_str_corrected = data.replace("'", '"')
+    try:
+        data = json.loads(data)
+    except json.JSONDecodeError as e:
+        print("JSON decoding error:", e)
+    print("subheading data------------>",data)
+    for title,headings in data.items():
+        if title:
+           value = headings 
+           break
+    return value
+        
+        
+        
+        
+        # for key, val in chapter_dict.items():
+        #     if partial_key in key:
+        #         value = val
+        #         break
