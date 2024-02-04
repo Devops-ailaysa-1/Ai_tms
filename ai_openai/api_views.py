@@ -1210,7 +1210,7 @@ def generate_chapter(request):
         print(author_info)
         sub_cat = 71
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
-        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info)
+        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
         print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
