@@ -10,7 +10,8 @@ from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, 
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
                     get_prompt_freestyle ,get_prompt_image_generations,\
-                    get_img_content_from_openai_url,get_consumable_credits_for_image_gen,get_prompt_chatgpt_turbo
+                    get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
+                    get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL
 from django.db.models import Q
@@ -1269,12 +1270,10 @@ class BookBodySerializer(serializers.ModelSerializer):
 
 
             if body_matter.id == 1:
-                print("-------------------------------------------")
                 print(book_body_start_phrase.start_phrase)
                 prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
                 print("PR------------->",prompt)
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
-
                 prompt_response = prompt_response_gpt.choices
                 print('PRS--------------->',prompt_response)
                 total_token = prompt_response_gpt['usage']['total_tokens']
@@ -1282,23 +1281,22 @@ class BookBodySerializer(serializers.ModelSerializer):
                 total_token = get_consumable_credits_for_openai_text_generator(total_token)
                 print("Token Usage in chapter-------------->",total_token)
                 AiPromptSerializer().customize_token_deduction(book_obj,total_token)
-                print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
                 queryset = BookBody.objects.filter(book_creation=book_obj,body_matter_id=body_matter.id).distinct('group')
-                print("QR----------------->",queryset)
                 if queryset: start = queryset.count()
                 else: start = 0
-                print("Start---------------------->",start)
                 qr = BookBody.objects.filter(book_creation=book_obj,body_matter_id=body_matter.id,group=group).order_by('custom_order')
-                print("qr-------------------------->",qr)
                 if qr: start_ = qr.last().custom_order
                 else:start_ = 0
                 print("Start________",start_)
                 for group,chapter_res in enumerate(prompt_response,start=start):
-                    chapters = chapter_res.message['content'].split('\n')
+                    data = chapter_res.message['content']
+                    chapters = get_chapters(data)
+                    #chapters = chapter_res.message['content'].split('\n')
                     for order,chapter in enumerate(chapters,start=start_+1):
                         print("Order----------->",order)
                         if chapter:
-                            chapter = re.sub(r'\d+.','',chapter).strip()
+                            sub_headings = get_sub_headings(chapter,data)
+                            chapter = re.sub(r'Chapter \d+.','',chapter).strip() 
                             print("chap========>",chapter)
                             if (book_obj.book_language_id not in blog_available_langs):
                                 initial_credit = book_obj.user.credit_balance.get("total_left")
@@ -1308,7 +1306,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                     book_chapter=get_translation(1,chapter,'en',book_obj.book_language_code,
                                                                 user_id=book_obj.user.id) 
                                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_obj,
-                                                            generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage)
+                                                            generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage,sub_headings=sub_headings)
                                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                                 else:
                                     AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_section)
@@ -1317,7 +1315,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                 rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, 
                                 generated_content=chapter,group=group,temp_order=order,custom_order=order,
                                 book_title =book_title_inst,book_creation=book_obj,
-                                name=body_matter.name,token_usage=token_usage) 
+                                name=body_matter.name,token_usage=token_usage,sub_headings=sub_headings) 
                                 print(rr)
             else:
                 prompt = book_body_start_phrase.start_phrase.format(body_matter.name,title,description,book_obj.genre.genre,book_obj.level.level)
