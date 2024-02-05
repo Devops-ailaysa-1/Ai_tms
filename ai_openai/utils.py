@@ -212,10 +212,8 @@ def get_sub_headings(title, pr_response):
     except json.JSONDecodeError as e:
         print("JSON decoding error:", e)
     print("subheading data------------>",data)
-    for title,headings in data.items():
-        if title:
-           value = headings 
-           break
+    if title in data:
+        value = data.get(title)
     return value
         
         
