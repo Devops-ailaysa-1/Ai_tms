@@ -1403,6 +1403,17 @@ class BookBodySerializer(serializers.ModelSerializer):
             instance.generated_content = validated_data.get('generated_content',instance.generated_content)
             instance.sub_headings = None
             instance.save()
+            lang_detect_user_gc =  lang_detector(instance.generated_content) 
+
+            if lang_detect_user_gc !='en':
+                initial_credit = instance.book_creation.user.credit_balance.get("total_left")
+                consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
+                if initial_credit < consumable_credit_section:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
+                instance.generated_content_mt =get_translation(1,instance.generated_content,lang_detect_user_gc,"en",user_id=instance.book_creation.user.id,from_open_ai=True)  
+                AiPromptSerializer().customize_token_deduction(instance.book_creation,consumable_credit_section)
+                instance.save()
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.book_creation.user, consumable_credit_section)
             # initial_credit = instance.book_creation.user.credit_balance.get("total_left")
             # consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)
             # if initial_credit < consumable_credit_section:

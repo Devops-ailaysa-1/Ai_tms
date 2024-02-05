@@ -698,14 +698,6 @@ class ProjectFilter(django_filters.FilterSet):
         model = Project
         fields = ('project', 'team','type','assign_status')#,'assign_to')
 
-    # def filter_assign_to(self,queryset,name,value):
-    #     field1_value = self.request.query_params.get('assign_status')
-    #     if field1_value:
-    #         queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
-    #     count = queryset.count()
-    #     assign_to_list = value.split(',')
-    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
-
 
     def filter_team(self, queryset, name, value):
         if value=="None":
