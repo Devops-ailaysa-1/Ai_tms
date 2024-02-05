@@ -1401,6 +1401,7 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         if validated_data.get('generated_content',None):
             instance.generated_content = validated_data.get('generated_content',instance.generated_content)
+            instance.sub_headings = None
             instance.save()
             # initial_credit = instance.book_creation.user.credit_balance.get("total_left")
             # consumable_credit_section = get_consumable_credits_for_text(instance.generated_content ,'en',lang_code)

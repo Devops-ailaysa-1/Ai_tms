@@ -1200,7 +1200,10 @@ def generate_chapter(request):
                 filter(html_data__isnull=False).order_by('custom_order')
         gen_content = query.last().html_data if query else None
         print("GenContent------------------->",gen_content)
-        context = get_summarize(gen_content,book_body_instance) if gen_content else None
+        lang = book_body_instance.book_creation.book_language
+        if lang.id == 17:
+            context = get_summarize(gen_content,book_body_instance) if gen_content else None
+        else:context = None
         print("Ctxt----------------->",context)
         #chapter_summary = gen_content.split('Summary:') if gen_content and 'Summary' in gen_content else None 
         print("-------",book_title)
@@ -1208,6 +1211,7 @@ def generate_chapter(request):
         print(book_level)
         print(book_description)
         print(author_info)
+        print("SH------------>",book_body_instance.sub_headings)
         sub_cat = 71
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
         prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
