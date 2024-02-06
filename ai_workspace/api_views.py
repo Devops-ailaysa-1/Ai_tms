@@ -5090,7 +5090,7 @@ def task_count_report(user,owner,start_date,today):
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         editors = user.team.get_editors if user.team else []
-        sorted_list = sorted(editors, key=attrgetter('fullname'))
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
@@ -5133,7 +5133,7 @@ def billing_report(user,owner,start_date,today):
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         #if queryset:
         editors = user.team.get_editors if user.team else []
-        sorted_list = sorted(editors, key=attrgetter('fullname'))
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
