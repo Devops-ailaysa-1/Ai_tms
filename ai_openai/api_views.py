@@ -1189,6 +1189,13 @@ def generate_chapter(request):
     if request.method=='GET':
         bookbody_id=request.query_params.get('bookbody_id')
         book_body_instance = BookBody.objects.get(id=bookbody_id)
+        initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
+        if book_body_instance.book_creation.book_language_code != 'en':
+            credits_required = 3000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         # book_phrase = PromptStartPhrases.objects.get(sub_category=book_body_instance.sub_categories)
         book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
@@ -1200,10 +1207,14 @@ def generate_chapter(request):
                 filter(html_data__isnull=False).order_by('custom_order')
         gen_content = query.last().html_data if query else None
         print("GenContent------------------->",gen_content)
-        lang = book_body_instance.book_creation.book_language
-        if lang.id == 17:
-            context = get_summarize(gen_content,book_body_instance) if gen_content else None
-        else:context = None
+        if gen_content:
+            lang = book_body_instance.book_creation.book_language_code
+            if lang!='en':
+                consumable_credits_for_article_gen = get_consumable_credits_for_text(gen_content,'en',lang)
+                consumable = max(round(consumable_credits_for_article_gen/3),1) 
+                if initial_credit < consumable:
+                    return JsonResponse({'error':'Insufficient credits.'},status=400)
+        context = get_summarize(gen_content,book_body_instance,lang) if gen_content else None
         print("Ctxt----------------->",context)
         #chapter_summary = gen_content.split('Summary:') if gen_content and 'Summary' in gen_content else None 
         print("-------",book_title)
@@ -1212,18 +1223,13 @@ def generate_chapter(request):
         print(book_description)
         print(author_info)
         print("SH------------>",book_body_instance.sub_headings)
-        sub_cat = 71
+        sub_cat = 71 #69
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
         prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
         print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
-        if book_body_instance.book_creation.book_language_code != 'en':
-            credits_required = 2500
-        else:
-            credits_required = 200
-        if initial_credit < credits_required:
-            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+        
         language_code = book_body_instance.book_creation.book_language_code
         if language_code == 'en':
             if context:
