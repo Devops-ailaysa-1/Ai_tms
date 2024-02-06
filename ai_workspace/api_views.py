@@ -72,6 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from cacheops import cached
+from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
@@ -5089,7 +5090,8 @@ def task_count_report(user,owner,start_date,today):
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         editors = user.team.get_editors if user.team else []
-        for i in editors:
+        sorted_list = sorted(editors, key=attrgetter('fullname'))
+        for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
@@ -5131,7 +5133,8 @@ def billing_report(user,owner,start_date,today):
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         #if queryset:
         editors = user.team.get_editors if user.team else []
-        for i in editors:
+        sorted_list = sorted(editors, key=attrgetter('fullname'))
+        for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
@@ -5185,6 +5188,7 @@ def get_task_count_report(request):
 
 
 def download_editors_report(res,from_date,to_date):
+    print("Res---------->",res)
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()
