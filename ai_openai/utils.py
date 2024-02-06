@@ -171,8 +171,12 @@ def get_summarize(text,bb_instance,lang):
     from .serializers import AiPromptSerializer
     from ai_openai.serializers import openai_token_usage
     from ai_workspace_okapi.utils import get_translation
+    from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+    print("Lang----------->",lang)
     if lang != 'en':
-        text=get_translation(1,text,"en",lang,user_id=bb_instance.book_creation.user.id,cc=consumable)
+        consumable_credits_for_article_gen = get_consumable_credits_for_text(text,'en',lang)
+        consumable = max(round(consumable_credits_for_article_gen/3),1) 
+        text=get_translation(1,text,lang,"en",user_id=bb_instance.book_creation.user.id,cc=consumable)
 
     prompt = '''Input text: {}
 Instructions:
