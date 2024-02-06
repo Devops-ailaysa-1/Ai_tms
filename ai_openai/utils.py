@@ -167,9 +167,13 @@ def replace_hex_colors_with_rgb(html):
 
 
 
-def get_summarize(text,bb_instance):
+def get_summarize(text,bb_instance,lang):
     from .serializers import AiPromptSerializer
     from ai_openai.serializers import openai_token_usage
+    from ai_workspace_okapi.utils import get_translation
+    if lang != 'en':
+        text=get_translation(1,text,"en",lang,user_id=bb_instance.book_creation.user.id,cc=consumable)
+
     prompt = '''Input text: {}
 Instructions:
 1. Summarize the input text in a concise manner while capturing key points and main ideas.
