@@ -821,5 +821,24 @@ class MarketingBootcamp(models.Model):
 
     def __str__(self) -> str:
         return "Name:"+self.name + "  Email:" +self.email
+
+
+
+class CareerSupportAI(models.Model):
+    INTERNSHIP = 1
+    JOB = 2
+    PROJECT = 3
+    APPLY_CHOICES = [
+        (INTERNSHIP,'Internship'),
+        (JOB, 'Job'),
+        (PROJECT, 'Project'),
+    ]
+    name = models.CharField(max_length=250,blank=True,null=True)
+    email = models.EmailField(unique=True)
+    college = models.TextField(max_length=1000,blank=True,null=True)
+    apply_for = models.IntegerField(choices=APPLY_CHOICES)
+    cv_file = models.FileField(upload_to=file_path)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
 
