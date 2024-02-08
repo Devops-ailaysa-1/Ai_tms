@@ -9,7 +9,7 @@ from celery.decorators import task
 from celery import shared_task
 from datetime import date
 from django.utils import timezone
-from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits
+from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits,CareerSupportAI
 import datetime,os,json, collections
 from djstripe.models import Subscription,Invoice,Charge
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
@@ -260,6 +260,20 @@ def send_bootcamp_mail(obj_id):
         print("Mail sent")
     else:
         print('Mail Not sent')
+
+
+@task(queue='low-priority')
+def send_career_mail(obj_id):
+    from ai_auth.api_views import send_email, career_support_thank_mail
+    instance = CareerSupportAI.objects.get(id=obj_id)
+    subject = "New Registration for AI/ML Openings"
+    template = 'career_support_email.html'
+    email = 'hr@ailaysa.com'
+    context = {'name':instance.name,'email':instance.email,'college':instance.college,'applied_for':instance.get_apply_for_display(),'file':instance.cv_file}
+    send_email(subject,template,context,email)
+    career_support_thank_mail(instance.name,instance.email)
+
+
 
 
 

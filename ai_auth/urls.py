@@ -88,5 +88,6 @@ urlpatterns+= [
     path('troubleshoot/',api_views.account_troubleshoot,name='account-troubleshoot'),
     path('user-info/',api_views.user_info_update,name='user-info'),
     path('editors_list/',api_views.internal_editors_list),
-    path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register') 
+    path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register'), 
+    path('career_support_ai/',api_views.CareerSupportAICreateView.as_view({'post':'create'}), name= 'ml-career-support' ),
 ]
