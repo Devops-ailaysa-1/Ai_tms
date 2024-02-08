@@ -837,7 +837,7 @@ class CareerSupportAI(models.Model):
     email = models.EmailField(unique=True)
     college = models.TextField(max_length=1000,blank=True,null=True)
     apply_for = models.IntegerField(choices=APPLY_CHOICES)
-    cv_file = models.FileField(upload_to=file_path)
+    cv_file = models.FileField(upload_to=file_path,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
