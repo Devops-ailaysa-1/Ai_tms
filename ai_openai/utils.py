@@ -124,10 +124,11 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
 ############
 async def generate_outline_response(prompt,n):
     response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
-                                                   n=n,max_tokens=170)
+                                                   n=n,max_tokens=1200)
     return response 
  
 async def outline_co(prompt,n):
+    print("N-------------------------->",n)
     coroutines=[]
     prompt = [prompt]#+" and every outline should be less than three words."]
     coroutines.append(generate_outline_response(prompt,n))
@@ -162,3 +163,71 @@ def replace_hex_colors_with_rgb(html):
 # htmlupdates = updatedHtml.replace('<br />', '')
 # new_parser.add_html_to_document(htmlupdates, document)
 # document.save('file_name.docx')s
+
+
+
+
+def get_summarize(text,bb_instance,lang):
+    from .serializers import AiPromptSerializer
+    from ai_openai.serializers import openai_token_usage
+    from ai_workspace_okapi.utils import get_translation
+    from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+    print("Lang----------->",lang)
+    if lang != 'en':
+        consumable_credits_for_article_gen = get_consumable_credits_for_text(text,'en',lang)
+        consumable = max(round(consumable_credits_for_article_gen/3),1) 
+        text=get_translation(1,text,lang,"en",user_id=bb_instance.book_creation.user.id,cc=consumable)
+
+    prompt = '''Input text: {}
+Instructions:
+1. Summarize the input text in a concise manner while capturing key points and main ideas.
+2. Extract up to 10 keywords or key phrases that represent important concepts or topics discussed in the input text.
+3. Please ensure that the summary is no longer than 200 words and that the keywords are relevant and representative of the input text.
+
+Summary:
+'''.format(text)
+
+    response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =200,n=1)
+    summary = response["choices"][0]["message"]["content"]
+    token_usage = openai_token_usage(response)
+    token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+    print("TUR--------------->",token_usage_to_reduce)
+    AiPromptSerializer().customize_token_deduction(bb_instance,token_usage_to_reduce,user=bb_instance.book_creation.user)
+    print("Summary---------------->",summary)
+    return summary 
+
+
+def get_chapters(pr_response):
+    data = pr_response
+    print("DT------------>",data)
+    print("Type---------->",type(data))
+    try:
+        data = json.loads(data)
+    except json.JSONDecodeError as e:
+        print("JSON decoding error:", e)
+    chapters = []
+    for title in data:
+        chapters.append(title)
+    print("Chapters------------->",chapters)
+    return chapters 
+
+def get_sub_headings(title, pr_response):
+    value = None
+    data = pr_response
+    #json_str_corrected = data.replace("'", '"')
+    try:
+        data = json.loads(data)
+    except json.JSONDecodeError as e:
+        print("JSON decoding error:", e)
+    print("subheading data------------>",data)
+    if title in data:
+        value = data.get(title)
+    return value
+        
+        
+        
+        
+        # for key, val in chapter_dict.items():
+        #     if partial_key in key:
+        #         value = val
+        #         break

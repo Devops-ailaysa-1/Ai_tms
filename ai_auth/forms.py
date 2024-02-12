@@ -416,7 +416,7 @@ def campaign_user_invite_email(user,gen_password):
          msg_html,
         'Ailaysa <noreply@ailaysa.com>',
         [email],
-        bcc=['support@ailaysa.com'],
+        # bcc=['support@ailaysa.com'],
         reply_to=['support@ailaysa.com'],
     )
 
