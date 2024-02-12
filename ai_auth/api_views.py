@@ -21,7 +21,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,CareerSupportAISerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -34,7 +34,7 @@ from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionali
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
-                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp)
+                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -395,10 +395,11 @@ class ContactPricingCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email(subject,template,context):
+def send_email(subject,template,context,email=None):
+    email = email if email else 'support@ailaysa.com'
     content = render_to_string(template, context)
     file_ =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
         name = os.path.basename(file_.path)
         msg.attach(name, file_.file.read())
@@ -2879,3 +2880,48 @@ def internal_editors_list(request):
         return Response(serializer.data)
     else:
         return JsonResponse({'msg':'you are having no team'},status=400)
+
+
+
+# def send_email(subject,template,context):
+#     content = render_to_string(template, context)
+#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
+#     file_ =context.get('file')
+#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
+#     if file_:
+#         name = os.path.basename(file_.path)
+#         msg.attach(name, file_.file.read())
+#     msg.content_subtype = 'html'
+#     msg.send()
+#     print("Msg sent")
+
+
+def career_support_thank_mail(user_name,user_email):
+    context = {'username':user_name}
+    Subject = render_to_string("career_support_thank_sub.txt")
+    Body = render_to_string("career_support_thank_msg.txt",context)
+    
+    sent = send_mail(Subject, Body, settings.DEFAULT_FROM_EMAIL, [user_email])
+    if sent:
+        print("Done")
+        return True
+    else:
+        return False
+
+
+
+class CareerSupportAICreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        from .tasks import send_career_mail
+        file = request.FILES.get('cv_file')
+        subject = "New Registration for AI/ML Openings"
+        template = 'career_support_email.html'
+        serializer = CareerSupportAISerializer(data={**request.POST.dict(),'cv_file':file})
+        if serializer.is_valid():
+            serializer.save()
+            instance = CareerSupportAI.objects.get(id=serializer.data.get('id'))
+            context = {'name':instance.name,'email':instance.email,'college':instance.college,'applied_for':instance.get_apply_for_display(),'file':instance.cv_file}      
+            send_career_mail.apply_async((instance.id,),queue='low-priority')
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

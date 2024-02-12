@@ -72,6 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from cacheops import cached
+from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
@@ -698,14 +699,6 @@ class ProjectFilter(django_filters.FilterSet):
         model = Project
         fields = ('project', 'team','type','assign_status')#,'assign_to')
 
-    # def filter_assign_to(self,queryset,name,value):
-    #     field1_value = self.request.query_params.get('assign_status')
-    #     if field1_value:
-    #         queryset = self.filter_status(queryset, 'assign_status', field1_value, inside=True)
-    #     count = queryset.count()
-    #     assign_to_list = value.split(',')
-    #     return queryset.filter(project_jobs_set__job_tasks_set__task_info__assign_to_id__in = assign_to_list)
-
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -978,26 +971,7 @@ class VendorDashBoardFilter(django_filters.FilterSet):
                 queryset = queryset.filter(Q(task_info__client_response = 1))
         return queryset
     
-    # def filter_assign_to(self, queryset, name, value):
-    #     assign_to_list = value.split(',')
-    #     return queryset.filter(task_info__assign_to_id__in = assign_to_list)
 
-    # def filter_queryset(self, queryset):
-    #     """
-    #     Apply a chain of filters to the queryset.
-    #     """
-    #     queryset = super().filter_queryset(queryset)
-        
-    #     status_filter = self.request.query_params.get('status')
-    #     if status_filter:
-    #         queryset = self.filter_status(queryset, 'status', status_filter)
-        
-       
-    #     assign_filter = self.request.query_params.get('assign_to')
-    #     if assign_filter:
-    #         queryset = self.filter_assign_to(queryset, 'assign_to', assign_filter)
-        
-    #     return queryset
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
@@ -1389,13 +1363,6 @@ class TaskView(APIView):
                 if task.document:
                     task.document.delete()
                 task.delete()
-            # else:
-            #     print("333333333333333")
-            #     if task.document:
-            #         print("Inside--------->",task.document)
-            #         task.document.delete()
-            #     print("Outside")
-            #     task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -1778,61 +1745,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # def update(self, request,pk=None):
-    #     task = request.POST.get('task')
-    #     step = request.POST.get('step')
-    #     file = request.FILES.getlist('instruction_file')
-    #     req_copy = copy.copy( request._request)
-    #     req_copy.method = "DELETE"
-    #
-    #     if not task:
-    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-    #
-    #     file_delete_ids = self.request.query_params.get(\
-    #         "file_delete_ids", [])
-    #
-    #     if file_delete_ids:
-    #         file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
-    #                     pk='0', many="true", ids=file_delete_ids)
-    #
-    #     task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
-    #     task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
-    #     if file:
-    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
-    #     else:
-    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #     else:
-    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #     return Response(task, status=status.HTTP_200_OK)
-    # def update(self, request,pk=None):
-    #     task = request.POST.getlist('task')
-    #     file = request.FILES.get('instruction_file')
-    #     assign_to = request.POST.get('assign_to',None)
-    #     if not task:
-    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-    #     ###############################Need to change############################################
-    #     if assign_to:
-    #         Receiver = AiUser.objects.get(id = assign_to)
-    #         user = request.user.team.owner  if request.user.team  else request.user
-    #         if Receiver.email == 'ailaysateam@gmail.com':
-    #             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-    #     ###########################################################################################
-    #     for i in task:
-    #         try:
-    #             task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-    #             if file:
-    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
-    #             else:
-    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-    #             if serializer.is_valid():
-    #                 serializer.save()
-    #             else:
-    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #         except TaskAssignInfo.DoesNotExist:
-    #             print('not exist')
-    #     return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
         task = request.GET.getlist('task')
@@ -1936,39 +1848,7 @@ def find_vendor(team,jobs):
                                         'lang_pair':job.source_language.language+'->'+job.target_language.language,\
                                         'unique_id':j.hired_editor.uid})
     return externalmembers
-    # if proj.team:
-    #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
-    #     for i in internal_team:
-    #         internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
-    #     external_team = proj.team.owner.user_info.filter(role =2)
-    #     print(external_team)
-    #     HiredEditors = find_vendor(external_team,job)
-    # else:
-    #     external_team = proj.ai_user.user_info.filter(role=2)
-    #     print(external_team)
-    #     HiredEditors = find_vendor(external_team,job)
 
-    # return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
-
-# def find_vendor(team,job):
-#     externalmembers=[]
-#     for j in team:
-#         try:
-#             profile = j.hired_editor.professional_identity_info.avatar_url
-#         except:
-#             profile = None
-#         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
-#         if vendor:
-#             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
-#     return externalmembers
-
-# class ProjectListFilter(django_filters.FilterSet):
-
-#     def filter(self, qs, value):
-#         print("$$$$$$$$$$$$$$",value)
-#         tt =  (pr for pr in qs if pr.get_assignable_tasks_exists == True)
-#         qs = super().filter(tt, value)
-#         return qs
 
 
 class ProjectListView(viewsets.ModelViewSet):
@@ -2002,9 +1882,7 @@ class ProjectListView(viewsets.ModelViewSet):
 
         
 
-# @permission_classes([IsAuthenticated])
-# @api_view(['GET',])
-# def get_file_project_list(request):
+
 class WriterProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
@@ -2053,9 +1931,6 @@ def tasks_list(request):
         return JsonResponse({"msg":"something went wrong"})
 
 
-    # for i in tasks:
-    #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
-    # return Response(task_list)
 @api_view(['GET',])
 def instruction_file_download(request,instruction_file_id):
     inst = Instructionfiles.objects.get(id=instruction_file_id)
@@ -2063,39 +1938,10 @@ def instruction_file_download(request,instruction_file_id):
     instruction_file =inst.instruction_file
     if instruction_file:
         return download_file(instruction_file.path)
-        # fl_path = instruction_file.path
-        # filename = os.path.basename(fl_path)
-        # # print(os.path.dirname(fl_path))
-        # fl = open(fl_path, 'rb')
-        # mime_type, _ = mimetypes.guess_type(fl_path)
-        # response = HttpResponse(fl, content_type=mime_type)
-        # response['Content-Disposition'] = "attachment; filename=%s" % filename
-        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
-#
-# @api_view(['GET',])
-# def instruction_file_list_download(request):
-#     file_ids = request.GET.get('file_ids')
-#     file_list = file_ids.split(',')
-#     file_objs = Instructionfiles.objects.get(id__in=file_list)
-#     zipObj = ZipFile('sample.zip', 'w')
-#     for i in file_objs:
-#         print(i.instruction_file)
-#         zipObj.write(i.instruction_file)
-#     zipObj.close()
-#     # if instruction_file:
-#     #     fl_path = instruction_file.path
-#     #     filename = os.path.basename(fl_path)
-#     #     # print(os.path.dirname(fl_path))
-#     fl = open('sample.zip', 'rb')
-#     mime_type, _ = mimetypes.guess_type(fl_path)
-#     response = HttpResponse(fl, content_type=mime_type)
-#     response['Content-Disposition'] = "attachment; filename=%s" % filename
-#     return response
-#     else:
-#         return JsonResponse({"msg":"no file associated with it"})
+
 
 class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -2124,33 +1970,6 @@ class AssignToListView(viewsets.ModelViewSet):
         print("User----------->",user) 
         #serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
-
-# class IntegerationProject(viewsets.ViewSet):
-
-#     def list(self, request, *args, **kwargs):
-#         project_id = self.kwargs.get("pk", None)
-#         #  ownership
-#         project = get_object_or_404(Project.objects.all(),
-#             id=project_id)
-#         #  ownership
-#         download_project = project.project_download.\
-#             get_download
-
-#         serlzr_class = serializer_map.get(
-#             download_project.serializer_class_str)
-
-#         serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
-#             .all(), many=True)
-
-#         return Response(serlzr.data)
-
-
-
-
-
-
-
-
 
 
 
@@ -5271,7 +5090,8 @@ def task_count_report(user,owner,start_date,today):
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         editors = user.team.get_editors if user.team else []
-        for i in editors:
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
+        for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
@@ -5313,7 +5133,8 @@ def billing_report(user,owner,start_date,today):
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         #if queryset:
         editors = user.team.get_editors if user.team else []
-        for i in editors:
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
+        for i in sorted_list:
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
@@ -5367,6 +5188,7 @@ def get_task_count_report(request):
 
 
 def download_editors_report(res,from_date,to_date):
+    print("Res---------->",res)
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()

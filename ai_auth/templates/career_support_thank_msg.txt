@@ -1,0 +1,5 @@
+Dear {{username}},
+Thank you for your interest. You'll be hearing from us shortly. Stay tuned!
+
+Regards,
+Team Ailaysa
