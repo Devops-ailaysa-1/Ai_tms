@@ -2609,6 +2609,7 @@ def oso_test_querys(request):
 
 from .models import CoCreateForm
 from .serializers import AiUserDetailsSerializer, CoCreateFormSerializer,CampaignRegisterSerializer
+from dj_rest_auth.utils import jwt_encode
 
 class CampaignRegistrationView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
@@ -2618,7 +2619,12 @@ class CampaignRegistrationView(viewsets.ViewSet):
             serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
             if serializer.is_valid():
                 serializer.save()
-            return Response({"msg":"User registerd successfully"},status=201)
+            print("serializer",serializer.data)
+            user = AiUser.objects.get(id=serializer.data["user_id"])
+            ser = AiUserDetailsSerializer(user)
+            access_token, refresh_token = jwt_encode(user)
+            return Response({"access_token":str(access_token),"refresh_token":str(refresh_token),"user":ser.data},status=200)
+            # return Response({"msg":"User registerd successfully"},status=201)
         except ValueError as e:
             return Response({"msg":str(e)},status=409)
     

@@ -642,10 +642,20 @@ class CampaignRegisterSerializer(serializers.Serializer):
             coupon = False
         else:
             coupon = None
-        CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
+        camp_user = CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
         campaign_user_invite_email(user=user,gen_password=password)
         camp = check_campaign(user)
-        return user
+        return camp_user
+
+    
+
+    def to_representation(self, instance):
+        # data = super(ResultLogSerializer, self).to_representation(instance)
+        data = dict()
+        data['user_id'] = instance.user.id
+        return data
+
+
     
 
 class MarketingBootcampSerializer(serializers.ModelSerializer):
