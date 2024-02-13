@@ -173,3 +173,6 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
     created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at      = models.DateTimeField(auto_now=True,blank=True, null=True)
     deleted_at      = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("sl_term", "tl_term", "user")

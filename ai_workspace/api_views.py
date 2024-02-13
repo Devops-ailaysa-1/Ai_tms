@@ -72,6 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from cacheops import cached
+from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
@@ -89,7 +90,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
-from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
+from .utils import get_consumable_credits_for_text_to_speech,\
+                   get_consumable_credits_for_speech_to_text, progress_filter
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -104,7 +106,7 @@ from rest_framework.decorators import authentication_classes
 from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
-import spacy
+import spacy, time
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -690,10 +692,13 @@ class ProjectFilter(django_filters.FilterSet):
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     assign_status = django_filters.CharFilter(method='filter_status')
-    #stat = django_filters.NumberFilter(field_name='project_jobs_set__job_tasks_set__task_info__status', lookup_expr='in', method='filter_xx_in')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+
+
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
+
 
     def filter_team(self, queryset, name, value):
         if value=="None":
@@ -704,17 +709,16 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
-        if value == 'inprogress':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-            Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
-        elif value == 'submitted':
-            qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
-            filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
-            queryset = qs.exclude(id__in=filtered_qs)
-            # queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
-            #             .exclude(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-        elif value == 'approved':
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
+        user = self.request.user
+        assign_to = self.request.query_params.get('assign_to')
+        if user.team and user in user.team.get_editors:
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = []
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -733,13 +737,20 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
-            #queryset = QuerySet(model=queryset.model, query=queryset.query, using=queryset.db)
-        #     queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-        # elif value == "assigned":
-        #     queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
-        # elif value == "express":
-        #     queryset = queryset.filter(project_type_id=5)
+
         return queryset
+    
+    # def filter_queryset(self, queryset):
+    #     """
+    #     Apply a chain of filters to the queryset.
+    #     """
+    #     queryset = super().filter_queryset(queryset)
+    #     field1_value = self.request.query_params.get('assign_status')
+    #     field2_value = self.request.query_params.get('assign_to')
+    #     if field1_value and field2_value:
+    #         queryset_1 = self.filter_status(queryset, 'assign_status', field1_value)
+    #         queryset = self.filter_assign_to(queryset_1, 'assign_to', field2_value)
+    #     return queryset
 
 #@never_cache
 #from django.utils.decorators import method_decorator
@@ -762,8 +773,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
-        # if project_type == 4:
-        #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -778,11 +787,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+        
+        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
+                    'project_jobs_set__job_tasks_set__task_info')\
                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        
         return queryset
 
     def get_user(self):
@@ -793,12 +805,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
+        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
-        print("QR------------>",queryset)
         user_1 = self.get_user()
+        print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
+        et_time = time.time()
+        print("Time Taken-------------------->",et_time-st_time)
         return  response
 
     
@@ -924,10 +939,46 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+class VendorDashBoardFilter(django_filters.FilterSet):
+    status = django_filters.CharFilter(method='filter_status')
+    #assign_to = django_filters.CharFilter(method='filter_assign_to')
+   
+    class Meta:
+        model = Task
+        fields = ('status',)#'assign_to')
+
+    def filter_status(self, queryset, name, value):
+        assign_filter = self.request.query_params.get('assign_to')
+        users = assign_filter.split(',') if assign_filter else None
+        queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
+        print("Users------------->",users)
+        if value == 'inprogress':
+            if users:
+                queryset = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                #print("QR------------->",queryset)
+            else:
+                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+        elif value == 'submitted':
+            if users:
+                queryset = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+            else:
+                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+        elif value =='approved':
+            if users:
+                queryset = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+            else:
+                queryset = queryset.filter(Q(task_info__client_response = 1))
+        return queryset
+    
+
+
+
 class VendorDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+    filterset_class = VendorDashBoardFilter
 
     @staticmethod
     #@cached(timeout=60 * 15)
@@ -974,13 +1025,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
-        if status == 'inprogress':
-            tasks = tasks.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
-        elif status == 'submitted':
-            tasks = tasks.filter(task_info__status = 3).exclude(task_info__client_response=1)
-        elif status =='approved':
-            tasks = tasks.filter(Q(task_info__client_response = 1)) 
-        tasks = tasks.order_by('-id')
+        queryset = self.filter_queryset(tasks)
+        tasks = queryset.order_by('-id')
         user,pr_managers = self.get_user()
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
@@ -990,7 +1036,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
-
+    
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -1317,13 +1363,6 @@ class TaskView(APIView):
                 if task.document:
                     task.document.delete()
                 task.delete()
-            # else:
-            #     print("333333333333333")
-            #     if task.document:
-            #         print("Inside--------->",task.document)
-            #         task.document.delete()
-            #     print("Outside")
-            #     task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -1706,61 +1745,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # def update(self, request,pk=None):
-    #     task = request.POST.get('task')
-    #     step = request.POST.get('step')
-    #     file = request.FILES.getlist('instruction_file')
-    #     req_copy = copy.copy( request._request)
-    #     req_copy.method = "DELETE"
-    #
-    #     if not task:
-    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-    #
-    #     file_delete_ids = self.request.query_params.get(\
-    #         "file_delete_ids", [])
-    #
-    #     if file_delete_ids:
-    #         file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
-    #                     pk='0', many="true", ids=file_delete_ids)
-    #
-    #     task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
-    #     task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
-    #     if file:
-    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
-    #     else:
-    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #     else:
-    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #     return Response(task, status=status.HTTP_200_OK)
-    # def update(self, request,pk=None):
-    #     task = request.POST.getlist('task')
-    #     file = request.FILES.get('instruction_file')
-    #     assign_to = request.POST.get('assign_to',None)
-    #     if not task:
-    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-    #     ###############################Need to change############################################
-    #     if assign_to:
-    #         Receiver = AiUser.objects.get(id = assign_to)
-    #         user = request.user.team.owner  if request.user.team  else request.user
-    #         if Receiver.email == 'ailaysateam@gmail.com':
-    #             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-    #     ###########################################################################################
-    #     for i in task:
-    #         try:
-    #             task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-    #             if file:
-    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
-    #             else:
-    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-    #             if serializer.is_valid():
-    #                 serializer.save()
-    #             else:
-    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #         except TaskAssignInfo.DoesNotExist:
-    #             print('not exist')
-    #     return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
         task = request.GET.getlist('task')
@@ -1864,39 +1848,7 @@ def find_vendor(team,jobs):
                                         'lang_pair':job.source_language.language+'->'+job.target_language.language,\
                                         'unique_id':j.hired_editor.uid})
     return externalmembers
-    # if proj.team:
-    #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
-    #     for i in internal_team:
-    #         internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
-    #     external_team = proj.team.owner.user_info.filter(role =2)
-    #     print(external_team)
-    #     HiredEditors = find_vendor(external_team,job)
-    # else:
-    #     external_team = proj.ai_user.user_info.filter(role=2)
-    #     print(external_team)
-    #     HiredEditors = find_vendor(external_team,job)
 
-    # return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
-
-# def find_vendor(team,job):
-#     externalmembers=[]
-#     for j in team:
-#         try:
-#             profile = j.hired_editor.professional_identity_info.avatar_url
-#         except:
-#             profile = None
-#         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
-#         if vendor:
-#             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
-#     return externalmembers
-
-# class ProjectListFilter(django_filters.FilterSet):
-
-#     def filter(self, qs, value):
-#         print("$$$$$$$$$$$$$$",value)
-#         tt =  (pr for pr in qs if pr.get_assignable_tasks_exists == True)
-#         qs = super().filter(tt, value)
-#         return qs
 
 
 class ProjectListView(viewsets.ModelViewSet):
@@ -1930,9 +1882,7 @@ class ProjectListView(viewsets.ModelViewSet):
 
         
 
-# @permission_classes([IsAuthenticated])
-# @api_view(['GET',])
-# def get_file_project_list(request):
+
 class WriterProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
@@ -1981,9 +1931,6 @@ def tasks_list(request):
         return JsonResponse({"msg":"something went wrong"})
 
 
-    # for i in tasks:
-    #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
-    # return Response(task_list)
 @api_view(['GET',])
 def instruction_file_download(request,instruction_file_id):
     inst = Instructionfiles.objects.get(id=instruction_file_id)
@@ -1991,39 +1938,10 @@ def instruction_file_download(request,instruction_file_id):
     instruction_file =inst.instruction_file
     if instruction_file:
         return download_file(instruction_file.path)
-        # fl_path = instruction_file.path
-        # filename = os.path.basename(fl_path)
-        # # print(os.path.dirname(fl_path))
-        # fl = open(fl_path, 'rb')
-        # mime_type, _ = mimetypes.guess_type(fl_path)
-        # response = HttpResponse(fl, content_type=mime_type)
-        # response['Content-Disposition'] = "attachment; filename=%s" % filename
-        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
-#
-# @api_view(['GET',])
-# def instruction_file_list_download(request):
-#     file_ids = request.GET.get('file_ids')
-#     file_list = file_ids.split(',')
-#     file_objs = Instructionfiles.objects.get(id__in=file_list)
-#     zipObj = ZipFile('sample.zip', 'w')
-#     for i in file_objs:
-#         print(i.instruction_file)
-#         zipObj.write(i.instruction_file)
-#     zipObj.close()
-#     # if instruction_file:
-#     #     fl_path = instruction_file.path
-#     #     filename = os.path.basename(fl_path)
-#     #     # print(os.path.dirname(fl_path))
-#     fl = open('sample.zip', 'rb')
-#     mime_type, _ = mimetypes.guess_type(fl_path)
-#     response = HttpResponse(fl, content_type=mime_type)
-#     response['Content-Disposition'] = "attachment; filename=%s" % filename
-#     return response
-#     else:
-#         return JsonResponse({"msg":"no file associated with it"})
+
 
 class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -2052,33 +1970,6 @@ class AssignToListView(viewsets.ModelViewSet):
         print("User----------->",user) 
         #serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
-
-# class IntegerationProject(viewsets.ViewSet):
-
-#     def list(self, request, *args, **kwargs):
-#         project_id = self.kwargs.get("pk", None)
-#         #  ownership
-#         project = get_object_or_404(Project.objects.all(),
-#             id=project_id)
-#         #  ownership
-#         download_project = project.project_download.\
-#             get_download
-
-#         serlzr_class = serializer_map.get(
-#             download_project.serializer_class_str)
-
-#         serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
-#             .all(), many=True)
-
-#         return Response(serlzr.data)
-
-
-
-
-
-
-
-
 
 
 
@@ -4412,6 +4303,7 @@ def translate_file(request):
         for obj in task_objs:
             if obj.task_file_detail.first() == None: #need to change for different mt_engines
                 conversion = translate_file_task(obj.id)
+                print("Con--------------->",conversion)
                 if conversion.get('status') == 200:
                     task_list.append({'task':obj.id,'msg':True,'status':200})
                 elif conversion.get('status') == 400 or conversion.get('status') == 402 or conversion.get('status') == 404:
@@ -4473,7 +4365,9 @@ def translate_file_task(task_id):
         print("Ins------------->",ins)
         state = translate_file_task_cel.AsyncResult(ins.celery_task_id).state if ins else None
         print("State--------------->",state)
-        if state == 'PENDING' or state == 'STARTED':
+        if state == 'SUCCESS':
+            return {'status':200}
+        elif state == 'PENDING' or state == 'STARTED':
             return ({'msg':'Translation ongoing. Please wait','celery_id':ins.celery_task_id,'task_id':tsk.id,'status':400})
         elif (tsk.task_file_detail.exists()==False) or (not ins) or state == "FAILURE" or state == 'REVOKED':
             if state == "FAILURE":
@@ -5183,9 +5077,79 @@ class AddStoriesView(viewsets.ModelViewSet):
         else:
             return Response({"detail": "You do not have permission to perform this action."},status=403) 
 
+##########################################Dinamalar Report########################################################################################
+
+def task_count_report(user,owner,start_date,today):
+    managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    team_members = user.team.get_team_members if user.team else []
+    team_members.append(owner)
+    res =[]
+    if user in managers  or user == owner:
+        tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
+        filter(assign_to__in = team_members).distinct()
+        total = tot_queryset.count()
+        queryset = tot_queryset.filter(task_assign_info__isnull=False)
+        editors = user.team.get_editors if user.team else []
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
+        for i in sorted_list:
+            additional_details = {}
+            query = queryset.filter(assign_to=i)
+            additional_details['user'] = i.fullname
+            additional_details['TotalAssigned'] = query.count()
+            additional_details['YetToStart']=query.filter(status=1).count()
+            additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
+            additional_details['Completed']=query.filter(status=3).count()
+            additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            res.append(additional_details)
+    else:
+        queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+                    filter(task__job__project__created_at__date__range=(start_date,today)).\
+                    filter(assign_to = user).distinct()
+        total = queryset.count()
+
+    print("QS--------->",queryset)
+    print("Res---------->",res)
+    total = total
+    total_assigned = queryset.count()
+    progress = queryset.filter(status=2).count()
+    yts = queryset.filter(status=1).count()
+    completed = queryset.filter(status=3)
+    total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    data = {'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    return data,res
+
+def billing_report(user,owner,start_date,today):
+    managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    team_members = user.team.get_team_members if user.team else []
+    team_members.append(owner)
+    res =[]
+    if user in managers  or user == owner:
+        tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+                    Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+                    filter(assign_to__in = team_members).distinct()
+        total = tot_queryset.count()
+        queryset = tot_queryset.filter(task_assign_info__isnull=False)
+        #if queryset:
+        editors = user.team.get_editors if user.team else []
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
+        for i in sorted_list:
+            additional_details = {}
+            query = queryset.filter(assign_to=i)
+            additional_details['user'] = i.fullname
+            additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            res.append(additional_details)
+    else:
+        queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+                    Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+                    filter(assign_to = user).distinct()
+    total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    data = {"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    return data,res
+
 from datetime import datetime, timedelta
 @api_view(["GET"])
-#@permission_classes([AllowAny])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
     user = request.user
@@ -5193,6 +5157,7 @@ def get_task_count_report(request):
     from_date = request.GET.get('from_date',None)
     to_date = request.GET.get('to_date',None) 
     download_report = request.GET.get('download_report',False) 
+    billing = request.GET.get('billing',False) 
     owner = user.team.owner if user.team else user
     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
@@ -5205,93 +5170,105 @@ def get_task_count_report(request):
             today = datetime.strptime(to_date, '%Y-%m-%d').date()
         else:
             start_date = today
-        managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
-        #team = Team.objects.filter(owner=user).first()
-        team_members = user.team.get_team_members if user.team else []
-        team_members.append(owner)
-        res =[]
-        if user in managers  or user == owner:
-            tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
-            filter(assign_to__in = team_members).distinct()
-            total = tot_queryset.count()
-            queryset = tot_queryset.filter(task_assign_info__isnull=False)
-            editors = user.team.get_editors if user.team else []
-            for i in editors:
-                additional_details = {}
-                query = queryset.filter(assign_to=i)
-                additional_details['user'] = i.fullname
-                additional_details['TotalAssigned'] = query.count()
-                additional_details['YetToStart']=query.filter(status=1).count()
-                additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
-                additional_details['Completed']=query.filter(status=3).count()
-                additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                if user in managers:
-                    additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                else:
-                    additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-                res.append(additional_details)
+        if billing == False:
+            data,res = task_count_report(user,owner,start_date,today)
         else:
-            queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
-                        filter(task__job__project__created_at__date__range=(start_date,today)).\
-                        filter(assign_to = user).distinct()
-            total = queryset.count()
-        
+            data,res = billing_report(user,owner,start_date,today)
         if download_report:
-            print("FR----->",start_date,today)
-            response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
-            return response
+            if res:
+                print("FR----->",start_date,today)
+                response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+                return response
 
-        print("QS--------->",queryset)
-        print("Res---------->",res)
-        total = total
-        total_assigned = queryset.count()
-        progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
-        yts = queryset.filter(status=1).count()
-        completed = queryset.filter(status=3)
-        total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
-        if user in managers:
-            total_approved_words = queryset.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-        else:
-            total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-        return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
+        return JsonResponse(data)
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+    
+ 
 
 
 def download_editors_report(res,from_date,to_date):
+    print("Res---------->",res)
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()
     data = pd.DataFrame(res)
+    print("Data------------->",data)
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
-    print("RR------------>",from_date,to_date)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
-    print("DDDD---------------->",data)
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
         date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
 
         # Write the second DataFrame to the same Excel file below the first DataFrame
-        data.to_excel(writer, sheet_name='Report', startrow=data.shape[0] + 2, index=False ) #
-        # for column in writer.sheets['Report'].columns:
-        #         max_length = 0
-        #         for cell in writer.sheets['Report'][column]:
-        #             try:  # Necessary to avoid error on empty cells
-        #                 if len(str(cell.value)) > max_length:
-        #                     max_length = len(cell.value)
-        #             except:
-        #                 pass
-        #         adjusted_width = (max_length + 2)  # Add some extra space
-        #         writer.sheets['Report'].column_dimensions[column].width = adjusted_width
-
- 
+        data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False ) #
+        
     writer.close()
     output.seek(0)
     filename = "editors_report.xlsx"
     response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
     return response
+
+
+
+# from datetime import datetime, timedelta
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated,IsEnterpriseUser])
+# def get_billing_report(request):
+#     user = request.user
+#     time_range = request.GET.get('time_range', None)
+#     from_date = request.GET.get('from_date',None)
+#     to_date = request.GET.get('to_date',None) 
+#     download_report = request.GET.get('download_report',False) 
+#     owner = user.team.owner if user.team else user
+#     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
+#         today = datetime.now().date()
+#         if time_range == 'today':
+#             start_date = today
+#         elif time_range == '30days':
+#             start_date = today - timedelta(days=30)
+#         elif from_date and to_date:
+#             start_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+#             today = datetime.strptime(to_date, '%Y-%m-%d').date()
+#         else:
+#             start_date = today
+#         managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+#         #team = Team.objects.filter(owner=user).first()
+#         team_members = user.team.get_team_members if user.team else []
+#         team_members.append(owner)
+#         res =[]
+#         if user in managers  or user == owner:
+#             tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+#                         filter(assign_to__in = team_members).distinct()
+#             total = tot_queryset.count()
+#             queryset = tot_queryset.filter(task_assign_info__isnull=False)
+#             editors = user.team.get_editors if user.team else []
+#             for i in editors:
+#                 additional_details = {}
+#                 query = queryset.filter(assign_to=i)
+#                 additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+#                 res.append(additional_details)
+#         else:
+#             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
+#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
+#                         filter(assign_to = user).distinct()
+
+        
+#         if download_report:
+#             print("FR----->",start_date,today)
+#             response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+#             return response
+
+#         print("QS--------->",queryset)
+#         print("Res---------->",res)
+#         total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+#         return JsonResponse({"TotalApprovedWords":total_approved_words,"Additional_info":res})
+#     else:
+#         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
 
 
 
@@ -5492,3 +5469,56 @@ def get_ner(request):
     #                 count=0
     # split = Split(out_filename,dir_1)
     # split.bysize(size_limit,True) 
+
+
+   #     managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    #     #team = Team.objects.filter(owner=user).first()
+    #     team_members = user.team.get_team_members if user.team else []
+    #     team_members.append(owner)
+    #     res =[]
+    #     if user in managers  or user == owner:
+    #         tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(task__job__project__created_at__date__range=(start_date,today)).\
+    #         filter(assign_to__in = team_members).distinct()
+    #         total = tot_queryset.count()
+    #         queryset = tot_queryset.filter(task_assign_info__isnull=False)
+    #         editors = user.team.get_editors if user.team else []
+    #         for i in editors:
+    #             additional_details = {}
+    #             query = queryset.filter(assign_to=i)
+    #             additional_details['user'] = i.fullname
+    #             additional_details['TotalAssigned'] = query.count()
+    #             additional_details['YetToStart']=query.filter(status=1).count()
+    #             additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
+    #             additional_details['Completed']=query.filter(status=3).count()
+    #             additional_details['total_completed_words'] = query.filter(status=3).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             # if user in managers:
+    #             #     additional_details['total_approved_words'] = query.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             # else:
+    #             additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #             res.append(additional_details)
+    #     else:
+    #         queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).\
+    #                     filter(task__job__project__created_at__date__range=(start_date,today)).\
+    #                     filter(assign_to = user).distinct()
+    #         total = queryset.count()
+        
+    #     if download_report:
+    #         print("FR----->",start_date,today)
+    #         response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
+    #         return response
+
+    #     print("QS--------->",queryset)
+    #     print("Res---------->",res)
+    #     total = total
+    #     total_assigned = queryset.count()
+    #     progress = queryset.filter(status=2).count()#.filter(task_assign_info__isnull=False)
+    #     yts = queryset.filter(status=1).count()
+    #     completed = queryset.filter(status=3)
+    #     total_completed_words = completed.aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     # if user in managers:
+    #     #     total_approved_words = queryset.filter(client_response=1).filter(user_who_approved_or_rejected=user).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     # else:
+    #     total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+    #     return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
+    # else:
+    #     return JsonResponse({'msg':'you are not allowed to access this details'},status=400)

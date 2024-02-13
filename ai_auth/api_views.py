@@ -21,7 +21,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,CareerSupportAISerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -34,7 +34,7 @@ from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionali
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
-                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp)
+                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -395,10 +395,11 @@ class ContactPricingCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email(subject,template,context):
+def send_email(subject,template,context,email=None):
+    email = email if email else 'support@ailaysa.com'
     content = render_to_string(template, context)
     file_ =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
         name = os.path.basename(file_.path)
         msg.attach(name, file_.file.read())
@@ -1628,9 +1629,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def get_queryset(self):
         team = self.request.query_params.get('team')
         if team:
-            queryset=InternalMember.objects.filter(team__name = team)
+            queryset=InternalMember.objects.filter(team__name = team).exclude(role_id=4).distinct()
         else:
-            queryset =InternalMember.objects.filter(team=self.request.user.team)
+            queryset =InternalMember.objects.filter(team=self.request.user.team).exclude(role_id=4).distinct()
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1842,7 +1843,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
-    receivers =  user.team.get_project_manager if user.team else []
+    receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
     print("Receivers------------->",receivers)
     for i in receivers:
@@ -2608,6 +2609,7 @@ def oso_test_querys(request):
 
 from .models import CoCreateForm
 from .serializers import AiUserDetailsSerializer, CoCreateFormSerializer,CampaignRegisterSerializer
+from dj_rest_auth.utils import jwt_encode
 
 class CampaignRegistrationView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
@@ -2617,7 +2619,12 @@ class CampaignRegistrationView(viewsets.ViewSet):
             serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
             if serializer.is_valid():
                 serializer.save()
-            return Response({"msg":"User registerd successfully"},status=201)
+            print("serializer",serializer.data)
+            user = AiUser.objects.get(id=serializer.data["user_id"])
+            ser = AiUserDetailsSerializer(user)
+            access_token, refresh_token = jwt_encode(user)
+            return Response({"access_token":str(access_token),"refresh_token":str(refresh_token),"user":ser.data},status=200)
+            # return Response({"msg":"User registerd successfully"},status=201)
         except ValueError as e:
             return Response({"msg":str(e)},status=409)
     
@@ -2870,5 +2877,60 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def internal_editors_list(request):
+    user = request.user
+    owner = request.user.team.owner if request.user.team else None
+    if owner:
+        team_obj = Team.objects.get(owner = owner)
+        queryset = InternalMember.objects.filter(team=owner.team,role_id=2).order_by('internal_member__fullname')
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
+    else:
+        return JsonResponse({'msg':'you are having no team'},status=400)
 
-     
+
+
+# def send_email(subject,template,context):
+#     content = render_to_string(template, context)
+#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
+#     file_ =context.get('file')
+#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
+#     if file_:
+#         name = os.path.basename(file_.path)
+#         msg.attach(name, file_.file.read())
+#     msg.content_subtype = 'html'
+#     msg.send()
+#     print("Msg sent")
+
+
+def career_support_thank_mail(user_name,user_email):
+    context = {'username':user_name}
+    Subject = render_to_string("career_support_thank_sub.txt")
+    Body = render_to_string("career_support_thank_msg.txt",context)
+    
+    sent = send_mail(Subject, Body, settings.DEFAULT_FROM_EMAIL, [user_email])
+    if sent:
+        print("Done")
+        return True
+    else:
+        return False
+
+
+
+class CareerSupportAICreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        from .tasks import send_career_mail
+        file = request.FILES.get('cv_file')
+        subject = "New Registration for AI/ML Openings"
+        template = 'career_support_email.html'
+        serializer = CareerSupportAISerializer(data={**request.POST.dict(),'cv_file':file})
+        if serializer.is_valid():
+            serializer.save()
+            instance = CareerSupportAI.objects.get(id=serializer.data.get('id'))
+            context = {'name':instance.name,'email':instance.email,'college':instance.college,'applied_for':instance.get_apply_for_display(),'file':instance.cv_file}      
+            send_career_mail.apply_async((instance.id,),queue='low-priority')
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

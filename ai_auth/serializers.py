@@ -10,7 +10,7 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
-                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp)
+                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp,CareerSupportAI)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -595,7 +595,7 @@ class InternalMemberSerializer(serializers.ModelSerializer):
         fields = ('id','team','team_name','added_by','role','functional_identity','professional_identity',
                 'status','current_status','internal_member','internal_member_detail',)
         extra_kwargs = {
-            'internal_member':{'write_only':True},
+            #'internal_member':{'write_only':True},
             'added_by':{'write_only':True},
             'status':{'write_only':True},
             }
@@ -642,10 +642,20 @@ class CampaignRegisterSerializer(serializers.Serializer):
             coupon = False
         else:
             coupon = None
-        CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
+        camp_user = CampaignUsers.objects.create(user=user,campaign_name=ai_camp,coupon_used=coupon)
         campaign_user_invite_email(user=user,gen_password=password)
         camp = check_campaign(user)
-        return user
+        return camp_user
+
+    
+
+    def to_representation(self, instance):
+        # data = super(ResultLogSerializer, self).to_representation(instance)
+        data = dict()
+        data['user_id'] = instance.user.id
+        return data
+
+
     
 
 class MarketingBootcampSerializer(serializers.ModelSerializer):
@@ -668,3 +678,9 @@ class MarketingBootcampSerializer(serializers.ModelSerializer):
         
         instance=MarketingBootcamp.objects.create(**validated_data)
         return instance
+
+
+class CareerSupportAISerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CareerSupportAI
+        fields = "__all__"

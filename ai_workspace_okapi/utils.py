@@ -607,7 +607,7 @@ def file_translate(task,file_path,target_language_code):
     user = task.job.project.ai_user
     parent = f"projects/{GOOGLE_TRANSLATION_API_PROJECT_ID}/locations/{GOOGLE_LOCATION}"
     file_type = file_path.split("/")[-1].split(".")
-    file_format=file_type[-1]
+    file_format=file_type[-1]   
     file_name = file_type[0]
     client = translate.TranslationServiceClient()
     if file_format not in google_mime_type.keys():

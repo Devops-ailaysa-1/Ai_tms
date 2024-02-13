@@ -315,6 +315,7 @@ class BookBody(models.Model):
     custom_order = models.IntegerField(null=True,blank=True) 
     temp_order = models.IntegerField(null=True,blank=True) 
     group = models.IntegerField(null=True,blank=True)
+    sub_headings = models.TextField(null=True,blank=True)
 
 class BookBodyDetails(models.Model):
     book_bm = models.ForeignKey(BookBody,on_delete=models.CASCADE,related_name='book_bdy_det_create')
