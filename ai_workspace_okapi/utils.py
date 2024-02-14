@@ -599,7 +599,7 @@ google_mime_type = {'doc':'application/msword',
 
 from google.cloud import translate_v3beta1 as translate
 from django import core
-import requests, os
+import requests, os, logger
 #from pptx import Presentation
 
 def file_translate(task,file_path,target_language_code):
