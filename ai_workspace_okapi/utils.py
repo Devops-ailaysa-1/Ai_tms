@@ -625,7 +625,7 @@ def file_translate(task,file_path,target_language_code):
             "parent": parent,
             "target_language_code": target_language_code,
             "document_input_config": document_input_config,
-            "is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
+            "is_translate_native_pdf_only":True})  #is_translate_native_pdf_only isTranslateNativePdfOnly
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
@@ -648,6 +648,7 @@ def count_pdf_pages(pdf_file):
             if line.startswith("Pages:"):
                 return int(line.split(':')[1])
     except:
+        print("count_pdf_pages function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
@@ -736,6 +737,7 @@ def pdf_char_check_for_document_trans(file_path):
                 return ["text" , len(pdfdoc.pages)]
         return ["ocr" , len(pdfdoc.pages)]
     except FileNotDecryptedError:
+        print("pdf_char_check_for_document_trans function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
 
 
