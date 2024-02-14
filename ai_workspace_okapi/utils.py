@@ -610,7 +610,6 @@ def file_translate(task,file_path,target_language_code):
     file_format=file_type[-1]   
     file_name = file_type[0]
     client = translate.TranslationServiceClient()
-    logger.info('file_translate fn called')
     if file_format not in google_mime_type.keys():
         print("file not support")
     mime_type = google_mime_type.get(file_format,None)
