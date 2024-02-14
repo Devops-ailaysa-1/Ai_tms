@@ -1413,6 +1413,7 @@ class CarrierSupportCreateView(viewsets.ViewSet):
         time = date.today()
         template = 'carrier_support_email.html'
         subject='Regarding Job Hiring'
+        hr_email = os.getenv("HR_MAIL")
         context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'message':message}
         serializer = CarrierSupportSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
@@ -1420,7 +1421,7 @@ class CarrierSupportCreateView(viewsets.ViewSet):
             ins = CarrierSupport.objects.get(id=serializer.data.get('id'))
             if ins.cv_file:
                 context.update({'file':ins.cv_file})
-            send_email(subject,template,context)
+            send_email(subject,template,context,hr_email)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -666,7 +666,7 @@ def page_count_in_docx(docx_path):
 
     subprocess.run(command, check=True)
     filename = os.path.basename(docx_path)
-    file_path = '/tmp/'+filename.split('.')[0]+'.pdf'
+    file_path = '/tmp/'+filename.rsplit('.',1)[0]+'.pdf'
     # Read the generated PDF into memory
     pages = count_pdf_pages(file_path)
     # pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
