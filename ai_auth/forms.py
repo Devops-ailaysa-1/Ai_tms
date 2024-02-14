@@ -437,7 +437,7 @@ def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
     file_ext = {"doc":"application/msword",
                 "docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "pdf":"application/pdf"}
-    email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
+    email =  os.getenv("HR_MAIL")
     # print("email",email)
     # email = "hemanthmurugan21@gmail.com"
 
