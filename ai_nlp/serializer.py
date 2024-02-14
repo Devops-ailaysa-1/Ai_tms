@@ -40,7 +40,8 @@ def check_txt(path):
 from PyPDF2 import PdfFileReader 
 from PyPDF2.errors import FileNotDecryptedError
 from ai_nlp.utils import epub_processing
-
+import logging
+logger = logging.getLogger('django')
 def chat_page_chk(instance):
     from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
     page_count=0
@@ -55,6 +56,7 @@ def chat_page_chk(instance):
             page_count = count_pdf_pages(instance.file.path)
             file_format='pdf'
         except FileNotDecryptedError:
+            print("chat_page_chk function")
             raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
     elif instance.file.name.endswith(".epub"):
         text = epub_processing(instance.file.path,text_word_count_check=True)
