@@ -584,11 +584,11 @@ def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_pr
         sd_instance.status="DONE"
         sd_instance.save()
         print("finished_generate")
-    except:
-
+    except Exception as e:
         sd_instance.status="ERROR"
         sd_instance.save()
-        raise serializers.ValidationError({'msg':"error on processing SD"})
+        msg = "An error occurred:_{}".format(e)
+        raise serializers.ValidationError({'msg':msg})
 
 
 
