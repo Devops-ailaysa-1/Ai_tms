@@ -40,7 +40,8 @@ def check_txt(path):
 from PyPDF2 import PdfFileReader 
 from PyPDF2.errors import FileNotDecryptedError
 from ai_nlp.utils import epub_processing
-
+import logging
+logger = logging.getLogger('django')
 def chat_page_chk(instance):
     from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
     page_count=0

@@ -4334,6 +4334,7 @@ def translate_file(request):
 from ai_exportpdf.utils import pdf_char_check
 def translate_file_process(task_id):
     tsk = Task.objects.get(id=task_id)
+    logger.info('translate_file_process called')
     file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
