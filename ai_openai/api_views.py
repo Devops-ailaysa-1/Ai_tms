@@ -226,7 +226,7 @@ def customize_text_openai(request):
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
     detector = Translator()
-
+    print("Text---------->",user_text)
     if task != None:
         obj = Task.objects.get(id=task)
         user = obj.job.project.ai_user
@@ -239,14 +239,17 @@ def customize_text_openai(request):
     else:    
         user = request.user.team.owner if request.user.team else request.user
     print("User---------->",user)
+    print("Language------------->",language)
         #project.team.owner if project.team else project.ai_user
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
-        lang = detector.detect(user_text).lang
+        detect_text = user_text[:500] if len(user_text) > 500 else user_text
+        lang = detector.detect(detect_text).lang
         if isinstance(lang,list):
             lang = lang[0]
         lang = get_lang_code(lang)
+        print("lang---------------->",lang)
 
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -274,7 +277,7 @@ def customize_text_openai(request):
     try:user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     except:user_text_lang = 17
 
-    if lang!= 'en':
+    if lang != 'en':
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
@@ -297,7 +300,7 @@ def customize_text_openai(request):
         #result_txt = response['choices'][0]['text']
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
-    print("TT---------->",prompt)
+    #print("TT---------->",prompt)
     data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
