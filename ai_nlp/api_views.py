@@ -164,7 +164,7 @@ def pdf_chat(request):
     user = request.user
 
     if chat_text: 
-        if not unit_chk['total_units_left']>0:   ### remove not
+        if unit_chk['total_units_left']>0:   ### remove not
             language = Languages.objects.get(id=language)
             lang = detector.detect(chat_text).lang
             
