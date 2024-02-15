@@ -742,8 +742,6 @@ def pdf_char_check_for_document_trans(file_path):
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
 
 
-
-
 def get_consumption_of_file_translate(task):
     # from ai_exportpdf.utils import pdf_char_check
     file,ext = os.path.splitext(task.file.file.path)
