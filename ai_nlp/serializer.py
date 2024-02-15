@@ -42,6 +42,7 @@ from PyPDF2.errors import FileNotDecryptedError
 from ai_nlp.utils import epub_processing
 import logging
 logger = logging.getLogger('django')
+
 def chat_page_chk(instance):
     from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
     page_count=0
@@ -72,9 +73,11 @@ def chat_page_chk(instance):
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     pdf_file_question = PdfQustionSerializer(many=True,required=False)
+
     class Meta:
         model = PdffileUpload
-        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file','pdf_file_question')
+        fields =('id','file_name','created_at','updated_at','celery_id',
+                 'status','user','file','pdf_file_question')
 
 
     def create(self, validated_data):
@@ -97,9 +100,6 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             
             instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
             instance.status="PENDING"
-            # emb_instance = ChatEmbeddingLLMModel.objects.get(model_name="cohere")
-            # print("emb_instance",emb_instance)
-            # instance.embedding_name = emb_instance
             instance.save()
             celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
             print(celery_id)
