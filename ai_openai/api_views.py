@@ -244,8 +244,7 @@ def customize_text_openai(request):
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
-        if len(user_text) > 500:
-            detect_text = user_text[:500]
+        detect_text = user_text[:500] if len(user_text) > 500 else user_text
         lang = detector.detect(detect_text).lang
         if isinstance(lang,list):
             lang = lang[0]
