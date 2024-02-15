@@ -129,20 +129,14 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
     return  res['output_text'] #res["output_text"] 
 
 def load_embedding_vector(instance,query)->RetrievalQA:
-    last_chat = instance.pdf_file_chat.last()
-    if last_chat:
-        last_ans = last_chat.answer
-        if ends_with_question_mark(last_ans):
-            query = last_ans+"   \n   "+ query
+    # last_chat = instance.pdf_file_chat.last()
+    # if last_chat:
+    #     last_ans = last_chat.answer
+    #     if ends_with_question_mark(last_ans):
+    #         query = last_ans+"   \n   "+ query
 
     vector_path = instance.vector_embedding_path
-    # if instance.embedding_name.model_name:
-    #     model_name = instance.embedding_name.model_name
-    # else:
-    #     model_name = "openai"
-
-    # if model_name == "openai":
-    #     print(model_name ,"openai")
+ 
     llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
     embed = OpenAIEmbeddings()
         
