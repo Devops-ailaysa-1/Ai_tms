@@ -86,7 +86,7 @@ def loader(file_id) -> None:
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
-        embeddings = OpenAIEmbeddings()
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
         print("emb----------------->>>>>>>>>>")
         # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
         print("--------->>>>> multilingual-22-12")
