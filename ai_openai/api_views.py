@@ -155,7 +155,7 @@ def instant_customize_response(customize ,user_text,used_tokens):
     return final,cust_tokens
 
 
-def customize_response(customize ,user_text,tone,used_tokens,words):
+def customize_response(customize ,user_text,tone,used_tokens,percent):
     #print("Initial------->",used_tokens)
     user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
@@ -169,7 +169,7 @@ def customize_response(customize ,user_text,tone,used_tokens,words):
             else:
                 user_text = user_text + '.'
                 if customize.customize == 'Summarize':
-                    prompt = customize.prompt.format(words) +' "{}"'.format(user_text)
+                    prompt = customize.prompt.format(percent) +' "{}"'.format(user_text)
                 else:
                     prompt = customize.prompt +' "{}"'.format(user_text)
             print("Pr-------->",prompt)
@@ -227,7 +227,7 @@ def customize_text_openai(request):
     customize = AiCustomize.objects.get(id = customize_id)
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
-    words = request.POST.get('words',None)
+    percent = request.POST.get('percent',None)
     detector = Translator()
     print("Text---------->",user_text)
     if task != None:
@@ -287,7 +287,7 @@ def customize_text_openai(request):
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
-            response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens,words)
+            response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens,percent)
             #result_txt = response['choices'][0]['text']
 
             result_txt = response["choices"][0]["message"]["content"]
@@ -299,7 +299,7 @@ def customize_text_openai(request):
             return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english      
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens,words)
+        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens,percent)
         #result_txt = response['choices'][0]['text']
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
