@@ -131,43 +131,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if not user: user = instance.user
         initial_credit = user.credit_balance.get("total_left")
         print("------>",instance.catagories.category)
+        token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
         if instance.catagories.category == 'Free Style':
-            prompt+= instance.description if lang in ai_langs else instance.description_mt + '.'
+            prompt+= instance.description + '.' if lang in ai_langs else instance.description_mt + '.'
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
             # prompt+=' Make sure to cover all relevant aspects within the token limit.' 
-
-        # elif instance.catagories.category == "News":
-        #     sub_catagories_instance = instance.sub_catagories.prompt_sub_category.first()
-        #     start_phrase = instance.sub_catagories.prompt_sub_category.first()
-        #     query = sub_catagories_instance.start_phrase
-        #     assistant = sub_catagories_instance.assistant
-        #     description = ""
-        #     if instance.description:
-        #         description = instance.description if lang in ai_langs else instance.description_mt
-        #     elif instance.news_files:
-        #         description = news_file_read(instance.news_files.path)
-        #     else:
-  
-        #         raise serializers.ValidationError({'msg':'no description or file'},code=400)
-
-        #     # if instance.sub_catagories.sub_category == "Named Entity and Keywords Extraction"
-        #     news_details = instance.ai_prompt_news_details
-
-        #     if news_details.no_of_words:
-        #         query = query.format(news_details.no_of_words)
-
-        #     # print("start_phrase",query)
-        #     # print("assiant",assistant)
-        #     # print('no_of_words',news_details.no_of_words)
-        #     # print('name_of_the_speaker',news_details.name_of_the_speaker)
-        #     # print('position_of_the_speaker',news_details.position_of_the_speaker)
-        #     # print('place_of_the_speech',news_details.place_of_the_speech)
-        #     # print('description',description)
-        #     consumable_credit = get_consumable_credits_for_text(description+query+assistant,target_lang=None,source_lang=instance.source_prompt_lang_code)
-        #     prompt = self.news_text_gen_prompt_template(description=description , prompt=query ,assistant=assistant)
-        #     print(prompt)
-
-
         else:
             print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
@@ -184,21 +152,26 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
 
-            prompt+=' Make sure to cover all relevant aspects within the token limit.' 
+            #prompt+= ' Ensure all relevant aspects are covered within the token limit, and include a conclusion that summarizes the main points and encourages engagement from the audience. Keep the total token count under {}.'.format(token)
+
+            #prompt+=' Make sure to cover all relevant aspects within the token limit.'
+            #prompt+=' with a conclusion that summarizes the main points and includes a clear call-to-action, keeping the total token count under {}.'.format(token) 
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
 
         print("consumable_credit",consumable_credit)
         # consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
-        token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
+        
 
         if instance.catagories.category == "News":
 
             openai_response=get_prompt_gpt_turbo_1106( prompt)
             print(prompt)
         else:
+            prompt+= ' Ensure all relevant aspects are covered within the token limit, and include a conclusion that summarizes the main points and encourages engagement from the audience. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
             openai_response=get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
+            print("Prompt------------>",prompt)
 
          
  
