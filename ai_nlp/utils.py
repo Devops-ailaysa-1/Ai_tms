@@ -12,7 +12,6 @@ import random,re
 from langchain.chat_models import ChatOpenAI
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
-from celery.decorators import task
 from ai_nlp.models import PdffileUpload ,PdfQustion
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
@@ -69,7 +68,6 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        # try:
         path_split=instance.file.path.split(".")
         persistent_dir=path_split[0]+"/"
         os.makedirs(persistent_dir,mode=0o777)
@@ -77,7 +75,6 @@ def loader(file_id) -> None:
         if instance.file.name.endswith(".docx"):
             loader = Docx2txtLoader(instance.file.path)
         elif instance.file.name.endswith(".txt"):
-
             loader = TextLoader(instance.file.path)
         elif instance.file.name.endswith(".epub"):
             text = epub_processing(instance.file.path,text_word_count_check=False)
@@ -138,7 +135,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
  
     llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
-    embed = OpenAIEmbeddings()
+    embed = OpenAIEmbeddings(model="text-embedding-3-large")
         
     # else: 
     #     print(model_name,"cohere")
