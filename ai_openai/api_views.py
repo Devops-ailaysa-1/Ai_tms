@@ -155,7 +155,7 @@ def instant_customize_response(customize ,user_text,used_tokens):
     return final,cust_tokens
 
 
-def customize_response(customize ,user_text,tone,used_tokens):
+def customize_response(customize ,user_text,tone,used_tokens):#percent
     #print("Initial------->",used_tokens)
     user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
@@ -168,8 +168,10 @@ def customize_response(customize ,user_text,tone,used_tokens):
                 prompt = customize.prompt+" "+user_text+"?"
             else:
                 user_text = user_text + '.'
+                # if customize.customize == 'Summarize':
+                #     prompt = customize.prompt.format(percent) +' "{}"'.format(user_text)
+                # else:
                 prompt = customize.prompt +' "{}"'.format(user_text)
-                #prompt = customize.prompt+" "+user_text+"."
             print("Pr-------->",prompt)
             response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
@@ -225,8 +227,9 @@ def customize_text_openai(request):
     customize = AiCustomize.objects.get(id = customize_id)
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
+    #percent = request.POST.get('percent',None)
     detector = Translator()
-
+    print("Text---------->",user_text)
     if task != None:
         obj = Task.objects.get(id=task)
         user = obj.job.project.ai_user
@@ -239,14 +242,17 @@ def customize_text_openai(request):
     else:    
         user = request.user.team.owner if request.user.team else request.user
     print("User---------->",user)
+    print("Language------------->",language)
         #project.team.owner if project.team else project.ai_user
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
-        lang = detector.detect(user_text).lang
+        detect_text = user_text[:500] if len(user_text) > 500 else user_text
+        lang = detector.detect(detect_text).lang
         if isinstance(lang,list):
             lang = lang[0]
         lang = get_lang_code(lang)
+        print("lang---------------->",lang)
 
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -274,7 +280,7 @@ def customize_text_openai(request):
     try:user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     except:user_text_lang = 17
 
-    if lang!= 'en':
+    if lang != 'en':
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
@@ -297,7 +303,7 @@ def customize_text_openai(request):
         #result_txt = response['choices'][0]['text']
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
-    print("TT---------->",prompt)
+    #print("TT---------->",prompt)
     data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
@@ -1374,33 +1380,56 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
 
 
 
-#####for testing streaming #############
+# #####for testing streaming #############
 # import time
 # @api_view(["GET"])
 # def generate(request):
-#     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations. In traditional computers, data is represented in bits, which can be either 0 or 1. But in quantum computing, data is represented using quantum bits, or qubits.
-
-# The fascinating thing about qubits is that they can exist in multiple states at the same time due to a phenomenon called superposition. It's like a coin that can be both heads and tails simultaneously. This allows quantum computers to explore many possibilities at once, making them potentially much faster for certain types of problems.
-
-# Another important concept in quantum computing is entanglement. When qubits are entangled, the state of one qubit instantly affects the state of another, no matter the distance between them. This allows quantum computers to process information in a highly interconnected way.
-
-# Quantum computing has the potential to solve certain complex problems that are practically impossible for classical computers to tackle. For example, it could help with simulations of large molecules, optimizing complex systems, and breaking some cryptographic codes.
-
-# However, building and maintaining quantum computers is very challenging because qubits are fragile and can be easily affected by their environment, leading to errors in calculations. Scientists and researchers are actively working on overcoming these challenges to unlock the full potential of quantum computing and revolutionize various fields of science and technology.
-
-#             """ 
+#     title="""Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.
+#     Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.
+#     Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.
+#     Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.
+#     Quantum computing is a type of computing that uses the principles of quantum mechanics to perform calculations.""" 
 #     if request.method=='GET':
 #         title=title.split(" ")
 #         def stream():
 #             for chunk in title:
-#                 time.sleep(0.05)
-#                 if chunk:
-#                     yield '\ndata: {}\n\n'.format(chunk)
-#                 else:
-#                     print("stream is finished")
-#         return StreamingHttpResponse(stream(),content_type='text/event-stream')
+#                 time.sleep(0.15)
+                
+#                 yield '\ndata: {}\n\n'.format(chunk)
+
+#         return StreamingHttpResponse(stream()) #,content_type='text/event-stream'
     
 #     return JsonResponse({'error':'Method not allowed.'},status=405)
+ 
+
+# from django.http.response import StreamingHttpResponse as strresp
+# from django.shortcuts import render
+# import time
+
+
+
+# def gen_message(msg):
+#     return f'data: {msg} '
+
+
+# def iterator():
+#     for i in range(100000):
+#         time.sleep(0.15)
+#         yield gen_message(f'iteration {i}')
+
+
+# def test_stream(request):
+#     stream = iterator()
+#     print("started streaming")
+#     response = strresp(stream, status=200, content_type='text/event-stream')
+#     response['Cache-Control'] = 'no-cache'
+#     return response
+
+
+
+
+
+
 
 # @api_view(["GET"])
 # def generate_article(request):

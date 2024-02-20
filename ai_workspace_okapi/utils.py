@@ -599,7 +599,7 @@ google_mime_type = {'doc':'application/msword',
 
 from google.cloud import translate_v3beta1 as translate
 from django import core
-import requests, os
+import requests, os #, logger
 #from pptx import Presentation
 
 def file_translate(task,file_path,target_language_code):
@@ -610,6 +610,7 @@ def file_translate(task,file_path,target_language_code):
     file_format=file_type[-1]   
     file_name = file_type[0]
     client = translate.TranslationServiceClient()
+    #logger.info('file_translate fn called')
     if file_format not in google_mime_type.keys():
         print("file not support")
     mime_type = google_mime_type.get(file_format,None)
@@ -625,7 +626,7 @@ def file_translate(task,file_path,target_language_code):
             "parent": parent,
             "target_language_code": target_language_code,
             "document_input_config": document_input_config,
-            "is_translate_native_pdf_only":True}) #is_translate_native_pdf_only isTranslateNativePdfOnly
+            "is_translate_native_pdf_only":True})  #is_translate_native_pdf_only isTranslateNativePdfOnly
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
@@ -648,6 +649,7 @@ def count_pdf_pages(pdf_file):
             if line.startswith("Pages:"):
                 return int(line.split(':')[1])
     except:
+        print("count_pdf_pages function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
@@ -664,7 +666,7 @@ def page_count_in_docx(docx_path):
 
     subprocess.run(command, check=True)
     filename = os.path.basename(docx_path)
-    file_path = '/tmp/'+filename.split('.')[0]+'.pdf'
+    file_path = '/tmp/'+filename.rsplit('.',1)[0]+'.pdf'
     # Read the generated PDF into memory
     pages = count_pdf_pages(file_path)
     # pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
@@ -736,9 +738,8 @@ def pdf_char_check_for_document_trans(file_path):
                 return ["text" , len(pdfdoc.pages)]
         return ["ocr" , len(pdfdoc.pages)]
     except FileNotDecryptedError:
+        print("pdf_char_check_for_document_trans function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
-
-
 
 
 def get_consumption_of_file_translate(task):

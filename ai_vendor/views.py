@@ -480,14 +480,16 @@ def vendor_language_pair(request):
                             ser_ven=create_service_types(service,vender_lang_pair[0],unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
-                    ven_lan_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,target_lang=tar_lang)
-                    ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]
-                    service=ven_service_info.services
-                    unit_type=ven_service_info.unit_type
-                    unit_rate=ven_service_info.unit_rate
-                    hourly_rate=ven_service_info.hourly_rate
-                    ven_service_info.save()
-                    pass
+                    try:
+                        ven_lan_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,target_lang=tar_lang)
+                        ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]
+                        service=ven_service_info.services
+                        unit_type=ven_service_info.unit_type
+                        unit_rate=ven_service_info.unit_rate
+                        hourly_rate=ven_service_info.hourly_rate
+                        ven_service_info.save()
+                    except:
+                        pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
             return JsonResponse({'msg':'some null present in rolls and might contain same lang pair'},status=400)

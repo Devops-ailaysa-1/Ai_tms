@@ -19,8 +19,7 @@ from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view,permission_classes
- 
-
+from ai_workspace.api_views import get_consumable_credits_for_text
 
 
 @api_view(['POST', ])
@@ -79,6 +78,7 @@ def wordapi_synonyms(request):
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+
 class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     filter_backends = [DjangoFilterBackend]
@@ -148,38 +148,49 @@ from ai_auth.api_views import AilaysaPurchasedUnits
 from ai_workspace_okapi.utils import get_translation
 from googletrans import Translator
 from rest_framework import serializers
+from ai_staff.models import Languages ,LanguagesLocale
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
     # user = request.user
     file_id=request.query_params.get('file_id',None)
     chat_text=request.query_params.get('chat_text',None)
+    language = request.query_params.get('language')
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
-    language = pdf_file.language 
+
     openai_available_langs = [17]
     detector = Translator()
     user = request.user
-    if chat_text:
-        # unit_chk['total_units_left'] =90
-        if unit_chk['total_units_left']>0: 
-            # lang = detector.detect(chat_text).lang
-            #consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
-            # if lang!= 'en':
-                # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,
-                                        # source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
-                
-            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            # if language.id not in openai_available_langs:
-                # chat_QA_res = get_translation(mt_engine_id=1 , source_string = chat_QA_res,
-                                        # source_lang_code=lang , target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
 
-            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text)
+    if chat_text: 
+        if unit_chk['total_units_left']>0:   ### remove not
+            language = Languages.objects.get(id=language)
+            lang = detector.detect(chat_text).lang
+            
+            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text,language=language)
+            
+            
+            consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
+
+            if lang!= 'en':
+                print(lang,language,"--",consumable_credits_user_text)
+                chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
+                                            target_lang_code='en',user_id=user.id,from_open_ai=True)
+
+                pdf_chat_instance.question_mt = chat_text 
+
+            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
+            if language.id not in openai_available_langs:
+                pdf_chat_instance.answer_mt=chat_QA_res
+                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code=lang,
+                                              target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
+
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
             serializer = PdffileChatHistorySerializer(pdf_chat_instance)
-            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1)
+            chat_unit_obj.deduct_units(service_name="pdf-chat",to_deduct_units=1) #uncommant this
             return Response(serializer.data)
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached question limit'}, code=400) #Insufficient Credits
@@ -194,10 +205,10 @@ def pdf_chat_remaining_units(request):
         user = getattr(user.team, 'owner', None) if user.team is not None else None
     else:
         user = request.user
+    chat_unit_obj = AilaysaPurchasedUnits(user=user)
+    unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
+    unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
     if user == None:
-        chat_unit_obj = AilaysaPurchasedUnits(user=user)
-        unit_msg = chat_unit_obj.get_units(service_name="pdf-chat")
-        unit_files = chat_unit_obj.get_units(service_name="pdf-chat-files")
         return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
     else:
         return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})

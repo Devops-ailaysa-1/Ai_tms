@@ -12,7 +12,6 @@ import random,re
 from langchain.chat_models import ChatOpenAI
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
-from celery.decorators import task
 from ai_nlp.models import PdffileUpload ,PdfQustion
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
@@ -24,6 +23,8 @@ from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
 import os
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
  
@@ -69,7 +70,6 @@ def loader(file_id) -> None:
     if website:
         loader = BSHTMLLoader(instance.website)
     else:
-        # try:
         path_split=instance.file.path.split(".")
         persistent_dir=path_split[0]+"/"
         os.makedirs(persistent_dir,mode=0o777)
@@ -77,7 +77,6 @@ def loader(file_id) -> None:
         if instance.file.name.endswith(".docx"):
             loader = Docx2txtLoader(instance.file.path)
         elif instance.file.name.endswith(".txt"):
-
             loader = TextLoader(instance.file.path)
         elif instance.file.name.endswith(".epub"):
             text = epub_processing(instance.file.path,text_word_count_check=False)
@@ -89,11 +88,11 @@ def loader(file_id) -> None:
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
-        embeddings = OpenAIEmbeddings()
+        embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
         print("emb----------------->>>>>>>>>>")
         # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
         print("--------->>>>> multilingual-22-12")
-        save_prest( texts, embeddings, persistent_dir,instance)
+        save_prest(texts, embeddings, persistent_dir,instance)
         instance.vector_embedding_path = persistent_dir
         instance.status = "SUCCESS"
         instance.save()
@@ -118,7 +117,8 @@ def save_prest(texts,embeddings,persistent_dir,instance):
         PdfQustion.objects.create(pdf_file_chat=instance , question=cleaned_sentence)
     vector_db.persist()
     vector_db = None
- 
+
+
 
 
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
@@ -126,25 +126,19 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
     res = chain({"input_documents":similarity_document, "question": query})
     return  res['output_text'] #res["output_text"] 
 
+
+
 def load_embedding_vector(instance,query)->RetrievalQA:
-    last_chat = instance.pdf_file_chat.last()
-    if last_chat:
-        last_ans = last_chat.answer
-        if ends_with_question_mark(last_ans):
-            query = last_ans+"   \n   "+ query
-            print(query)
-    
+    # last_chat = instance.pdf_file_chat.last()
+    # if last_chat:
+    #     last_ans = last_chat.answer
+    #     if ends_with_question_mark(last_ans):
+    #         query = last_ans+"   \n   "+ query
 
     vector_path = instance.vector_embedding_path
-    # if instance.embedding_name.model_name:
-    #     model_name = instance.embedding_name.model_name
-    # else:
-    #     model_name = "openai"
-
-    # if model_name == "openai":
-    #     print(model_name ,"openai")
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #,max_tokens=300
-    embed = OpenAIEmbeddings()
+ 
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
+    embed = OpenAIEmbeddings() #model="text-embedding-3-large"
         
     # else: 
     #     print(model_name,"cohere")
@@ -154,10 +148,18 @@ def load_embedding_vector(instance,query)->RetrievalQA:
  
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
-    v = vector_db.similarity_search(query=query,k=2 )
-    result = querying_llm(llm=llm,chain_type="stuff",chain_type_kwargs=prompt_template_chatbook(),similarity_document=v,query=query) ##chatgpt
+    retriever = vector_db.as_retriever(search_kwargs={"k": 20})
+    # v = vector_db.similarity_search(query=query,k=4)
 
-    # result = gen_text_context_question(vectors_list=v,question=query)
+    # result = querying_llm(llm=llm,chain_type="stuff",
+                        #   chain_type_kwargs=prompt_template_chatbook(),
+                        #   similarity_document=v,query=query) ##chatgpt
+
+    compressor = CohereRerank()
+    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
+    # compressed_docs = compression_retriever.get_relevant_documents(query)
+    qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
+    result = qa.run(query=query)
     return result
 
 
@@ -185,7 +187,7 @@ def gen_text_context_question(vectors_list,question):
     for i in vectors_list:
         context +=i.page_content
     prompt_template = prompt_temp_context_question(context,question)
-    print(prompt_template)
+    # print(prompt_template)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
     generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
     # generated_text = cohere_endpoint(prompt_template)
