@@ -23,6 +23,8 @@ from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
 import os
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
  
@@ -86,7 +88,7 @@ def loader(file_id) -> None:
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+        embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
         print("emb----------------->>>>>>>>>>")
         # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
         print("--------->>>>> multilingual-22-12")
@@ -116,14 +118,15 @@ def save_prest(texts,embeddings,persistent_dir,instance):
     vector_db.persist()
     vector_db = None
 
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import CohereRerank
+
 
 
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     chain = load_qa_chain(llm, chain_type=chain_type ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
     res = chain({"input_documents":similarity_document, "question": query})
     return  res['output_text'] #res["output_text"] 
+
+
 
 def load_embedding_vector(instance,query)->RetrievalQA:
     # last_chat = instance.pdf_file_chat.last()
@@ -135,7 +138,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
  
     llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
-    embed = OpenAIEmbeddings(model="text-embedding-3-large")
+    embed = OpenAIEmbeddings() #model="text-embedding-3-large"
         
     # else: 
     #     print(model_name,"cohere")
