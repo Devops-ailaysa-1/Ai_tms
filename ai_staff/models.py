@@ -742,3 +742,8 @@ class Genre(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
  
     
+class BookCategory(models.Model):
+    category_name =  models.CharField(max_length=100,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.category_name+'----'
