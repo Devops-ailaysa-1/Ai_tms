@@ -226,7 +226,7 @@ admin.site.register(SubscriptionOrder)
 admin.site.register(AiTroubleshootData)
 admin.site.register(TroubleshootIssues)
 admin.site.register(PurchasedUnits)
-admin.site.register(PurchasedUnitsCount)
+# admin.site.register(PurchasedUnitsCount)
 admin.site.register(MarketingBootcamp)
 
 @admin.register(PurchasedUnitsCount)
