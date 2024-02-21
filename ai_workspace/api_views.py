@@ -4740,7 +4740,7 @@ def push_translated_story(request):
         base_url = os.getenv('TELUGANA_FEDERAL_URL')
     elif target_lang == "Kannada":
         federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        base_url = os.getenv('STAGINGFEDERAL_URL')
+        base_url = os.getenv('KARNATAKA_FEDERAL_URL')
     else:
         federal_key = os.getenv("STAGING-FEDERAL-KEY")
         base_url = os.getenv('STAGINGFEDERAL_URL')
