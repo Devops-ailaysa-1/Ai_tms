@@ -81,11 +81,7 @@ class PdfQustion(models.Model):
 #     prompt = models.CharField(max_length=500,null=True,blank=True)
     
 
-# class BookCategory(models.Model):
-#     category_name =  models.CharField(max_length=100,null=True,blank=True)
 
-#     def __str__(self) -> str:
-#         return self.category_name+'----'
 
 
 
@@ -124,7 +120,7 @@ class PdfQustion(models.Model):
     
 
  
-# class PdffileChatHistory(models.Model):
+# class PdfPublicChatHistory(models.Model):
 #     pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
 #     question = models.CharField(max_length=2000,null=True,blank=True)
 #     answer = models.CharField(max_length=2000,null=True,blank=True)
