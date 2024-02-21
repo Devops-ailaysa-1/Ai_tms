@@ -155,7 +155,7 @@ def pdf_chat(request):
     # user = request.user
     file_id=request.query_params.get('file_id',None)
     chat_text=request.query_params.get('chat_text',None)
-    language = request.query_params.get('language')
+    language = request.query_params.get('language',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
@@ -166,26 +166,26 @@ def pdf_chat(request):
 
     if chat_text: 
         if unit_chk['total_units_left']>0:   ### remove not
-            language = Languages.objects.get(id=language)
+            # language = Languages.objects.get(id=language)
             lang = detector.detect(chat_text).lang
             
-            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text,language=language)
+            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text) #,language=language)
             
             
-            consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
+            # consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
 
             if lang!= 'en':
-                print(lang,language,"--",consumable_credits_user_text)
+                # print(lang,language,"--",consumable_credits_user_text)
                 chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
                                             target_lang_code='en',user_id=user.id,from_open_ai=True)
 
                 pdf_chat_instance.question_mt = chat_text 
 
             chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            if language.id not in openai_available_langs:
+            if  openai_available_langs: #language.id not in
                 pdf_chat_instance.answer_mt=chat_QA_res
-                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code=lang,
-                                              target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
+                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
+                                              target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
 
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()

@@ -76,8 +76,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PdffileUpload
-        fields =('id','file_name','created_at','updated_at','celery_id',
-                 'status','user','file','pdf_file_question')
+        fields =('id','file_name','created_at','updated_at','celery_id','status','user','file','pdf_file_question')
 
 
     def create(self, validated_data):
