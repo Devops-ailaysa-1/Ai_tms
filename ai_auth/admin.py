@@ -226,5 +226,10 @@ admin.site.register(SubscriptionOrder)
 admin.site.register(AiTroubleshootData)
 admin.site.register(TroubleshootIssues)
 admin.site.register(PurchasedUnits)
-admin.site.register(PurchasedUnitsCount)
+# admin.site.register(PurchasedUnitsCount)
 admin.site.register(MarketingBootcamp)
+
+@admin.register(PurchasedUnitsCount)
+class PurchasedUnitsCountAdmin(admin.ModelAdmin):
+    list_display = ("id","user","purchase_units" , "intial_units" ,"units_left" , "unit_type" ,"expires_at")
+    list_filter = ('user__email',)
