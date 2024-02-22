@@ -773,4 +773,74 @@ def get_consumption_of_file_translate(task):
         return None
 
 
+def search_wikipedia(search_term,lang):
+    # Search for the given search term
+    endpoint = f"https://{lang}.wikipedia.org/w/api.php"
+    search_params = {
+        "action": "query",
+        "format": "json",
+        "list": "search",
+        "srsearch": search_term
+    }
+    search_response = requests.get(endpoint, params=search_params)
+    search_data = search_response.json()
+    search_results = search_data['query']['search']
+    
+    # If there are search results, get the content of the first article
+    if search_results:
+        title = search_results[0]['title']
+        page_params = {
+            "action": "query",
+            "format": "json",
+            "prop": "extracts",
+            "titles": title
+        }
+        URL=f"https://{lang}.wikipedia.org/wiki/{search_term}"
+        page_response = requests.get(endpoint, params=page_params)
+        page_data = page_response.json()
+        page_id = list(page_data['query']['pages'].keys())[0]
+        content = page_data['query']['pages'][page_id]['extract']
+        return {"Title": title, "Content": content, "URL": URL}
+    else:
+        print("No search results found.")
+
+
+def search_wiktionary(search_term,lang):
+    user_input=search_term.strip()
+    parser = WiktionaryParser()
+    parser.set_default_language(lang)
+    parser.include_relation('Translations')
+    word = parser.fetch(user_input)
+    if word:
+        if word[0].get('definitions')==[]:
+            word=parser.fetch(user_input.lower())
+    res=[]
+    for i in word:
+        defin=i.get("definitions")
+        for j,k in enumerate(defin):
+            out=[]
+            pos=k.get("partOfSpeech")
+            text=k.get("text")
+            rel=k.get('relatedWords')
+            out=[{'pos':pos,'definitions':text}]
+            res.extend(out)
+
+    return res
+
+
+def google_custom_search(api_key, cx, query):
+    api_key = os.getenv('GOOGLE_CUSTOM_SEARCH')
+    cx = os.getenv('GOOGLE_CUSTOM_ENGINE')
+    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cx}&q={query}"
+    response = requests.get(url)
+    data = response.json()
+    res = []
+    for item in search_results['items']:
+        title = item['title']
+        link = item['link']
+        dt = {'title':title,'link':link}
+        res.append(dt)
+    return res
+
+
 
