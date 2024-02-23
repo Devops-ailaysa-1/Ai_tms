@@ -5148,6 +5148,29 @@ def billing_report(user,owner,start_date,today):
     data = {"TotalApprovedWords":total_approved_words,"Additional_info":res}
     return data,res
 
+def glossary_report(user,owner,start_date,today):
+    from ai_glex.models import MyGlossary
+    managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+    team_members = user.team.get_team_members if user.team else []
+    team_members.append(owner)
+    res =[]
+    if user in managers  or user == owner:
+        queryset = MyGlossary.objects.filter(user=owner).distinct()
+        editors = user.team.get_terminologist if user.team else []
+        sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
+        for i in sorted_list:
+            additional_details = {}
+            query = queryset.filter(created_by=i)
+            additional_details['user'] = i.fullname
+            additional_details['total_terms_added'] = query.count()
+            res.append(additional_details)
+    else:
+        queryset = MyGlossary.objects.filter(created_by=user).distinct()
+    total_approved_words = queryset.count()
+    data = {"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    return data,res
+
+
 from datetime import datetime, timedelta
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
@@ -5158,6 +5181,8 @@ def get_task_count_report(request):
     to_date = request.GET.get('to_date',None) 
     download_report = request.GET.get('download_report',False) 
     billing = request.GET.get('billing',False) 
+    glossary = request.GET.get('glossary',False)
+    print("Gloss--------->",glossary)
     owner = user.team.owner if user.team else user
     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
         today = datetime.now().date()
@@ -5170,10 +5195,16 @@ def get_task_count_report(request):
             today = datetime.strptime(to_date, '%Y-%m-%d').date()
         else:
             start_date = today
-        if billing == False:
-            data,res = task_count_report(user,owner,start_date,today)
-        else:
+
+        if glossary == 'True':
+            data,res = glossary_report(user,owner,start_date,today)
+
+        elif billing == 'True':
             data,res = billing_report(user,owner,start_date,today)
+
+        else:
+            data,res = task_count_report(user,owner,start_date,today)
+
         if download_report:
             if res:
                 print("FR----->",start_date,today)
@@ -5207,7 +5238,7 @@ def download_editors_report(res,from_date,to_date):
         
     writer.close()
     output.seek(0)
-    filename = "editors_report.xlsx"
+    filename = "editors_report({},{})".format(from_date,to_date)+ ".xlsx"
     response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
     return response
 

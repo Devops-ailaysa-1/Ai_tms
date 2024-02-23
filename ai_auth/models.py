@@ -84,7 +84,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def internal_member_team_detail(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()  ###Need to change with dynamic roles and permissions
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id__in=[4,5]).first()  ###Need to change with dynamic roles and permissions
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
             if plan in settings.TEAM_PLANS:
@@ -96,7 +96,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     @property
     def team(self):
         if self.is_internal_member == True:
-            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id=4).first()
+            obj = InternalMember.objects.filter(internal_member_id = self.id).exclude(role_id__in=[4,5]).first()
             plan = get_plan_name(obj.team.owner)
             return obj.team if plan in settings.TEAM_PLANS else None
         else:
@@ -593,6 +593,10 @@ class Team(models.Model):
     @property
     def get_finance(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=4)]
+
+    @property
+    def get_terminologist(self):
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=5)]
 
     @property
     def owner_pk(self):
