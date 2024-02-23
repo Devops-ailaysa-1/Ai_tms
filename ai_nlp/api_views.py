@@ -8,13 +8,14 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import HttpResponse
-from ai_nlp.models import PdffileUpload,PdffileChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory #,PdfBookChatHistory
 import django_filters
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from ai_nlp.utils import load_embedding_vector
 from rest_framework.response import Response
-from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,PdffileShowDetailsSerializer)
+from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,
+                              PdffileShowDetailsSerializer) #PdfBookChatHistorySerializer
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
@@ -213,6 +214,87 @@ def pdf_chat_remaining_units(request):
     else:
         return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
 
+
+
+from ai_nlp.serializer import PdffileHistorylistSerializer
+
+
+class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['file_name','status']
+    search_fields =['file_name','status']
+    page_size=20
+
+
+
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = PdffileUpload.objects.filter(user=user).order_by("created_at")
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = PdffileHistorylistSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
+
+
+
+#     def get_object(self, pk):
+#         try:
+#             user = self.request.user.team.owner if self.request.user.team else self.request.user
+#             return PdfBookChatHistory.objects.get(user=user,id=pk)
+#         except PdfBookChatHistory.DoesNotExist:
+#             raise Http404
+
+#     def get_user(self):
+#         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+#         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+#         #project_managers.append(user)
+#         print("Pms----------->",project_managers)
+#         return user,project_managers
+
+
+#     def create(self,request):
+#         serializer = PdfBookChatHistorySerializer(data=request.POST.dict(),context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+    
+#     def list(self, request):
+#         user = request.user.team.owner if request.user.team else request.user
+#         queryset = PdfBookChatHistory.objects.filter(user=user).order_by("-id")
+#         queryset = self.filter_queryset(queryset)
+#         pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         serializer = PdfBookChatHistorySerializer(pagin_tc,many=True)
+#         response = self.get_paginated_response(serializer.data)
+#         return response
+    
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer = PdfBookChatHistorySerializer(obj)
+#         return Response(serializer.data)
+    
+#     def filter_queryset(self, queryset):
+#         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+#         for backend in list(filter_backends):
+#             queryset = backend().filter_queryset(self.request, queryset, view=self)
+#         return queryset
+
+#     def destroy(self,request,pk):
+#         try:
+#             obj =self.get_object(pk)
+#             obj.delete()
+#             return Response({'msg':'deleted successfully'},status=200)
+#         except:
+#             return Response({'msg':'deletion unsuccessfull'},status=400)
 
 
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory ,PdfQustion #ChatEmbeddingLLMModel
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,PdfQustion#,PdfBookChatHistory #ChatEmbeddingLLMModel
 from ai_nlp.utils import loader #,thumbnail_create
 
 
@@ -111,13 +111,30 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             return instance
         else:
             raise serializers.ValidationError({'msg':'Need to buy add-on pack reached your file upload limit'}, code=400)
-        
+
+
+
+
+class PdffileHistorylistSerializer(serializers.ModelSerializer):
+    # website = serializers.CharField(required=False)
+    # pdf_file_question = PdfQustionSerializer(many=True,required=False)
+    pdf_file_chat=PdffileChatHistorySerializer(many=True)
+    class Meta:
+        model = PdffileUpload
+        fields =('id','file_name','created_at','updated_at','user','pdf_file_chat')
+
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        pdf_file_chat = instance.pdf_file_chat.last()
+        representation['pdf_file_chat'] = PdffileChatHistorySerializer(pdf_file_chat).data.get('question',None)
+        return representation
 
 # from ai_nlp.models import StoryIllustate,IllustateGeneration
 
-# class StoryIllustateSerializer(serializers.ModelSerializer):
+# class PdfBookChatHistorySerializer(serializers.ModelSerializer):
 #     class Meta:
-#         model = StoryIllustate
+#         model = PdfBookChatHistory
 #         fields ='__all__'
 
 
