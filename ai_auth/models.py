@@ -436,6 +436,8 @@ class PurchasedUnitsCount(models.Model):
         return self.user.email
 
 
+
+
 class PdfChatUsageQuota(models.Model):
     user = models.OneToOneField(AiUser,on_delete=models.CASCADE)
     question_threshold = models.IntegerField(default=0)

@@ -45,6 +45,7 @@ class PdffileUpload(models.Model):
     # embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
 
 
+
 class PdffileChatHistory(models.Model):
     pdf_file =models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
     question =models.CharField(max_length=2000,null=True,blank=True)
@@ -55,6 +56,17 @@ class PdffileChatHistory(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     token_usage = models.CharField(max_length=2000,null=True,blank=True)
     language  = models.ForeignKey(Languages,related_name='pdf_chat_lang', on_delete=models.CASCADE,null=True,blank=True)
+
+
+
+# class PdfBookChatHistory(models.Model):
+#     pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_book")
+#     pdf_chats =models.ForeignKey(PdffileChatHistory,on_delete=models.CASCADE,related_name="pdf_chat_his")
+#     chat_name = models.CharField(max_length=200,null=True,blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+
+
 
 
 class PdfQustion(models.Model):
@@ -83,7 +95,7 @@ class PdfQustion(models.Model):
 
 
 
-
+# from ai_staff.models import BookCategory
 
 # def user_directory_path_public_pdf(filename):
 #     return '{0}/{1}'.format("public_pdf_book/semantic_search_file",filename)
@@ -106,14 +118,15 @@ class PdfQustion(models.Model):
 #     pdf_thumbnail = models.FileField(upload_to=user_directory_pdf_publicbook_thumbnail,blank=True ,null=True)
 #     vector_embedding_path = models.CharField(max_length=200,null=True,blank=True)
 #     text_file =  models.FileField(upload_to=user_directory_path_pdf_upload,null=True,blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-#     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
-#     is_train=models.BooleanField(default=False)
+
 #     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='pdf_public_created_by')
 #     book_category = models.ForeignKey(BookCategory,on_delete=models.CASCADE,related_name="pdf_public_file",null=True,blank=True)
-#     vector_id= models.CharField(max_length=200,null=True,blank=True)
+ 
 #     celery_id = models.CharField(max_length=200,null=True,blank=True)
 #     status = models.CharField(max_length=200,null=True,blank=True)
+
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+#     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
 #     def __str__(self) -> str:
 #         return self.author+'----'+self.file_name+'----'+self.isbn
@@ -121,7 +134,8 @@ class PdfQustion(models.Model):
 
  
 # class PdfPublicChatHistory(models.Model):
-#     pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
+#     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
+#     pdf_file = models.ForeignKey(PublicBook,on_delete=models.CASCADE,related_name="pdf_file_chat")
 #     question = models.CharField(max_length=2000,null=True,blank=True)
 #     answer = models.CharField(max_length=2000,null=True,blank=True)
 #     question_mt = models.CharField(max_length=2000,null=True,blank=True)
