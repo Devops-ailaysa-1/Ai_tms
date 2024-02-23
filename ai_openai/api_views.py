@@ -253,6 +253,11 @@ def customize_text_openai(request):
             lang = lang[0]
         lang = get_lang_code(lang)
         print("lang---------------->",lang)
+    
+    if customize.id in [25,26,27]:
+        result = customize_refer(customize,user_text)
+        return Response(result)
+        
 
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -1562,21 +1567,19 @@ def docx_merger(request):
     return res
 
 from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search
-@api_view(["POST"])
-def customize_refer(request):
-    customize_id = request.POST.get('customize_id')
-    search_term = request.POST.get('user_text')
+def customize_refer(customize,search_term):
+    print("Cus--------->",customize)
+    #customize = AiCustomize.objects.get(id = customize_id)
     lang = lang_detector(search_term)
-    option = request.POST.get('option')
-    if option == "wikipedia":
+    if customize.customize == "Wikipedia":
         res = search_wikipedia(search_term,lang)
-    elif option == "wiktionary":
+    elif customize.customize == "Wiktionary":
         res = search_wiktionary(search_term,lang)
-    elif option == "web_search":
+    elif customize.customize == "Web search":
         from_google = google_custom_search(search_term)
         from_bing = bing_search(search_term)
         res = [{"google":from_google,"bing":from_bing}]
-    return Response(res)
+    return res
 
 
 
