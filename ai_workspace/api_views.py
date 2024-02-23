@@ -5156,7 +5156,7 @@ def glossary_report(user,owner,start_date,today):
     res =[]
     if user in managers  or user == owner:
         queryset = MyGlossary.objects.filter(user=owner).distinct()
-        editors = user.team.get_editors if user.team else []
+        editors = user.team.get_terminologist if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
             additional_details = {}
