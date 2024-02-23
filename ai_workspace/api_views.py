@@ -5166,8 +5166,8 @@ def glossary_report(user,owner,start_date,today):
             res.append(additional_details)
     else:
         queryset = MyGlossary.objects.filter(created_by=user).distinct()
-    total_approved_words = queryset.count()
-    data = {"TotalApprovedWords":total_approved_words,"Additional_info":res}
+    total_terms = queryset.count()
+    data = {"Totalterms":total_terms,"Additional_info":res}
     return data,res
 
 
@@ -5443,6 +5443,7 @@ def get_ner(request):
     ner = [ent.text for ent in doc.ents if ent.label_ not in exclude_labels]
     ner_new = list(set(ner))
     return JsonResponse({"ner": ner_new}, safe=False)
+
 
 
     

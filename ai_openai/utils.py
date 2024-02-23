@@ -4,10 +4,11 @@ from django.contrib.auth import settings
 from django.http import HttpResponse
 from ai_auth.models import UserCredits
 from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
-from ai_staff.models import Languages
+from ai_staff.models import Languages,LanguagesLocale
 from django.db.models import Q
 from io import BytesIO
 from PIL import Image
+from wiktionaryparser import WiktionaryParser
 logger = logging.getLogger('django')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
@@ -226,8 +227,100 @@ def get_sub_headings(title, pr_response):
         
         
         
-        
-        # for key, val in chapter_dict.items():
-        #     if partial_key in key:
-        #         value = val
-        #         break
+def search_wikipedia(search_term,lang):
+    # Search for the given search term
+    endpoint = f"https://{lang}.wikipedia.org/w/api.php"
+    search_params = {
+        "action": "query",
+        "format": "json",
+        "list": "search",
+        "srsearch": search_term
+    }
+    search_response = requests.get(endpoint, params=search_params)
+    search_data = search_response.json()
+    search_results = search_data['query']['search']
+    
+    # If there are search results, get the content of the first article
+    if search_results:
+        title = search_results[0]['title']
+        page_params = {
+            "action": "query",
+            "format": "json",
+            "prop": "extracts",
+            "titles": title
+        }
+        URL=f"https://{lang}.wikipedia.org/wiki/{search_term}"
+        page_response = requests.get(endpoint, params=page_params)
+        page_data = page_response.json()
+        page_id = list(page_data['query']['pages'].keys())[0]
+        content = page_data['query']['pages'][page_id]['extract']
+        return {"Title": title, "Content": content, "URL": URL}
+    else:
+        print("No search results found.")
+
+
+def search_wiktionary(search_term,lang):
+    try:
+        language = LanguagesLocale.objects.filter(locale_code = lang).first().language.language
+    except:
+        language = LanguagesLocale.objects.filter(locale_code = 'en').first().language.language
+    user_input=search_term.strip()
+    parser = WiktionaryParser()
+    print("Search term--------->",search_term)
+    print("Lang---------->",lang)
+    parser.set_default_language(language)
+    word = parser.fetch(user_input)
+    if word:
+        if word[0].get('definitions')==[]:
+            word=parser.fetch(user_input.lower())
+    res=[]
+    for i in word:
+        defin=i.get("definitions")
+        for j,k in enumerate(defin):
+            out=[]
+            pos=k.get("partOfSpeech")
+            text=k.get("text")
+            rel=k.get('relatedWords')
+            out=[{'pos':pos,'definitions':text}]
+            res.extend(out)
+
+    return res
+
+
+def google_custom_search(query):
+    api_key = os.getenv('GOOGLE_CUSTOM_SEARCH')
+    cx = os.getenv('GOOGLE_CUSTOM_ENGINE')
+    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cx}&q={query}"
+    response = requests.get(url)
+    res = []
+    if response.status_code == 200:
+        search_results = response.json()
+        for item in search_results['items']:
+            title = item['title']
+            link = item['link']
+            dt = {'title':title,'link':link}
+            res.append(dt)
+    else:
+        print("Error:", response.status_code, response.text)
+    return res
+
+
+def bing_search(query):
+    subscription_key = os.getenv('MST_SEARCH_KEY')
+    search_url = os.getenv('MST_SEARCH_ENDPOINT') + "v7.0/search"
+    headers = {"Ocp-Apim-Subscription-Key": subscription_key}
+    params = {"q": query, "textDecorations": True, "textFormat": "HTML"}
+    response = requests.get(search_url, headers=headers, params=params)
+    print(response.status_code)
+    res = []
+    if response.status_code == 200:
+        search_results = response.json()['webPages']['value']
+        for result in search_results:
+            name = result['name'] if 'name' in result else ''
+            description = result['snippet'] if 'snippet' in result else ''
+            url = result['url'] if 'url' in result else ''
+            dt = {'title':name,'link':url,'description':description}
+            res.append(dt)
+    else:
+        print("Error:", response.status_code, response.text)
+    return res   
