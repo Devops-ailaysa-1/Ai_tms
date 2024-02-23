@@ -1561,4 +1561,24 @@ def docx_merger(request):
     os.remove(composed)
     return res
 
+from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search
+@api_view(["POST"])
+def customize_refer(request):
+    customize_id = request.POST.get('customize_id')
+    search_term = request.POST.get('user_text')
+    lang = lang_detector(search_term)
+    option = request.POST.get('option')
+    if option == "wikipedia":
+        res = search_wikipedia(search_term,lang)
+    elif option == "wiktionary":
+        res = search_wiktionary(search_term,lang)
+    elif option == "web_search":
+        from_google = google_custom_search(search_term)
+        from_bing = bing_search(search_term)
+        res = [{"google":from_google,"bing":from_bing}]
+    return Response(res)
+
+
+
+
     

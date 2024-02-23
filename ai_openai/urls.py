@@ -24,6 +24,7 @@ urlpatterns = router.urls
 urlpatterns += [
     path("prompt_result/",api_views.AiPromptResultViewset.as_view()),
     path("customize_text_generate",api_views.customize_text_openai),
+    path("customize_refer",api_views.customize_refer),
     path("history/",api_views.history_delete),
     path("prompt_image_generations/" ,api_views.image_gen),
     path('customize_history/',api_views.AiPromptCustomizeViewset.as_view()),
