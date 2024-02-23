@@ -169,7 +169,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
             openai_response=get_prompt_gpt_turbo_1106( prompt)
             print(prompt)
         else:
-            prompt+= ' Ensure all relevant aspects are covered within the token limit, and include a conclusion that summarizes the main points and encourages engagement from the audience. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
+            #prompt+= ' Ensure all relevant aspects are covered within the token limit, and include a conclusion that summarizes the main points and encourages engagement from the audience. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
+            prompt+= ' Ensure all relevant aspects are covered within the token limit. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
             openai_response=get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
             print("Prompt------------>",prompt)
 
