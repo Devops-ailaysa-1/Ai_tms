@@ -966,7 +966,7 @@ class TeamRoleView(viewsets.ViewSet):
 
     @cached
     def get_queryset(self):
-        queryset = Role.objects.all().exclude(id=4)
+        queryset = Role.objects.all().exclude(id__in=[4,5])
         return queryset
 
     def list(self,request):
