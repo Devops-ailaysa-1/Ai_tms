@@ -297,12 +297,15 @@ def google_custom_search(query):
     res = []
     if response.status_code == 200:
         search_results = response.json()
-        for item in search_results['items']:
-            title = item['title']
-            link = item['link']
-            description = item['snippet'] if 'snippet' in item else ''
-            dt = {'title':title,'link':link,'description':description}
-            res.append(dt)
+        if search_results.get('items'):
+            for item in search_results['items']:
+                title = item['title']
+                link = item['link']
+                description = item['snippet'] if 'snippet' in item else ''
+                dt = {'title':title,'link':link,'description':description}
+                res.append(dt)
+        else:
+            print("No Results Found")
     else:
         print("Error:", response.status_code, response.text)
     return res
@@ -318,12 +321,15 @@ def bing_search(query):
     res = []
     if response.status_code == 200:
         search_results = response.json()['webPages']['value']
-        for result in search_results:
-            name = result['name'] if 'name' in result else ''
-            description = result['snippet'] if 'snippet' in result else ''
-            url = result['url'] if 'url' in result else ''
-            dt = {'title':name,'link':url,'description':description}
-            res.append(dt)
+        if search_results:
+            for result in search_results:
+                name = result['name'] if 'name' in result else ''
+                description = result['snippet'] if 'snippet' in result else ''
+                url = result['url'] if 'url' in result else ''
+                dt = {'title':name,'link':url,'description':description}
+                res.append(dt)
+        else:
+            print("No Results Found")
     else:
         print("Error:", response.status_code, response.text)
     return res   
@@ -340,13 +346,16 @@ def bing_news_search(query):
     if response.status_code == 200:
         # Extract needed data of recent news articles
         news_articles = response.json()['value']
-        for article in news_articles:
-            title = article['name'] if 'name' in article else ''
-            description = article.get('description', '')
-            url = article['url'] if 'url' in article else ''
-            thumbnail_url = article['image']['thumbnail']['contentUrl'] if 'image' in article and 'thumbnail' in article['image'] else ''
-            dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
-            res.append(dt)
+        if news_articles:
+            for article in news_articles:
+                title = article['name'] if 'name' in article else ''
+                description = article.get('description', '')
+                url = article['url'] if 'url' in article else ''
+                thumbnail_url = article['image']['thumbnail']['contentUrl'] if 'image' in article and 'thumbnail' in article['image'] else ''
+                dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
+                res.append(dt)
+        else:
+            print("No Results Found")
     else:
         print("Error:", response.status_code, response.text)
     return res
