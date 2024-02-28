@@ -1569,7 +1569,6 @@ def docx_merger(request):
 from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search
 def customize_refer(customize,search_term):
     print("Cus--------->",customize)
-    #customize = AiCustomize.objects.get(id = customize_id)
     lang = lang_detector(search_term)
     if customize.customize == "Wikipedia":
         res = search_wikipedia(search_term,lang)
@@ -1578,7 +1577,7 @@ def customize_refer(customize,search_term):
     elif customize.customize == "Web search":
         from_google = google_custom_search(search_term)
         from_bing = bing_search(search_term)
-        res = [{"google":from_google,"bing":from_bing}]
+        res = {"google":from_google,"bing":from_bing}
     return res
 
 
