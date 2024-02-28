@@ -257,6 +257,7 @@ def search_wikipedia(search_term,lang):
         return {"Title": title, "Content": content, "URL": URL}
     else:
         print("No search results found.")
+        return {}
 
 
 def search_wiktionary(search_term,lang):
@@ -337,7 +338,7 @@ def bing_news_search(query):
     res = []
     # Check if the request was successful
     if response.status_code == 200:
-        # Extract and print recent news articles
+        # Extract needed data of recent news articles
         news_articles = response.json()['value']
         for article in news_articles:
             title = article['name'] if 'name' in article else ''
