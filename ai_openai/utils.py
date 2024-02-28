@@ -249,7 +249,7 @@ def search_wikipedia(search_term,lang):
             "prop": "extracts",
             "titles": title
         }
-        URL=f"https://{lang}.wikipedia.org/wiki/{search_term}"
+        URL=f"https://{lang}.wikipedia.org/wiki/{title}"
         page_response = requests.get(endpoint, params=page_params)
         page_data = page_response.json()
         page_id = list(page_data['query']['pages'].keys())[0]
@@ -339,9 +339,9 @@ def bing_news_search(query):
         # Extract and print recent news articles
         news_articles = response.json()['value']
         for article in news_articles:
-            title = article['name']
+            title = article['name'] if 'name' in article else ''
             description = article.get('description', '')
-            url = article['url']
+            url = article['url'] if 'url' in article else ''
             thumbnail_url = article['image']['thumbnail']['contentUrl'] if 'image' in article and 'thumbnail' in article['image'] else ''
             dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
             res.append(dt)
