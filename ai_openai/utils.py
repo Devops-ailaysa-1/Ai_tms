@@ -299,7 +299,8 @@ def google_custom_search(query):
         for item in search_results['items']:
             title = item['title']
             link = item['link']
-            dt = {'title':title,'link':link}
+            description = item['snippet'] if 'snippet' in item else ''
+            dt = {'title':title,'link':link,'desccription':description}
             res.append(dt)
     else:
         print("Error:", response.status_code, response.text)
