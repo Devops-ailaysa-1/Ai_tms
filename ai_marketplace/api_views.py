@@ -1,13 +1,12 @@
 from rest_framework import filters,generics
 from rest_framework.pagination import PageNumberPagination
 import django_filters
-from  django.utils import timezone
+from django.utils import timezone
 from ai_marketplace import forms as m_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
 from os.path import join
-#from ai_auth.signals import email_notification_to_vendors
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
@@ -17,7 +16,6 @@ from notifications.models import Notification
 from django.db.models import Q, Max
 from django.db import transaction
 from ai_workspace.api_views import integrity_error
-from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
 from ai_auth import forms as auth_forms
@@ -56,7 +54,6 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,ProzE
                             MtpeEngines, SubjectFields,ServiceTypeunits,ProzLanguagesCode)
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
-import json,requests
 from ai_auth.tasks import shortlisted_vendor_list_send_email_new,check_dict
 from django.db.models import Count
 from django.http import JsonResponse
@@ -70,7 +67,7 @@ import django_filters
 from django_filters.filters import OrderingFilter
 from ai_workspace.serializers import TaskSerializer,\
             JobSerializer, ProjectSubjectSerializer,ProjectContentTypeSerializer
-import os,mimetypes
+import os,mimetypes,json,requests
 from django.http import JsonResponse,HttpResponse
 from ai_workspace_okapi.utils import download_file
 from django_oso.auth import authorize
