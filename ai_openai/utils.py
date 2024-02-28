@@ -283,11 +283,9 @@ def search_wiktionary(search_term,lang):
             rel=k.get('relatedWords')
             out=[{'pos':pos,'definitions':text}]
             res.extend(out)
-    if res:
-        URL=f"https://{lang}.wiktionary.org/wiki/{search_term}"
-        src = [{'URL': URL}]
-        res.extend(src)
-    return res
+    URL=f"https://{lang}.wiktionary.org/wiki/{search_term}" if res else ""
+    data = {'URL': URL, 'res': res}
+    return data
 
 
 def google_custom_search(query):
