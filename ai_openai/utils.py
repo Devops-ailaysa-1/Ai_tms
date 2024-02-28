@@ -310,7 +310,7 @@ def bing_search(query):
     subscription_key = os.getenv('MST_SEARCH_KEY')
     search_url = os.getenv('MST_SEARCH_ENDPOINT') + "v7.0/search"
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
-    params = {"q": query, "textDecorations": True, "textFormat": "HTML"}
+    params = {"q": query, "count": 10, "textDecorations": True, "textFormat": "HTML"}
     response = requests.get(search_url, headers=headers, params=params)
     print(response.status_code)
     res = []
@@ -325,3 +325,26 @@ def bing_search(query):
     else:
         print("Error:", response.status_code, response.text)
     return res   
+
+
+def bing_news_search(query):
+    subscription_key = os.getenv('MST_SEARCH_KEY')
+    search_url = os.getenv('MST_SEARCH_ENDPOINT') + "v7.0/news/search"
+    headers = {"Ocp-Apim-Subscription-Key": subscription_key}
+    params = {"q": query, "count":10,'freshness': 'Day'}
+    response = requests.get(search_url, headers=headers, params=params)
+    res = []
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Extract and print recent news articles
+        news_articles = response.json()['value']
+        for article in news_articles:
+            title = article['name']
+            description = article.get('description', '')
+            url = article['url']
+            thumbnail_url = article['image']['thumbnail']['contentUrl'] if 'image' in article and 'thumbnail' in article['image'] else ''
+            dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
+            res.append(dt)
+    else:
+        print("Error:", response.status_code, response.text)
+    return res
