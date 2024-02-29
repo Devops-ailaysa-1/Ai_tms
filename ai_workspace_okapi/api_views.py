@@ -2346,7 +2346,7 @@ def WiktionaryParse(request):
 
 
 def wikipedia_ws(code,codesrc,user_input):
-    S = requests.Session()
+    #S = requests.Session()
     URL = f"https://{codesrc}.wikipedia.org/w/api.php"
     PARAMS = {
         "action": "query",
@@ -2358,7 +2358,7 @@ def wikipedia_ws(code,codesrc,user_input):
         "llprop": "url",
         "lllang": code,
     }
-    R = S.get(url=URL, params=PARAMS)
+    R = requests.get(url=URL, params=PARAMS)
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
@@ -2411,7 +2411,7 @@ def WikipediaWorkspace(request):
 
 
 def wiktionary_ws(code,codesrc,user_input):
-    S = requests.Session()
+    #S = requests.Session()
     URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
     PARAMS={
         "action": "query",
@@ -2422,7 +2422,7 @@ def wiktionary_ws(code,codesrc,user_input):
         "titles": user_input,
         "iwlocal":codesrc,
     }
-    response = S.get(url=URL, params=PARAMS)
+    response = requests.get(url=URL, params=PARAMS)
     try:
         data = response.json()
     except JSONDecodeError:

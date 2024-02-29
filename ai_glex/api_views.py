@@ -485,6 +485,7 @@ def adding_term_to_glossary_from_workspace(request):
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
+    user = request.user.team.owner if request.user.team else request.user
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
         job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
@@ -495,7 +496,8 @@ def adding_term_to_glossary_from_workspace(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
         data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":doc.project,"user":request.user.id}
+                "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
+                 "created_by":request.user.id}
         serializer = MyGlossarySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -699,7 +701,8 @@ class MyGlossaryView(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":source_lang,\
-                    "tl_language":target_lang,"project":doc.project if doc else None,"user":user.id}
+                    "tl_language":target_lang,"project":doc.project if doc else None,\
+                    "user":user.id,"created_by":request.user.id}
             serializer = MyGlossarySerializer(data=data)
             if serializer.is_valid():
                 serializer.save()

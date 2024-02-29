@@ -5,16 +5,15 @@ from django.http import JsonResponse
 from nltk import word_tokenize
 from nltk.util import ngrams
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from django.http import HttpResponse
-from ai_nlp.models import PdffileUpload,PdffileChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory #,PdfBookChatHistory
 import django_filters
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from ai_nlp.utils import load_embedding_vector
 from rest_framework.response import Response
-from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,PdffileShowDetailsSerializer)
+from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,
+                              PdffileShowDetailsSerializer,PublicBookSerializer) #PdfBookChatHistorySerializer
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
@@ -155,7 +154,7 @@ def pdf_chat(request):
     # user = request.user
     file_id=request.query_params.get('file_id',None)
     chat_text=request.query_params.get('chat_text',None)
-    language = request.query_params.get('language')
+    language = request.query_params.get('language',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
@@ -166,26 +165,26 @@ def pdf_chat(request):
 
     if chat_text: 
         if unit_chk['total_units_left']>0:   ### remove not
-            language = Languages.objects.get(id=language)
+            # language = Languages.objects.get(id=language)
             lang = detector.detect(chat_text).lang
             
-            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text,language=language)
+            pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text) #,language=language)
             
             
-            consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
+            # consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
 
             if lang!= 'en':
-                print(lang,language,"--",consumable_credits_user_text)
+                # print(lang,language,"--",consumable_credits_user_text)
                 chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
                                             target_lang_code='en',user_id=user.id,from_open_ai=True)
 
                 pdf_chat_instance.question_mt = chat_text 
 
             chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            if language.id not in openai_available_langs:
+            if  openai_available_langs: #language.id not in
                 pdf_chat_instance.answer_mt=chat_QA_res
-                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code=lang,
-                                              target_lang_code=language.locale_code,user_id=user.id,from_open_ai=True)
+                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
+                                              target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
 
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
@@ -213,6 +212,104 @@ def pdf_chat_remaining_units(request):
     else:
         return Response({"total_msgs_left":unit_msg["total_units_left"],"total_files_left":unit_files["total_units_left"]})
 
+
+
+from ai_nlp.serializer import PdffileHistorylistSerializer
+
+
+class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields =['file_name','status']
+    search_fields =['file_name','status']
+    page_size=20
+
+
+
+    def list(self, request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = PdffileUpload.objects.filter(user=user).order_by("created_at")
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = PdffileHistorylistSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
+
+
+class PublicBookViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+ 
+
+
+    def create(self,request):
+        file=request.FILES.get('file',None)
+        if not file:
+            return Response({'msg':'no file attached'})
+        serializer = PublicBookSerializer(data={**request.POST.dict(),'file':file},context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
+
+#     def get_object(self, pk):
+#         try:
+#             user = self.request.user.team.owner if self.request.user.team else self.request.user
+#             return PdfBookChatHistory.objects.get(user=user,id=pk)
+#         except PdfBookChatHistory.DoesNotExist:
+#             raise Http404
+
+#     def get_user(self):
+#         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+#         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+#         #project_managers.append(user)
+#         print("Pms----------->",project_managers)
+#         return user,project_managers
+
+
+#     def create(self,request):
+#         serializer = PdfBookChatHistorySerializer(data=request.POST.dict(),context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+    
+#     def list(self, request):
+#         user = request.user.team.owner if request.user.team else request.user
+#         queryset = PdfBookChatHistory.objects.filter(user=user).order_by("-id")
+#         queryset = self.filter_queryset(queryset)
+#         pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         serializer = PdfBookChatHistorySerializer(pagin_tc,many=True)
+#         response = self.get_paginated_response(serializer.data)
+#         return response
+    
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer = PdfBookChatHistorySerializer(obj)
+#         return Response(serializer.data)
+    
+#     def filter_queryset(self, queryset):
+#         filter_backends = (DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter )
+#         for backend in list(filter_backends):
+#             queryset = backend().filter_queryset(self.request, queryset, view=self)
+#         return queryset
+
+#     def destroy(self,request,pk):
+#         try:
+#             obj =self.get_object(pk)
+#             obj.delete()
+#             return Response({'msg':'deleted successfully'},status=200)
+#         except:
+#             return Response({'msg':'deletion unsuccessfull'},status=400)
 
 
 

@@ -311,7 +311,7 @@ def add_internal_member_group(user) -> bool:
 def update_internal_member_status(sender, instance, *args, **kwargs):
     if instance.is_internal_member:
         if instance.last_login:
-            obj = auth_model.InternalMember.objects.filter(internal_member = instance).exclude(role_id=4).first()
+            obj = auth_model.InternalMember.objects.filter(internal_member = instance).exclude(role_id__in=[4,5]).first()
             obj.status = 2
             obj.save()
             # add_internal_member_group(user=instance.internal_member)
