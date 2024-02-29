@@ -31,10 +31,8 @@ class VendorServiceTypeSerializer(serializers.ModelSerializer):
        fields=('id','services','unit_rate','unit_type','hourly_rate',)
 
 class VendorServiceInfoSerializer(serializers.ModelSerializer):
-    # mtpe_rate = serializers.DecimalField(max_digits=12, decimal_places=2)
     class Meta:
         model=VendorServiceInfo
-        # fields = ('id','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit',)
         exclude=('lang_pair','created_at','updated_at','deleted_at')
 
 class VendorCATsoftwareSerializer(serializers.ModelSerializer):
@@ -50,10 +48,7 @@ class SavedVendorSerializer(serializers.ModelSerializer):
     def run_validation(self, data):
         customer = data.get('customer')
         vendor = json.loads(data.get('vendor'))
-        print('customer--------->',customer,type(customer))
-        print('vendor----------->',vendor,type(vendor))
         if customer == vendor:
-            print("Inside")
             raise serializers.ValidationError({"msg":"save-vendor cannot happen between same person"})
         return super().run_validation(data) 
     
@@ -125,35 +120,17 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
 
 
      def run_validation(self, data):
-         print("Data--->",data)
          request_user = self.context.get("request").user
          pr_managers = request_user.team.get_project_manager if request_user.team and request_user.team.owner.is_agency else [] 
          user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency and request_user in pr_managers else request_user
          data["user_id"] = user.id
-         # if self.context['request']._request.method == 'POST':
-         #     if "source_lang" in data and "target_lang" in data:
-         #         tt = VendorLanguagePair.objects.filter(source_lang_id=data.get('source_lang'),target_lang_id=data.get('target_lang'),user_id=data['user_id'])
-         #         if len(tt) == 1:
-         #             if tt.first().service.exists():pass
-         #             elif tt.first().servicetype.exists():pass
-         #             else:tt.delete()
-         # # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         # #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
-         # #    or("apply_for_reverse") in data))):
-         # # if self.context['request']._request.method == 'POST':
-         # #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         # #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
-         # #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
-        #   ##
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
-         #data["user_id"] = self.context.get("request").user.id
          if data.get('service'):
              data["service"] = json.loads(data["service"])
          if data.get("servicetype"):
              data["servicetype"] = json.loads(data["servicetype"])
-         print("validated data----->",data)
          return super().run_validation(data)
 
 
@@ -163,17 +140,14 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          service_type_data=data.pop('servicetype', [])
          existing_lang_pair_id = data.pop("existing_lang_pair_id", None)
          apply_for_reverse = data.pop("apply_for_reverse", None)
-         print("Reverse--->",apply_for_reverse)
          lang_reverse = None
          if data.get("source_lang"):
              lang = VendorLanguagePair.objects.create(**data)
-             print("lang====>",lang)
          else:
              lang = VendorLanguagePair.objects.get(id=existing_lang_pair_id)
 
          if apply_for_reverse:
              reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
-             print("reverse_data--->",reverse_data)
              try:lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
              except BaseException as e:
                  print(f"Error : {str(e)}")
@@ -217,7 +191,6 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         }
 
     def run_validation(self, data):
-        print('Data---->',data)
         if data.get("vendor_subject") and isinstance( data.get("vendor_subject"), str):
             data["vendor_subject"]=json.loads(data["vendor_subject"])
         if data.get("vendor_membership") and isinstance( data.get("vendor_membership"), str):
@@ -228,7 +201,6 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
             data["vendor_mtpe_engines"] = json.loads(data["vendor_mtpe_engines"])
         if data.get("vendor_software") and isinstance( data.get("vendor_software"), str):
             data["vendor_software"] = json.loads(data["vendor_software"])
-        print("validated data----->",data)
         return super().run_validation(data)
 
 class VendorBankDetailSerializer(serializers.ModelSerializer):
@@ -237,14 +209,6 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
         fields=('user','paypal_email','bank_name','bank_address','bank_account_name','bank_account_number','iban','bank_swift_code','bank_ifsc','gst_number','pan_number','other_bank_details')
         extra_kwargs = {'user':{"read_only":True},
         }
-
-    # def create(self, validated_data):
-    #     user_id=self.context["request"].user.id
-    #     vendor = VendorBankDetails.objects.create(**validated_data, user_id=user_id)
-    #     return vendor
-    #
-    # def update(self):
-    #     return super().create()
 
     def save(self, user_id):
         vendor = VendorBankDetails.objects.create(**self.validated_data, user_id=user_id)
@@ -272,6 +236,5 @@ class AMSLangpairSerializer(serializers.ModelSerializer):
             representation['price'] = float(service_info_instance.mtpe_rate)
             representation['mtpe_hourly_rate'] = float(service_info_instance.mtpe_hourly_rate)
             representation['mtpe_count_unit'] = service_info_instance.mtpe_count_unit.unit
-            # representation['is_active'] = service_info_instance.mtpe_count_unit.is_active
         return representation
  

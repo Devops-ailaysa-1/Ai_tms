@@ -45,7 +45,33 @@ def integrity_error(func):
 class VendorsInfoCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
+
+    """
+    API endpoint for retrieving or updating vendor profiles.
+
+    This view allows vendors to view,create,update their own profile information.
+
+    Methods:
+        get(request): Retrieve the vendor's profile.
+        post(request): Create the vendor's profile.
+        put(request): Update the vendor's profile.
+        delete(request): Delete vendor's CV file.
+    """
+
     def get(self, request):
+        """
+        Retrieve the vendor's profile.
+
+        Parameters:
+            request (Request): The HTTP request object.
+
+        Returns:
+            Response: The HTTP response object with the vendor's profile data.
+
+        Raises:
+            NotFound: If the vendor profile does not exist.
+            PermissionDenied: If the user does not have permission to access the profile.
+        """
         try:
             queryset = VendorsInfo.objects.get(user_id=request.user.id)
             serializer = VendorsInfoSerializer(queryset)
@@ -54,6 +80,19 @@ class VendorsInfoCreateView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
+        """
+        Handle POST requests and create a new resource.
+
+        Parameters:
+            request (Request): The HTTP request object containing data to create the resource.
+
+        Returns:
+            Response: The HTTP response object indicating success or failure of the operation.
+
+        Raises:
+            ValidationError: If the request data is not valid.
+            PermissionDenied: If the user does not have permission to perform the action.
+        """
         cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
@@ -95,7 +134,7 @@ class VendorsInfoCreateView(APIView):
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     permission_classes =[IsAuthenticated]
 
-
+    
     def get_queryset(self):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
@@ -112,18 +151,11 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
             res[tt]=ser.data
         return Response(res)
 
-   # def retrieve(self, request, pk=None):
-   #      queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
-   #      user = get_object_or_404(queryset, pk=pk)
-   #      serializer = VendorLanguagePairSerializer(user)
-   #      return Response(serializer.data)
-
     @integrity_error
     def create(self,request):
         user_id = request.user.id
         data={**request.POST.dict()}
         serializer = VendorLanguagePairSerializer(data={**request.POST.dict()},context={'request':request})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -136,8 +168,6 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         queryset = VendorLanguagePair.objects.filter(user_id=user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},context={'request':request},partial=True)
-        print(ser.is_valid())
-        print(ser.errors)
         if ser.is_valid():
             ser.save()
             return Response(ser.data)
@@ -276,33 +306,6 @@ def vendor_legal_categories_list(request):
         out.append({"label":i.name,"value":i.id})
     return JsonResponse({"out":out},safe = False)
 
-@api_view(['GET',])
-def cat_softwares_list(request):
-    out=[]
-    for i in CATSoftwares.objects.all():
-        out.append({"label":i.name,"value":i.id})
-    return JsonResponse({"out":out},safe = False)
-
-@api_view(['GET',])
-def vendor_membership_list(request):
-    out=[]
-    for i in VendorMemberships.objects.all():
-        out.append({"label":i.membership,"value":i.id})
-    return JsonResponse({"out":out},safe = False)
-
-@api_view(['GET',])
-def vendor_mtpe_engines_list(request):
-    out=[]
-    for i in MtpeEngines.objects.all():
-        out.append({"label":i.name,"value":i.id})
-    return JsonResponse({"out":out},safe = False)
-
-@api_view(['GET',])
-def vendor_subject_matter_list(request):
-    out=[]
-    for i in SubjectFields.objects.all():
-        out.append({"label":i.name,"value":i.id})
-    return JsonResponse({"out":out},safe = False)
 
 class SavedVendorView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
