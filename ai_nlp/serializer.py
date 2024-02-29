@@ -130,17 +130,15 @@ class PdffileHistorylistSerializer(serializers.ModelSerializer):
         representation['pdf_file_chat'] = PdffileChatHistorySerializer(pdf_file_chat).data.get('question',None)
         return representation
 
-# from ai_nlp.models import StoryIllustate,IllustateGeneration
-
-# class PdfBookChatHistorySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = PdfBookChatHistory
-#         fields ='__all__'
 
 
-# class IllustateGenerationSerializer(serializers.ModelSerializer):
-#     illustrate_story = StoryIllustateSerializer(required=False,many=True)
-#     class Meta:
-#         model = IllustateGeneration
-#         fields =('id','illustrate_story','text')
+
+from ai_nlp.models import PublicBook
+
+class PublicBookSerializer(serializers.ModelSerializer):
+     
+    class Meta:
+        model = PublicBook
+        fields ="__all__"
+
 
