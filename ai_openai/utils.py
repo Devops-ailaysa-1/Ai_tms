@@ -249,7 +249,7 @@ def search_wikipedia(search_term,lang):
             "prop": "extracts",
             "titles": title
         }
-        URL=f"https://{lang}.wikipedia.org/wiki/{search_term}"
+        URL=f"https://{lang}.wikipedia.org/wiki/{title}"
         page_response = requests.get(endpoint, params=page_params)
         page_data = page_response.json()
         page_id = list(page_data['query']['pages'].keys())[0]
@@ -257,6 +257,7 @@ def search_wikipedia(search_term,lang):
         return {"Title": title, "Content": content, "URL": URL}
     else:
         print("No search results found.")
+        return {}
 
 
 def search_wiktionary(search_term,lang):
@@ -283,8 +284,9 @@ def search_wiktionary(search_term,lang):
             rel=k.get('relatedWords')
             out=[{'pos':pos,'definitions':text}]
             res.extend(out)
-
-    return res
+    URL=f"https://{lang}.wiktionary.org/wiki/{search_term}" if res else ""
+    data = {'URL': URL, 'res': res}
+    return data
 
 
 def google_custom_search(query):
@@ -295,11 +297,15 @@ def google_custom_search(query):
     res = []
     if response.status_code == 200:
         search_results = response.json()
-        for item in search_results['items']:
-            title = item['title']
-            link = item['link']
-            dt = {'title':title,'link':link}
-            res.append(dt)
+        if search_results.get('items'):
+            for item in search_results['items']:
+                title = item['title']
+                link = item['link']
+                description = item['snippet'] if 'snippet' in item else ''
+                dt = {'title':title,'link':link,'description':description}
+                res.append(dt)
+        else:
+            print("No Results Found")
     else:
         print("Error:", response.status_code, response.text)
     return res
@@ -309,18 +315,47 @@ def bing_search(query):
     subscription_key = os.getenv('MST_SEARCH_KEY')
     search_url = os.getenv('MST_SEARCH_ENDPOINT') + "v7.0/search"
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
-    params = {"q": query, "textDecorations": True, "textFormat": "HTML"}
+    params = {"q": query, "count": 10, "textDecorations": True, "textFormat": "HTML"}
     response = requests.get(search_url, headers=headers, params=params)
     print(response.status_code)
     res = []
     if response.status_code == 200:
         search_results = response.json()['webPages']['value']
-        for result in search_results:
-            name = result['name'] if 'name' in result else ''
-            description = result['snippet'] if 'snippet' in result else ''
-            url = result['url'] if 'url' in result else ''
-            dt = {'title':name,'link':url,'description':description}
-            res.append(dt)
+        if search_results:
+            for result in search_results:
+                name = result['name'] if 'name' in result else ''
+                description = result['snippet'] if 'snippet' in result else ''
+                url = result['url'] if 'url' in result else ''
+                dt = {'title':name,'link':url,'description':description}
+                res.append(dt)
+        else:
+            print("No Results Found")
     else:
         print("Error:", response.status_code, response.text)
     return res   
+
+
+def bing_news_search(query):
+    subscription_key = os.getenv('MST_SEARCH_KEY')
+    search_url = os.getenv('MST_SEARCH_ENDPOINT') + "v7.0/news/search"
+    headers = {"Ocp-Apim-Subscription-Key": subscription_key}
+    params = {"q": query, "count":10,'freshness': 'Day'}
+    response = requests.get(search_url, headers=headers, params=params)
+    res = []
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Extract needed data of recent news articles
+        news_articles = response.json()['value']
+        if news_articles:
+            for article in news_articles:
+                title = article['name'] if 'name' in article else ''
+                description = article.get('description', '')
+                url = article['url'] if 'url' in article else ''
+                thumbnail_url = article['image']['thumbnail']['contentUrl'] if 'image' in article and 'thumbnail' in article['image'] else ''
+                dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
+                res.append(dt)
+        else:
+            print("No Results Found")
+    else:
+        print("Error:", response.status_code, response.text)
+    return res

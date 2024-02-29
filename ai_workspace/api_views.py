@@ -56,9 +56,7 @@ from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer,
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
 from ai_pay.api_views import po_modify
-# from controller.serializer_mapper import serializer_map
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines,AiCustomize
-#from ai_tm.models import TmxFile
 from ai_workspace import forms as ws_forms
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
@@ -112,14 +110,12 @@ nlp = spacy.load("en_core_web_sm")
 class IsCustomer(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        # user = (get_object_or_404(AiUser, pk=request.user.id))
         if request.user.user_permissions.filter(codename="user-attribute-exist").first():
             return True
 
 class ProjectView(viewsets.ModelViewSet):
     permission_classes = [IsCustomer]
     serializer_class = ProjectSerializer
-    # queryset = Project.objects.all()
 
     def get_queryset(self):
         return Project.objects.filter(ai_user=self.request.user)
@@ -150,7 +146,6 @@ class JobView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
-            print("obj id--->", obj_id)
             try:
                 objs.append(get_object_or_404(Job.objects.all(),\
                     id=obj_id))
@@ -168,7 +163,6 @@ class JobView(viewsets.ModelViewSet):
             return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             objs=authorize_list(objs,"delete",request.user) 
@@ -196,7 +190,6 @@ class ProjectSubjectView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
-            print("obj id--->", obj_id)
             try:
                 objs.append(get_object_or_404(ProjectSubjectField.objects.all(),\
                     id=obj_id))
@@ -212,9 +205,7 @@ class ProjectSubjectView(viewsets.ModelViewSet):
 
     def list(self,request):
         queryset = self.get_queryset()
-        # pagin_tc = self.paginate_queryset( queryset, request , view=self )
         serializer = ProjectSubjectSerializer(queryset, many=True, context={'request': request})
-        # response =self.get_paginated_response(serializer.data)
         return  Response(serializer.data)
 
     def create(self, request):
@@ -224,7 +215,6 @@ class ProjectSubjectView(viewsets.ModelViewSet):
             return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
@@ -249,7 +239,6 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
-            print("obj id--->", obj_id)
             try:
                 objs.append(get_object_or_404(ProjectContentType.objects.all(),\
                     id=obj_id))
@@ -283,7 +272,6 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 class FileView(viewsets.ModelViewSet):
-    #from ai_workspace_okapi.api_views import DocumentViewByTask
     serializer_class = FileSerializer
     parser_classes = [MultiPartParser, FormParser]
 
@@ -301,7 +289,6 @@ class FileView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
-            print("obj id--->", obj_id)
             try:
                 objs.append(get_object_or_404(File.objects.all(),\
                     id=obj_id))
@@ -329,7 +316,6 @@ class FileView(viewsets.ModelViewSet):
                 for i in tasks:
                     path = DocumentViewByTask.get_json_file_path(i)
                     if os.path.exists(path):
-                        print("Exists",path)
                         os.remove(path)
                 os.remove(obj.file.path)
                 obj.delete()
@@ -366,8 +352,6 @@ class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def create(self, request):
-        print("data--->",request.POST.dict())
-        print("Files--->",request.FILES.getlist('files'))
         serializer = ProjectSetupSerializer(data={**request.POST.dict(),
             "files":request.FILES.getlist('files')},context={"request":request})
         if serializer.is_valid(raise_exception=True):
@@ -5089,7 +5073,7 @@ def task_count_report(user,owner,start_date,today):
         filter(assign_to__in = team_members).distinct()
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
-        editors = user.team.get_editors if user.team else []
+        editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
             additional_details = {}
@@ -5132,7 +5116,7 @@ def billing_report(user,owner,start_date,today):
         total = tot_queryset.count()
         queryset = tot_queryset.filter(task_assign_info__isnull=False)
         #if queryset:
-        editors = user.team.get_editors if user.team else []
+        editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
             additional_details = {}

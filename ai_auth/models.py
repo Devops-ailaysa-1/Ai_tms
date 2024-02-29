@@ -589,6 +589,11 @@ class Team(models.Model):
     @property
     def get_editors(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2)]
+    
+    @property
+    def get_editors_only(self):
+        terminologists = [i.internal_member_id for i in self.internal_member_team_info.filter(role_id=5)] 
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=2).exclude(internal_member_id__in=terminologists)]
 
     @property
     def get_finance(self):
