@@ -36,6 +36,7 @@ from string import punctuation
 from django.db.models import Q
 from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
+from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search,bing_news_search
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -253,6 +254,11 @@ def customize_text_openai(request):
             lang = lang[0]
         lang = get_lang_code(lang)
         print("lang---------------->",lang)
+    
+    if customize.id in [25,26,27,28]:
+        result = customize_refer(customize,user_text)
+        return Response(result)
+        
 
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -1560,5 +1566,24 @@ def docx_merger(request):
     res = download_file(composed)
     os.remove(composed)
     return res
+
+
+def customize_refer(customize,search_term):
+    print("Cus--------->",customize)
+    lang = lang_detector(search_term)
+    if customize.customize == "Wikipedia":
+        res = search_wikipedia(search_term,lang)
+    elif customize.customize == "Wiktionary":
+        res = search_wiktionary(search_term,lang)
+    elif customize.customize == "Web search":
+        from_google = google_custom_search(search_term)
+        from_bing = bing_search(search_term)
+        res = {"google":from_google,"bing":from_bing}
+    elif customize.customize == "News":
+        res = bing_news_search(search_term)
+    return res
+
+
+
 
     

@@ -416,7 +416,7 @@ class AiCustomizeGroupingSerializer(serializers.ModelSerializer):
     def get_results(self,obj):
         result_dict ={}
         #queryset = AiCustomize.objects.all().distinct('grouping')
-        results =['Edit','Explore','Convert']
+        results =['Edit','Explore','Convert']#,'Refer']
         for i in results:
             rr = AiCustomize.objects.filter(grouping=i).exclude(customize='Text completion').order_by('id')
             result_dict[i] = AiCustomizeSerializer(rr,many=True).data
@@ -551,3 +551,10 @@ class BodyMatterSerializer(serializers.ModelSerializer):
     class Meta:
         model = BodyMatter
         fields = "__all__"
+
+
+
+# class BookCategorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = BookCategory
+#         fields = "__all__"

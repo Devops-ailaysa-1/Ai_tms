@@ -14,7 +14,7 @@ from ai_glex.signals import update_words_from_template,delete_words_from_term_mo
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
-class Glossary(models.Model):
+class Glossary(models.Model): ########Glossary projecct################
     class GlossaryObjects(models.Manager):
         def get_queryset(self):
             return super().get_queryset().filter(usage_permission='Public')
@@ -176,4 +176,4 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
 
     class Meta:
-        unique_together = ("sl_term", "tl_term", "user")
+        unique_together = ("sl_term", "user")
