@@ -9,7 +9,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
                     PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
                     ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType,FontCatagoryList,DesignShapeCategory,
-                    DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,BookCategory)
+                    DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -554,7 +554,7 @@ class BodyMatterSerializer(serializers.ModelSerializer):
 
 
 
-class BookCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BookCategory
-        fields = "__all__"
+# class BookCategorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = BookCategory
+#         fields = "__all__"
