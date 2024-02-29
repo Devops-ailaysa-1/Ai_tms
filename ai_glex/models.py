@@ -176,4 +176,4 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
 
     class Meta:
-        unique_together = ("sl_term", "tl_term", "user")
+        unique_together = ("sl_term", "user")
