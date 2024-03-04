@@ -476,33 +476,57 @@ class GetTranslation(APIView):#############Mt update need to work###############
         else:
             return Response({"res": "Insufficient credits"}, status=424)
 
+   
+
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def adding_term_to_glossary_from_workspace(request):
+    from .serializers import GlossarySetupSerializer
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
+    pos = request.POST.get('pos', "")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
     user = request.user.team.owner if request.user.team else request.user
-    if glossary_id:
-        glossary = Glossary.objects.get(id = glossary_id)
-        job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
-        serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
-                 "created_by":request.user.id}
-        serializer = MyGlossarySerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not glossary_id:
+        print("SRC-------------->",doc.job.source_language.id)
+        print("TAR-------------->",doc.job.target_language.id)
+        print("User------------>",user)
+        gls_pr = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = doc.job.source_language.id)\
+                .filter(project_jobs_set__target_language_id__in = [doc.job.target_language.id])
+        print("RR---------------->",gls_pr)
+        glossary_id = gls_pr.first().glossary_project_id if gls_pr else None
+        if not gls_pr:
+            print("----------New-------------")
+            source_language = [str(doc.job.source_language_id)]
+            target_languages = [str(doc.job.target_language_id)]
+            serializer =GlossarySetupSerializer(data={'source_language':source_language,'target_languages':target_languages,"project_type":['10']},context={"request": request,'user_1':user})
+            if serializer.is_valid():
+                ins = serializer.save()
+                glossary_id = ins.glossary_project.id if ins.glossary_project else None
+        print("GLS ID------------->",glossary_id)
+        if glossary_id:
+            glossary = Glossary.objects.get(id = glossary_id)
+            GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+
+    glossary = Glossary.objects.get(id = glossary_id)
+    job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"pos":pos,"job":job.id,"glossary":glossary.id})
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+        # data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+        #         "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
+        #          "created_by":request.user.id}
+        # serializer = MyGlossarySerializer(data=data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
