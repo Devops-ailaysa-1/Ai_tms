@@ -62,7 +62,7 @@ def epub_processing(file_path,text_word_count_check=False):
         return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
 
 
- 
+
 @task(queue='default')
 def loader(file_id) -> None:
     instance = PdffileUpload.objects.get(id=file_id)
