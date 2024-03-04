@@ -5,8 +5,6 @@ from django.http import JsonResponse
 from nltk import word_tokenize
 from nltk.util import ngrams
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from django.http import HttpResponse
 from ai_nlp.models import PdffileUpload,PdffileChatHistory #,PdfBookChatHistory
 import django_filters
@@ -15,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from ai_nlp.utils import load_embedding_vector
 from rest_framework.response import Response
 from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,
-                              PdffileShowDetailsSerializer) #PdfBookChatHistorySerializer
+                              PdffileShowDetailsSerializer,PublicBookSerializer) #PdfBookChatHistorySerializer
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
@@ -243,6 +241,23 @@ class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
+
+
+class PublicBookViewset(viewsets.ViewSet,PageNumberPagination):
+    permission_classes = [IsAuthenticated,]
+    filter_backends = [DjangoFilterBackend]
+ 
+
+
+    def create(self,request):
+        file=request.FILES.get('file',None)
+        if not file:
+            return Response({'msg':'no file attached'})
+        serializer = PublicBookSerializer(data={**request.POST.dict(),'file':file},context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
 
 
