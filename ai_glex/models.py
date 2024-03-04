@@ -94,6 +94,7 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='terms_add_user')
     #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
@@ -176,4 +177,21 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
 
     class Meta:
-        unique_together = ("sl_term", "tl_term", "user")
+        unique_together = ("sl_term", "user")
+
+
+
+# class WordChoices(models.Model):
+#     sl_term         = models.CharField(max_length=200, null=True, blank=False)
+#     tl_term         = models.CharField(max_length=200, null=True, blank=True)
+#     pos             = models.CharField(max_length=200, null=True, blank=True)
+#     task            = models.ForeignKey(Task, null=True, on_delete=models.SET_NULL,related_name='WC_job')
+#     created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at      = models.DateTimeField(auto_now=True,blank=True, null=True)
+#     deleted_at      = models.DateTimeField(blank=True, null=True)
+#     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
+
+#     class Meta:
+#         unique_together = ("sl_term", "pos", "user")
+
+    

@@ -65,6 +65,7 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
+        print("In create--------->", validated_data)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
