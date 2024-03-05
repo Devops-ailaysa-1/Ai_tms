@@ -720,6 +720,8 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
+        elif value == "word_choices":
+            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
 
         return queryset
