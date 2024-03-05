@@ -498,13 +498,10 @@ def adding_term_to_glossary_from_workspace(request):
     glossary_id = request.POST.get('glossary',None)
     user = request.user.team.owner if request.user.team else request.user
     if not glossary_id:
-        print("SRC-------------->",doc.job.source_language.id)
-        print("TAR-------------->",doc.job.target_language.id)
-        print("User------------>",user)
+
         gls_pr = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = doc.job.source_language.id)\
                 .filter(project_jobs_set__target_language_id__in = [doc.job.target_language.id])
-        print("RR---------------->",gls_pr.first().id)
         glossary_id = gls_pr.first().glossary_project.id if gls_pr else None
         if not gls_pr:
             glossary_id = create_gloss_project(doc,request,user)
