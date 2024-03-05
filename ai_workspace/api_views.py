@@ -755,7 +755,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
         print("type---->",project_type)
-        if project_type == 3:
+        if project_type == 3 or project_type == 10:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
 

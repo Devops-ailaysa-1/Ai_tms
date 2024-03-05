@@ -2431,7 +2431,7 @@ def wiktionary_ws(code,codesrc,user_input):
     res=data["query"]["pages"]
     if "-1" in res:
         PARAMS.update({'titles':user_input.lower()})
-        data = S.get(url=URL, params=PARAMS).json()
+        data = requests.get(url=URL, params=PARAMS).json()
         srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input.lower()}"
         res =data['query']['pages']
     for i in res:
@@ -3639,7 +3639,13 @@ def symspellcheck(request):
     # return JsonResponse({"result":suggestions},safe=False)
 
 
+# def check_input(sentence):
+#     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
+#                 .filter(job__target_language__language=target_language)\
+#                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+#                       params=[user_input]).distinct().values('sl_term','tl_term')
 
 
+#     return queryset
 
 

@@ -476,33 +476,57 @@ class GetTranslation(APIView):#############Mt update need to work###############
         else:
             return Response({"res": "Insufficient credits"}, status=424)
 
+   
+def create_gloss_project(doc,request,user):
+    from .serializers import GlossarySetupSerializer
+    print("----------New-------------")
+    source_language = [str(doc.job.source_language_id)]
+    target_languages = [str(doc.job.target_language_id)]
+    serializer =GlossarySetupSerializer(data={'source_language':source_language,'target_languages':target_languages,"project_type":['10']},context={"request": request,'user_1':user})
+    if serializer.is_valid():
+        ins = serializer.save()
+    return ins.glossary_project.id if ins else None
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def adding_term_to_glossary_from_workspace(request):
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
+    pos = request.POST.get('pos', "")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
     user = request.user.team.owner if request.user.team else request.user
+    if not glossary_id:
+
+        gls_pr = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = doc.job.source_language.id)\
+                .filter(project_jobs_set__target_language_id__in = [doc.job.target_language.id])
+        glossary_id = gls_pr.first().glossary_project.id if gls_pr else None
+        if not gls_pr:
+            glossary_id = create_gloss_project(doc,request,user)
+
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
-        job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
-        serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
-                 "created_by":request.user.id}
-        serializer = MyGlossarySerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        glss,created = GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+        print("RRR------------->",glss, created)
+
+
+    glossary = Glossary.objects.get(id = glossary_id)
+    job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"pos":pos,"job":job.id,"glossary":glossary.id})
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+        # data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+        #         "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
+        #          "created_by":request.user.id}
+        # serializer = MyGlossarySerializer(data=data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -608,13 +632,13 @@ def whole_glossary_term_search(request):
     return JsonResponse({'results':out})#'data':ser.data})
 
 
-class GlossaryListView(viewsets.ViewSet):
+class WordChoiceListView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
         task = request.GET.get('task_id')
         user = request.user.team.owner if request.user.team else request.user
-        queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+        queryset = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
                     .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
         if task:
             task_obj = Task.objects.get(id=task)
