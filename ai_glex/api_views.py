@@ -477,12 +477,19 @@ class GetTranslation(APIView):#############Mt update need to work###############
             return Response({"res": "Insufficient credits"}, status=424)
 
    
-
+def create_gloss_project(doc,request,user):
+    from .serializers import GlossarySetupSerializer
+    print("----------New-------------")
+    source_language = [str(doc.job.source_language_id)]
+    target_languages = [str(doc.job.target_language_id)]
+    serializer =GlossarySetupSerializer(data={'source_language':source_language,'target_languages':target_languages,"project_type":['10']},context={"request": request,'user_1':user})
+    if serializer.is_valid():
+        ins = serializer.save()
+    return ins.glossary_project.id if ins else None
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def adding_term_to_glossary_from_workspace(request):
-    from .serializers import GlossarySetupSerializer
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     pos = request.POST.get('pos', "")
@@ -494,23 +501,17 @@ def adding_term_to_glossary_from_workspace(request):
         print("SRC-------------->",doc.job.source_language.id)
         print("TAR-------------->",doc.job.target_language.id)
         print("User------------>",user)
-        gls_pr = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+        gls_pr = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = doc.job.source_language.id)\
                 .filter(project_jobs_set__target_language_id__in = [doc.job.target_language.id])
         print("RR---------------->",gls_pr)
-        glossary_id = gls_pr.first().glossary_project_id if gls_pr else None
+        glossary_id = gls_pr.first().glossary_project.id if gls_pr else None
         if not gls_pr:
-            print("----------New-------------")
-            source_language = [str(doc.job.source_language_id)]
-            target_languages = [str(doc.job.target_language_id)]
-            serializer =GlossarySetupSerializer(data={'source_language':source_language,'target_languages':target_languages,"project_type":['10']},context={"request": request,'user_1':user})
-            if serializer.is_valid():
-                ins = serializer.save()
-                glossary_id = ins.glossary_project.id if ins.glossary_project else None
-        print("GLS ID------------->",glossary_id)
-        if glossary_id:
-            glossary = Glossary.objects.get(id = glossary_id)
-            GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+            glossary_id = create_gloss_project(doc,request,user)
+            
+    if glossary_id:
+        glossary = Glossary.objects.get(id = glossary_id)
+        GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
 
     glossary = Glossary.objects.get(id = glossary_id)
     job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
