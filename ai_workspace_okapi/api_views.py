@@ -3639,13 +3639,37 @@ def symspellcheck(request):
     # return JsonResponse({"result":suggestions},safe=False)
 
 
-# def check_input(sentence):
-#     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
-#                 .filter(job__target_language__language=target_language)\
-#                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-#                       params=[user_input]).distinct().values('sl_term','tl_term')
+def check_source_words(user_input):
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
+                .filter(job__target_language__language=target_language)\
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
+    words = [i.get('sl_term') for i in queryset]
+    return words
+
+def target_source_words(target_mt):
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
+                .filter(job__target_language__language=target_language)\
+                .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
+    
+    gloss = [i for i in queryset]
+
+    word_list = [i.get('tl_term') for i in queryset]
+
+    input_sentence_lower = user_input.lower()
+    word_list_lower = [word.lower() for word in word_list]
+    
+    for word in word_list_lower:
+        
+        if word not in input_sentence_lower:
+            return False, gloss 
+    
+    return True, gloss
 
 
-#     return queryset
 
+    
+    
+    
 

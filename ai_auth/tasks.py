@@ -783,7 +783,24 @@ def count_update(job_id):
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
 
+def replace_with_gloss(seg,raw_mt):
+    final_mt = raw_mt
+    if word_choice:
+        source_words = check_source_words(seg.source)
+        if source_words:
+            all_target_replaced,gloss = target_source_words(raw_mt)
+            if not all_target_replaced:
+                final_mt = replace_mt_with_gloss(raw_mt,gloss)
+    return final_mt
 
+def replace_mt_with_gloss(raw_mt,source_words):
+    try:
+        pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Text:{}, Glossary:{}'''.format(raw_mt,gloss)
+        completion = openai.ChatCompletion.create(model="gpt-4",messages=[{"role": "user", "content": pr}])
+        res = completion["choices"][0]["message"]["content"]
+    except:
+        res = raw_mt
+    return res        
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
@@ -794,12 +811,16 @@ def mt_raw_update(task_id,segments):
     from ai_workspace_okapi.models import MergeSegment,SplitSegment
     #from ai_workspace_okapi.api_views import DocumentViewByTask
     from itertools import chain
-
+    word_choice = False
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
+    proj = task.job.project
+    if GlossarySelected.objects.filter(project = proj).exists():
+        word_choice = True
+    #tt = pr.glossary_project if hasattr(pr,'glossary_project') else None
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     if segments == None:
         segments = task.document.segments_for_find_and_replace
@@ -833,7 +854,8 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        mt = replace_with_gloss(seg,raw_mt)
                         tags = get_tags(seg)
                         if tags:
                             seg.target = mt + tags
@@ -864,7 +886,8 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    mt = replace_with_gloss(seg,raw_mt)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
