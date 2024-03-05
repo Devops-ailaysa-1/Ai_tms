@@ -504,14 +504,16 @@ def adding_term_to_glossary_from_workspace(request):
         gls_pr = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = doc.job.source_language.id)\
                 .filter(project_jobs_set__target_language_id__in = [doc.job.target_language.id])
-        print("RR---------------->",gls_pr)
+        print("RR---------------->",gls_pr.first().id)
         glossary_id = gls_pr.first().glossary_project.id if gls_pr else None
         if not gls_pr:
             glossary_id = create_gloss_project(doc,request,user)
-            
+
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
-        GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+        glss,created = GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+        print("RRR------------->",glss, created)
+
 
     glossary = Glossary.objects.get(id = glossary_id)
     job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
@@ -633,13 +635,13 @@ def whole_glossary_term_search(request):
     return JsonResponse({'results':out})#'data':ser.data})
 
 
-class GlossaryListView(viewsets.ViewSet):
+class WordChoiceListView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
         task = request.GET.get('task_id')
         user = request.user.team.owner if request.user.team else request.user
-        queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+        queryset = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False)\
                     .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
         if task:
             task_obj = Task.objects.get(id=task)
