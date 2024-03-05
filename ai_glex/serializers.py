@@ -118,3 +118,8 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
+
+
+class ChoicelistSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = "__all__"

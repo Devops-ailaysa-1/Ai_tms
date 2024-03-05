@@ -322,21 +322,22 @@ def extract_entities(sentence):
     # print(qa_chain(query) ) #chain.run(query).strip()
 
 
-# import requests
-# import os
-# def ner_terminology_finder(file_path):
-#     file_name = os.path.basename(file_path)
+import requests
+import os
+def ner_terminology_finder(file_path):
+    file_name = os.path.basename(file_path)
 
-#     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
+    url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
 
-#     payload = {}
-#     files=[
-#     ('file',(file_name,open(file_path,'rb'),'text/plain'))]
-#     headers = {}
-#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-#     if response.status_code == 200:
-#         ner = response.json()['ner'].split(",")
-#         terminology = response.json()['terminology'].split(",")
-#         return {'ner':ner,'terminology':terminology}
-#     else:
-#         return None
+    payload = {}
+    files=[
+    ('file',(file_name,open(file_path,'rb'),'text/plain'))]
+    headers = {}
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    if response.status_code == 200:
+        ner = response.json()['ner'].split(",")
+ 
+        terminology = response.json()['terminology'].split(",")
+        return {'terminology':terminology+ner}
+    else:
+        return None

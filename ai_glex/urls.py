@@ -8,6 +8,7 @@ router.register(r'glossary_file_upload',api_views.GlossaryFileView, basename="gl
 router.register(r'term_upload',api_views.TermUploadView, basename="term_upload")
 router.register(r'glossary_selected',api_views.GlossarySelectedCreateView, basename='glossary-selected')
 router.register(r'default_glossary',api_views.MyGlossaryView, basename="my_glossary")
+
 urlpatterns = router.urls
 
 
@@ -24,5 +25,6 @@ urlpatterns += [
     path('whole_glossary_term_search/',api_views.whole_glossary_term_search),
     path('word_choices_list/',api_views.WordChoiceListView.as_view({'get': 'list'}),name='glossaries-list'),
     path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" ),
-    path('term_mt/',api_views.get_word_mt)
+    path('term_mt/',api_views.get_word_mt),
+    path('get_terminology',api_views.get_ner_terminology_extract)
 ]
