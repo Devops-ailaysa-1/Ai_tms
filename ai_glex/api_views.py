@@ -374,9 +374,13 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 
     def list(self,request):
         project = request.GET.get('project')
+        option = request.GET.get('glossary',None)
         if not project:
             return Response({"msg":"project_id required"})
-        glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
+        if option == 'glossary':
+            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=3).filter(project_id=project).all()
+        else:
+            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=10).filter(project_id=project).all()
         serializer = GlossarySelectedSerializer(glossary_selected, many=True)
         return Response(serializer.data)
 
