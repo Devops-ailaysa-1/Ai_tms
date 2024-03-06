@@ -374,7 +374,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 
     def list(self,request):
         project = request.GET.get('project')
-        option = request.GET.get('glossary',None)
+        option = request.GET.get('option',None)
         if not project:
             return Response({"msg":"project_id required"})
         if option == 'glossary':
