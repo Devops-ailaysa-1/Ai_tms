@@ -4519,7 +4519,7 @@ def get_news_federal_key_and_url(lang):
     if lang == "Kannada":
         key = os.getenv("KARNATAKA-FEDARAL-KEY")
         integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
-    if lang == "Telugu":
+    elif lang == "Telugu":
         key = os.getenv("TELUGANA-FEDARAL-KEY")
         integration_api_url = os.getenv('TELUGANA_FEDERAL_URL')+"news"
     else:
