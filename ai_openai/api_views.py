@@ -1576,9 +1576,9 @@ def customize_refer(customize,search_term):
     elif customize.customize == "Wiktionary":
         res = search_wiktionary(search_term,lang)
     elif customize.customize == "Web search":
-        from_google = google_custom_search(search_term)
+        #from_google = google_custom_search(search_term)
         from_bing = bing_search(search_term)
-        res = {"google":from_google,"bing":from_bing}
+        res = {"bing":from_bing}
     elif customize.customize == "News":
         res = bing_news_search(search_term)
     return res
