@@ -707,7 +707,7 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
-            queryset = queryset.filter(Q(glossary_project__isnull=False))
+            queryset = queryset.filter(Q(glossary_project__isnull=False)).exclude(project_type_id=10)
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
         elif value == "transcription":
