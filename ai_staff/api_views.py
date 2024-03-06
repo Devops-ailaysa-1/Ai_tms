@@ -28,7 +28,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,DesignerOrientationSerializer,
                          ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer,
-                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer,BookCategorySerializer)
+                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
