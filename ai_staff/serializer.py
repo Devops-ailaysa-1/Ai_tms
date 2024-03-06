@@ -416,7 +416,7 @@ class AiCustomizeGroupingSerializer(serializers.ModelSerializer):
     def get_results(self,obj):
         result_dict ={}
         #queryset = AiCustomize.objects.all().distinct('grouping')
-        results =['Edit','Explore','Convert']#,'Refer']
+        results =['Edit','Explore','Refer','Convert']
         for i in results:
             rr = AiCustomize.objects.filter(grouping=i).exclude(customize='Text completion').order_by('id')
             result_dict[i] = AiCustomizeSerializer(rr,many=True).data
