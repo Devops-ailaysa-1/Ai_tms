@@ -16,7 +16,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
                     FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,
-                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,BookCategory)
+                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,) #BookCategory
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,

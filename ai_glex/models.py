@@ -195,3 +195,17 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
 #         unique_together = ("sl_term", "pos", "user")
 
     
+class Terminologyextract(models.Model):
+    project = models.ForeignKey(Project, null=True, on_delete=models.SET_NULL,related_name = 'my_choice_list_project')
+    file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Choicelist(models.Model):
+    terminology_file = models.ForeignKey(Terminologyextract, on_delete=models.CASCADE, related_name='terminology_file')
+    language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="terminology_language")
+    source_term = models.CharField(max_length=200, null=True, blank=True)
+    terget_term = models.CharField(max_length=200, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
