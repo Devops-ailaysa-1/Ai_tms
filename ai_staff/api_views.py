@@ -186,7 +186,7 @@ class CurrenciesView(APIView):
 
 class SubjectFieldsView(APIView):
     permission_classes = [
-        # IsAuthenticated
+        IsAuthenticated
     ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
@@ -237,7 +237,7 @@ class SubjectFieldsView(APIView):
 
 class ContentTypesView(APIView):
     permission_classes = [
-        # IsAuthenticated
+        IsAuthenticated
     ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
@@ -337,9 +337,9 @@ class MtpeEnginesView(APIView):
 
 
 class SupportFilesView(APIView):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
@@ -436,9 +436,9 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-    permission_classes = [AllowAny,]
-    #authentication_classes = [TokenAuthentication]
-    #permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny,]
+    # authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
@@ -807,7 +807,8 @@ class IndianStatesView(viewsets.ViewSet):
 
 
 class SupportTopicsView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
 
     @cached
     def get_queryset(self):
@@ -848,7 +849,8 @@ class SupportTopicsView(viewsets.ViewSet):
 
 
 class SuggestionTypeView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
 
     @cached
     def get_queryset(self):
@@ -886,7 +888,8 @@ class SuggestionTypeView(viewsets.ViewSet):
 
 
 class SuggestionView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
 
     @cached
     def get_queryset(self):
@@ -924,7 +927,8 @@ class SuggestionView(viewsets.ViewSet):
 
 
 class JobPositionsView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
 
     @cached
     def get_queryset(self):
@@ -961,7 +965,8 @@ class JobPositionsView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class TeamRoleView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
 
 
     @cached
