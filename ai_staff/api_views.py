@@ -85,9 +85,9 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    permission_classes = [AllowAny,]
+    # permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     @cached
     def get_queryset(self):
@@ -1375,15 +1375,15 @@ class LevelView(viewsets.ViewSet):
         return Response(serializer.data)
     
 
-class BookCategoryView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+# class BookCategoryView(viewsets.ViewSet):
+#     permission_classes = [AllowAny,]
 
-    @cached
-    def get_queryset(self):
-        queryset = BookCategory.objects.all().order_by('id')
-        return queryset
+#     @cached
+#     def get_queryset(self):
+#         queryset = BookCategory.objects.all().order_by('id')
+#         return queryset
     
-    def list(self,request):
-        queryset = self.get_queryset()
-        serializer = BookCategorySerializer(queryset,many=True)
-        return Response(serializer.data)
+#     def list(self,request):
+#         queryset = self.get_queryset()
+#         serializer = BookCategorySerializer(queryset,many=True)
+#         return Response(serializer.data)
