@@ -42,6 +42,7 @@ class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
+    # http_method_names = ['get']
     
     @cached
     def get_queryset(self):
@@ -85,9 +86,10 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    # permission_classes = [AllowAny,]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -137,9 +139,10 @@ class CountriesView(APIView):
 
 
 class CurrenciesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
 
     def get_object(self, pk):
         try:
@@ -186,10 +189,11 @@ class CurrenciesView(APIView):
 
 class SubjectFieldsView(APIView):
     permission_classes = [
-        IsAuthenticated
+        AllowAny
     ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
 
     def get_object(self, pk):
         try:
@@ -237,11 +241,11 @@ class SubjectFieldsView(APIView):
 
 class ContentTypesView(APIView):
     permission_classes = [
-        IsAuthenticated
+        AllowAny
     ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
-
+    http_method_names = ['get']
     def get_object(self, pk):
         try:
             return ContentTypes.objects.get(pk=pk)
@@ -288,10 +292,10 @@ class ContentTypesView(APIView):
 
 
 class MtpeEnginesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
-
+    http_method_names = ['get']
     def get_object(self, pk):
         try:
             return MtpeEngines.objects.get(pk=pk)
@@ -337,10 +341,10 @@ class MtpeEnginesView(APIView):
 
 
 class SupportFilesView(APIView):
-    # permission_classes = [AllowAny,]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
+    #permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
     def get_object(self, pk):
         try:
             return SupportFiles.objects.get(pk=pk)
@@ -388,9 +392,10 @@ class SupportFilesView(APIView):
 
 
 class TimezonesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
 
     def get_object(self, pk):
         try:
@@ -436,9 +441,10 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-    # permission_classes = [AllowAny,]
-    # authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
+    #authentication_classes = [TokenAuthentication]
+    #permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
@@ -483,7 +489,8 @@ class LanguagesView(APIView):
 
 
 class LanguagesLocaleView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    http_method_names = ['get']
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -526,7 +533,8 @@ class LanguagesLocaleView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class BillingunitsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    http_method_names = ['get']
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -626,7 +634,8 @@ class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
 
 
 class SubscriptionPricingCreateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -663,7 +672,8 @@ class SubscriptionPricingCreateView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class SubscriptionFeaturesCreateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -702,7 +712,8 @@ class SubscriptionFeaturesCreateView(viewsets.ViewSet):
 
 
 class StripeTaxIdView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -748,7 +759,8 @@ def get_addons_details(request):
     return JsonResponse({"addons":serializer.data},safe=False,status=200)
 
 class CreditsAddonsCreateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -794,6 +806,7 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 
 class IndianStatesView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -807,8 +820,8 @@ class IndianStatesView(viewsets.ViewSet):
 
 
 class SupportTopicsView(viewsets.ViewSet):
-    # permission_classes = [AllowAny,]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -849,8 +862,8 @@ class SupportTopicsView(viewsets.ViewSet):
 
 
 class SuggestionTypeView(viewsets.ViewSet):
-    # permission_classes = [AllowAny,]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -888,8 +901,8 @@ class SuggestionTypeView(viewsets.ViewSet):
 
 
 class SuggestionView(viewsets.ViewSet):
-    # permission_classes = [AllowAny,]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -927,8 +940,8 @@ class SuggestionView(viewsets.ViewSet):
 
 
 class JobPositionsView(viewsets.ViewSet):
-    # permission_classes = [AllowAny,]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -965,8 +978,8 @@ class JobPositionsView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class TeamRoleView(viewsets.ViewSet):
-    # permission_classes = [AllowAny,]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
 
     @cached
@@ -1006,6 +1019,7 @@ class TeamRoleView(viewsets.ViewSet):
 
 class MTLanguageSupportView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
 
     @cached
@@ -1033,6 +1047,7 @@ class ProjectTypeView(viewsets.ViewSet):
 
 class ProjectTypeDetailView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
+    http_method_names = ['get']
 
     @cached
     def get_queryset(self):
@@ -1313,7 +1328,7 @@ class DesignerOrientationViewset(viewsets.ViewSet):
 
 class FrontMatterView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
-
+     
     @cached
     def get_queryset(self):
         queryset = FrontMatter.objects.all().order_by('id')
@@ -1327,6 +1342,7 @@ class FrontMatterView(viewsets.ViewSet):
 
 class BackMatterView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
+     
 
     @cached
     def get_queryset(self):
@@ -1380,15 +1396,3 @@ class LevelView(viewsets.ViewSet):
         return Response(serializer.data)
     
 
-# class BookCategoryView(viewsets.ViewSet):
-#     permission_classes = [AllowAny,]
-
-#     @cached
-#     def get_queryset(self):
-#         queryset = BookCategory.objects.all().order_by('id')
-#         return queryset
-    
-#     def list(self,request):
-#         queryset = self.get_queryset()
-#         serializer = BookCategorySerializer(queryset,many=True)
-#         return Response(serializer.data)
