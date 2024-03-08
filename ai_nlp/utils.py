@@ -338,6 +338,6 @@ def ner_terminology_finder(file_path):
         ner = response.json()['ner'].split(",")
  
         terminology = response.json()['terminology'].split(",")
-        return {'terminology':terminology+ner}
+        return {'terminology':terminology+ner , 'pos_tags': response.json()['pos_user']}
     else:
         return None
