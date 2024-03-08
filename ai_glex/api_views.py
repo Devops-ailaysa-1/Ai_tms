@@ -551,11 +551,18 @@ def get_ner_terminology_extract(request):
     proj = Project.objects.get(id=proj_id)
     terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
     ner_terminology= ner_terminology_finder(terminology_instance.file.path)
+    print("NER TERM--------------->",ner_terminology)
     if ner_terminology:
-        for lang in proj_id.project_jobs_set.all():
-            instance = [{"sl_term":i} for i in ner_terminology['terminology']]
-            TermsModel.objects.bulk_create(instance)
-        
+        obj =[
+            TermsModel(pk = None,
+            job_id = lang.id,
+            sl_term = i,
+            glossary_id=proj.glossary_project.id,
+            )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
+        # for lang in proj.project_jobs_set.all():
+        #     instance = [{"pk":None,"sl_term":i,"job":lang.id,"glossary":proj.glossary_project.id} for i in ner_terminology['terminology']]
+        #     TermsModel.objects.bulk_create(instance)
+        TermsModel.objects.bulk_create(obj)
         choice_instance = TermsModel.objects.filter(glossary__project=proj)
         
         ser = TermsSerializer(choice_instance,many=True)
