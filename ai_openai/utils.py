@@ -93,6 +93,11 @@ def get_prompt_gpt_turbo_1106(messages):
     return completion
 
 
+# @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
+# def get_prompt_chatgpt_4(prompt,n,max_token=None):
+    
+
+
 OPEN_AI_GPT_MODEL = "gpt-3.5-turbo"   #"gpt-3.5-turbo" gpt-4 
 TEXT_DAVINCI = "text-davinci-003"
 

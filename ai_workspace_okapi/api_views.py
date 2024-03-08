@@ -3639,25 +3639,35 @@ def symspellcheck(request):
     # return JsonResponse({"result":suggestions},safe=False)
 
 
-def check_source_words(user_input):
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
-                .filter(job__target_language__language=target_language)\
+def check_source_words(user_input,task):
+    from ai_glex.models import TermsModel,GlossarySelected
+    proj = task.job.project
+    target_language = task.job.target_language
+    print("Proj------------->",proj,target_language)
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+                .filter(job__target_language=target_language)\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term')
+    gloss = [i for i in queryset]
     words = [i.get('sl_term') for i in queryset]
-    return words
+    return words,gloss
 
-def target_source_words(target_mt):
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type = 10)\
-                .filter(job__target_language__language=target_language)\
+def target_source_words(target_mt,task):
+    from ai_glex.models import TermsModel,GlossarySelected
+    proj = task.job.project
+    target_language = task.job.target_language
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+                .filter(job__target_language=target_language)\
                 .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term')
+                      params=[target_mt]).distinct().values('sl_term','tl_term')
     
     gloss = [i for i in queryset]
 
     word_list = [i.get('tl_term') for i in queryset]
 
-    input_sentence_lower = user_input.lower()
+    input_sentence_lower = target_mt.lower()
     word_list_lower = [word.lower() for word in word_list]
     
     for word in word_list_lower:

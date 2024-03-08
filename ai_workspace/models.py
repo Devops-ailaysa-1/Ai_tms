@@ -287,6 +287,8 @@ class Project(models.Model):
             prefix = 'Designer Project-'
         elif self.project_type_id == 8:
             prefix = 'News Story-'
+        elif self.project_type_id == 10:
+            prefix = 'Word Choice-'
         else:
             prefix = 'Project-'
         return prefix
