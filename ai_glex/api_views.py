@@ -537,9 +537,9 @@ def adding_term_to_glossary_from_workspace(request):
         #     return Response(serializer.data)
         # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-from ai_glex.models import Terminologyextract,Choicelist
+from ai_glex.models import Terminologyextract
 from ai_nlp.utils import ner_terminology_finder
-from ai_glex.serializers import ChoicelistSerializer
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_ner_terminology_extract(request):
@@ -548,17 +548,17 @@ def get_ner_terminology_extract(request):
     if not proj_id or not file:
         return Response({'msg':'need proj_id and file'})
     
-    proj_id = Project.objects.get(id=proj_id)
-    terminology_instance = Terminologyextract.objects.create(file=file,project = proj_id)
+    proj = Project.objects.get(id=proj_id)
+    terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
     ner_terminology= ner_terminology_finder(terminology_instance.file.path)
     if ner_terminology:
         for lang in proj_id.project_jobs_set.all():
-            instance = [{"terminology_file": terminology_instance,"language":lang.target_language,"source_term":i} for i in ner_terminology['terminology']]
-            Choicelist.objects.bulk_create(instance)
+            instance = [{"sl_term":i} for i in ner_terminology['terminology']]
+            TermsModel.objects.bulk_create(instance)
         
-        choice_instance = Choicelist.objects.filter(terminology_file=terminology_instance)
+        choice_instance = TermsModel.objects.filter(glossary__project=proj)
         
-        ser = ChoicelistSerializer(choice_instance,many=True)
+        ser = TermsSerializer(choice_instance,many=True)
         return Response(ser.data)
     else:
         return Response({'msg':'no terminology'})
