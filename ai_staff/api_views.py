@@ -28,11 +28,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,DesignerOrientationSerializer,
                          ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer,
-<<<<<<< HEAD
                          FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)#,BookCategorySerializer)
-=======
-                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)
->>>>>>> origin/v4-merged-production
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
