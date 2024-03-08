@@ -1570,7 +1570,8 @@ def docx_merger(request):
 
 def customize_refer(customize,search_term,lang):
     print("Cus--------->",customize)
-    lang = lang_detector(search_term)
+    if not lang:
+        lang = lang_detector(search_term)
     if customize.customize == "Wikipedia":
         res = search_wikipedia(search_term,lang)
     elif customize.customize == "Wiktionary":
