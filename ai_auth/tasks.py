@@ -787,7 +787,7 @@ def count_update(job_id):
 def replace_mt_with_gloss(raw_mt,gloss):
     try:
         pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Please provide the output without any feedback on the correctness of the translation. Text:{}, Glossary:{} output: '''.format(raw_mt,gloss)
-        completion = openai.ChatCompletion.create(model="gpt-4",messages=[{"role": "user", "content": pr}])
+        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo-0125",messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
     except:
         res = raw_mt
