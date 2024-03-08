@@ -796,9 +796,14 @@ def replace_mt_with_gloss(raw_mt,gloss):
 
 
 
-def replace_with_gloss(seg,raw_mt,word_choice,task):
+def replace_with_gloss(seg,raw_mt,task):
+    from ai_glex.models import GlossarySelected
     from ai_workspace_okapi.api_views import check_source_words, target_source_words
     final_mt = raw_mt
+    proj = task.job.project
+    word_choice = False
+    if GlossarySelected.objects.filter(project = proj,glossary__project__project_type_id=10).exists():
+        word_choice = True
     if word_choice:
         source_words,gloss = check_source_words(seg.source,task)
         print("SRC----------------->",source_words)
@@ -815,22 +820,18 @@ def replace_with_gloss(seg,raw_mt,word_choice,task):
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
     from ai_workspace.models import Task, TaskAssign
-    from ai_glex.models import GlossarySelected
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
     from ai_workspace_okapi.models import MergeSegment,SplitSegment
     #from ai_workspace_okapi.api_views import DocumentViewByTask
     from itertools import chain
-    word_choice = False
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
     proj = task.job.project
-    if GlossarySelected.objects.filter(project = proj).exists():
-        word_choice = True
     #tt = pr.glossary_project if hasattr(pr,'glossary_project') else None
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     if segments == None:
@@ -868,7 +869,7 @@ def mt_raw_update(task_id,segments):
                         print("Inside TRY")
                         raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                         print("RAWMT---------------->",raw_mt)
-                        mt = replace_with_gloss(seg,raw_mt,word_choice,task)
+                        mt = replace_with_gloss(seg,raw_mt,task)
                         print("MT--------------->",mt)
                         tags = get_tags(seg)
                         if tags:
@@ -902,7 +903,7 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    mt = replace_with_gloss(seg,raw_mt,word_choice,task)
+                    mt = replace_with_gloss(seg,raw_mt,task)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
