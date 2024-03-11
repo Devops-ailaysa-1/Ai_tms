@@ -4477,7 +4477,7 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset1 = queryset.filter(glossary_project__isnull=False).exclude(project_type_id=10)
         queryset2 = ChoiceLists.objects.none()  #commenting for now
         #queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
