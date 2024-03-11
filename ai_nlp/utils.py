@@ -324,20 +324,29 @@ def extract_entities(sentence):
 
 import requests
 import os
-def ner_terminology_finder(file_path):
-    file_name = os.path.basename(file_path)
-
+def ner_terminology_finder(file_paths):
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
-
+    
     payload = {}
-    files=[
-    ('file',(file_name,open(file_path,'rb'),'text/plain'))]
     headers = {}
+    files = []
+    for file_path in file_paths:
+        
+        file_name = os.path.basename(file_path)
+        files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
+    
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
     if response.status_code == 200:
-        ner = response.json()['ner'].split(",")
- 
-        terminology = response.json()['terminology'].split(",")
-        return {'terminology':terminology+ner , 'pos_tags': response.json()['pos_user']}
+        ner = []
+        term = []
+        pos = []
+        for i in response.json():
+            ner.extend(i['ner'].split(","))
+            term.extend(i['terminology'].split(","))
+            pos.extend(i['pos_user'])
+        return {'terminology':term , 'pos_tags': pos, 'ner':ner}
     else:
         return None
+    
+
