@@ -807,6 +807,7 @@ def replace_with_gloss(seg,raw_mt,task):
     if word_choice:
         source_words,gloss = check_source_words(seg.source,task)
         print("SRC----------------->",source_words)
+        print("Gloss------------->",gloss)
         if source_words:
             # all_target_replaced,gloss = target_source_words(raw_mt,task)
             # print("All---------->",all_target_replaced)
