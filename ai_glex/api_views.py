@@ -523,7 +523,7 @@ def adding_term_to_glossary_from_workspace(request):
 
     glossary = Glossary.objects.get(id = glossary_id)
     job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
-    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"pos":pos,"job":job.id,"glossary":glossary.id})
+    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"pos":pos,"job":job.id,"glossary":glossary.id,"created_by":request,user.id})
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
@@ -619,6 +619,7 @@ def clone_source_terms_from_single_to_multiple_task(request):
             termtype=i.termtype,
             geographical_usage=i.geographical_usage,
             term_location=i.term_location,
+            created_by = request.user
             glossary_id=Job.objects.get(id=j).project.glossary_project.id,#glossary_id,file_id clone need to revise
             )for j in to_job_ids for i in queryset ]
     print(obj)

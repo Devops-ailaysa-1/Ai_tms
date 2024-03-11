@@ -94,6 +94,7 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='terms_add_user')
     #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
