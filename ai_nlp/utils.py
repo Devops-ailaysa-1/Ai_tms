@@ -324,6 +324,8 @@ def extract_entities(sentence):
 
 import requests
 import os
+from string import punctuation
+import string
 def ner_terminology_finder(file_paths):
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
     
@@ -338,15 +340,20 @@ def ner_terminology_finder(file_paths):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
 
     if response.status_code in [200,201]:
-        ner = []
-        term = []
+        terminology = []
         pos = []
+        tem_list = []
         for i in response.json():
-            ner.extend(i['ner'].split(","))
-            term.extend(i['terminology'].split(","))
+            terminology.extend(i['ner'].split(","))
+            terminology.extend(i['terminology'].split(","))
             pos.extend(i['pos_user'])
+
+        terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“")).strip().capitalize() for i in terminology if len(i)>1]))
         
-        return {'terminology':list(set(term+ner))  , 'pos_tags': pos} #, 'ner':ner
+        
+        for i in terminology:
+            tem_list.append({'term':i,'pos':'Noun'})
+        return {'terminology':tem_list+pos  , 'pos_tags': pos} #, 'ner':ner
     else:
         return None
     
