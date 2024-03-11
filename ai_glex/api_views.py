@@ -544,13 +544,17 @@ from ai_nlp.utils import ner_terminology_finder
 @permission_classes([IsAuthenticated])
 def get_ner_terminology_extract(request):
     proj_id = request.POST.get('proj_id',None)
-    file = request.FILES.get('file',None)
-    if not proj_id or not file:
+    files = request.FILES.getlist('file',None)
+    if not proj_id or not files:
         return Response({'msg':'need proj_id and file'})
     
     proj = Project.objects.get(id=proj_id)
-    terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
-    ner_terminology= ner_terminology_finder(terminology_instance.file.path)
+    file_paths = []
+    for file in files:
+        terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
+        file_paths.append(terminology_instance.file.path)
+    print("FP----------->",file_paths)
+    ner_terminology= ner_terminology_finder(file_paths)
     print("NER TERM--------------->",ner_terminology)
     if ner_terminology:
         obj =[
@@ -559,9 +563,7 @@ def get_ner_terminology_extract(request):
             sl_term = i,
             glossary_id=proj.glossary_project.id,
             )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
-        # for lang in proj.project_jobs_set.all():
-        #     instance = [{"pk":None,"sl_term":i,"job":lang.id,"glossary":proj.glossary_project.id} for i in ner_terminology['terminology']]
-        #     TermsModel.objects.bulk_create(instance)
+
         TermsModel.objects.bulk_create(obj)
         choice_instance = TermsModel.objects.filter(glossary__project=proj)
         
@@ -570,9 +572,6 @@ def get_ner_terminology_extract(request):
     else:
         return Response({'msg':'no terminology'})
             
-
-        # ner_list = {"source_term":ner_terminology['ner']+ner_terminology['terminology']
-        # Choicelist.objects.c
     
 
 @api_view(['GET',])
