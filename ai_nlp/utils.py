@@ -337,7 +337,7 @@ def ner_terminology_finder(file_paths):
     
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
 
-    if response.status_code == 200:
+    if response.status_code in [200,201]:
         ner = []
         term = []
         pos = []
