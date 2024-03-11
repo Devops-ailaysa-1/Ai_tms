@@ -565,6 +565,18 @@ def get_ner_terminology_extract(request):
             )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
 
         TermsModel.objects.bulk_create(obj)
+ 
+
+        obj =[
+            TermsModel(pk = None,
+            job_id = lang.id,
+            sl_term = i['term'],
+            pos = i['pos'],
+            glossary_id=proj.glossary_project.id,
+            )for i in ner_terminology['pos_tags'] for lang in proj.project_jobs_set.all()]    
+
+        TermsModel.objects.bulk_create(obj)    
+
         choice_instance = TermsModel.objects.filter(glossary__project=proj)
         
         ser = TermsSerializer(choice_instance,many=True)

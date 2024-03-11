@@ -345,7 +345,8 @@ def ner_terminology_finder(file_paths):
             ner.extend(i['ner'].split(","))
             term.extend(i['terminology'].split(","))
             pos.extend(i['pos_user'])
-        return {'terminology':term+ner , 'pos_tags': pos} #, 'ner':ner
+        
+        return {'terminology':list(set(term+ner))  , 'pos_tags': pos} #, 'ner':ner
     else:
         return None
     
