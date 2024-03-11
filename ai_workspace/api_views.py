@@ -1339,7 +1339,7 @@ class TaskView(APIView):
         authorize(request,resource=task,action="delete",actor=self.request.user)
         if task.task_info.filter(task_assign_info__isnull=False):
             print("assigned")
-            return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+            return Response(data={"Message":"Task is assigned. Unassign and Delete"},status=400)
         else:
             if len(task.job.project.get_tasks) == 1:
                 task.job.project.delete()
