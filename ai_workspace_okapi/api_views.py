@@ -3651,7 +3651,7 @@ def check_source_words(user_input,task):
     glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
                 .filter(job__target_language=target_language)\
-                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
                       params=[user_input]).distinct('sl_term').values('sl_term','tl_term')
     gloss = [i for i in queryset]
     words = [i.get('sl_term') for i in queryset]
