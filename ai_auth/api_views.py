@@ -2885,7 +2885,7 @@ def internal_editors_list(request):
     owner = request.user.team.owner if request.user.team else None
     if owner:
         team_obj = Team.objects.get(owner = owner)
-        queryset = InternalMember.objects.filter(team=owner.team,role_id=2).order_by('internal_member__fullname')
+        queryset = InternalMember.objects.exclude(internal_member__is_active=False).filter(team=owner.team,role_id=2).order_by('internal_member__fullname')
         serializer = InternalMemberSerializer(queryset,many=True)
         return Response(serializer.data)
     else:

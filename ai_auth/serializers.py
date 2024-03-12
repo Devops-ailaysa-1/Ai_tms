@@ -601,7 +601,7 @@ class InternalMemberSerializer(serializers.ModelSerializer):
             }
 
     def get_internal_member_detail(self, obj):
-        state = "active" if obj.internal_member.is_active == True else "past"
+        state = "active" if obj.internal_member.is_active == True else "deleted"
         return {'name':obj.internal_member.fullname,'email':obj.internal_member.email,'state':state}
 
 
