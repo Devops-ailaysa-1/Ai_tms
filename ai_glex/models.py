@@ -102,8 +102,8 @@ class TermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
-    # class Meta:
-    #     unique_together = ("sl_term","pos","glossary")
+    class Meta:
+        unique_together = ("sl_term","pos","job")
 
     # def save(self, *args, **kwargs):
     #     super().save(*args, **kwargs)
