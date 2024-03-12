@@ -5233,6 +5233,8 @@ def download_editors_report(res,from_date,to_date):
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
+
+    data.fillna(0, inplace=True)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
