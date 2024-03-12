@@ -1641,16 +1641,6 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
-    # def list(self, request):
-    #     queryset_all = self.get_queryset()
-    #     if not queryset_all.exists():
-    #         return Response(status=204)
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
-    #     serializer = InternalMemberSerializer(pagin_tc,many=True)
-    #     response = self.get_paginated_response(serializer.data)
-    #     return response
-
     def list(self, request):
         queryset = self.get_queryset()
         serializer = InternalMemberSerializer(queryset,many=True)
