@@ -203,7 +203,7 @@ def generate_question(document):
     n = 2 if doc_len>2 else 1
     document = random.sample(document_list,n)
     document = " ".join(document)
-    query = "Generate four questions from the above content and split all four questions with new line in same language"
+    query = "Generate four questions from the above content and split all four questions with new line and questions should be in English language"
     prompt = prompt_gen_question_chatbook(document,query)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
     generated_text =prompt_res['choices'][0]['message']['content']
@@ -326,7 +326,10 @@ import requests
 import os
 from string import punctuation
 import string
-def ner_terminology_finder(file_paths):
+#get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
+ #                                               target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)  
+
+def ner_terminology_finder(file_paths,proj_instance ):
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
     
     payload = {}
@@ -338,6 +341,9 @@ def ner_terminology_finder(file_paths):
         files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
     
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+ #   project_instance --> list of job --> get_lang_code --> translation --> {"s_term":"", "t_term":"","lang_code":,"job":""}
+    
 
     if response.status_code in [200,201]:
         terminology = []
@@ -353,8 +359,13 @@ def ner_terminology_finder(file_paths):
         
         for i in terminology:
             tem_list.append({'term':i,'pos':'Noun'})
-        return {'terminology':tem_list+pos  , 'pos_tags': pos} #, 'ner':ner
+
+        return {'terminology':tem_list+pos} #, 'ner':ner
     else:
         return None
     
 
+# def terminology_translation(langs,terminology_list):
+#     for lang in langs:
+#         print(lang)
+#         pass
