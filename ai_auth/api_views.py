@@ -1735,7 +1735,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         user.is_active = False
         user.email = user.email+"_deleted_"+user.uid
         user.save()
-        #internal_member.delete()
+        internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def msg_send(user,vendor):
