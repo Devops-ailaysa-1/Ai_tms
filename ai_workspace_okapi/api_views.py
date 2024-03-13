@@ -2431,7 +2431,7 @@ def wiktionary_ws(code,codesrc,user_input):
     res=data["query"]["pages"]
     if "-1" in res:
         PARAMS.update({'titles':user_input.lower()})
-        data = S.get(url=URL, params=PARAMS).json()
+        data = requests.get(url=URL, params=PARAMS).json()
         srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input.lower()}"
         res =data['query']['pages']
     for i in res:

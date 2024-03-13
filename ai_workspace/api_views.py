@@ -5091,9 +5091,11 @@ def task_count_report(user,owner,start_date,today):
         editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
+            additional_details['state'] = state
             additional_details['TotalAssigned'] = query.count()
             additional_details['YetToStart']=query.filter(status=1).count()
             additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
@@ -5134,10 +5136,12 @@ def billing_report(user,owner,start_date,today):
         editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
             additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            additional_details['state'] = state
             res.append(additional_details)
     else:
         queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
@@ -5158,10 +5162,12 @@ def glossary_report(user,owner,start_date,today):
         editors = user.team.get_terminologist if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(created_by=i)
             additional_details['user'] = i.fullname
             additional_details['total_terms_added'] = query.count()
+            additional_details['state'] = state
             res.append(additional_details)
     else:
         queryset = MyGlossary.objects.filter(created_by=user).distinct()
@@ -5227,6 +5233,8 @@ def download_editors_report(res,from_date,to_date):
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
+
+    data.fillna(0, inplace=True)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1
