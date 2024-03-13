@@ -785,7 +785,7 @@ def count_update(job_id):
 
 
 
-OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
+OPEN_AI_GPT_MODEL = "gpt-3.5-turbo-0125" #"gpt-4"
 
 def replace_mt_with_gloss(raw_mt,gloss):
     try:
