@@ -4517,6 +4517,18 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
+def get_news_federal_key_and_url(lang):
+    if lang == "Kannada":
+        key = os.getenv("KARNATAKA-FEDARAL-KEY")
+        integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
+    elif lang == "Telugu":
+        key = os.getenv("TELUGANA-FEDARAL-KEY")
+        integration_api_url = os.getenv('TELUGANA_FEDERAL_URL')+"news"
+    else:
+        key = os.getenv("FEDERAL-KEY")
+        integration_api_url = os.getenv('FEDERAL_URL')+"news"
+    return key,integration_api_url
+
 class GetNewsFederalView(generics.ListAPIView):
     pagination.PageNumberPagination.page_size = 20
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
@@ -4537,13 +4549,15 @@ class GetNewsFederalView(generics.ListAPIView):
         count = self.request.query_params.get('count', 20)
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
+        lang = self.request.query_params.get('lang',None)
         categoryIds = self.request.query_params.getlist('categoryId')
         print("CategoryID------>",categoryIds)
         #contenttype = self.request.query_params.get('content')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
+        key,integration_api_url = get_news_federal_key_and_url(lang)
 
         headers = {
-            's-id': os.getenv("FEDERAL-KEY"),
+            's-id': key,
             }
         
         startIndex = (int(page) - 1) * int(count)
@@ -4558,7 +4572,7 @@ class GetNewsFederalView(generics.ListAPIView):
             params.update({'search':search})
         if categoryIds:
             params.update({'categoryIds':categoryIds})
-        integration_api_url = os.getenv('FEDERAL_URL')+"news"
+        #integration_api_url = os.getenv('FEDERAL_URL')+"news"
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
             news_jsons = response.json().get('news')
@@ -4591,14 +4605,12 @@ from ai_workspace.utils import split_dict
 class NewsProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
-    def get_files(self,news):
+    def get_files(self,news,lang):
         files =[]
-        headers = { 's-id': os.getenv("FEDERAL-KEY"),}
+        key,federal_api_url = get_news_federal_key_and_url(lang)
+        headers = { 's-id': key,}
         for i in news:
-            federal_api_url = os.getenv('FEDERAL_URL')+"news"
             response = requests.request("GET", federal_api_url, headers=headers, params={'newsId':i})
-            #translatable_data = split_dict(response.json()) 
-            #print("Trans------------------->",translatable_data)
             if response.status_code == 200:
                 name = f"{i}.json"
                 im_file = DJFile(ContentFile(json.dumps(response.json())),name=name)
@@ -4621,11 +4633,14 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
+        from ai_staff.models import Languages
         allow = GetNewsFederalView.check_user_federal(request.user)
         print("allow---->",allow)
         if allow:
             news = request.POST.getlist('news_id')
-            files = self.get_files(news)
+            lang = request.POST.get('source_language')
+            source_lang = Languages.objects.get(id=lang).language
+            files = self.get_files(news,source_lang)
             user = self.request.user
             user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
             serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
@@ -4728,8 +4743,8 @@ def push_translated_story(request):
         federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
         base_url = os.getenv('KARNATAKA_FEDERAL_URL')
     else:
-        federal_key = os.getenv("STAGING-FEDERAL-KEY")
-        base_url = os.getenv('STAGINGFEDERAL_URL')
+        federal_key = os.getenv("FEDERAL-KEY")
+        base_url = os.getenv('FEDERAL_URL')
     src_json,tar_json = {},{}
     headers = { 's-id': federal_key,'Content-Type': 'application/json'}
     feed_url = base_url+'createFeedV2'
@@ -5078,9 +5093,11 @@ def task_count_report(user,owner,start_date,today):
         editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
+            additional_details['state'] = state
             additional_details['TotalAssigned'] = query.count()
             additional_details['YetToStart']=query.filter(status=1).count()
             additional_details['Inprogress']=query.filter(status=2).count() #filter(task_assign_info__isnull=False).
@@ -5121,10 +5138,12 @@ def billing_report(user,owner,start_date,today):
         editors = user.team.get_editors_only if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(assign_to=i)
             additional_details['user'] = i.fullname
             additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
+            additional_details['state'] = state
             res.append(additional_details)
     else:
         queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
@@ -5145,10 +5164,12 @@ def glossary_report(user,owner,start_date,today):
         editors = user.team.get_terminologist if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(created_by=i)
             additional_details['user'] = i.fullname
             additional_details['total_terms_added'] = query.count()
+            additional_details['state'] = state
             res.append(additional_details)
     else:
         queryset = MyGlossary.objects.filter(created_by=user).distinct()
@@ -5214,6 +5235,8 @@ def download_editors_report(res,from_date,to_date):
     data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
                                 'YetToStart':'Yet to start','Inprogress':'In progress',\
                                 'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
+
+    data.fillna(0, inplace=True)
     date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
     with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
         # Write the first DataFrame to the Excel file at cell A1

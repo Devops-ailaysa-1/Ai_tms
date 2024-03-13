@@ -320,14 +320,15 @@ def bing_search(query):
     print(response.status_code)
     res = []
     if response.status_code == 200:
-        search_results = response.json()['webPages']['value']
-        if search_results:
-            for result in search_results:
-                name = result['name'] if 'name' in result else ''
-                description = result['snippet'] if 'snippet' in result else ''
-                url = result['url'] if 'url' in result else ''
-                dt = {'title':name,'link':url,'description':description}
-                res.append(dt)
+        if response.json().get('webPages'):
+            search_results = response.json()['webPages']['value']
+            if search_results:
+                for result in search_results:
+                    name = result['name'] if 'name' in result else ''
+                    description = result['snippet'] if 'snippet' in result else ''
+                    url = result['url'] if 'url' in result else ''
+                    dt = {'title':name,'link':url,'description':description}
+                    res.append(dt)
         else:
             print("No Results Found")
     else:
