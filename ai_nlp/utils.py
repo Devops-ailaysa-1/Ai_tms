@@ -25,9 +25,12 @@ openai.api_key = OPENAI_API_KEY
 import os
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
-# llm = ChatOpenAI(model_name='gpt-4')
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
- 
+import spacy
+import yake
+import requests
+from string import punctuation
+nlp = spacy.load('en_core_web_sm')
 
 
 def tag_visible(element):
@@ -100,12 +103,6 @@ def loader(file_id) -> None:
         #     instance.status ="ERROR"  #####need to add if error 
         #     instance.save()
 
-def ends_with_question_mark(input_string):
-    if "would you" in input_string.lower() or "would you like" in input_string.lower() or input_string.endswith('?'):
-        return True
-    else:
-        return False
-
 
 def save_prest(texts,embeddings,persistent_dir,instance):
     vector_db = Chroma.from_documents(documents=texts,embedding=embeddings,persist_directory=persistent_dir)
@@ -129,11 +126,6 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
 
 
 def load_embedding_vector(instance,query)->RetrievalQA:
-    # last_chat = instance.pdf_file_chat.last()
-    # if last_chat:
-    #     last_ans = last_chat.answer
-    #     if ends_with_question_mark(last_ans):
-    #         query = last_ans+"   \n   "+ query
 
     vector_path = instance.vector_embedding_path
  
@@ -197,7 +189,6 @@ def gen_text_context_question(vectors_list,question):
 
 def generate_question(document):
     collections = document._collection
-    print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
@@ -243,9 +234,7 @@ def remove_number_from_sentence(sentence):
 
 
 
-import spacy
-import yake
-nlp = spacy.load('en_core_web_sm')
+
  
 def keyword_extract(text):
     language = "en"
@@ -297,39 +286,9 @@ def extract_entities(sentence):
                 ner_dict[entity[ent.label_]] = [ent.text]
     return ner_dict
 
+ 
 
-
-
-
-
-# def thumbnail_create(path) -> core :
-#     img_io = io.BytesIO()
-#     images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]
-#     images.save(img_io, format='PNG')
-#     img_byte_arr = img_io.getvalue()
-#     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
-
-
-
-    # vector_db=Chroma.from_documents(documents=doc,embedding=embeddings )
-    # chain = RetrievalQA.from_chain_type(llm=llm,retriever =vector_db.as_retriever(search_type="similarity", search_kwargs={"k":4}),chain_type="stuff")
-  
-    # qa_chain = RetrievalQA.from_chain_type(llm=OpenAI(),
-    #                               chain_type="stuff",
-    #                               retriever=retriever,
-    #                               return_source_documents=True)
-    # print("-------------------")
-    # print(qa_chain(query) ) #chain.run(query).strip()
-
-
-import requests
-import os
-from string import punctuation
-import string
-#get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
- #                                               target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)  
-
-def ner_terminology_finder(file_paths,proj_instance ):
+def ner_terminology_finder(file_paths):
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
     
     payload = {}
@@ -365,7 +324,4 @@ def ner_terminology_finder(file_paths,proj_instance ):
         return None
     
 
-# def terminology_translation(langs,terminology_list):
-#     for lang in langs:
-#         print(lang)
-#         pass
+ 
