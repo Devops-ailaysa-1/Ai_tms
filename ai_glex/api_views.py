@@ -576,7 +576,65 @@ def get_ner_terminology_extract(request):
     else:
         return Response({'msg':'no terminology'})
             
-    
+
+from ai_workspace.api_views import  get_consumable_credits_for_text
+from ai_workspace_okapi.utils import get_translation
+
+class WordChoiceView(APIView, PageNumberPagination):
+    PAGE_SIZE = page_size =  10
+    max_page_size = 50
+    page_size_query_param = 'page_size' 
+    def get(self, request):
+        task_id = request.query_params.get('task_id',None)
+        if task_id:
+            initial_credit = request.user.credit_balance.get("total_left")
+            task = Task.objects.get(id=task_id)
+            job = task.job
+            term_instance = TermsModel.objects.filter(job=job)
+            tar_code = job.target_language_code
+            paginated_queryset = self.paginate_queryset(term_instance,request , view=self)
+            #mt_engine = task.term_task.last().mt_engine
+            for paginate_query_instance in paginated_queryset:
+                if not paginate_query_instance.tl_term:
+
+                    consumed_credit = get_consumable_credits_for_text(paginate_query_instance.sl_term,
+                                                                      job.source_language_code,tar_code)
+
+                    if initial_credit < consumed_credit:
+                        return Response({'msg':'Insufficient credit'})
+
+                    paginate_query_instance.tl_term = get_translation(1,paginate_query_instance.sl_term,
+                                                                        source_lang_code=job.source_language_code,
+                                                                        target_lang_code=tar_code,user_id=request.user.id) 
+                    paginate_query_instance.save()
+ 
+
+            if paginated_queryset is not None:
+                serializer = TermsSerializer(paginated_queryset, many=True)
+                return self.get_paginated_response(serializer.data)
+        else:
+             return Response({'msg':'no task_id'})
+
+
+        # segments = document.segments_for_find_and_replace
+        # print("Segments------------->",segments)
+        # merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
+        # split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
+        # final_segments = list(chain(segments, merge_segments, split_segments))
+        # print("Final Segments------------->",final_segments)
+        # sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
+        # page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
+        # page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
+        # #print("PageSe----------->",page_segments)
+        # if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
+        #    mt_raw_update(task.id,page_segments)
+        # segments_ser = SegmentSerializer(page_segments, many=True)
+
+        # [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
+        # res = self.get_paginated_response(segments_ser.data)
+        # return res
+
+
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])

@@ -288,7 +288,7 @@ def extract_entities(sentence):
 
  
 
-def ner_terminology_finder(file_paths,proj_instance ):
+def ner_terminology_finder(file_paths):
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
     
     payload = {}
