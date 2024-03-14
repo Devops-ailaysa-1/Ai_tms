@@ -178,10 +178,10 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
     created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at      = models.DateTimeField(auto_now=True,blank=True, null=True)
     deleted_at      = models.DateTimeField(blank=True, null=True)
-    # created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
+    created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
 
-    # class Meta:
-    #     unique_together = ("sl_term", "user")
+    class Meta:
+        unique_together = ("sl_term", "user")
 
 
 
@@ -206,10 +206,10 @@ class Terminologyextract(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
-class Choicelist(models.Model):
-    terminology_file = models.ForeignKey(Terminologyextract, on_delete=models.CASCADE, related_name='terminology_file')
-    language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="terminology_language")
-    source_term = models.CharField(max_length=200, null=True, blank=True)
-    terget_term = models.CharField(max_length=200, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+# class Choicelist(models.Model):
+#     terminology_file = models.ForeignKey(Terminologyextract, on_delete=models.CASCADE, related_name='terminology_file')
+#     language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="terminology_language")
+#     source_term = models.CharField(max_length=200, null=True, blank=True)
+#     terget_term = models.CharField(max_length=200, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
