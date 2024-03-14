@@ -539,16 +539,35 @@ def adding_term_to_glossary_from_workspace(request):
 
 from ai_glex.models import Terminologyextract
 from ai_nlp.utils import ner_terminology_finder
+from ai_staff.models import Languages
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_ner_terminology_extract(request):
     proj_id = request.POST.get('proj_id',None)
     files = request.FILES.getlist('file',None)
+    language_id = request.POST.get('language_id',None)
     if not proj_id or not files:
         return Response({'msg':'need proj_id and file'})
-    
     proj = Project.objects.get(id=proj_id)
+
+    if language_id:
+        lang_instance = Languages.objects.get(id=language_id)
+        
+        job_instance = proj.project_jobs_set.get(target_language=lang_instance)
+        existing_job = proj.project_jobs_set.first()
+        term_list = TermsModel.objects.filter(job=existing_job)
+        objs = []
+        for  term in term_list:
+            objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,pos=term.pos,
+                       glossary_id=proj.glossary_project.id))
+        if objs:
+            TermsModel.objects.bulk_create(objs)
+            choice_instance = TermsModel.objects.filter(job=job_instance)
+            ser = TermsSerializer(choice_instance,many=True)
+            return Response(ser.data)
+
+    
     file_paths = []
     for file in files:
         terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
@@ -565,13 +584,14 @@ def get_ner_terminology_extract(request):
             glossary_id=proj.glossary_project.id,
             )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
  
-
-
         TermsModel.objects.bulk_create(obj)    
 
         choice_instance = TermsModel.objects.filter(glossary__project=proj)
         
         ser = TermsSerializer(choice_instance,many=True)
+
+
+
         return Response(ser.data)
     else:
         return Response({'msg':'no terminology'})
