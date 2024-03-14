@@ -27,5 +27,4 @@ urlpatterns += [
     path('terms_simple_download/',api_views.terms_simple_download, name="gloss-simple-xlsx-download" ),
     path('term_mt/',api_views.get_word_mt),
     path('get_terminology',api_views.get_ner_terminology_extract),
-    path('wordchoices',api_views.WordChoiceView.as_view() ,name="word_choices")
 ]
