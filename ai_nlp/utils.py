@@ -194,7 +194,7 @@ def generate_question(document):
     n = 2 if doc_len>2 else 1
     document = random.sample(document_list,n)
     document = " ".join(document)
-    query = "Generate four questions from the above content and split all four questions with new line and questions should be in English language"
+    query = "Generate four questions from the above content and split all four questions with new line and questions should be translate in English language"
     prompt = prompt_gen_question_chatbook(document,query)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
     generated_text =prompt_res['choices'][0]['message']['content']
