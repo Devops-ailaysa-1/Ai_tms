@@ -552,7 +552,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				if pt not in [4 ,3, 8] and data.get('target_languages')==None:
 						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
-			print("target_languages hema---->",data.get('target_languages'))
 			comparisons = [source == target for (source, target) in itertools.
 				product(data['source_language'],data['target_languages'])]
 			if True in comparisons:
