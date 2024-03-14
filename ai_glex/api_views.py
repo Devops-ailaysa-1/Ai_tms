@@ -585,7 +585,7 @@ class WordChoiceView(APIView, PageNumberPagination):
     max_page_size = 50
     page_size_query_param = 'page_size' 
     def get(self, request):
-        task_id = request.query_params.get('task_id',None)
+        task_id = request.query_params.get('task',None)
         if task_id:
             initial_credit = request.user.credit_balance.get("total_left")
             task = Task.objects.get(id=task_id)
@@ -758,7 +758,7 @@ import xlsxwriter
 import pandas as pd
 from ai_glex.models import TermsModel
 @api_view(['GET',])
-def glossary_task_simple_download(request):
+def terms_simple_download(request):
     gloss_id = request.GET.get('gloss_id')
     task_id  = request.GET.get('task')
     task_obj = Task.objects.get(id=task_id)
