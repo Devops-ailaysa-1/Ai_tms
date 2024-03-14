@@ -94,11 +94,17 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='terms_add_user')
     #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.sl_term
+
+    # class Meta:
+
+    #     unique_together = ("sl_term","pos","job")
 
     # def save(self, *args, **kwargs):
     #     super().save(*args, **kwargs)
@@ -177,3 +183,34 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
 
     class Meta:
         unique_together = ("sl_term", "user")
+
+
+
+# class WordChoices(models.Model):
+#     sl_term         = models.CharField(max_length=200, null=True, blank=False)
+#     tl_term         = models.CharField(max_length=200, null=True, blank=True)
+#     pos             = models.CharField(max_length=200, null=True, blank=True)
+#     task            = models.ForeignKey(Task, null=True, on_delete=models.SET_NULL,related_name='WC_job')
+#     created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at      = models.DateTimeField(auto_now=True,blank=True, null=True)
+#     deleted_at      = models.DateTimeField(blank=True, null=True)
+#     created_by      = models.ForeignKey(AiUser, blank=True, null=True, on_delete=models.CASCADE, related_name='created_user')
+
+#     class Meta:
+#         unique_together = ("sl_term", "pos", "user")
+
+    
+class Terminologyextract(models.Model):
+    project = models.ForeignKey(Project, null=True, on_delete=models.SET_NULL,related_name = 'my_choice_list_project')
+    file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+# class Choicelist(models.Model):
+#     terminology_file = models.ForeignKey(Terminologyextract, on_delete=models.CASCADE, related_name='terminology_file')
+#     language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="terminology_language")
+#     source_term = models.CharField(max_length=200, null=True, blank=True)
+#     terget_term = models.CharField(max_length=200, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

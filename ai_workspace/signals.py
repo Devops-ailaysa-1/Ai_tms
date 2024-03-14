@@ -126,3 +126,6 @@ def invalidate_cache_on_delete(sender, instance, **kwargs):
             except:
                 print("Not found")
                 pass
+
+
+

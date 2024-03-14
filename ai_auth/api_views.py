@@ -111,14 +111,7 @@ def get_stripe_api_key():
 def striphtml(data):
     p = re.compile(r'<.*?>')
     return p.sub('', data)
-# class MyObtainTokenPairView(TokenObtainPairView):
-#     permission_classes = (AllowAny,)
-#     serializer_class = MyTokenObtainPairSerializer
 
-# class RegisterView(generics.CreateAPIView):
-#     queryset = AiUser.objects.all()
-#     permission_classes = (AllowAny,)
-#     serializer_class = RegisterSerializer
 
 class UserAttributeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -157,89 +150,6 @@ class UserAttributeView(APIView):
 
 
 
-# class PersonalInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = PersonalInformation.objects.get(user_id=request.user.id)
-#         except PersonalInformation.DoesNotExist:
-#             return Response(status=204)
-
-#         serializer = PersonalInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-#     def post(self, request):
-#         data = request.data
-#         print("Data==>",data)
-#         serializer = PersonalInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         print(request.data)
-#         personal_info = PersonalInformation.objects.get(user_id=request.user.id)
-#         serializer = PersonalInformationSerializer(personal_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class OfficialInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = OfficialInformation.objects.get(user_id=request.user.id)
-#         except OfficialInformation.DoesNotExist:
-#             return Response(status=204)
-#         serializer = OfficialInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-
-#     def post(self, request):
-#         data = request.data
-#         serializer = OfficialInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
-#         serializer = OfficialInformationSerializer(officaial_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-# class JPEGRenderer(renderers.BaseRenderer):
-#     media_type = 'image/png'
-#     format = 'png'
-#     charset = None
-#     render_style = 'binary'
-
-#     def render(self, data, media_type=None, renderer_context=None):
-#         return data
 
 
 class ProfessionalidentityView(APIView):
@@ -1640,16 +1550,6 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
-
-    # def list(self, request):
-    #     queryset_all = self.get_queryset()
-    #     if not queryset_all.exists():
-    #         return Response(status=204)
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
-    #     serializer = InternalMemberSerializer(pagin_tc,many=True)
-    #     response = self.get_paginated_response(serializer.data)
-    #     return response
 
     def list(self, request):
         queryset = self.get_queryset()

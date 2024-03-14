@@ -36,7 +36,7 @@ import calendar
 from ai_workspace.models import ExpressTaskHistory
 from celery.exceptions import MaxRetriesExceededError
 from ai_auth.signals import purchase_unit_renewal
-
+import openai
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -785,6 +785,42 @@ def count_update(job_id):
 
 
 
+OPEN_AI_GPT_MODEL = "gpt-3.5-turbo-0125" #"gpt-4"
+
+def replace_mt_with_gloss(raw_mt,gloss):
+    try:
+        pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Please provide the output without any feedback on the correctness of the translation. Text:{}, Glossary:{} output: '''.format(raw_mt,gloss)
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
+        res = completion["choices"][0]["message"]["content"]
+    except:
+        res = raw_mt
+    print("REs-------------->",res)
+    return res  
+
+
+
+def replace_with_gloss(seg,raw_mt,task):
+    from ai_glex.models import GlossarySelected
+    from ai_workspace_okapi.api_views import check_source_words, target_source_words
+    final_mt = raw_mt
+    proj = task.job.project
+    word_choice = False
+    if GlossarySelected.objects.filter(project = proj,glossary__project__project_type_id=10).exists():
+        word_choice = True
+    if word_choice:
+        source_words,gloss = check_source_words(seg.source,task)
+        print("SRC----------------->",source_words)
+        print("Gloss------------->",gloss)
+        if source_words:
+            # all_target_replaced,gloss = target_source_words(raw_mt,task)
+            # print("All---------->",all_target_replaced)
+            # if not all_target_replaced:
+            #     print("Inside----------")
+            final_mt = replace_mt_with_gloss(raw_mt,gloss)
+    print("FinalMT------------>",final_mt)
+    return final_mt
+      
+
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
     from ai_workspace.models import Task, TaskAssign
@@ -794,12 +830,13 @@ def mt_raw_update(task_id,segments):
     from ai_workspace_okapi.models import MergeSegment,SplitSegment
     #from ai_workspace_okapi.api_views import DocumentViewByTask
     from itertools import chain
-
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
     print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
+    proj = task.job.project
+    #tt = pr.glossary_project if hasattr(pr,'glossary_project') else None
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
     if segments == None:
         segments = task.document.segments_for_find_and_replace
@@ -833,7 +870,11 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        print("Inside TRY")
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        print("RAWMT---------------->",raw_mt)
+                        mt = replace_with_gloss(seg,raw_mt,task)
+                        print("MT--------------->",mt)
                         tags = get_tags(seg)
                         if tags:
                             seg.target = mt + tags
@@ -846,7 +887,8 @@ def mt_raw_update(task_id,segments):
                         if type(seg) is SplitSegment:
                             mt_split_segments.append({'seg':seg,'mt':mt})
                         else:mt_segments.append({'seg':seg,'mt':mt})
-                    except:
+                    except Exception as e:
+                        print(f'Error in task: {e}')
                         seg.target = ''
                         seg.temp_target = ''
                         seg.status_id=None
@@ -864,7 +906,8 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    mt = replace_with_gloss(seg,raw_mt,task)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
