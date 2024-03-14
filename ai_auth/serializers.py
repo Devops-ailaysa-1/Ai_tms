@@ -601,8 +601,9 @@ class InternalMemberSerializer(serializers.ModelSerializer):
             }
 
     def get_internal_member_detail(self, obj):
-        state = "active" if obj.internal_member.is_active == True else "past"
-        return {'name':obj.internal_member.fullname,'email':obj.internal_member.email,'state':state}
+        state = "active" if obj.internal_member.is_active == True else "deleted"
+        email = obj.internal_member.email if state == "active" else None
+        return {'name':obj.internal_member.fullname,'email':email,'state':state}
 
 
 class HiredEditorSerializer(serializers.ModelSerializer):
