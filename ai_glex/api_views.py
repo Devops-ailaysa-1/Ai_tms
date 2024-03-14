@@ -910,8 +910,6 @@ def get_word_mt(request):
         translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
-        print("SRC----------------->",source)
-        print("TAR------------------>",target)
         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
         tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
         print(tt)
