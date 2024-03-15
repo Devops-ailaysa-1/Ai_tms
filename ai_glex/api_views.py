@@ -897,14 +897,14 @@ def get_word_mt(request):
         sl_code = task_obj.job.source_language_code
         tl_code = task_obj.job.target_language_code
         text = source
-        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id)).last()
+        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
         if target_mt:
             return Response(GlossaryMtSerializer(target_mt).data,status=200)
     elif target:
         sl_code = task_obj.job.target_language_code
         tl_code = task_obj.job.source_language_code
         text = target
-        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id)).last()
+        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
         if source_mt:
             return Response(GlossaryMtSerializer(source_mt).data,status=200)
     
