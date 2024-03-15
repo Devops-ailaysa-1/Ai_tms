@@ -322,7 +322,7 @@ def ner_terminology_finder(file_paths):
                 ner_duplicate_list.append(i.lower())
                 tem_list.append({'term':i,'pos':'Noun'})
 
-        return {'terminology':tem_list+pos} #, 'ner':ner
+        return {'terminology':tem_list+pos} 
     else:
         return None
     
