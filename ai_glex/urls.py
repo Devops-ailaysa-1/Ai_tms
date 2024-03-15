@@ -15,6 +15,7 @@ urlpatterns = router.urls
 urlpatterns += [
     path('template/', api_views.glossary_template, name='template'),
     path('template_lite/', api_views.glossary_template_lite, name='template_lite'),
+    path('word-choice-template/', api_views.word_choice_template, name='wc_template'),
     path('tbx_write/<int:task_id>/', api_views.tbx_write, name='tbx_write'),
     path('glossaries/<int:project_id>/',api_views.glossaries_list, name='glossaries-list'),
     path('glossary_term_search/',api_views.glossary_search,name='glossary_term_search'),
