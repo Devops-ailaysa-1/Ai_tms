@@ -564,8 +564,8 @@ def get_ner_terminology_extract(request):
     proj_id = request.POST.get('proj_id',None)
     files = request.FILES.getlist('file',None)
     language_ids = request.POST.getlist('language_id',None)
-    if not proj_id or not files:
-        return Response({'msg':'need proj_id and file'})
+    if not proj_id:
+        return Response({'msg':'need proj_id and file'},status=400)
     proj = Project.objects.get(id=proj_id)
 
     if language_ids:
