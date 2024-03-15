@@ -841,7 +841,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							contents_data, subjects_data, steps_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
-		if project_type == 1 or project_type == 2 or project_type == 5:
+		if project_type in [1,2,5,9,8,10]:
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
 		if project_type == 3:
