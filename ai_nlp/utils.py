@@ -308,6 +308,7 @@ def ner_terminology_finder(file_paths):
         terminology = []
         pos = []
         tem_list = []
+        ner_duplicate_list = []
         for i in response.json():
             terminology.extend(i['ner'].split(","))
             terminology.extend(i['terminology'].split(","))
@@ -317,7 +318,9 @@ def ner_terminology_finder(file_paths):
         
         
         for i in terminology:
-            tem_list.append({'term':i,'pos':'Noun'})
+            if i.lower() not in ner_duplicate_list:
+                ner_duplicate_list.append(i.lower())
+                tem_list.append({'term':i,'pos':'Noun'})
 
         return {'terminology':tem_list+pos} #, 'ner':ner
     else:
