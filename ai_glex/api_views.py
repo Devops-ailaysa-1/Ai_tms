@@ -20,7 +20,7 @@ from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
-from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel,WriteToExcel_wordchoice
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django.db import transaction
@@ -279,6 +279,18 @@ def glossary_template_lite(request):
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
+
+########################WordChoiceTemplateDownload###################################
+@api_view(['GET',])
+#@permission_classes([IsAuthenticated])
+def word_choice_template(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=word_choice_template.xlsx'
+    xlsx_data = WriteToExcel_wordchoice()
+    response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
+
 
 
 @api_view(['GET',])
@@ -774,6 +786,7 @@ def terms_simple_download(request):
     task_obj = Task.objects.get(id=task_id)
     # gloss_id = task_obj.job.project.glossary.id
     term_model = TermsModel.objects.filter(job_id = task_obj.job.id).values("sl_term","tl_term","pos")
+
     if term_model:
         df = pd.DataFrame.from_records(term_model)
         df.columns=['source_term','target_term','pos']
@@ -782,7 +795,11 @@ def terms_simple_download(request):
         df.to_excel(writer, index=False, sheet_name='Sheet1')
         writer.save()
         response = HttpResponse(content_type='application/vnd.ms-excel')
-        response['Content-Disposition'] = 'attachment; filename=Glossary_simple.xlsx'
+        encoded_filename = 'word_choice.xlsx'
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
+        response['X-Suggested-Filename'] = encoded_filename
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         output.seek(0)
         response.write(output.read())
         return response
