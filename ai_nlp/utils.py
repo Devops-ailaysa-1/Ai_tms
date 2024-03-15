@@ -308,23 +308,30 @@ def ner_terminology_finder(file_paths):
         terminology = []
         pos = []
         tem_list = []
-        ner_duplicate_list = []
+        duplicate_list = []
+ 
         for i in response.json():
             terminology.extend(i['ner'].split(","))
             terminology.extend(i['terminology'].split(","))
             pos.extend(i['pos_user'])
 
-        terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“")).strip().capitalize() for i in terminology if len(i)>1]))
+        terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
         
         
         for i in terminology:
-            if i.lower() not in ner_duplicate_list:
-                ner_duplicate_list.append(i.lower())
+            if i.lower() not in duplicate_list:
+                duplicate_list.append(i.lower())
                 tem_list.append({'term':i,'pos':'Noun'})
+        duplicate_list = []
+        for i in pos:
+            if i['term'].lower() not in duplicate_list:
+                duplicate_list.append(i['term'].lower())
+                tem_list.append(i) #{'term':i,'pos':'Noun'}
 
-        return {'terminology':tem_list+pos} 
+        return {'terminology':tem_list} 
     else:
         return None
-    
+
+
 
  

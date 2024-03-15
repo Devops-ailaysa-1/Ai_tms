@@ -551,55 +551,53 @@ from ai_staff.models import Languages
 def get_ner_terminology_extract(request):
     proj_id = request.POST.get('proj_id',None)
     files = request.FILES.getlist('file',None)
-    language_id = request.POST.get('language_id',None)
+    language_ids = request.POST.getlist('language_id',None)
     if not proj_id or not files:
         return Response({'msg':'need proj_id and file'})
     proj = Project.objects.get(id=proj_id)
 
-    if language_id:
-        lang_instance = Languages.objects.get(id=language_id)
+    if language_ids:
+        for language_id in language_ids:
+            lang_instance = Languages.objects.get(id=language_id)
+            
+            job_instance = proj.project_jobs_set.get(target_language=lang_instance)
+            existing_job = proj.project_jobs_set.first()
+            term_list = TermsModel.objects.filter(job=existing_job)
+            objs = []
+            for  term in term_list:
+                objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,pos=term.pos,glossary_id=proj.glossary_project.id))
+            if objs:
+                TermsModel.objects.bulk_create(objs)
+                choice_instance = TermsModel.objects.filter(job=job_instance)
+                ser = TermsSerializer(choice_instance,many=True)
         
-        job_instance = proj.project_jobs_set.get(target_language=lang_instance)
-        existing_job = proj.project_jobs_set.first()
-        term_list = TermsModel.objects.filter(job=existing_job)
-        objs = []
-        for  term in term_list:
-            objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,pos=term.pos,
-                       glossary_id=proj.glossary_project.id))
-        if objs:
-            TermsModel.objects.bulk_create(objs)
-            choice_instance = TermsModel.objects.filter(job=job_instance)
+    file_paths = []
+    if files:
+        for file in files:
+            terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
+            file_paths.append(terminology_instance.file.path)
+        print("FP----------->",file_paths)
+        ner_terminology= ner_terminology_finder(file_paths)
+        print("NER TERM--------------->",ner_terminology)
+        if ner_terminology:
+            obj =[
+                TermsModel(pk = None,
+                job_id = lang.id,
+                sl_term = i['term'],
+                pos = i['pos'],
+                glossary_id=proj.glossary_project.id,
+                )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
+    
+            TermsModel.objects.bulk_create(obj)    
+
+            choice_instance = TermsModel.objects.filter(glossary__project=proj)
+            
             ser = TermsSerializer(choice_instance,many=True)
             return Response(ser.data)
-
+        else:
+            return Response({'msg':'no terminology'})
+    return Response({'msg':"updated"})
     
-    file_paths = []
-    for file in files:
-        terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
-        file_paths.append(terminology_instance.file.path)
-    print("FP----------->",file_paths)
-    ner_terminology= ner_terminology_finder(file_paths)
-    print("NER TERM--------------->",ner_terminology)
-    if ner_terminology:
-        obj =[
-            TermsModel(pk = None,
-            job_id = lang.id,
-            sl_term = i['term'],
-            pos = i['pos'],
-            glossary_id=proj.glossary_project.id,
-            )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
- 
-        TermsModel.objects.bulk_create(obj)    
-
-        choice_instance = TermsModel.objects.filter(glossary__project=proj)
-        
-        ser = TermsSerializer(choice_instance,many=True)
-
-
-
-        return Response(ser.data)
-    else:
-        return Response({'msg':'no terminology'})
             
 
 from ai_workspace.api_views import  get_consumable_credits_for_text
