@@ -596,6 +596,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 			data['pre_translate'] = data.get('pre_translate',['false'])[0]
+			data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 			data['from_text'] =  data.get('from_text',[0])[0]
 
 		else:
@@ -603,6 +604,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				target_language} for target_language in data.get("target_languages", [])]
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
+				data['get_mt_by_page'] = data.get('get_mt_by_page')[0]
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
