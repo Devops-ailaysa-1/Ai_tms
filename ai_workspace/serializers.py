@@ -568,7 +568,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
-		data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
+		#data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 		data['file_translate'] =data.get('file_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
