@@ -659,8 +659,9 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         #print("PageSe----------->",page_segments)
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
-            # page_obj = list(page_segments)
-            # cel_task = mt_raw_update.apply_async((task.id,page_obj,), queue='high-priority')
+            # ser = SegmentSerializer(page_segments, many=True)
+            # page_objects = json.dumps(ser.data)
+            # cel_task = mt_raw_update.apply_async((task.id,page_objects,), queue='high-priority')
             # state = mt_raw_update.AsyncResult(cel.celery_task_id).state
             # if state == 'STARTED':
             #     return Response({'msg':'celery running','celery_id':cel.id})

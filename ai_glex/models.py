@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
-from ai_glex.signals import update_words_from_template,delete_words_from_term_model
+from ai_glex.signals import update_words_from_template,delete_words_from_term_model,update_proj_settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
@@ -164,6 +164,8 @@ class GlossarySelected(models.Model):
 
     class Meta:
         unique_together = ("project", "glossary")
+
+post_save.connect(update_proj_settings, sender=GlossarySelected) 
 
 
 class MyGlossary(models.Model):######Default Glossary For Each User###################
