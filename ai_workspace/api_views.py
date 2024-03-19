@@ -483,7 +483,7 @@ class Files_Jobs_List(APIView):
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        glossary_selected = True if project.project.exists() else False 
+        glossary_selected = True if project.project.filter(glossary__project__project_type_id =10).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
