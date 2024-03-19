@@ -330,7 +330,8 @@ def prompt_to_extract_ner_terms(terms):
     prompt = """context_list : {} 
     
     
-    Extract only list of named entity and terminology from the above list of context result should be in comma separated""".format(",".join(terms))
+    Extract only list of named entity and terminology from the above list of context result should be in comma separated
+    Note: Remove stop words ,pronoun,verbs,adverb""".format(",".join(terms))
     result = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
     generated_text =result['choices'][0]['message']['content']
     if generated_text:
