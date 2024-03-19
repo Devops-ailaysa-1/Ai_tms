@@ -324,9 +324,25 @@ def check_file_language(list_of_file_path):
                 file_paths.append(file_path)
     return file_paths
 
+from ai_openai.utils import get_prompt_chatgpt_turbo
+def prompt_to_extract_ner_terms(terms):
+    
+    prompt = """context_list : {} 
+    
+    
+    Extract only list of named entity and terminology from the above list of context result should be in comma separated""".format(",".join(terms))
+    result = get_prompt_chatgpt_turbo(prompt)
+    generated_text =result['choices'][0]['message']['content']
+    if generated_text:
+        generated_text = generated_text.split(",")
+        return generated_text
+    else:
+        return None
 
 def ner_terminology_finder(file_paths):
     file_paths = check_file_language(file_paths)
+    if not file_paths:
+        raise  'please upload English language files' 
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
     payload = {}
     headers = {}
@@ -352,7 +368,7 @@ def ner_terminology_finder(file_paths):
             pos.extend(i['pos_user'])
 
         terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
-        
+        terminology = prompt_to_extract_ner_terms(terminology)
         
         for i in terminology:
             if i.lower() not in duplicate_list:
