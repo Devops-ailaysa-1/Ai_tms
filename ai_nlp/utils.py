@@ -335,6 +335,7 @@ def prompt_to_extract_ner_terms(terms):
     generated_text =result['choices'][0]['message']['content']
     if generated_text:
         generated_text = generated_text.split(",")
+        print("generated_text",generated_text)
         return generated_text
     else:
         return None
