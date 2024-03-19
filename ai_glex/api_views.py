@@ -577,7 +577,9 @@ def get_ner_terminology_extract(request):
             term_list = TermsModel.objects.filter(job=existing_job)
             objs = []
             for  term in term_list:
-                objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,pos=term.pos,glossary_id=proj.glossary_project.id))
+                objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,
+                                       pos=term.pos,glossary_id=proj.glossary_project.id))
+            print(objs,language_id)
             if objs:
                 TermsModel.objects.bulk_create(objs)
                 choice_instance = TermsModel.objects.filter(job=job_instance)
