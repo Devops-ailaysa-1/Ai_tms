@@ -253,7 +253,9 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     doc.save(docx_filename)
 
 from django.db.models import Q
+import time
 def progress_filter(queryset,value,users):
+	st_time = time.time()	
 	if value == 'inprogress':
 		if users:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
@@ -280,7 +282,8 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 		else:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-	
+	et_time = time.time()
+	print("Time Taken inside filter-------------------->",et_time-st_time)
 	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}

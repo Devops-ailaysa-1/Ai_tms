@@ -694,6 +694,7 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        print("<-----------Inside--------------->")
         user = self.request.user
         assign_to = self.request.query_params.get('assign_to')
         if user.team and user in user.team.get_editors:
@@ -703,7 +704,11 @@ class ProjectFilter(django_filters.FilterSet):
         else: assign_to_list = []
         print("Editors--------->",assign_to_list)
         print("List--------------->",assign_to_list)
+        start_time = time.time()
         queryset = progress_filter(queryset,value,assign_to_list)
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print("Time Taken to filter-------------------->",time_taken)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -726,23 +731,7 @@ class ProjectFilter(django_filters.FilterSet):
         print("QRF-->",queryset)
 
         return queryset
-    
-    # def filter_queryset(self, queryset):
-    #     """
-    #     Apply a chain of filters to the queryset.
-    #     """
-    #     queryset = super().filter_queryset(queryset)
-    #     field1_value = self.request.query_params.get('assign_status')
-    #     field2_value = self.request.query_params.get('assign_to')
-    #     if field1_value and field2_value:
-    #         queryset_1 = self.filter_status(queryset, 'assign_status', field1_value)
-    #         queryset = self.filter_assign_to(queryset_1, 'assign_to', field2_value)
-    #     return queryset
 
-#@never_cache
-#from django.utils.decorators import method_decorator
-# from django.views.decorators.cache import cache_page
-#from .utils import custom_cache_page, generate_list_cache_key
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -792,15 +781,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
-        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
         user_1 = self.get_user()
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
-        et_time = time.time()
-        print("Time Taken-------------------->",et_time-st_time)
         return  response
 
     
