@@ -286,16 +286,52 @@ def extract_entities(sentence):
                 ner_dict[entity[ent.label_]] = [ent.text]
     return ner_dict
 
+from langdetect import detect
+from docx import Document
+
+
+def lang_det_word_choice(text):
+    if len(text) > 500:
+        text = text[:450]
+    lang_code = detect(text)
+    return lang_code
+
+
  
 
+
+
+
+
+def check_file_language(list_of_file_path):
+    file_paths = []
+    for file_path in list_of_file_path:
+        if file_path.endswith('.txt'):
+            with open(file_path,'r',encoding='utf-8') as fp:
+                text = fp.read()
+                lang_code = lang_det_word_choice(text)
+                if lang_code == "en":
+                    file_paths.append(file_path)
+
+        if file_path.endswith('.docx'):
+            document = Document(file_path)
+            extracted_text = ""
+            for p in document.paragraphs:
+                extracted_text = extracted_text+" "+p.text
+            
+            lang_code = lang_det_word_choice(extracted_text)
+            if lang_code == "en":
+                file_paths.append(file_path)
+    return file_paths
+
+
 def ner_terminology_finder(file_paths):
+    file_paths = check_file_language(file_paths)
     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
-    
     payload = {}
     headers = {}
     files = []
     for file_path in file_paths:
-        
         file_name = os.path.basename(file_path)
         files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
     
