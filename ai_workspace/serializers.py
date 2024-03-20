@@ -2199,3 +2199,25 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	# 				return "GlossaryEditor"
 	# 		except:
 	# 			return "Transeditor"
+
+
+class ProjectSimpleSerializer(serializers.ModelSerializer):
+	project_name = serializers.CharField(required=False,allow_null=True)
+	assign_enable = serializers.SerializerMethodField(method_name='get_assign_enable')
+	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+	get_project_type = serializers.ReadOnlyField(source='project_type.id')
+
+	class Meta:
+		model = Project
+		fields = ("id", "project_name","assigned","assign_enable","project_analysis", \
+				"created_at",'get_project_type')
+
+	def get_assign_enable(self,obj):  
+		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
+		return result
+
+	def get_project_analysis(self,obj):
+		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
+		return result
