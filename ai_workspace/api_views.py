@@ -789,18 +789,21 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
-        st_time = time.time()
         st_time_2 = time.time()
         queryset = self.filter_queryset(self.get_queryset())
         et_time_2 = time.time()
+        st_time = time.time()
         print("Time taken for querset filter------------------>",et_time_2-st_time_2)
         user_1 = self.get_user()
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        st_time_3 = time.time()
         if AddStoriesView.check_user_dinamalar(user_1):
             serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         else:
             serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        et_time_3 = time.time()
+        print("Time Taken for serializer-------------------->",et_time_3-st_time_3)
         response = self.get_paginated_response(serializer.data)
         et_time = time.time()
         print("Time Taken for list-------------------->",et_time-st_time)
