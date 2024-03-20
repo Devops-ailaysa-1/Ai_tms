@@ -82,7 +82,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
-                          StepsSerializer, WorkflowsSerializer, \
+                          StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
@@ -794,7 +794,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = self.get_user()
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        if AddStoriesView.check_user_dinamalar(user_1):
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        else:
+            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         et_time = time.time()
         print("Time Taken-------------------->",et_time-st_time)
