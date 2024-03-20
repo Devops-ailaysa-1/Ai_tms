@@ -739,7 +739,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9,8]:  #8
+				if project_type in [1,2,5,9,8,10]:  #8
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					

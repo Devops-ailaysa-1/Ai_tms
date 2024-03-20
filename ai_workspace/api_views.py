@@ -706,8 +706,8 @@ class ProjectFilter(django_filters.FilterSet):
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
-        if value == "assets":
-            queryset = queryset.filter(Q(glossary_project__isnull=False))
+        if value == "glossary":
+            queryset = queryset.filter(Q(glossary_project__isnull=False)).exclude(project_type_id=10)
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
         elif value == "transcription":
@@ -720,6 +720,8 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
+        elif value == "word_choices":
+            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
 
         return queryset
@@ -755,7 +757,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
         print("type---->",project_type)
-        if project_type == 3:
+        if project_type == 3 or project_type == 10:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
 
@@ -1340,7 +1342,7 @@ class TaskView(APIView):
         authorize(request,resource=task,action="delete",actor=self.request.user)
         if task.task_info.filter(task_assign_info__isnull=False):
             print("assigned")
-            return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+            return Response(data={"Message":"Task is assigned. Unassign and Delete"},status=400)
         else:
             if len(task.job.project.get_tasks) == 1:
                 task.job.project.delete()
@@ -4478,7 +4480,7 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset1 = queryset.filter(glossary_project__isnull=False).exclude(project_type_id=10)
         queryset2 = ChoiceLists.objects.none()  #commenting for now
         #queryset2 = ChoiceLists.objects.filter(user=user).order_by('-id')
 
@@ -5254,127 +5256,6 @@ def download_editors_report(res,from_date,to_date):
 
 
 
-# from datetime import datetime, timedelta
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated,IsEnterpriseUser])
-# def get_billing_report(request):
-#     user = request.user
-#     time_range = request.GET.get('time_range', None)
-#     from_date = request.GET.get('from_date',None)
-#     to_date = request.GET.get('to_date',None) 
-#     download_report = request.GET.get('download_report',False) 
-#     owner = user.team.owner if user.team else user
-#     if owner.user_enterprise.subscription_name == 'Enterprise - DIN':
-#         today = datetime.now().date()
-#         if time_range == 'today':
-#             start_date = today
-#         elif time_range == '30days':
-#             start_date = today - timedelta(days=30)
-#         elif from_date and to_date:
-#             start_date = datetime.strptime(from_date, '%Y-%m-%d').date()
-#             today = datetime.strptime(to_date, '%Y-%m-%d').date()
-#         else:
-#             start_date = today
-#         managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
-#         #team = Team.objects.filter(owner=user).first()
-#         team_members = user.team.get_team_members if user.team else []
-#         team_members.append(owner)
-#         res =[]
-#         if user in managers  or user == owner:
-#             tot_queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
-#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
-#                         filter(assign_to__in = team_members).distinct()
-#             total = tot_queryset.count()
-#             queryset = tot_queryset.filter(task_assign_info__isnull=False)
-#             editors = user.team.get_editors if user.team else []
-#             for i in editors:
-#                 additional_details = {}
-#                 query = queryset.filter(assign_to=i)
-#                 additional_details['total_approved_words'] = query.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-#                 res.append(additional_details)
-#         else:
-#             queryset = TaskAssign.objects.filter(task__job__project__project_type_id=8).filter(Q(task_assign_status_history__field_name='client_response')&\
-#                         Q(task_assign_status_history__timestamp__date__range=(start_date,today))).\
-#                         filter(assign_to = user).distinct()
-
-        
-#         if download_report:
-#             print("FR----->",start_date,today)
-#             response = download_editors_report(res,start_date,today) #need date details. today or last month or (from_date, to_date)
-#             return response
-
-#         print("QS--------->",queryset)
-#         print("Res---------->",res)
-#         total_approved_words = queryset.filter(client_response=1).aggregate(total=Sum('task__task_details__task_word_count'))['total']
-#         return JsonResponse({"TotalApprovedWords":total_approved_words,"Additional_info":res})
-#     else:
-#         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
-
-
-
-
-
-# from datetime import datetime, timedelta
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated,IsEnterpriseUser])
-# def get_task_count_detailed_report(request):
-
-
-
-# @api_view(["GET"])
-# @authentication_classes([APIAuthentication])
-# #@permission_classes([IsAuthenticated])
-# def get_translated_story(request):
-#     from ai_workspace_okapi.api_views import DocumentToFile
-#     tar_lang = request.GET.get('target_lang')
-#     news_id = request.GET.get('news_id')
-#     if news_id:
-#         task_news = TaskNewsDetails.objects.filter(news_id = news_id,task__job__target_language__language = tar_lang)
-#         if task_news:
-#             task_assign = task_news.first().task.task_info.filter(client_response=3)
-#             if task_assign:
-#                 doc = task_assign.first().task.document
-#                 doc_to_file = DocumentToFile()
-#                 res = doc_to_file.document_data_to_file(request,doc.id)
-#                 if res.status_code in [200, 201]:
-#                     with open(res.text,"r") as fp:
-#                         tar_json = json.load(fp)
-#                     src_json = task_news.first().source_json.get('news')[0]
-#                     final_json = merge_dict(tar_json,src_json)
-#                     res = {'success': True, 'data':final_json}
-#                     return Response({'result':res},status = 200)
-#                 else:
-#                     res = {'success':False, 'data':{}}  
-#                     return Response({'result':res},status = 500)
-#             else:
-#                 res = {'success': True, 'data': {'msg':'Inprogress'}}
-#                 return Response({'result':res},status=202)
-#         else:
-#             #res = {'success' : True, 'data': {'msg':'detail not found'}}
-#             return Response(status=204)
-#     else:
-#         from datetime import date
-#         today_date = date.today()
-#         task_news = TaskNewsDetails.objects.filter(updated_at__date=today_date,task__job__target_language__language = tar_lang)
-#         print("TaskNews------------->",task_news)
-#         data = []
-#         if task_news:
-#             for i in task_news:
-#                 task_assign = i.task.task_info.filter(client_response=3)
-#                 print("TA-------->",task_assign)
-#                 if task_assign:
-#                     doc = task_assign.first().task.document
-#                     if doc:
-#                         doc_to_file = DocumentToFile()
-#                         res = doc_to_file.document_data_to_file(request,doc.id)
-#                         if res.status_code in [200, 201]:
-#                             with open(res.text,"r") as fp:
-#                                 tar_json = json.load(fp)
-#                             src_json = task_news.first().source_json.get('news')[0]
-#                             final_json = merge_dict(tar_json,src_json)
-#                             data.append(final_json)
-#         res = {'success': True, 'result': data}
-#         return Response({'result':res},status = 200)
 def get_file_url(path):
     media_url = settings.MEDIA_URL.rstrip('/')
     url = path.replace(settings.MEDIA_ROOT,media_url)
