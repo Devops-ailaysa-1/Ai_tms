@@ -2208,8 +2208,8 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned","assign_enable",\#"project_analysis", \
-				"created_at",'get_project_type')
+		fields = ("id", "project_name","assigned","assign_enable",
+				"created_at",'get_project_type',)
 
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
