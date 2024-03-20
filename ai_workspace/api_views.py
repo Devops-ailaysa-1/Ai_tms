@@ -781,12 +781,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
+        start_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
         user_1 = self.get_user()
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
+        end_time = time.time()
+        print("Time Taken for project list---------------->",end_time-start_time)
         return  response
 
     
