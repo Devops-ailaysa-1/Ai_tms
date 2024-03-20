@@ -21,6 +21,7 @@ import collections
 import csv
 import io,time
 from django.db.models import Func, F, CharField
+from ai_auth.tasks import replace_with_gloss
 
 client = translate.Client()
 
@@ -641,6 +642,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
+        task = Task.objects.get(job=doc.job)
 
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
@@ -655,10 +657,12 @@ class MT_RawSerializer(serializers.ModelSerializer):
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
                 print("get trans")
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                validated_data["mt_raw"] = replace_with_gloss(active_segment,translation_original,task)
         else:
             print("In Translation")
-            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+            translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+            validated_data["mt_raw"] = replace_with_gloss(active_segment,translation_original,task)
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         #word update in mt_raw
