@@ -75,6 +75,12 @@ class PdfQustion(models.Model):
     
 
 
+    
+
+
+
+ 
+
 def user_directory_path_public_pdf(filename):
     return '{0}/{1}'.format("public_pdf_book/semantic_search_file",filename)
 

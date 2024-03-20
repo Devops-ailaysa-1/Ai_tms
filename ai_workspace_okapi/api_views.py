@@ -104,8 +104,8 @@ from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
-from ai_glex.models import GlossarySelected
-from ai_auth.tasks import replace_with_gloss
+
+
 # import markdown
 
 # def text_to_html_markdown(text):
@@ -1041,24 +1041,21 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        task = Task.objects.get(job=doc.job)
-    
+
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
-        
-        seg  = Segment.objects.get(id=segment_id)
+
         print("Consumable_credits---------------->",consumable_credits)
         
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############
-                translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -1118,9 +1115,8 @@ class MT_RawAndTM_View(views.APIView):
 
             # Updating raw translation of split segments
             if mt_raw_split:
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1128,9 +1124,9 @@ class MT_RawAndTM_View(views.APIView):
             # Creating new MT raw for split segment
             else:
                 print("Creating new MT raw for split segment")
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
+
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -3643,47 +3639,7 @@ def symspellcheck(request):
     # return JsonResponse({"result":suggestions},safe=False)
 
 
-def check_source_words(user_input,task):
-    from ai_glex.models import TermsModel,GlossarySelected
-    proj = task.job.project
-    target_language = task.job.target_language
-    print("Proj------------->",proj,target_language)
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
-                .filter(job__target_language=target_language)\
-                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                      params=[user_input]).values('sl_term','tl_term','pos').order_by('sl_term','-created_at').distinct('sl_term')
-    gloss = [i for i in queryset]
-    words = [i.get('sl_term') for i in queryset]
-    return words,gloss
-
-def target_source_words(target_mt,task):
-    from ai_glex.models import TermsModel,GlossarySelected
-    proj = task.job.project
-    target_language = task.job.target_language
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
-                .filter(job__target_language=target_language)\
-                .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
-                      params=[target_mt]).distinct().values('sl_term','tl_term')
-    
-    gloss = [i for i in queryset]
-
-    word_list = [i.get('tl_term') for i in queryset]
-
-    input_sentence_lower = target_mt.lower()
-    word_list_lower = [word.lower() for word in word_list]
-    
-    for word in word_list_lower:
-        
-        if word not in input_sentence_lower:
-            return False, gloss 
-    
-    return True, gloss
 
 
 
-    
-    
-    
 
