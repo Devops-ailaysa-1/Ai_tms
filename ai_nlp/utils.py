@@ -30,6 +30,10 @@ import spacy
 import yake
 import requests
 from string import punctuation
+from langdetect import detect
+from docx import Document
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
 
 
@@ -155,16 +159,6 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     return result
 
 
-# import cohere
-
-# def cohere_endpoint(prompt_template):
-#     co = cohere.Client("3m756aexJwhQztVHTgbsGSg3CagAbUCkzWj9j1aV")
-#     response = co.generate(prompt=prompt_template, model="command-nightly" , num_generations=1,stream=False,max_tokens=256)
-#     return response[0].text
-
-
-
-from ai_openai.utils import get_prompt_chatgpt_turbo
 def prompt_temp_context_question(context,question):
     prompt_template = """Text: {context}
 
@@ -286,9 +280,8 @@ def extract_entities(sentence):
                 ner_dict[entity[ent.label_]] = [ent.text]
     return ner_dict
 
-from langdetect import detect
-from docx import Document
 
+ 
 
 def lang_det_word_choice(text):
     if len(text) > 500:
@@ -297,21 +290,20 @@ def lang_det_word_choice(text):
     return lang_code
 
 
- 
-
-
-
-
-
 def check_file_language(list_of_file_path):
     file_paths = []
+    extracted_text_list = []
     for file_path in list_of_file_path:
+        print("file_path-->",file_path)
         if file_path.endswith('.txt'):
             with open(file_path,'r',encoding='utf-8') as fp:
                 text = fp.read()
+                
                 lang_code = lang_det_word_choice(text)
+                print("lang_code--->",lang_code)
                 if lang_code == "en":
                     file_paths.append(file_path)
+                    extracted_text_list.append(text)
 
         if file_path.endswith('.docx'):
             document = Document(file_path)
@@ -322,9 +314,11 @@ def check_file_language(list_of_file_path):
             lang_code = lang_det_word_choice(extracted_text)
             if lang_code == "en":
                 file_paths.append(file_path)
-    return file_paths
+                extracted_text_list.append(extracted_text)
+    print("extracted_text_list",extracted_text_list)
+    return file_paths ,extracted_text_list
 
-from ai_openai.utils import get_prompt_chatgpt_turbo
+
 def prompt_to_extract_ner_terms(terms):
     
     prompt = """context_list : {} 
@@ -340,51 +334,83 @@ def prompt_to_extract_ner_terms(terms):
     else:
         return None
 
+# def ner_terminology_finder(file_paths):
+#     file_paths = check_file_language(file_paths)
+#     if not file_paths:
+#         raise  'please upload English language files' 
+#     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
+
+#     payload = {}
+#     headers = {}
+#     files = []
+#     for file_path in file_paths:
+#         file_name = os.path.basename(file_path)
+#         files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
+    
+#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+#  #   project_instance --> list of job --> get_lang_code --> translation --> {"s_term":"", "t_term":"","lang_code":,"job":""}
+    
+
+#     if response.status_code in [200,201]:
+#         terminology = []
+#         pos = []
+#         tem_list = []
+#         duplicate_list = []
+ 
+#         for i in response.json():
+#             terminology.extend(i['ner'].split(","))
+#             terminology.extend(i['terminology'].split(","))
+#             pos.extend(i['pos_user'])
+
+#         terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
+#         terminology = prompt_to_extract_ner_terms(terminology)
+        
+#         for i in terminology:
+#             if i.lower() not in duplicate_list:
+#                 duplicate_list.append(i.lower())
+#                 tem_list.append({'term':i,'pos':'Noun'})
+#         duplicate_list = []
+#         for i in pos:
+#             if i['term'].lower() not in duplicate_list:
+#                 duplicate_list.append(i['term'].lower())
+#                 tem_list.append(i) #{'term':i,'pos':'Noun'}
+
+#         return {'terminology':tem_list} 
+#     else:
+#         return None
+
+
+
+ 
+prompt = """Context: {} 
+
+
+Extract key phrases and Named Entity Recognition (NER) from the given context give only Person, Nationalities or Religious or Political Groups (NORP), Facilities, Organizations, Geopolitical Entities (GPE), Locations, Products, Works of Art, and Laws for NER and 
+give only the word and don't include NER names in results and the output should be in the format of {"key": key pharas list , "ner": list of ners } and eliminate the repeated words 
+"""
+
+import json
+
 def ner_terminology_finder(file_paths):
-    file_paths = check_file_language(file_paths)
+    file_paths ,extracted_text_list = check_file_language(file_paths)
     if not file_paths:
         raise  'please upload English language files' 
-    url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
-    payload = {}
-    headers = {}
-    files = []
-    for file_path in file_paths:
-        file_name = os.path.basename(file_path)
-        files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
-    
-    response = requests.request("POST", url, headers=headers, data=payload, files=files)
-
- #   project_instance --> list of job --> get_lang_code --> translation --> {"s_term":"", "t_term":"","lang_code":,"job":""}
-    
-
-    if response.status_code in [200,201]:
-        terminology = []
-        pos = []
-        tem_list = []
-        duplicate_list = []
- 
-        for i in response.json():
-            terminology.extend(i['ner'].split(","))
-            terminology.extend(i['terminology'].split(","))
-            pos.extend(i['pos_user'])
-
-        terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
-        terminology = prompt_to_extract_ner_terms(terminology)
-        
-        for i in terminology:
-            if i.lower() not in duplicate_list:
-                duplicate_list.append(i.lower())
-                tem_list.append({'term':i,'pos':'Noun'})
-        duplicate_list = []
-        for i in pos:
-            if i['term'].lower() not in duplicate_list:
-                duplicate_list.append(i['term'].lower())
-                tem_list.append(i) #{'term':i,'pos':'Noun'}
-
-        return {'terminology':tem_list} 
+    terms = []
+    for extracted_text in extracted_text_list:
+        prompt = prompt.format(extracted_text)
+        result = mistral_chat_api(prompt)
+        try:
+            result = json.loads(chat_response.choices[0].message.content)
+        except Exception as e:
+            print("ERROR in JSON DECODE-------->",e)
+    print("terms",terms)
+    if terms:
+         return {'terminology':terms} 
     else:
         return None
 
 
 
- 
+        
+    
