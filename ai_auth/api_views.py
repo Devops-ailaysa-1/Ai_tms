@@ -1698,11 +1698,15 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         team_name = Team.objects.get(id=data.get('team')).name
         role_name = Role.objects.get(id=data.get('role')).name
         enterprise_plans = os.getenv("ENTERPRISE_PLANS")
+        own_company_emails = os.getenv("AILAYSA_EMAILS")
+        print("RR------------>",own_company_emails)
         existing = self.check_user(email,team_name)
+        owner = self.request.user.team.owner
+        
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
         print("plan_name----------->",get_plan_name(self.request.user.team.owner))
-        if not get_plan_name(self.request.user.team.owner) in enterprise_plans:
+        if not (get_plan_name(owner) in enterprise_plans or owner.email in own_company_emails):
             if InternalMember.objects.filter(team = self.request.user.team).count()>=20:
                 return Response({'msg':'internal member count execeeded'},status=400)
         user,password = self.create_internal_user(data.get('name'),email)
