@@ -547,6 +547,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 	def run_validation(self,data):
+		print("DATA--------------------->",data)
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
 				if pt not in [4 ,3, 8] and data.get('target_languages')==None:
@@ -604,6 +605,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				target_language} for target_language in data.get("target_languages", [])]
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
+			if data.get('get_mt_by_page'):
 				data['get_mt_by_page'] = data.get('get_mt_by_page')[0]
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
@@ -2201,3 +2203,26 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	# 				return "GlossaryEditor"
 	# 		except:
 	# 			return "Transeditor"
+
+
+
+# class ProjectSimpleSerializer(serializers.ModelSerializer):
+# 	project_name = serializers.CharField(required=False,allow_null=True)
+# 	assign_enable = serializers.SerializerMethodField(method_name='get_assign_enable')
+# 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+# 	get_project_type = serializers.ReadOnlyField(source='project_type.id')
+
+# 	class Meta:
+# 		model = Project
+# 		fields = ("id", "project_name","assigned","assign_enable","project_analysis", \
+# 				"created_at",'get_project_type')
+
+# 	def get_assign_enable(self,obj):  
+# 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+# 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
+# 		return result
+
+# 	def get_project_analysis(self,obj):
+# 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+# 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
+# 		return result
