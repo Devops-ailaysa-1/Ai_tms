@@ -11,7 +11,7 @@ from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFi
 from django.db.models.signals import post_save, pre_save, pre_delete
 from ai_auth.signals import proz_connect, create_allocated_dirs, updated_user_taxid, \
                             update_internal_member_status, vendor_status_send_email, \
-                            get_currency_based_on_country,\
+                            get_currency_based_on_country,update_member_count,\
                             create_purchased_units_count,add_purchase_units
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -569,9 +569,11 @@ class Team(models.Model):
     name = models.CharField(max_length=50)#,unique=True)
     owner = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='team_owner')
     description = models.TextField(max_length=1000,blank=True,null=True)
+    team_member_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
+
 
     @property
     def get_project_manager(self):
@@ -606,6 +608,8 @@ class Team(models.Model):
     @property
     def owner_pk(self):
         return self.owner.id
+
+post_save.connect(update_member_count, sender=Team)
 
 
 class InternalMember(models.Model):
