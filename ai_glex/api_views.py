@@ -651,7 +651,6 @@ def glossary_task_simple_download(request):
 
 
 
-
 class MyGlossaryView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MyGlossarySerializer
