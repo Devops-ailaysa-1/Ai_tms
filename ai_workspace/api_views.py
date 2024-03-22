@@ -82,7 +82,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
-                          StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
+                          StepsSerializer, WorkflowsSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
