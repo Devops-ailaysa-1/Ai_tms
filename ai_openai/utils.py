@@ -9,8 +9,21 @@ from django.db.models import Q
 from io import BytesIO
 from PIL import Image
 from wiktionaryparser import WiktionaryParser
+#from mistralai.client import MistralClient
+#from mistralai.models.chat_completion import ChatMessage
+
 logger = logging.getLogger('django')
 openai.api_key = os.getenv('OPENAI_API_KEY')
+
+
+MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
+print("MISTRAL_AI_API_KEY",MISTRAL_AI_API_KEY)
+mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
+
+
+
+
+
 
 def ceil_round_off(token_len):
     import math
@@ -365,3 +378,18 @@ def bing_news_search(query):
     else:
         print("Error:", response.status_code, response.text)
     return res
+
+
+
+
+def mistral_chat_api(prompt):
+    pass
+    # model = "open-mixtral-8x7b"
+    # mistral_client = MistralClient(api_key=MISTRAL_AI_API_KEY)
+    # messages = [ChatMessage(role="user", content=prompt)]
+    # chat_response = client.chat(model=model,messages=messages)
+    # return chat_response.choices[0].message.content
+
+
+    
+
