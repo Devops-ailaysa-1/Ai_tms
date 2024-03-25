@@ -740,7 +740,12 @@ class Genre(models.Model):
     genre = models.CharField(max_length = 250,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
- 
+
+class InternalFlowPrompts(models.Model):
+    name = models.CharField(max_length =300, null=True, blank=True)  
+    prompt_phrase = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
 # class BookCategory(models.Model):
 #     category_name =  models.CharField(max_length=100,null=True,blank=True)

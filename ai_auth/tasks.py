@@ -786,12 +786,12 @@ def count_update(job_id):
 
 
 OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
-
+from ai_staff.models import InternalFlowPrompts
 def replace_mt_with_gloss(raw_mt,gloss):
     try:
-        pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Pay attention to sentence formation and ensure that the replaced terms maintain the coherence and grammaticality of the translation. Translation:{}, Glossary:{} Provide the output with source terms replaced according to the glossary, maintaining proper sentence structure. Please provide the output without any feedback on the correctness of the translation. Output: '''.format(raw_mt,gloss)
-        #pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Please provide the output without any feedback on the correctness of the translation. Translation:{}, Glossary:{} output: Provide the translation with source terms replaced according to the glossary. '''.format(raw_mt,glossary)
-        #pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Please provide the output without any feedback on the correctness of the translation. Text:{}, Glossary:{} output: '''.format(raw_mt,gloss)
+        prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
+        pr = prompt_phrase.format(raw_mt,gloss)
+        print("Pr--------------->",pr)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
     except:
@@ -1212,3 +1212,20 @@ def proz_list_send_email(projectpost_id):
         print("Payload------------->",payload)
         #response = requests.request("POST", url, headers=headers, data=payload)
     return Response({'msg':'email sent'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Pay attention to sentence formation and ensure that the replaced terms maintain the coherence and grammaticality of the translation. Translation:{}, Glossary:{} Provide the output with source terms replaced according to the glossary, maintaining proper sentence structure. Please provide the output without any feedback on the correctness of the translation. Output: '''.format(raw_mt,gloss)
+    #pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Please provide the output without any feedback on the correctness of the translation. Translation:{}, Glossary:{} output: Provide the translation with source terms replaced according to the glossary. '''.format(raw_mt,glossary)
+    #pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Please provide the output without any feedback on the correctness of the translation. Text:{}, Glossary:{} output: '''.format(raw_mt,gloss)
