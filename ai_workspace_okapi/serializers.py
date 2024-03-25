@@ -658,11 +658,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
             else:
                 print("get trans")
                 translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
-                validated_data["mt_raw"] = replace_with_gloss(active_segment,translation_original,task)
+                validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
         else:
             print("In Translation")
             translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
-            validated_data["mt_raw"] = replace_with_gloss(active_segment,translation_original,task)
+            validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         #word update in mt_raw

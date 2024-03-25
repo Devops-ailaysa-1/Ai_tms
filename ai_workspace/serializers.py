@@ -522,6 +522,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	file_translate = serializers.BooleanField(required=False,allow_null=True)
+	glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 	#project_progress = serializers.SerializerMethodField(method_name='get_project_progress')
 	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
@@ -532,7 +533,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+					'file_translate','glossary_id',)#'project_progress',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
 	
 		# extra_kwargs = {
 		# 	"subjects": {"write_only": True},

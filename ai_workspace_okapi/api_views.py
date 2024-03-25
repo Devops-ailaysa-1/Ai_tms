@@ -1064,7 +1064,7 @@ class MT_RawAndTM_View(views.APIView):
                 translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
+                translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -1126,7 +1126,7 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
+                translation = replace_with_gloss(seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1136,7 +1136,7 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg,translation_original,task)
+                translation = replace_with_gloss(seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -2685,6 +2685,7 @@ def paraphrasing_for_non_english(request):
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+            replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         prompt_usage = result_prompt['usage']
@@ -2692,7 +2693,7 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("Tsg------->",tags)
-        return Response({'result':rewrited ,'tag':tags})
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2717,6 +2718,7 @@ def paraphrasing(request):
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
     option = request.POST.get('option')
+    segment_id = request.POST.get('seg_id')
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         user = doc_obj.doc_credit_debit_user
@@ -2727,7 +2729,6 @@ def paraphrasing(request):
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
-    
     tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
@@ -2736,12 +2737,17 @@ def paraphrasing(request):
         print("Prompt------------->",prompt)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        if segment_id:
+            seg = Segment.objects.get(id=segment_id)
+            replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+        else:
+            replaced = para_sentence
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
         print("tag-->",tags)
-        return Response({'result':para_sentence ,'tag':tags})
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -3655,6 +3661,7 @@ def check_source_words(user_input,task):
     target_language = task.job.target_language
     print("Proj------------->",proj,target_language)
     glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    print("Selected Glossaries----------->",glossary_selected)
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
                 .filter(job__target_language=target_language).filter(tl_term__isnull=False).exclude(tl_term='')\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\

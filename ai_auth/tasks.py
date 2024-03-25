@@ -789,7 +789,7 @@ OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
 
 def replace_mt_with_gloss(raw_mt,gloss):
     try:
-        pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Pay attention to sentence formation and ensure that the replaced terms maintain the coherence and grammaticality of the translation. Please provide the output without any feedback on the correctness of the translation. Translation:{}, Glossary:{} Provide the output with source terms replaced according to the glossary, maintaining proper sentence structure. Output: '''.format(raw_mt,gloss)
+        pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Pay attention to sentence formation and ensure that the replaced terms maintain the coherence and grammaticality of the translation. Translation:{}, Glossary:{} Provide the output with source terms replaced according to the glossary, maintaining proper sentence structure. Please provide the output without any feedback on the correctness of the translation. Output: '''.format(raw_mt,gloss)
         #pr = '''Given a translation and a glossary list mapping terms from a source language to a target language, your task is to replace the source terms in the translation with their corresponding translations from the glossary. Please provide the output without any feedback on the correctness of the translation. Translation:{}, Glossary:{} output: Provide the translation with source terms replaced according to the glossary. '''.format(raw_mt,glossary)
         #pr = '''Consider the following glossary list and input text. Your task is to replace the terms listed in the glossary with their corresponding translations in the input text. Please provide the output without any feedback on the correctness of the translation. Text:{}, Glossary:{} output: '''.format(raw_mt,gloss)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
@@ -801,7 +801,7 @@ def replace_mt_with_gloss(raw_mt,gloss):
 
 
 
-def replace_with_gloss(seg,raw_mt,task):
+def replace_with_gloss(src,raw_mt,task):
     from ai_glex.models import GlossarySelected
     from ai_workspace_okapi.api_views import check_source_words, target_source_words
     final_mt = raw_mt
@@ -810,7 +810,7 @@ def replace_with_gloss(seg,raw_mt,task):
     if GlossarySelected.objects.filter(project = proj,glossary__project__project_type_id=10).exists():
         word_choice = True
     if word_choice:
-        source_words,gloss = check_source_words(seg.source,task)
+        source_words,gloss = check_source_words(src,task)
         print("SRC----------------->",source_words)
         print("Gloss------------->",gloss)
         if source_words:
@@ -875,7 +875,7 @@ def mt_raw_update(task_id,segments):
                         print("Inside TRY")
                         raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                         print("RAWMT---------------->",raw_mt)
-                        mt = replace_with_gloss(seg,raw_mt,task)
+                        mt = replace_with_gloss(seg.source,raw_mt,task)
                         print("MT--------------->",mt)
                         tags = get_tags(seg)
                         if tags:
@@ -909,7 +909,7 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    mt = replace_with_gloss(seg,raw_mt,task)
+                    mt = replace_with_gloss(seg.source,raw_mt,task)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
