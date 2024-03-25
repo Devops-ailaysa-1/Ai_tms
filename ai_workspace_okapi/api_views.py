@@ -2723,6 +2723,7 @@ def paraphrasing(request):
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         user = doc_obj.doc_credit_debit_user
+        task_obj = Task.objects.get(document = doc_obj)
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         user = task_obj.job.project.ai_user
@@ -2740,6 +2741,7 @@ def paraphrasing(request):
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         if segment_id:
             seg = Segment.objects.get(id=segment_id)
+            print("Seg--------->",seg)
             replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
         else:
             replaced = para_sentence
