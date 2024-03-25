@@ -2660,6 +2660,7 @@ def paraphrasing_for_non_english(request):
         doc_obj = Document.objects.get(id=doc_id)
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
+        task_obj = Task.objects.get(document=doc_obj)
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
