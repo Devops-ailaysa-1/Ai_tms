@@ -367,6 +367,7 @@ def glossaries_list(request,project_id):
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+
     def list(self,request):
         project = request.GET.get('project')
         if not project:
@@ -385,8 +386,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
             return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
     def update(self,request,pk):
         pass
+
 
     def delete(self,request):
         glossary_selected_delete_ids = request.query_params.get('to_remove_ids')
