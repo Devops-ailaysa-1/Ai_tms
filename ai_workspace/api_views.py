@@ -806,7 +806,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         st_time_3 = time.time()
         if AddStoriesView.check_user_dinamalar(user_1):
             serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        els
+        else:
             serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         et_time_3 = time.time()
         print("Time Taken for serializer-------------------->",et_time_3-st_time_3)
