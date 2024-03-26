@@ -1834,7 +1834,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
 				if task_assign_data.get('status') == 3:
 					task_assign_data.update({'client_response':None})
-				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				try:notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				except:pass
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
