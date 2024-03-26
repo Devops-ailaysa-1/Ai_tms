@@ -336,8 +336,7 @@ def ner_terminology_finder(file_path):
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     if response.status_code == 200:
         ner = response.json()['ner'].split(",")
- 
         terminology = response.json()['terminology'].split(",")
-        return {'terminology':terminology+ner}
+        return {'ner':ner,'terminology':terminology}
     else:
         return None

@@ -256,7 +256,7 @@ def customize_text_openai(request):
         print("lang---------------->",lang)
     
     if customize.id in [25,26,27,28]:
-        result = customize_refer(customize,user_text)
+        result = customize_refer(customize,user_text,lang)
         return Response(result)
         
 
@@ -1568,9 +1568,10 @@ def docx_merger(request):
     return res
 
 
-def customize_refer(customize,search_term):
+def customize_refer(customize,search_term,lang):
     print("Cus--------->",customize)
-    lang = lang_detector(search_term)
+    if not lang:
+        lang = lang_detector(search_term)
     if customize.customize == "Wikipedia":
         res = search_wikipedia(search_term,lang)
     elif customize.customize == "Wiktionary":

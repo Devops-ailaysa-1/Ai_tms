@@ -65,7 +65,6 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        print("In create--------->", validated_data)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
@@ -93,7 +92,7 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_name = serializers.CharField(source = 'project_name')
-    glossary_id = serializers.IntegerField(source = 'glossary_project.id')
+    glossary_id = serializers.CharField(source = 'glossary_project.id')
     source_lang = serializers.SerializerMethodField()
     target_lang = serializers.SerializerMethodField()
     #source_lang = serializers.CharField(source = 'project_jobs_set.first().source_language.language')
@@ -118,8 +117,3 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
-
-
-class ChoicelistSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = "__all__"

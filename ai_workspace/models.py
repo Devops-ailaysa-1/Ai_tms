@@ -323,7 +323,7 @@ class Project(models.Model):
   
     def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
-        if self.project_type_id  in  [3,10]:
+        if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
             if terms.count() == 0:
                 return "Yet to start"

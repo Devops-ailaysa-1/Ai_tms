@@ -336,6 +336,17 @@ def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
                 instance.currency_based_on_country_id = 144
                 instance.save()
 
+from ai_auth.utils import get_plan_name
+def update_member_count(sender, instance, created, *args, **kwargs):
+    if created:
+        plan = get_plan_name(instance.owner)
+        if plan in os.getenv('ENTERPRISE_PLANS'):
+            instance.team_member_count = 100
+        elif plan in os.getenv('TEAM_PLANS'):
+            instance.team_member_count = 20
+        else:
+            instance.team_member_count = 0
+        instance.save()
 
 
 

@@ -82,7 +82,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
-                          StepsSerializer, WorkflowsSerializer, \
+                          StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
@@ -707,7 +707,7 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
-            queryset = queryset.filter(Q(glossary_project__isnull=False)).exclude(project_type_id=10)
+            queryset = queryset.filter(Q(glossary_project__isnull=False))
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
         elif value == "transcription":
@@ -720,8 +720,6 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
             queryset = queryset.filter(project_type_id=8)
-        elif value == "word_choices":
-            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
 
         return queryset
@@ -757,7 +755,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
         print("type---->",project_type)
-        if project_type == 3 or project_type == 10:
+        if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
 
@@ -791,15 +789,33 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
-        st_time = time.time()
+        st_time_2 = time.time()
         queryset = self.filter_queryset(self.get_queryset())
+        et_time_2 = time.time()
+        st_time = time.time()
+        print("Time taken for querset filter------------------>",et_time_2-st_time_2)
+        st_time_5 = time.time()
         user_1 = self.get_user()
+        et_time_5 = time.time()
+        print("Time taken for get_user------------------>",et_time_5-st_time_5)
         print("Final QR-------->",queryset)
+        st_time_4 = time.time()
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        et_time_4 = time.time()
+        print("Time Taken for paginate-------------------->",et_time_4-st_time_4)
+        st_time_3 = time.time()
+        if AddStoriesView.check_user_dinamalar(user_1):
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        else:
+            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        et_time_3 = time.time()
+        print("Time Taken for serializer-------------------->",et_time_3-st_time_3)
+        st_time_6 = time.time()
         response = self.get_paginated_response(serializer.data)
+        et_time_6 = time.time()
+        print("Time Taken for paginated_response-------------------->",et_time_6-st_time_6)
         et_time = time.time()
-        print("Time Taken-------------------->",et_time-st_time)
+        print("Time Taken for list-------------------->",et_time-st_time)
         return  response
 
     
