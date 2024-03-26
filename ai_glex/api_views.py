@@ -381,7 +381,7 @@ def glossaries_list(request,project_id):
                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct()
+                .exclude(id=project.id).distinct().order_by('-id')
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -771,7 +771,7 @@ class WordChoiceListView(viewsets.ViewSet):
         queryset = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False).distinct().order_by('-id')
         if task:
             task_obj = Task.objects.get(id=task)
-            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language))
+            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language)).order_by('-id')
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
 
