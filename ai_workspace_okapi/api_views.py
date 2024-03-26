@@ -1032,6 +1032,10 @@ class MT_RawAndTM_View(views.APIView):
     def get_data(request, segment_id, mt_params):
 
         
+        user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+        task = Task.objects.get(job=doc.job)
+        seg  = Segment.objects.get(id=segment_id)
+
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
@@ -1039,15 +1043,16 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
+                
+                replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
+                mt_raw.mt_raw = replaced
+                mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
-
-        user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        task = Task.objects.get(job=doc.job)
     
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
@@ -1055,7 +1060,6 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
         
-        seg  = Segment.objects.get(id=segment_id)
         print("Consumable_credits---------------->",consumable_credits)
         
         if initial_credit > consumable_credits :
@@ -1092,6 +1096,10 @@ class MT_RawAndTM_View(views.APIView):
 
         split_seg = SplitSegment.objects.filter(id=segment_id).first()
 
+        user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
+
+        task = Task.objects.get(job=doc.job)
+
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
 
@@ -1104,13 +1112,15 @@ class MT_RawAndTM_View(views.APIView):
                     =split_seg.segment_id).first().mt_engine
 
             if proj_mt_engine == task_assign_mt_engine:
+                replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
+                mt_raw_split.mt_raw = replaced
+                mt_raw_split.save()
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
-        user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
@@ -1126,7 +1136,7 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg.source,translation_original,task)
+                translation = replace_with_gloss(split_seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1136,7 +1146,7 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(seg.source,translation_original,task)
+                translation = replace_with_gloss(split_seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
