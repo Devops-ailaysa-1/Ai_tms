@@ -719,7 +719,7 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            queryset = queryset#queryset.filter(project_type_id=8)
+            queryset = queryset.filter(project_type_id=8)
         print("QRF-->",queryset)
 
         return queryset
