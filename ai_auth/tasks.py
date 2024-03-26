@@ -787,10 +787,10 @@ def count_update(job_id):
 
 OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
-def replace_mt_with_gloss(raw_mt,gloss):
+def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
-        pr = prompt_phrase.format(raw_mt,gloss)
+        pr = prompt_phrase.format(src,raw_mt,gloss)
         print("Pr--------------->",pr)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
@@ -818,7 +818,7 @@ def replace_with_gloss(src,raw_mt,task):
             # print("All---------->",all_target_replaced)
             # if not all_target_replaced:
             #     print("Inside----------")
-            final_mt = replace_mt_with_gloss(raw_mt,gloss)
+            final_mt = replace_mt_with_gloss(src,raw_mt,gloss)
     print("FinalMT------------>",final_mt)
     return final_mt
       

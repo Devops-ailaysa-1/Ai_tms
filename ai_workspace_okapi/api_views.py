@@ -1243,20 +1243,20 @@ class MT_RawAndTM_View(views.APIView):
         print(project)
         return project
 
-    @staticmethod
-    def get_words_list(sent):
-        punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-        tokens=word_tokenize(sent)
-        target = [word for word in tokens if word not in punctuation]
-        words=[]
-        tg_word = [word for word in target] 
-        unigram = ngrams(tg_word , 1)
-        words.extend(list(" ".join(i) for i in unigram))
-        bigrams = ngrams(tg_word , 2)
-        words.extend(list(" ".join(i) for i in bigrams))
-        trigrams = ngrams(tg_word , 3)
-        words.extend(list(" ".join(i) for i in trigrams))
-        return words
+    # @staticmethod
+    # def get_words_list(sent):
+    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+    #     tokens=word_tokenize(sent)
+    #     target = [word for word in tokens if word not in punctuation]
+    #     words=[]
+    #     tg_word = [word for word in target] 
+    #     unigram = ngrams(tg_word , 1)
+    #     words.extend(list(" ".join(i) for i in unigram))
+    #     bigrams = ngrams(tg_word , 2)
+    #     words.extend(list(" ".join(i) for i in bigrams))
+    #     trigrams = ngrams(tg_word , 3)
+    #     words.extend(list(" ".join(i) for i in trigrams))
+    #     return words
 
     # @staticmethod   
     # def asset_replace(translation,project,lang): 
