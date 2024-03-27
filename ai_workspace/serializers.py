@@ -609,7 +609,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def get_project_analysis(self,instance):
 		if type(instance) is Project:
-
+			st_time = time.time()
 			user_1 = self.context.get('user_1')
 			if instance.project_type_id == 8 and user_1.user_enterprise.subscription_name == 'Enterprise - TFN':
 				return None		
@@ -633,6 +633,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
 			#print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
+			et_time = time.time()
+			print("Time taken------------->",et_time-st_time)
 			return res
 		else:
 			return None
