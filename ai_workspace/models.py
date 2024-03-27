@@ -692,6 +692,7 @@ class Project(models.Model):
             return analysed_true(self,tasks)
 
         else:
+            print("Inside else")
             from .api_views import ProjectAnalysisProperty,analysed_true
             
             try:
