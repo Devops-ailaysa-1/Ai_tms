@@ -682,16 +682,15 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true, GetNewsFederalView, AddStoriesView
 
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
-            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
         #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
-            if (self.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(self.ai_user)):
-                return None
-            else: return analysed_true(self,tasks)
+            # if (self.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(self.ai_user)):
+            #     return None
+            return analysed_true(self,tasks)
 
         else:
             from .api_views import ProjectAnalysisProperty,analysed_true

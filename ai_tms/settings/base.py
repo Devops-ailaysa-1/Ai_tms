@@ -151,7 +151,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
-    #"silk",
+    "silk",
 ]
 
 
@@ -172,12 +172,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
+    'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
+    #'django.middleware.gzip.GZipMiddleware',
     #'silk.middleware.SilkyMiddleware',
     
 ]
+
+SILKY_PYTHON_PROFILER = True
+
 
 ROOT_URLCONF = 'ai_tms.urls'
 AUTH_USER_MODEL="ai_auth.AiUser"
