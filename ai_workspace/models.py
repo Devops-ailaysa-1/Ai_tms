@@ -433,7 +433,7 @@ class Project(models.Model):
     def get_assignable_tasks_exists(self):
         cache_key = f'pr_get_assignable_tasks_exists_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in Assignable---------->",cached_value)
+        #print("Cached Value in Assignable---------->",cached_value)
         if cached_value is None:
             tasks=[]
             for task in self.get_tasks:
@@ -487,7 +487,7 @@ class Project(models.Model):
         #return self.get_tasks.count()
         cache_key = f'pr_tasks_count_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in tasks_count---------->",cached_value)
+        #print("Cached Value in tasks_count---------->",cached_value)
         if cached_value is None:
             cached_value = self.get_tasks.count() 
             cache.set(cache_key,cached_value)
@@ -608,14 +608,14 @@ class Project(models.Model):
         if self.get_tasks:
             cache_key = f'pr_assigned_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in assigned---------->",cached_value)
+            #print("Cached Value in assigned---------->",cached_value)
             if cached_value is None:
                 cached_value =False # Initialize
                 for task in self.get_tasks:
                     if task.task_info.filter(task_assign_info__isnull=False):
                         cached_value = True
                         break
-                print("CV in  prop--------->",cached_value)
+                #print("CV in  prop--------->",cached_value)
                 cache.set(cache_key,cached_value)
             return cached_value
         else:
