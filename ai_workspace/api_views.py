@@ -799,42 +799,42 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
 
-    # def list(self, request, *args, **kwargs):
-    #     st_time = time.time()
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     user_1 = self.get_user()
-    #     limit = request.query_params.get('limit')
-    #     offset = request.query_params.get('offset')
-    #     print("Limit Offset----------->",limit,offset)
-    #     if limit is not None and offset is not None:
-    #         queryset = queryset[int(offset):int(offset) + int(limit)]
-    #     din = AddStoriesView.check_user_dinamalar(user_1)
-    #     if din:
-    #         serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
-    #     else:
-    #         serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
-    #     et_time = time.time()
-    #     print("Time taken for list------------------>",et_time-st_time)
-    #     return Response(serializer.data)
-
-
     def list(self, request, *args, **kwargs):
         st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
-
         user_1 = self.get_user()
-
-        print("Final QR-------->",queryset)
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        
-        if AddStoriesView.check_user_dinamalar(user_1):
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        limit = request.query_params.get('limit')
+        offset = request.query_params.get('offset')
+        print("Limit Offset----------->",limit,offset)
+        if limit is not None and offset is not None:
+            queryset = queryset[int(offset):int(offset) + int(limit)]
+        din = AddStoriesView.check_user_dinamalar(user_1)
+        if din:
+            serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
         else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        response = self.get_paginated_response(serializer.data)
+            serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
         et_time = time.time()
         print("Time taken for list------------------>",et_time-st_time)
-        return  response
+        return Response(serializer.data)
+
+
+    # def list(self, request, *args, **kwargs):
+    #     st_time = time.time()
+    #     queryset = self.filter_queryset(self.get_queryset())
+
+    #     user_1 = self.get_user()
+
+    #     print("Final QR-------->",queryset)
+    #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        
+    #     if AddStoriesView.check_user_dinamalar(user_1):
+    #         serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+    #     else:
+    #         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+    #     response = self.get_paginated_response(serializer.data)
+    #     et_time = time.time()
+    #     print("Time taken for list------------------>",et_time-st_time)
+    #     return  response
 
     
     def retrieve(self, request, pk):
