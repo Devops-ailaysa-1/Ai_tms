@@ -609,10 +609,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def get_project_analysis(self,instance):
 		if type(instance) is Project:
+
+			user_1 = self.context.get('user_1')
+			if instance.project_type_id == 8 and user_1.user_enterprise.subscription_name == 'Enterprise - TFN':
+				return None		
+			
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+			#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_analysis_tasks
