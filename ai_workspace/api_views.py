@@ -89,7 +89,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
-                   get_consumable_credits_for_speech_to_text, progress_filter,filter_status
+                   get_consumable_credits_for_speech_to_text, progress_filter#,filter_status
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -692,18 +692,18 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    # def filter_status(self, queryset, name, value):
-    #     user = self.request.user
-    #     assign_to = self.request.query_params.get('assign_to')
-    #     if user.team and user in user.team.get_editors:
-    #         assign_to_list = [user]
-    #     elif assign_to:
-    #         assign_to_list = assign_to.split(',')
-    #     else: assign_to_list = []
-    #     print("Editors--------->",assign_to_list)
-    #     print("List--------------->",assign_to_list)
-    #     queryset = progress_filter(queryset,value,assign_to_list)
-    #     return queryset
+    def filter_status(self, queryset, name, value):
+        user = self.request.user
+        assign_to = self.request.query_params.get('assign_to')
+        if user.team and user in user.team.get_editors:
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = []
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
+        return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -793,13 +793,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         et_time = time.time()
         print("Time taken to filter------------>",et_time-st_time)
         user_1 = self.get_user()
-        value = self.request.query_params.get('assign_status')
-        if value:
-            st_time_1 = time.time()
-            assign_to = self.request.query_params.get('assign_to')
-            queryset = filter_status(self.request.user,queryset,value,assign_to)
-            et_time_1 = time.time()
-            print("Time takem to assign_filter-------------->",et_time_1-st_time_1)
+        # value = self.request.query_params.get('assign_status')
+        # if value:
+        #     st_time_1 = time.time()
+        #     assign_to = self.request.query_params.get('assign_to')
+        #     queryset = filter_status(self.request.user,queryset,value,assign_to)
+        #     et_time_1 = time.time()
+        #     print("Time takem to assign_filter-------------->",et_time_1-st_time_1)
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         if AddStoriesView.check_user_dinamalar(user_1):
