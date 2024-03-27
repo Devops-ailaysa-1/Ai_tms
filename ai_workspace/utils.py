@@ -252,9 +252,24 @@ def add_additional_content_to_docx(docx_filename, additional_content):
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
+
+def filter_status(request_user,queryset,value,assign_to):
+	user = request_user
+	if user.team and user in user.team.get_editors:
+		assign_to_list = [user]
+	elif assign_to:
+		assign_to_list = assign_to.split(',')
+	else: assign_to_list = []
+	print("Editors--------->",assign_to_list)
+	print("List--------------->",assign_to_list)
+	queryset = progress_filter(queryset,value,assign_to_list)
+	return queryset 
+
+
 from django.db.models import Q
 def progress_filter(queryset,value,users):
 	queryset = queryset.filter(project_type_id=8)
+	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
 	 
 	if value == 'inprogress':
 		if users:
