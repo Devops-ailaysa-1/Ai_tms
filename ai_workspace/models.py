@@ -690,7 +690,7 @@ class Project(models.Model):
         if self.is_proj_analysed == True:
             # if (self.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(self.ai_user)):
             #     return None
-            else: return analysed_true(self,tasks)
+            return analysed_true(self,tasks)
 
         else:
             from .api_views import ProjectAnalysisProperty,analysed_true
