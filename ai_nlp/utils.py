@@ -150,14 +150,14 @@ def load_embedding_vector(instance,query)->RetrievalQA:
  
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
-    retriever = vector_db.as_retriever(search_kwargs={"k": 20})
+    retriever = vector_db.as_retriever(search_kwargs={"k": 9})
     # v = vector_db.similarity_search(query=query,k=4)
 
     # result = querying_llm(llm=llm,chain_type="stuff",
                         #   chain_type_kwargs=prompt_template_chatbook(),
                         #   similarity_document=v,query=query) ##chatgpt
 
-    compressor = CohereRerank()
+    compressor = CohereRerank(user_agent="langchain")
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
     # compressed_docs = compression_retriever.get_relevant_documents(query)
     qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
