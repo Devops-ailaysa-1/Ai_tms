@@ -788,12 +788,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
+        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
+        et_time = time.time()
+        print("Time taken to filter------------>",et_time-st_time)
         user_1 = self.get_user()
         value = self.request.query_params.get('assign_status')
         if value:
+            st_time_1 = time.time()
             assign_to = self.request.query_params.get('assign_to')
             queryset = filter_status(self.request.user,queryset,value,assign_to)
+            et_time_1 = time.time()
+            print("Time takem to assign_filter-------------->",et_time_1-st_time_1)
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         if AddStoriesView.check_user_dinamalar(user_1):
@@ -4432,7 +4438,9 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
 def analysed_true(pr,tasks):
     task_words = []
-    if pr.is_all_doc_opened:
+    if (pr.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
+        return None
+    elif pr.is_all_doc_opened:
         [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
         out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
             Sum('total_char_count'),Sum('total_segment_count'))
