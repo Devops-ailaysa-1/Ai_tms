@@ -796,27 +796,46 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
 
+
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        user_1 = self.get_user()
+        limit = request.query_params.get('limit')
+        offset = request.query_params.get('offset')
+        print("Limit Offset----------->",limit,offset)
+        if limit is not None and offset is not None:
+            queryset = queryset[int(offset):int(offset) + int(limit)]
+        #pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        if AddStoriesView.check_user_dinamalar(user_1):
+            serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+        else:
+            serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+        #response = self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
-    def list(self, request, *args, **kwargs):
-        st_time = time.time()
-        queryset = self.get_queryset()
-        et_time = time.time()
-        print("Time taken to get queryset in list------------>",et_time-st_time)
-        st_time_1 = time.time()
-        queryset = self.filter_queryset(queryset)
-        et_time_1 = time.time()
-        print("Time taken to filter------------>",et_time_1-st_time_1)
-        user_1 = self.get_user()
+    # def list(self, request, *args, **kwargs):
+    #     st_time = time.time()
+    #     queryset = self.get_queryset()
+    #     et_time = time.time()
+    #     print("Time taken to get queryset in list------------>",et_time-st_time)
+    #     st_time_1 = time.time()
+    #     queryset = self.filter_queryset(queryset)
+    #     et_time_1 = time.time()
+    #     print("Time taken to filter------------>",et_time_1-st_time_1)
+    #     user_1 = self.get_user()
 
-        print("Final QR-------->",queryset)
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        if AddStoriesView.check_user_dinamalar(user_1):
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-        response = self.get_paginated_response(serializer.data)
-        return  response
+    #     print("Final QR-------->",queryset)
+    #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        
+    #     if AddStoriesView.check_user_dinamalar(user_1):
+    #         serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+    #     else:
+    #         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+    #     response = self.get_paginated_response(serializer.data)
+    #     return  response
 
     
     def retrieve(self, request, pk):
