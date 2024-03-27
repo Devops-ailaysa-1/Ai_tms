@@ -806,12 +806,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("Limit Offset----------->",limit,offset)
         if limit is not None and offset is not None:
             queryset = queryset[int(offset):int(offset) + int(limit)]
-        #pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         if AddStoriesView.check_user_dinamalar(user_1):
             serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
         else:
             serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
-        #response = self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
