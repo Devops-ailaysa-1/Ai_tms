@@ -774,6 +774,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@cached(timeout=60 * 15)
     def get_queryset(self):
         st_time = time.time()
+        assign_status = self.request.query_params.get('assign_status')
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
@@ -787,6 +788,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        if assign_status:
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
         et_time = time.time()
         print("Time taken for get_queryset--------->",et_time-st_time)
         return queryset
@@ -5600,4 +5604,5 @@ def get_ner(request):
     #     return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
     # else:
     #     return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
 
