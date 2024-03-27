@@ -677,7 +677,7 @@ class Project(models.Model):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
                             
-    def project_analysis(self,tasks):
+    def project_analysis(self,tasks,din=None):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
         from .api_views import analysed_true, GetNewsFederalView, AddStoriesView
@@ -688,6 +688,8 @@ class Project(models.Model):
                 "proj_seg_count": 0, "task_words":[]} 
         #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
+            if din:
+                return None
             return analysed_true(self,tasks)
 
         else:
