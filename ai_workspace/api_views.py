@@ -703,7 +703,10 @@ class ProjectFilter(django_filters.FilterSet):
         else: assign_to_list = []
         print("Editors--------->",assign_to_list)
         print("List--------------->",assign_to_list)
+        st_time = time.time()
         queryset = progress_filter(queryset,value,assign_to_list)
+        et_time = time.time()
+        print("Timetaken in filter_status--------->",et_time-st_time)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -770,6 +773,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
+        st_time = time.time()
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
@@ -783,7 +787,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        
+        et_time = time.time()
+        print("Time taken for get_queryset--------->",et_time-st_time)
         return queryset
 
     def get_user(self):
@@ -795,9 +800,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
         st_time = time.time()
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
         et_time = time.time()
-        print("Time taken to filter------------>",et_time-st_time)
+        print("Time taken to get queryset in list------------>",et_time-st_time)
+        st_time_1 = time.time()
+        queryset = self.filter_queryset(queryset)
+        et_time_1 = time.time()
+        print("Time taken to filter------------>",et_time_1-st_time_1)
         user_1 = self.get_user()
 
         print("Final QR-------->",queryset)
