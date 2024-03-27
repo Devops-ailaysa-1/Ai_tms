@@ -687,8 +687,9 @@ class Project(models.Model):
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
         #print("PR_AN------------------->",self.is_proj_analysed)
+        print("Pr analyssis---------->"self.is_proj_analysed)
         if self.is_proj_analysed == True:
-            print("In analysed")
+            print("Inside if")
             return analysed_true(self,tasks)
 
         else:
