@@ -47,6 +47,7 @@ from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
 from django.db import models
+from django.db.models import Prefetch
 from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
@@ -89,7 +90,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
-                   get_consumable_credits_for_speech_to_text, progress_filter,filter_status
+                   get_consumable_credits_for_speech_to_text, progress_filter#,filter_status
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -675,13 +676,13 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
-    #assign_status = django_filters.CharFilter(method='filter_status')
+    assign_status = django_filters.CharFilter(method='filter_status')
     #assign_to = django_filters.CharFilter(method='filter_assign_to')
 
 
     class Meta:
         model = Project
-        fields = ('project', 'team','type')#,'assign_status')#,'assign_to')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
 
 
     def filter_team(self, queryset, name, value):
@@ -692,18 +693,18 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    # def filter_status(self, queryset, name, value):
-    #     user = self.request.user
-    #     assign_to = self.request.query_params.get('assign_to')
-    #     if user.team and user in user.team.get_editors:
-    #         assign_to_list = [user]
-    #     elif assign_to:
-    #         assign_to_list = assign_to.split(',')
-    #     else: assign_to_list = []
-    #     print("Editors--------->",assign_to_list)
-    #     print("List--------------->",assign_to_list)
-    #     queryset = progress_filter(queryset,value,assign_to_list)
-    #     return queryset
+    def filter_status(self, queryset, name, value):
+        user = self.request.user
+        assign_to = self.request.query_params.get('assign_to')
+        if user.team and user in user.team.get_editors:
+            assign_to_list = [user]
+        elif assign_to:
+            assign_to_list = assign_to.split(',')
+        else: assign_to_list = []
+        print("Editors--------->",assign_to_list)
+        print("List--------------->",assign_to_list)
+        queryset = progress_filter(queryset,value,assign_to_list)
+        return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -769,13 +770,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
+        from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
-                    'project_jobs_set__job_tasks_set__task_info')\
-                    .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+
+        prefetch_team_info = Prefetch('team__internal_member_team_info', queryset=InternalMember.objects.filter(role=1))
+        prefetch_task_info = Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=TaskAssign.objects.all())
+
+        queryset = Project.objects.prefetch_related(prefetch_team_info, prefetch_task_info)
+
+        queryset = queryset.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
@@ -793,13 +799,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         et_time = time.time()
         print("Time taken to filter------------>",et_time-st_time)
         user_1 = self.get_user()
-        value = self.request.query_params.get('assign_status')
-        if value:
-            st_time_1 = time.time()
-            assign_to = self.request.query_params.get('assign_to')
-            queryset = filter_status(self.request.user,queryset,value,assign_to)
-            et_time_1 = time.time()
-            print("Time takem to assign_filter-------------->",et_time_1-st_time_1)
+
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         if AddStoriesView.check_user_dinamalar(user_1):
@@ -4438,9 +4438,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
 def analysed_true(pr,tasks):
     task_words = []
-    if (pr.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
-        return None
-    elif pr.is_all_doc_opened:
+    if pr.is_all_doc_opened:
         [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
         out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
             Sum('total_char_count'),Sum('total_segment_count'))
@@ -5035,7 +5033,7 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def check_user_dinamalar(request_user):
         user = request_user.team.owner if request_user.team else request_user
-        print("user--->",user)
+        #print("user--->",user)
         try:
             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
                 return True

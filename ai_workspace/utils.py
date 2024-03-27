@@ -253,24 +253,26 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     doc.save(docx_filename)
 
 
-def filter_status(request_user,queryset,value,assign_to):
-	user = request_user
-	if user.team and user in user.team.get_editors:
-		assign_to_list = [user]
-	elif assign_to:
-		assign_to_list = assign_to.split(',')
-	else: assign_to_list = []
-	print("Editors--------->",assign_to_list)
-	print("List--------------->",assign_to_list)
-	queryset = progress_filter(queryset,value,assign_to_list)
-	return queryset 
+# def filter_status(request_user,queryset,value,assign_to):
+# 	user = request_user
+# 	if user.team and user in user.team.get_editors:
+# 		assign_to_list = [user]
+# 	elif assign_to:
+# 		assign_to_list = assign_to.split(',')
+# 	else: assign_to_list = []
+# 	print("Editors--------->",assign_to_list)
+# 	print("List--------------->",assign_to_list)
+# 	queryset = progress_filter(queryset,value,assign_to_list)
+# 	return queryset 
 
 
 from django.db.models import Q
+import time
 def progress_filter(queryset,value,users):
+	st_time = time.time()
 	queryset = queryset.filter(project_type_id=8)
 	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
-	 
+	
 	if value == 'inprogress':
 		if users:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
@@ -278,9 +280,6 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 		else:
-			# q1 = queryset.filter(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])
-			# q2 = queryset.filter(project_jobs_set__job_tasks_set__task_info__client_response = 2)
-			# queryset = q1 | q2
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
 	elif value == 'submitted':
@@ -300,7 +299,8 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 		else:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-	
+	et_time = time.time()
+	print("Time taken for assign filter------------>",et_time-st_time)
 	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}

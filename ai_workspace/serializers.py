@@ -670,7 +670,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
 			cache_key = f'check_role_{user.id}_{instance.pk}'
-			cached_value = cache.get(cache_key)
+			cached_value = None#cache.get(cache_key) 
 			if cached_value is None:
 				if instance.team :
 					cached_value = True if ((instance.team.owner == user)\
@@ -683,7 +683,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					cached_value = True if ((instance.ai_user == user) or\
 					(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 					else False
-			cache.set(cache_key,cached_value)
+			#cache.set(cache_key,cached_value)
 		else:cached_value = None
 		return cached_value
 
