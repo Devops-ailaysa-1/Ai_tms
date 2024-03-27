@@ -626,7 +626,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 			else:
 				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
-			print("TT---------->",tasks)
+			#print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
 			return res
 		else:
