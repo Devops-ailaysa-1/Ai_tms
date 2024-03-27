@@ -676,13 +676,13 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
-    assign_status = django_filters.CharFilter(method='filter_status')
+    #assign_status = django_filters.CharFilter(method='filter_status')
     #assign_to = django_filters.CharFilter(method='filter_assign_to')
 
 
     class Meta:
         model = Project
-        fields = ('project', 'team','type','assign_status')#,'assign_to')
+        fields = ('project', 'team','type')#,'assign_status')#,'assign_to')
 
 
     def filter_team(self, queryset, name, value):
@@ -693,21 +693,21 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
-    def filter_status(self, queryset, name, value):
-        user = self.request.user
-        assign_to = self.request.query_params.get('assign_to')
-        if user.team and user in user.team.get_editors:
-            assign_to_list = [user]
-        elif assign_to:
-            assign_to_list = assign_to.split(',')
-        else: assign_to_list = []
-        print("Editors--------->",assign_to_list)
-        print("List--------------->",assign_to_list)
-        st_time = time.time()
-        queryset = progress_filter(queryset,value,assign_to_list)
-        et_time = time.time()
-        print("Timetaken in filter_status--------->",et_time-st_time)
-        return queryset
+    # def filter_status(self, queryset, name, value):
+    #     user = self.request.user
+    #     assign_to = self.request.query_params.get('assign_to')
+    #     if user.team and user in user.team.get_editors:
+    #         assign_to_list = [user]
+    #     elif assign_to:
+    #         assign_to_list = assign_to.split(',')
+    #     else: assign_to_list = []
+    #     print("Editors--------->",assign_to_list)
+    #     print("List--------------->",assign_to_list)
+    #     st_time = time.time()
+    #     queryset = progress_filter(queryset,value,assign_to_list)
+    #     et_time = time.time()
+    #     print("Timetaken in filter_status--------->",et_time-st_time)
+    #     return queryset
 
     def filter_not_empty(self,queryset, name, value):
         if value == "assets":
@@ -789,7 +789,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         if assign_status:
-            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+            queryset = queryset.filter(project_type_id = 8).filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
         et_time = time.time()
         print("Time taken for get_queryset--------->",et_time-st_time)
