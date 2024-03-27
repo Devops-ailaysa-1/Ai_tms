@@ -687,13 +687,10 @@ class Project(models.Model):
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
         #print("PR_AN------------------->",self.is_proj_analysed)
-        print("Pr analyssis---------->"self.is_proj_analysed)
         if self.is_proj_analysed == True:
-            print("Inside if")
             return analysed_true(self,tasks)
 
         else:
-            print("Inside else")
             from .api_views import ProjectAnalysisProperty,analysed_true
             
             try:
@@ -704,7 +701,6 @@ class Project(models.Model):
                 if state == 'STARTED':
                     return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
                 elif state == 'SUCCESS' and self.is_proj_analysed == True:
-                    print("Double check")
                     return analysed_true(self,tasks)
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
