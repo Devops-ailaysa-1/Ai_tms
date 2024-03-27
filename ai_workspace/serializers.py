@@ -2202,7 +2202,36 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
 
-	def get_project_analysis(self,obj):
-		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
-		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
-		return result
+	def get_project_analysis(self,instance):
+		st_time = time.time()
+		din = True
+		user_1 = self.context.get('user_1')
+		if instance.project_type_id == 8 and user_1.user_enterprise.subscription_name == 'Enterprise - TFN':
+			return None		
+		
+		user = self.context.get("request").user if self.context.get("request")!=None else self\
+			.context.get("ai_user", None)
+
+		#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
+		if instance.ai_user == user:
+			tasks = instance.get_analysis_tasks
+		elif instance.team:
+			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+				tasks = instance.get_analysis_tasks
+			else:
+				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+				# tasks = [task for job in instance.project_jobs_set.all() for task \
+				# 		in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+		else:
+			tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+		#print("TT---------->",tasks)
+		res = instance.project_analysis(tasks,din)
+		et_time = time.time()
+		print("Time taken------------->",et_time-st_time)
+		return res
+
+		# serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		# result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
+		# return result
