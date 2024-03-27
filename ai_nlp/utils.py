@@ -3,7 +3,8 @@ import openai ,os,pdf2image,io
 from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
-                                        WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader,PyPDFLoader)
+                                        WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
