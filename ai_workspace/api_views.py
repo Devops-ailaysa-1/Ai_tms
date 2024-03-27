@@ -675,13 +675,13 @@ class ProjectFilter(django_filters.FilterSet):
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
-    #assign_status = django_filters.CharFilter(method='filter_status')
+    assign_status = django_filters.CharFilter(method='filter_status')
     #assign_to = django_filters.CharFilter(method='filter_assign_to')
 
 
     class Meta:
         model = Project
-        fields = ('project', 'team','type')#,'assign_status')#,'assign_to')
+        fields = ('project', 'team','type','assign_status')#,'assign_to')
 
 
     def filter_team(self, queryset, name, value):
@@ -793,13 +793,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         et_time = time.time()
         print("Time taken to filter------------>",et_time-st_time)
         user_1 = self.get_user()
-        # value = self.request.query_params.get('assign_status')
-        # if value:
-        #     st_time_1 = time.time()
-        #     assign_to = self.request.query_params.get('assign_to')
-        #     queryset = filter_status(self.request.user,queryset,value,assign_to)
-        #     et_time_1 = time.time()
-        #     print("Time takem to assign_filter-------------->",et_time_1-st_time_1)
+
         print("Final QR-------->",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         if AddStoriesView.check_user_dinamalar(user_1):
