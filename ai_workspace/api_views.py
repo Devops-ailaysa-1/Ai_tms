@@ -800,9 +800,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
     def list(self, request, *args, **kwargs):
         st_time = time.time()
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
         et_time = time.time()
-        print("Time taken to filter------------>",et_time-st_time)
+        print("Time taken to get queryset in list------------>",et_time-st_time)
+        st_time_1 = time.time()
+        queryset = self.filter_queryset(queryset)
+        et_time_1 = time.time()
+        print("Time taken to filter------------>",et_time_1-st_time_1)
         user_1 = self.get_user()
 
         print("Final QR-------->",queryset)
