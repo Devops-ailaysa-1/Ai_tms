@@ -267,99 +267,102 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 
 
-from django.db.models import Q, Prefetch, F, Count
-import time
+# from django.db.models import Q, Prefetch, F, Count
+# import time
 
+# def progress_filter(queryset,value,users):
+# 	from ai_workspace.models import TaskAssign
+# 	st_time = time.time()
+# 	queryset = queryset.filter(project_type_id=8)
+
+# 	task_info_queryset_inprogress = TaskAssign.objects.filter(
+# 									Q(status__in=[1, 2, 4]) | Q(client_response=2))
+
+# 	task_info_queryset_submitted = TaskAssign.objects.filter(status=3)
+
+# 	task_info_queryset_approved = TaskAssign.objects.filter(client_response = 1)
+
+	
+# 	if value == 'inprogress':
+# 		if users:
+# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
+# 		queryset = queryset.prefetch_related\
+# 						(Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_inprogress)).filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+#  			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
+# 	elif value == 'submitted':
+# 		if users:
+# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
+# 		queryset = queryset.prefetch_related(\
+# 						Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_submitted))\
+# 						.filter(project_jobs_set__job_tasks_set__task_info__status=3).distinct()\
+# 						.annotate(
+# 							num_tasks_with_status_3=Count(
+# 							'project_jobs_set__job_tasks_set__task_info',
+# 							filter=Q(project_jobs_set__job_tasks_set__task_info__status=3),
+# 							distinct=True
+# 							),
+# 							num_tasks_with_client_response_1=Count(
+# 							'project_jobs_set__job_tasks_set__task_info',
+# 							filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1),
+# 							distinct=True
+# 							)
+# 						).exclude(
+# 							Q(num_tasks_with_status_3=F('num_tasks_with_client_response_1')) |
+# 							Q(num_tasks_with_status_3=0)
+# 							)
+# 	elif value == 'approved':
+# 		if users:
+# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
+# 		queryset = queryset.prefetch_related(
+# 		Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_approved)
+# 	).filter(project_jobs_set__job_tasks_set__task_info__client_response=1).distinct()
+		
+# 	et_time = time.time()
+# 	print("Time taken for assign filter------------>",et_time-st_time)
+# 	return queryset
+
+
+
+
+from django.db.models import Q
+import time
 def progress_filter(queryset,value,users):
-	from ai_workspace.models import TaskAssign
 	st_time = time.time()
 	queryset = queryset.filter(project_type_id=8)
-
-	task_info_queryset_inprogress = TaskAssign.objects.filter(
-									Q(status__in=[1, 2, 4]) | Q(client_response=2))
-
-	task_info_queryset_submitted = TaskAssign.objects.filter(status=3)
-
-	task_info_queryset_approved = TaskAssign.objects.filter(client_response = 1)
-
+	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
 	
 	if value == 'inprogress':
 		if users:
-			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-		queryset = queryset.prefetch_related\
-						(Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_inprogress)).filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
- 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
+			|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
+			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
 	elif value == 'submitted':
 		if users:
-			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-		queryset = queryset.prefetch_related(\
-						Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_submitted))\
-						.filter(project_jobs_set__job_tasks_set__task_info__status=3).distinct()\
-						.annotate(
-							num_tasks_with_status_3=Count(
-							'project_jobs_set__job_tasks_set__task_info',
-							filter=Q(project_jobs_set__job_tasks_set__task_info__status=3),
-							distinct=True
-							),
-							num_tasks_with_client_response_1=Count(
-							'project_jobs_set__job_tasks_set__task_info',
-							filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1),
-							distinct=True
-							)
-						).exclude(
-							Q(num_tasks_with_status_3=F('num_tasks_with_client_response_1')) |
-							Q(num_tasks_with_status_3=0)
-							)
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3,task_info__assign_to__in=users).count() == i.get_tasks.filter(task_info__client_response=1,task_info__assign_to__in=users).count()]
+		else:
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
+		queryset = qs.exclude(id__in=filtered_qs)
 	elif value == 'approved':
 		if users:
-			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-		queryset = queryset.prefetch_related(
-		Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_approved)
-	).filter(project_jobs_set__job_tasks_set__task_info__client_response=1).distinct()
-		
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),\
+			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
+			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
+		else:
+			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
 	et_time = time.time()
 	print("Time taken for assign filter------------>",et_time-st_time)
 	return queryset
 
 
-
-
-# from django.db.models import Q
-# import time
-# def progress_filter(queryset,value,users):
-# 	st_time = time.time()
-# 	queryset = queryset.filter(project_type_id=8)
-# 	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
 	
-# 	if value == 'inprogress':
-# 		if users:
-# 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
-# 			|Q(project_jobs_set__job_tasks_set__task_info__client_response = 2),\
-# 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
-# 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
-# 		else:
-# 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-# 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
-# 	elif value == 'submitted':
-# 		if users:
-# 			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),\
-# 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
-# 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
-# 			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3,task_info__assign_to__in=users).count() == i.get_tasks.filter(task_info__client_response=1,task_info__assign_to__in=users).count()]
-# 		else:
-# 			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
-# 			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
-# 		queryset = qs.exclude(id__in=filtered_qs)
-# 	elif value == 'approved':
-# 		if users:
-# 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),\
-# 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
-# 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
-# 		else:
-# 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1))
-# 	et_time = time.time()
-# 	print("Time taken for assign filter------------>",et_time-st_time)
-# 	return queryset
 # # Example usage:
 # sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
 

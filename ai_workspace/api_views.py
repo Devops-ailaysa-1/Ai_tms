@@ -820,13 +820,16 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         st_time = time.time()
+        
         queryset = self.filter_queryset(self.get_queryset())
 
         user_1 = self.get_user()
 
         print("Final QR-------->",queryset)
+        st_time_1 = time.time()
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        
+        et_time_1 = time.time()
+        print("Time taken for Paginate queryset------------------>",et_time_1-st_time_1)
         if AddStoriesView.check_user_dinamalar(user_1):
             serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         else:
