@@ -254,6 +254,8 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 from django.db.models import Q
 def progress_filter(queryset,value,users):
+	queryset = queryset.filter(project_type_id=8)
+	 
 	if value == 'inprogress':
 		if users:
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])\
@@ -261,6 +263,9 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 		else:
+			# q1 = queryset.filter(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])
+			# q2 = queryset.filter(project_jobs_set__job_tasks_set__task_info__client_response = 2)
+			# queryset = q1 | q2
 			queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
 			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2))
 	elif value == 'submitted':

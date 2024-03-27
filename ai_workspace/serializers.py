@@ -1204,8 +1204,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'bid_job_computed_{obj.job.project.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in bid_jb---------->",cached_value)
-		print("computed in bid_jb------------------>",computation_done)
+		#print("Cached Value in bid_jb---------->",cached_value)
+		#print("computed in bid_jb------------------>",computation_done)
 		if cached_value is None and computation_done is None:
 			from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 			if obj.job.project.proj_detail.all():
@@ -1213,7 +1213,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
 			else:
 				cached_value = None#"null"#None#'Not exists'
-			print("Cached Value in bid_job--------->",cached_value)
+			#print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
 			cache.set(computed_key, True)
 			return cached_value
@@ -1237,17 +1237,17 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'task_assign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in Task Assign Info---------->",cached_value)
-		print("computed in Task Assign Info------------------>",computation_done)
+		#print("Cached Value in Task Assign Info---------->",cached_value)
+		#print("computed in Task Assign Info------------------>",computation_done)
 		if cached_value is None and computation_done is None:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
-			print("TaskAssign----------->",task_assign)
+			#print("TaskAssign----------->",task_assign)
 			if task_assign:
 				task_assign_final= task_assign
 			else:
 				task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 			# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
-			print("TSF----------->",task_assign_final)
+			#print("TSF----------->",task_assign_final)
 			if task_assign_final:
 				task_assign_info=[]
 				for i in task_assign_final:
@@ -1272,8 +1272,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'task_reassign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in Task ReAssign Info---------->",cached_value)
-		print("computed in Task ReAssign Info------------------>",computation_done)
+		#print("Cached Value in Task ReAssign Info---------->",cached_value)
+		#print("computed in Task ReAssign Info------------------>",computation_done)
 		# user = AiUser.objects.get(id=109)
 		if cached_value is None and computation_done is None:
 			if user.is_agency == True:
@@ -1287,7 +1287,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				else: cached_value =None#"null"# None#"Not exists"
 			else:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
-				print("Task Assign-------->",task_assign)
+				#print("Task Assign-------->",task_assign)
 				if task_assign and task_assign.filter(assign_to=user):
 					cached_value = True
 					# else:return None
@@ -1834,7 +1834,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
 				if task_assign_data.get('status') == 3:
 					task_assign_data.update({'client_response':None})
-				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				try:notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				except:pass
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
