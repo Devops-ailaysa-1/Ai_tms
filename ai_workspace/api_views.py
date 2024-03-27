@@ -799,6 +799,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def list(self, request, *args, **kwargs):
+        st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
         user_1 = self.get_user()
         limit = request.query_params.get('limit')
@@ -806,10 +807,16 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("Limit Offset----------->",limit,offset)
         if limit is not None and offset is not None:
             queryset = queryset[int(offset):int(offset) + int(limit)]
-        if AddStoriesView.check_user_dinamalar(user_1):
+        st_time_1 = time.time()
+        din = AddStoriesView.check_user_dinamalar(user_1)
+        et_time_1 =time.time()
+        print("Time for din check----------------->",et_time_1 - st_time_1)
+        if din:
             serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
         else:
             serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+        et_time = time.time()
+        print("Time taken for list------------------>",et_time-st_time)
         return Response(serializer.data)
 
     #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
