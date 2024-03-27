@@ -275,7 +275,7 @@ def progress_filter(queryset,value,users):
 	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
 	
 	if value == 'inprogress':
-		queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])).distinct()
+		queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 2)).distinct()
 	elif value == 'submitted':
 		queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
 	elif value == 'approved':
