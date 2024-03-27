@@ -807,10 +807,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print("Limit Offset----------->",limit,offset)
         if limit is not None and offset is not None:
             queryset = queryset[int(offset):int(offset) + int(limit)]
-        st_time_1 = time.time()
         din = AddStoriesView.check_user_dinamalar(user_1)
-        et_time_1 =time.time()
-        print("Time for din check----------------->",et_time_1 - st_time_1)
         if din:
             serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
         else:
