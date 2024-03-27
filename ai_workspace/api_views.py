@@ -754,7 +754,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
-    paginator.page_size = 20
+    paginator.page_size = 10
 
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
