@@ -694,6 +694,7 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        st_time = time.time()
         user = self.request.user
         assign_to = self.request.query_params.get('assign_to')
         if user.team and user in user.team.get_editors:
@@ -703,7 +704,6 @@ class ProjectFilter(django_filters.FilterSet):
         else: assign_to_list = []
         print("Editors--------->",assign_to_list)
         print("List--------------->",assign_to_list)
-        st_time = time.time()
         queryset = progress_filter(queryset,value,assign_to_list)
         et_time = time.time()
         print("Timetaken in filter_status--------->",et_time-st_time)
@@ -799,42 +799,42 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
 
+    # def list(self, request, *args, **kwargs):
+    #     st_time = time.time()     
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     user_1 = self.get_user()
+    #     limit = request.query_params.get('limit')
+    #     offset = request.query_params.get('offset')
+    #     print("Limit Offset----------->",limit,offset)
+    #     if limit is not None and offset is not None:
+    #         queryset = queryset[int(offset):int(offset) + int(limit)]
+    #     din = AddStoriesView.check_user_dinamalar(user_1)
+    #     if din:
+    #         serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+    #     else:
+    #         serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+    #     et_time = time.time()
+    #     print("Time taken for list------------------>",et_time-st_time)
+    #     return Response(serializer.data)
+
+
     def list(self, request, *args, **kwargs):
         st_time = time.time()
         queryset = self.filter_queryset(self.get_queryset())
+
         user_1 = self.get_user()
-        limit = request.query_params.get('limit')
-        offset = request.query_params.get('offset')
-        print("Limit Offset----------->",limit,offset)
-        if limit is not None and offset is not None:
-            queryset = queryset[int(offset):int(offset) + int(limit)]
-        din = AddStoriesView.check_user_dinamalar(user_1)
-        if din:
-            serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+
+        print("Final QR-------->",queryset)
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        
+        if AddStoriesView.check_user_dinamalar(user_1):
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         else:
-            serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        response = self.get_paginated_response(serializer.data)
         et_time = time.time()
         print("Time taken for list------------------>",et_time-st_time)
-        return Response(serializer.data)
-
-
-    # def list(self, request, *args, **kwargs):
-    #     st_time = time.time()
-    #     queryset = self.filter_queryset(self.get_queryset())
-
-    #     user_1 = self.get_user()
-
-    #     print("Final QR-------->",queryset)
-    #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        
-    #     if AddStoriesView.check_user_dinamalar(user_1):
-    #         serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-    #     else:
-    #         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
-    #     response = self.get_paginated_response(serializer.data)
-    #     et_time = time.time()
-    #     print("Time taken for list------------------>",et_time-st_time)
-    #     return  response
+        return  response
 
     
     def retrieve(self, request, pk):

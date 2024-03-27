@@ -294,23 +294,22 @@ def progress_filter(queryset,value,users):
 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
 		queryset = queryset.prefetch_related(\
 						Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_submitted))\
-						.filter(project_jobs_set__job_tasks_set__task_info__status=3).distinct()
-		queryset = queryset.annotate(
-					num_tasks_with_status_3=Count(
-					'project_jobs_set__job_tasks_set__task_info',
-					filter=Q(project_jobs_set__job_tasks_set__task_info__status=3),
-					distinct=True
-					),
-					num_tasks_with_client_response_1=Count(
-					'project_jobs_set__job_tasks_set__task_info',
-					filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1),
-					distinct=True
-					)
-					)
-		queryset = queryset.exclude(
-				Q(num_tasks_with_status_3=F('num_tasks_with_client_response_1')) |
-				Q(num_tasks_with_status_3=0)
-				)
+						.filter(project_jobs_set__job_tasks_set__task_info__status=3).distinct()\
+						.annotate(
+							num_tasks_with_status_3=Count(
+							'project_jobs_set__job_tasks_set__task_info',
+							filter=Q(project_jobs_set__job_tasks_set__task_info__status=3),
+							distinct=True
+							),
+							num_tasks_with_client_response_1=Count(
+							'project_jobs_set__job_tasks_set__task_info',
+							filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1),
+							distinct=True
+							)
+						).exclude(
+							Q(num_tasks_with_status_3=F('num_tasks_with_client_response_1')) |
+							Q(num_tasks_with_status_3=0)
+							)
 	elif value == 'approved':
 		if users:
 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
