@@ -3,7 +3,7 @@ import openai ,os,pdf2image,io
 from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
-                                        WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
+                                        WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader,PyPDFLoader)
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -84,7 +84,8 @@ def loader(file_id) -> None:
             instance.save()
             loader = TextLoader(instance.text_file.path)
         else:
-            loader = PDFMinerLoader(instance.file.path)
+            loader = PyPDFLoader(instance.file.path,extract_images=True)
+            # loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
