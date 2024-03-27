@@ -267,6 +267,7 @@ def add_additional_content_to_docx(docx_filename, additional_content):
 
 
 from django.db.models import Q
+import time
 def progress_filter(queryset,value,users):
 	st_time = time.time()
 	queryset = queryset.filter(project_type_id=8)
