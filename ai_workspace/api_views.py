@@ -47,6 +47,7 @@ from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
 from django.db import models
+from django.db.models import Prefetch
 from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
@@ -769,13 +770,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
+        from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
-                    'project_jobs_set__job_tasks_set__task_info')\
-                    .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+
+        prefetch_team_info = Prefetch('team__internal_member_team_info', queryset=InternalMember.objects.filter(role=1))
+        prefetch_task_info = Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=TaskAssign.objects.all())
+
+        queryset = Project.objects.prefetch_related(prefetch_team_info, prefetch_task_info)
+
+        queryset = queryset.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
