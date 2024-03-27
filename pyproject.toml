@@ -90,7 +90,7 @@ pandas = "1.5.2"
 python-pptx = "^0.6.22"
 onnxruntime = "1.16.0"
 unstructured = "0.10.12"
-langchain = "^0.0.306"
+langchain = "0.0.331"
 pydantic = "1.10.12"
 chromadb = "0.3.29"
 pysqlite3-binary = "^0.5.2"
@@ -101,6 +101,7 @@ pycryptodome = "3.19.0"
 segmind = "^0.2.3"
 yake = "^0.4.8"
 bleach = "6.1.0"
+langchain-community = "0.0.10"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
