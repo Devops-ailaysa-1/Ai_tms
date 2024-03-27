@@ -102,6 +102,7 @@ segmind = "^0.2.3"
 yake = "^0.4.8"
 bleach = "6.1.0"
 langchain-community = "0.0.10"
+pypdf = "^4.1.0"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
