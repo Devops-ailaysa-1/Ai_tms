@@ -4438,9 +4438,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
 def analysed_true(pr,tasks):
     task_words = []
-    if (pr.project_type_id == 8) and (AddStoriesView.check_user_dinamalar(pr.ai_user)):
-        return None
-    elif pr.is_all_doc_opened:
+    if pr.is_all_doc_opened:
         [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
         out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
             Sum('total_char_count'),Sum('total_segment_count'))
@@ -5035,7 +5033,7 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def check_user_dinamalar(request_user):
         user = request_user.team.owner if request_user.team else request_user
-        print("user--->",user)
+        #print("user--->",user)
         try:
             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
                 return True
