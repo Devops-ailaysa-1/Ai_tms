@@ -9,7 +9,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,TaskTransla
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
 		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory#,TaskAssignRateInfo
-import json,os
+import json,os,time
 import pickle,itertools
 from ai_workspace import forms as ws_forms
 from notifications.signals import notify
@@ -609,10 +609,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def get_project_analysis(self,instance):
 		if type(instance) is Project:
+			st_time = time.time()
+			user_1 = self.context.get('user_1')
+			if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+				return None		
+			
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
 				.context.get("ai_user", None)
 
-			user_1 = self.context.get('user_1')#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+			#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
 
 			if instance.ai_user == user:
 				tasks = instance.get_analysis_tasks
@@ -626,8 +631,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 			else:
 				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
-			print("TT---------->",tasks)
+			#print("TT---------->",tasks)
 			res = instance.project_analysis(tasks)
+			et_time = time.time()
+			print("Time taken------------->",et_time-st_time)
 			return res
 		else:
 			return None
@@ -670,7 +677,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				user = self.context.get("request").user
 			else:user = self.context.get("ai_user", None)
 			cache_key = f'check_role_{user.id}_{instance.pk}'
-			cached_value = cache.get(cache_key)
+			cached_value = cache.get(cache_key) 
 			if cached_value is None:
 				if instance.team :
 					cached_value = True if ((instance.team.owner == user)\
@@ -969,22 +976,6 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
         client_response = instance.task_assign.get_client_response_display() if instance.task_assign.client_response else None
-        # count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
-        # print("Count-------------->",count)
-        # if count == 1:
-        #     can_open = True
-        # else:
-	    #     if instance.task_assign.step_id == 1:
-	    #         try:
-	    #             #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
-	    #             if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
-	    #                 can_open = False
-	    #             else:can_open = True
-	    #         except:can_open = True
-	    #     elif instance.task_assign.step_id == 2:
-	    #         if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
-	    #             can_open = True
-	    #         else:can_open = False
         return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"client_response":client_response}#,"can_open":can_open}
 
     def run_validation(self, data):
@@ -1000,10 +991,6 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
            data['reassigned'] = json.loads(data['reassigned'])
         if data.get('pre_translate'):
            data['pre_translate'] = json.loads(data['pre_translate'])
-        # if data.get('tasks'): #and self.context['request']._request.method=='POST':
-        #    print("tasks------>",data['tasks']) 
-        #    print("type-------->",[type(i) for i in data['tasks']])
-        #    data['tasks'] = [task for task in data.pop('tasks',[])]
         if data.get('files'):
            data['files'] = [{'instruction_file':file} for file in data['files']]
         data['assigned_by'] = self.context['request'].user.id
@@ -1037,15 +1024,13 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)) for task in task_list]
             print('task_assign_list--------->',task_assign_list)
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
-	    	#need to add for resassign and lsp
-            # objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
+
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:
                     try:total_word_count = i.task_assign.task.task_details.first().task_word_count
                     except:total_word_count=None
-                # billable_word_count = get_weighted_word_count(i.task_assign.task)
-                # billable_char_count = get_weighted_char_count(i.task_assign.task)
+
                 TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)#,billable_char_count=billable_char_count,billable_word_count=billable_word_count)
             tt = [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
             task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)).update(assign_to_id = assign_to) for task in task_list]
@@ -1226,8 +1211,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'bid_job_computed_{obj.job.project.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in bid_jb---------->",cached_value)
-		print("computed in bid_jb------------------>",computation_done)
+		#print("Cached Value in bid_jb---------->",cached_value)
+		#print("computed in bid_jb------------------>",computation_done)
 		if cached_value is None and computation_done is None:
 			from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 			if obj.job.project.proj_detail.all():
@@ -1235,7 +1220,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				cached_value = ProjectPostJobDetailSerializer(qs,many=True,context={'request':self.context.get("request")}).data
 			else:
 				cached_value = None#"null"#None#'Not exists'
-			print("Cached Value in bid_job--------->",cached_value)
+			#print("Cached Value in bid_job--------->",cached_value)
 			cache.set(cache_key,cached_value)
 			cache.set(computed_key, True)
 			return cached_value
@@ -1259,17 +1244,17 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'task_assign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in Task Assign Info---------->",cached_value)
-		print("computed in Task Assign Info------------------>",computation_done)
+		#print("Cached Value in Task Assign Info---------->",cached_value)
+		#print("computed in Task Assign Info------------------>",computation_done)
 		if cached_value is None and computation_done is None:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
-			print("TaskAssign----------->",task_assign)
+			#print("TaskAssign----------->",task_assign)
 			if task_assign:
 				task_assign_final= task_assign
 			else:
 				task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 			# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
-			print("TSF----------->",task_assign_final)
+			#print("TSF----------->",task_assign_final)
 			if task_assign_final:
 				task_assign_info=[]
 				for i in task_assign_final:
@@ -1294,8 +1279,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		computed_key = f'task_reassign_computed_{obj.pk}_{request_user.pk}'
 		cached_value = cache.get(cache_key)
 		computation_done = cache.get(computed_key)
-		print("Cached Value in Task ReAssign Info---------->",cached_value)
-		print("computed in Task ReAssign Info------------------>",computation_done)
+		#print("Cached Value in Task ReAssign Info---------->",cached_value)
+		#print("computed in Task ReAssign Info------------------>",computation_done)
 		# user = AiUser.objects.get(id=109)
 		if cached_value is None and computation_done is None:
 			if user.is_agency == True:
@@ -1309,7 +1294,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				else: cached_value =None#"null"# None#"Not exists"
 			else:
 				task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
-				print("Task Assign-------->",task_assign)
+				#print("Task Assign-------->",task_assign)
 				if task_assign and task_assign.filter(assign_to=user):
 					cached_value = True
 					# else:return None
@@ -1856,7 +1841,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
 				if task_assign_data.get('status') == 3:
 					task_assign_data.update({'client_response':None})
-				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				try:notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+				except:pass
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
@@ -2199,3 +2185,53 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	# 				return "GlossaryEditor"
 	# 		except:
 	# 			return "Transeditor"
+
+class ProjectSimpleSerializer(serializers.ModelSerializer):
+	project_name = serializers.CharField(required=False,allow_null=True)
+	assign_enable = serializers.SerializerMethodField(method_name='get_assign_enable')
+	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+	get_project_type = serializers.ReadOnlyField(source='project_type.id')
+
+	class Meta:
+		model = Project
+		fields = ("id", "project_name","assigned","assign_enable",
+				"created_at",'get_project_type',"project_analysis",)
+
+	def get_assign_enable(self,obj):  
+		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
+		return result
+
+	def get_project_analysis(self,instance):
+		st_time = time.time()
+		din = True
+		user_1 = self.context.get('user_1')
+		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+			return None		
+		
+		user = self.context.get("request").user if self.context.get("request")!=None else self\
+			.context.get("ai_user", None)
+
+		#user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+
+		if instance.ai_user == user:
+			tasks = instance.get_analysis_tasks
+		elif instance.team:
+			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+				tasks = instance.get_analysis_tasks
+			else:
+				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+				# tasks = [task for job in instance.project_jobs_set.all() for task \
+				# 		in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
+
+		else:
+			tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+		#print("TT---------->",tasks)
+		res = instance.project_analysis(tasks,din)
+		et_time = time.time()
+		print("Time taken------------->",et_time-st_time)
+		return res
+
+		# serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		# result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
+		# return result

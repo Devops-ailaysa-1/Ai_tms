@@ -433,7 +433,7 @@ class Project(models.Model):
     def get_assignable_tasks_exists(self):
         cache_key = f'pr_get_assignable_tasks_exists_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in Assignable---------->",cached_value)
+        #print("Cached Value in Assignable---------->",cached_value)
         if cached_value is None:
             tasks=[]
             for task in self.get_tasks:
@@ -487,7 +487,7 @@ class Project(models.Model):
         #return self.get_tasks.count()
         cache_key = f'pr_tasks_count_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in tasks_count---------->",cached_value)
+        #print("Cached Value in tasks_count---------->",cached_value)
         if cached_value is None:
             cached_value = self.get_tasks.count() 
             cache.set(cache_key,cached_value)
@@ -608,14 +608,14 @@ class Project(models.Model):
         if self.get_tasks:
             cache_key = f'pr_assigned_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in assigned---------->",cached_value)
+            #print("Cached Value in assigned---------->",cached_value)
             if cached_value is None:
                 cached_value =False # Initialize
                 for task in self.get_tasks:
                     if task.task_info.filter(task_assign_info__isnull=False):
                         cached_value = True
                         break
-                print("CV in  prop--------->",cached_value)
+                #print("CV in  prop--------->",cached_value)
                 cache.set(cache_key,cached_value)
             return cached_value
         else:
@@ -677,18 +677,19 @@ class Project(models.Model):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
                             
-    def project_analysis(self,tasks):
+    def project_analysis(self,tasks,din=None):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
-        from .api_views import analysed_true,GetNewsFederalView
+        from .api_views import analysed_true, GetNewsFederalView, AddStoriesView
 
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
-            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
             print("In")
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
         #print("PR_AN------------------->",self.is_proj_analysed)
         if self.is_proj_analysed == True:
+            if din:
+                return None
             return analysed_true(self,tasks)
 
         else:
@@ -1226,7 +1227,7 @@ class Task(models.Model):
     def converted(self):
         cache_key = f'task_converted_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -1271,7 +1272,7 @@ class Task(models.Model):
     def is_task_translated(self):
         cache_key = f'task_translated_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             if self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
                 if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
@@ -1297,7 +1298,7 @@ class Task(models.Model):
     def transcribed(self):
         cache_key = f'transcribed_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -1314,7 +1315,7 @@ class Task(models.Model):
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
@@ -1362,7 +1363,7 @@ class Task(models.Model):
         from .api_views import GetNewsFederalView
         cache_key = f'task_open_in_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             try:
                 if self.job.project.project_type_id == 5:
@@ -1437,14 +1438,14 @@ class Task(models.Model):
         if self.document_id:
             cache_key = f'task_word_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_word_count---------->",cached_value)
+            #print("Cached Value in task_word_count---------->",cached_value)
             if cached_value is None:
                 document = Document.objects.get(id = self.document_id)
                 cached_value =  document.total_word_count
         elif self.task_details.exists():
             cache_key = f'task_word_count_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_word_count---------->",cached_value)
+            #print("Cached Value in task_word_count---------->",cached_value)
             if cached_value is None:
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_word_count
@@ -1460,14 +1461,14 @@ class Task(models.Model):
         if self.document_id:
             cache_key = f'task_char_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_char_count---------->",cached_value)
+            #print("Cached Value in task_char_count---------->",cached_value)
             if cached_value is None:
                 document = Document.objects.get(id = self.document_id)
                 cached_value =  document.total_char_count
         elif self.task_details.first():
             cache_key = f'task_char_count_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_char_count---------->",cached_value)
+            #print("Cached Value in task_char_count---------->",cached_value)
             if cached_value is None:
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_char_count
@@ -1488,7 +1489,7 @@ class Task(models.Model):
     def download_audio_source_file(self):
         cache_key = f'task_audio_source_file_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+        #print("Cached Value---------->",cached_value)
         if cached_value is None:
             try:
                 if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
@@ -1559,7 +1560,7 @@ class Task(models.Model):
         else:
             cache_key = f'seg_progress_{self.job.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in progress---------->",cached_value)
+            #print("Cached Value in progress---------->",cached_value)
             if cached_value is None:
                 target_words = self.job.term_job.filter(Q(tl_term__isnull=False)).exclude(tl_term='').count()
                 source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
