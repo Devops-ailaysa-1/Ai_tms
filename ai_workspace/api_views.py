@@ -778,11 +778,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
-        # prefetch_team_info = Prefetch('team__internal_member_team_info', queryset=InternalMember.objects.filter(role=1))
-        # #prefetch_task_info = Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=TaskAssign.objects.all())
-
-        # queryset = Project.objects.prefetch_related(prefetch_team_info)#, prefetch_task_info)
-
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
