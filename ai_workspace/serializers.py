@@ -611,7 +611,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if type(instance) is Project:
 			st_time = time.time()
 			user_1 = self.context.get('user_1')
-			if instance.project_type_id == 8 and user_1.user_enterprise.subscription_name == 'Enterprise - TFN':
+			if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
 				return None		
 			
 			user = self.context.get("request").user if self.context.get("request")!=None else self\
@@ -2206,7 +2206,7 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		st_time = time.time()
 		din = True
 		user_1 = self.context.get('user_1')
-		if instance.project_type_id == 8 and user_1.user_enterprise.subscription_name == 'Enterprise - TFN':
+		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
 			return None		
 		
 		user = self.context.get("request").user if self.context.get("request")!=None else self\
