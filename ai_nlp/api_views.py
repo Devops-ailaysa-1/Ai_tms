@@ -77,6 +77,7 @@ def wordapi_synonyms(request):
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+import os
 
 class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
@@ -137,7 +138,9 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     def destroy(self,request,pk):
         try:
             obj =self.get_object(pk)
+            pdf_path = obj.file.path
             obj.delete()
+            os.remove(pdf_path)
             return Response({'msg':'deleted successfully'},status=200)
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)

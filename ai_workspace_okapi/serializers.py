@@ -542,59 +542,59 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
-from .models import SelflearningAsset,ChoiceLists,ChoiceListSelected
-class SelflearningAssetSerializer (serializers.ModelSerializer):
-    document = serializers.PrimaryKeyRelatedField(required=False,write_only=True, queryset=Document.objects.all())
-    class Meta():
-        model=SelflearningAsset
-        fields=("source_word","edited_word","occurance","choice_list","created_at","updated_at","document")
+# from .models import SelflearningAsset,ChoiceLists,ChoiceListSelected
+# class SelflearningAssetSerializer (serializers.ModelSerializer):
+#     document = serializers.PrimaryKeyRelatedField(required=False,write_only=True, queryset=Document.objects.all())
+#     class Meta():
+#         model=SelflearningAsset
+#         fields=("source_word","edited_word","occurance","choice_list","created_at","updated_at","document")
 
-    def create(self,validated_data):
-        print("Validated Data------------->",validated_data)
-        edited = validated_data.get('edited_word',None)
-        source = validated_data.get('source_word',None)
-        document = validated_data.get('document', None)
-        choice_list = validated_data.get('choice_list', None)
-        print("ChList---------->",choice_list)
+#     def create(self,validated_data):
+#         print("Validated Data------------->",validated_data)
+#         edited = validated_data.get('edited_word',None)
+#         source = validated_data.get('source_word',None)
+#         document = validated_data.get('document', None)
+#         choice_list = validated_data.get('choice_list', None)
+#         print("ChList---------->",choice_list)
 
-        # user = validated_data.get('user',None)
-        if document:
-            project = document.job.project
-        if source and edited and document:
-            if choice_list:
-                choice_list = ChoiceLists.objects.get(id = choice_list)
-            else:
-                choice_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=document.job.target_language_id,is_default=True)
-            cl_selected = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=document.job.target_language_id)
-            if not cl_selected:
-                cl_selected, created = ChoiceListSelected.objects.get_or_create(project=project,choice_list=choice_list)
-        slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choice_list,source_word=source)
+#         # user = validated_data.get('user',None)
+#         if document:
+#             project = document.job.project
+#         if source and edited and document:
+#             if choice_list:
+#                 choice_list = ChoiceLists.objects.get(id = choice_list)
+#             else:
+#                 choice_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=document.job.target_language_id,is_default=True)
+#             cl_selected = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=document.job.target_language_id)
+#             if not cl_selected:
+#                 cl_selected, created = ChoiceListSelected.objects.get_or_create(project=project,choice_list=choice_list)
+#         slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choice_list,source_word=source)
 
-        if  slf_lrn_list.filter(edited_word=edited):
-            ins = slf_lrn_list.filter(edited_word=edited).last()
-            ins.occurance +=1
-            ins.save()         
-        else:
-            if slf_lrn_list.count() >= 5:
-                first_out=slf_lrn_list.first().delete()
-            ins=SelflearningAsset.objects.create(choice_list=choice_list,source_word=source,edited_word=edited,occurance=1)  
-        return ins
+#         if  slf_lrn_list.filter(edited_word=edited):
+#             ins = slf_lrn_list.filter(edited_word=edited).last()
+#             ins.occurance +=1
+#             ins.save()         
+#         else:
+#             if slf_lrn_list.count() >= 5:
+#                 first_out=slf_lrn_list.first().delete()
+#             ins=SelflearningAsset.objects.create(choice_list=choice_list,source_word=source,edited_word=edited,occurance=1)  
+#         return ins
 
 
-class ChoiceListsSerializer (serializers.ModelSerializer):
+# class ChoiceListsSerializer (serializers.ModelSerializer):
 
-    class Meta:
-        model = ChoiceLists
-        fields = "__all__"
+#     class Meta:
+#         model = ChoiceLists
+#         fields = "__all__"
 
-class ChoiceListSelectedSerializer (serializers.ModelSerializer):
-    language=serializers.SerializerMethodField()
-    class Meta:
-        model = ChoiceListSelected
-        fields = ("id","project","choice_list","language")
+# class ChoiceListSelectedSerializer (serializers.ModelSerializer):
+#     language=serializers.SerializerMethodField()
+#     class Meta:
+#         model = ChoiceListSelected
+#         fields = ("id","project","choice_list","language")
     
-    def get_language(self,obj):
-        return obj.choice_list.language.id
+#     def get_language(self,obj):
+#         return obj.choice_list.language.id
 
 
 class MT_RawSerializer(serializers.ModelSerializer):

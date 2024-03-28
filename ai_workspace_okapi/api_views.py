@@ -21,6 +21,7 @@ import urllib.parse
 import xlsxwriter
 import rapidfuzz
 from json import JSONDecodeError
+from django.db.models.signals import post_save ,pre_save
 from os.path import exists
 from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
 from django.contrib.auth import settings
@@ -3128,50 +3129,7 @@ def get_tags(seg):
     return tags
 
 
-from ai_workspace_okapi.serializers import SegmentDiffSerializer,SelflearningAssetSerializer
-from django.http import Http404
-from ai_staff.models import Languages
-from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
-from ai_workspace_okapi.utils import do_compare_sentence
-from django.db.models.signals import post_save ,pre_save
 
-# class SelflearningAssetViewset(viewsets.ViewSet):
-#     permission_classes = [IsAuthenticated,]
-#     def get_object(self, pk):
-#         try:
-#             return SelflearningAsset.objects.get(id=pk)
-#         except SelflearningAsset.DoesNotExist:
-#             raise Http404
-
-#     def create(self,request):
-#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
-    
-#     def list(self, request):
-#         target_language=request.query_params.get('target_language', None)
-#         if target_language:
-#             target_language=Languages.objects.get(id=target_language)
-#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
-#         else:
-#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
-#         serializer=SelflearningAssetSerializer(queryset,many=True)
-#         return Response(serializer.data)
-
-#     def retrieve(self,request,pk):
-#         obj =self.get_object(pk)
-#         serializer=SelflearningAssetSerializer(obj)
-#         return Response(serializer.data)
-    
-#     def update(self,request,pk):
-#         obj =self.get_object(pk)
-#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors,status=400)
 
 class SegmentDiffViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -3182,37 +3140,9 @@ class SegmentDiffViewset(viewsets.ViewSet):
             raise Http404
 
 
-def update_self_learning(sender, instance, *args, **kwargs):
-    user=instance.user
-    language=instance.segment.text_unit.document.job.target_language
-    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
-    if hasattr(instance.segment,'seg_mt_raw'):
-        target_segment =instance.segment.seg_mt_raw.mt_raw  
-    else:target_segment=''
-    
-    edited_segment=instance.target
-
-    # if instance.status.status_id==104:
-    if edited_segment and target_segment:
-        diff_words=do_compare_sentence(target_segment,edited_segment,sentense_diff=False)
-        if diff_words:
-            for diff_word in diff_words:
-                self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
-                if not self_learn_filter:
-                    SelflearningAsset.objects.create(user=user,source_word=diff_word[0],edited_word=diff_word[1],
-                                                    target_language=language)
-                if self_learn_filter:
-                    self_learn_filter.update(source_word=diff_word[0],edited_word=diff_word[1])
-            print("diff_words--->",diff_words)
-        else:
-            print("no_diff")
-    else:
-        print("no_seg and no_tar")
 
 
-# post_save.connect(update_self_learning, sender=SegmentHistory)
-
-
+from ai_workspace_okapi.utils import do_compare_sentence
 def prev_seg_his(instance):
     seg_his_ins=SegmentHistory.objects.filter(segment_id=instance.segment_id)
     for i in seg_his_ins:
@@ -3259,285 +3189,285 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 
 
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .serializers import SelflearningAssetSerializer,ChoiceListSelectedSerializer,ChoiceListsSerializer
-from rest_framework.response import Response
-from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment,ChoiceLists,ChoiceListSelected
-from ai_staff.models import Languages
-from rest_framework import status
-from nltk import word_tokenize
-from django_filters.rest_framework import DjangoFilterBackend
-import difflib
-from rest_framework.pagination import PageNumberPagination
-from django.core.exceptions import ValidationError
+# from rest_framework import viewsets
+# from rest_framework.permissions import IsAuthenticated
+# from .serializers import SelflearningAssetSerializer,ChoiceListSelectedSerializer,ChoiceListsSerializer
+# from rest_framework.response import Response
+# from ai_workspace_okapi.models import SelflearningAsset,Document,BaseSegment,ChoiceLists,ChoiceListSelected
+# from ai_staff.models import Languages
+# from rest_framework import status
+# from nltk import word_tokenize
+# from django_filters.rest_framework import DjangoFilterBackend
+# import difflib
+# from rest_framework.pagination import PageNumberPagination
+# from django.core.exceptions import ValidationError
 
-from nltk.corpus import stopwords
-#nltk.download('stopwords')
-#stop_words = set(stopwords.words('english'))
-stop_words = None
-class SelflearningView(viewsets.ViewSet, PageNumberPagination):
-    permission_classes = [IsAuthenticated,]
-    page_size = 20
-    search_fields = ['source_word','edited_word']
-    ordering = ('-id')
-    ordering_fields = ['id','source_word','edited_word']
+# from nltk.corpus import stopwords
+# #nltk.download('stopwords')
+# #stop_words = set(stopwords.words('english'))
+# stop_words = None
+# class SelflearningView(viewsets.ViewSet, PageNumberPagination):
+#     permission_classes = [IsAuthenticated,]
+#     page_size = 20
+#     search_fields = ['source_word','edited_word']
+#     ordering = ('-id')
+#     ordering_fields = ['id','source_word','edited_word']
 
-    @staticmethod
-    def get_object(request,id):
-        user =request.user.team.owner  if request.user.team  else request.user
-        asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=user)
-        return  asset
+#     @staticmethod
+#     def get_object(request,id):
+#         user =request.user.team.owner  if request.user.team  else request.user
+#         asset = get_object_or_404(SelflearningAsset, id=id,choice_list__user=user)
+#         return  asset
 
-    def filter_queryset(self, queryset):
-        from rest_framework.filters import SearchFilter, OrderingFilter
-        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
-        for backend in list(filter_backends):
-            queryset = backend().filter_queryset(self.request, queryset, view=self)
-        return queryset
+#     def filter_queryset(self, queryset):
+#         from rest_framework.filters import SearchFilter, OrderingFilter
+#         filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+#         for backend in list(filter_backends):
+#             queryset = backend().filter_queryset(self.request, queryset, view=self)
+#         return queryset
     
-    def list(self,request):
-        segment_id=request.GET.get('segment_id',None)
-        choice_list_id = request.GET.get('choice_list_id',None)
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        if segment_id: 
-            if split_check(segment_id):
-                project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
-                seg = get_object_or_404(Segment,id=segment_id) 
-                lang = get_object_or_404(Languages,id=seg.text_unit.document.target_language_id)
-                seg_his=SegmentHistory.objects.filter(segment=seg)             
-                if len(seg_his)>=2:
-                   raw_mt=seg_his[len(seg_his)-2].target
-                else:                   
-                    try:raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
-                    except:raw_mt = ''
-                mt_edited=seg.target
-                print("raw_mt normal>>>>>>",raw_mt)
-            else:
-                project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
-                split_seg=get_object_or_404(SplitSegment,id=segment_id)
-                lang = get_object_or_404(Languages,id=split_seg.text_unit.document.target_language_id)
-                seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
-                if len(seg_his)>=2:
-                   raw_mt=seg_his[len(seg_his)-2].target 
-                else:
-                    try:raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
-                    except:raw_mt=''
-                mt_edited=split_seg.target               
-                print("raw_mt split>>>>>>>",raw_mt)
+#     def list(self,request):
+#         segment_id=request.GET.get('segment_id',None)
+#         choice_list_id = request.GET.get('choice_list_id',None)
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         if segment_id: 
+#             if split_check(segment_id):
+#                 project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)  
+#                 seg = get_object_or_404(Segment,id=segment_id) 
+#                 lang = get_object_or_404(Languages,id=seg.text_unit.document.target_language_id)
+#                 seg_his=SegmentHistory.objects.filter(segment=seg)             
+#                 if len(seg_his)>=2:
+#                    raw_mt=seg_his[len(seg_his)-2].target
+#                 else:                   
+#                     try:raw_mt=MT_RawTranslation.objects.get(segment=seg).mt_raw
+#                     except:raw_mt = ''
+#                 mt_edited=seg.target
+#                 print("raw_mt normal>>>>>>",raw_mt)
+#             else:
+#                 project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
+#                 split_seg=get_object_or_404(SplitSegment,id=segment_id)
+#                 lang = get_object_or_404(Languages,id=split_seg.text_unit.document.target_language_id)
+#                 seg_his=SegmentHistory.objects.filter(split_segment=split_seg)             
+#                 if len(seg_his)>=2:
+#                    raw_mt=seg_his[len(seg_his)-2].target 
+#                 else:
+#                     try:raw_mt=MtRawSplitSegment.objects.get(split_segment=split_seg).mt_raw
+#                     except:raw_mt=''
+#                 mt_edited=split_seg.target               
+#                 print("raw_mt split>>>>>>>",raw_mt)
            
-            choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).last()
-            print("Choice in self-learn------->",choice)
-            if choice:
-                self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
-            else:
-                self_learning=None
-            print("self Learn------->",self_learning)
-            asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning,lang)
-            print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-            if asset:
-                return Response(asset,status=status.HTTP_200_OK)
-            return Response({},status=status.HTTP_200_OK)
-        else:
-            if choice_list_id:
-                assets = SelflearningAsset.objects.filter(choice_list__id=choice_list_id)
-            else:
-                assets = SelflearningAsset.objects.filter(choice_list__user=user)
-            queryset = self.filter_queryset(assets)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = SelflearningAssetSerializer(pagin_tc, many=True)
-            response = self.get_paginated_response(serializer.data)
-            print(response)
-            return  response
+#             choice=ChoiceListSelected.objects.filter(project__id=project.id).filter(choice_list__language=lang).last()
+#             print("Choice in self-learn------->",choice)
+#             if choice:
+#                 self_learning=SelflearningAsset.objects.filter(choice_list=choice.choice_list.id)
+#             else:
+#                 self_learning=None
+#             print("self Learn------->",self_learning)
+#             asset=SelflearningView.seq_match_seg_diff(raw_mt,mt_edited,self_learning,lang)
+#             print(asset,'<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+#             if asset:
+#                 return Response(asset,status=status.HTTP_200_OK)
+#             return Response({},status=status.HTTP_200_OK)
+#         else:
+#             if choice_list_id:
+#                 assets = SelflearningAsset.objects.filter(choice_list__id=choice_list_id)
+#             else:
+#                 assets = SelflearningAsset.objects.filter(choice_list__user=user)
+#             queryset = self.filter_queryset(assets)
+#             pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#             serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+#             response = self.get_paginated_response(serializer.data)
+#             print(response)
+#             return  response
 
-    def retrieve(self,request,pk):
-        obj =self.get_object(request,pk)
-        serializer=SelflearningAssetSerializer(obj)
-        return Response(serializer.data)
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(request,pk)
+#         serializer=SelflearningAssetSerializer(obj)
+#         return Response(serializer.data)
 
-    def create(self,request): 
-        doc_id=request.POST.get('document',None)
-        choice_list_id=request.POST.get('choice_list_id',None)
-        source=request.POST.get('source_word',None)
-        edited=request.POST.get('edited_word',None)
-        ser = SelflearningAssetSerializer(data=request.POST.dict()) 
-        if ser.is_valid():
-            ser.save()
-            return Response(ser.data)
-        return Response(ser.errors)
+#     def create(self,request): 
+#         doc_id=request.POST.get('document',None)
+#         choice_list_id=request.POST.get('choice_list_id',None)
+#         source=request.POST.get('source_word',None)
+#         edited=request.POST.get('edited_word',None)
+#         ser = SelflearningAssetSerializer(data=request.POST.dict()) 
+#         if ser.is_valid():
+#             ser.save()
+#             return Response(ser.data)
+#         return Response(ser.errors)
 
-    def update(self,request,pk):
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
-        edited=request.POST.get('edited_word',None)
-        slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
-        if slf:
-            return Response({"msg": 'choice list already exists'}, status=400)
-        else:
-            ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
-            if ser.is_valid():
-                ser.save()
-                return Response(ser.data)
-            return Response(ser.errors)
+#     def update(self,request,pk):
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
+#         edited=request.POST.get('edited_word',None)
+#         slf=SelflearningAsset.objects.filter(choice_list__id=ins.choice_list_id,source_word=ins.source_word,edited_word=edited)
+#         if slf:
+#             return Response({"msg": 'choice list already exists'}, status=400)
+#         else:
+#             ser = SelflearningAssetSerializer(ins,data=request.POST.dict(), partial=True)
+#             if ser.is_valid():
+#                 ser.save()
+#                 return Response(ser.data)
+#             return Response(ser.errors)
 
-    def delete(self,request,pk):
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
-        ins.delete()
-        return  Response(status=204)
+#     def delete(self,request,pk):
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         ins = SelflearningAsset.objects.get(choice_list__user=user,id=pk)
+#         ins.delete()
+#         return  Response(status=204)
     
-    @staticmethod
-    def seq_match_seg_diff(words1,words2,self_learning,lang):
-        source = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words1)
-        s1=source.split()
-        target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
-        s2=target.split()
-        stopwords=stop_words if lang.language=='English' else {}
-        assets={}
-        print(s1,s2)
-        matcher=difflib.SequenceMatcher(None,s1,s2 )
-        print(matcher.get_opcodes())
-        for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-            if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
-                source=" ".join(s1[i1:i2])
-                edited=" ".join(s2[j1:j2])
-                if source not in stopwords and edited not in stopwords:
-                    if self_learning:
-                        if not self_learning.filter(source_word=source ,edited_word=edited): 
-                            assets[source]=edited
-                    else:
-                        assets[source]=edited
-        print("------------------",assets)  
-        return assets
+    # @staticmethod
+    # def seq_match_seg_diff(words1,words2,self_learning,lang):
+    #     source = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words1)
+    #     s1=source.split()
+    #     target = re.sub(rf'\(.*?\)|\<.*?\>|[,.?]', "", words2)
+    #     s2=target.split()
+    #     stopwords=stop_words if lang.language=='English' else {}
+    #     assets={}
+    #     print(s1,s2)
+    #     matcher=difflib.SequenceMatcher(None,s1,s2 )
+    #     print(matcher.get_opcodes())
+    #     for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+    #         if tag == 'replace' and (i2-i1 <= 3) and (j2-j1 <= 3):
+    #             source=" ".join(s1[i1:i2])
+    #             edited=" ".join(s2[j1:j2])
+    #             if source not in stopwords and edited not in stopwords:
+    #                 if self_learning:
+    #                     if not self_learning.filter(source_word=source ,edited_word=edited): 
+    #                         assets[source]=edited
+    #                 else:
+    #                     assets[source]=edited
+    #     print("------------------",assets)  
+    #     return assets
 
 
-class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
-    permission_classes = [IsAuthenticated,]
-    page_size = 20
-    ordering = ('-id')
-    search_fields = ['name']
-    ordering_fields = ['id','name','language']
+# class ChoicelistView(viewsets.ViewSet, PageNumberPagination):
+#     permission_classes = [IsAuthenticated,]
+#     page_size = 20
+#     ordering = ('-id')
+#     search_fields = ['name']
+#     ordering_fields = ['id','name','language']
 
-    @staticmethod
-    def get_object(request,id):
-        user = request.user.team.owner  if request.user.team  else request.user
-        asset = get_object_or_404(ChoiceLists, id=id, user=user)
-        return  asset
+#     @staticmethod
+#     def get_object(request,id):
+#         user = request.user.team.owner  if request.user.team  else request.user
+#         asset = get_object_or_404(ChoiceLists, id=id, user=user)
+#         return  asset
 
-    def filter_queryset(self, queryset):
-        from rest_framework.filters import SearchFilter, OrderingFilter
-        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
-        for backend in list(filter_backends):
-            queryset = backend().filter_queryset(self.request, queryset, view=self)
-        return queryset
+#     def filter_queryset(self, queryset):
+#         from rest_framework.filters import SearchFilter, OrderingFilter
+#         filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+#         for backend in list(filter_backends):
+#             queryset = backend().filter_queryset(self.request, queryset, view=self)
+#         return queryset
     
-    def list(self,request):
-        project = request.GET.get('project',None)
-        #choice=request.GET.get('choice_list_id',None)
-        user = request.user.team.owner  if request.user.team  else request.user
-        # if choice:
-        #     ch_list=self.get_object(request,choice)
-        #     self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
-        #     queryset = self.filter_queryset(self_learning)
-        #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        #     serializer = SelflearningAssetSerializer(pagin_tc, many=True)
-        #     return self.get_paginated_response(serializer.data)
-        if project:
-            project=get_object_or_404(Project,id=project)
-            lang=project.get_target_languages
-            ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=user)
-            queryset = self.filter_queryset(ch_list)
-            #pagin_tc = self.paginate_queryset(queryset, request , view=self) 
-            choice_serializer=ChoiceListsSerializer(queryset,many=True)
-            return Response(choice_serializer.data)
-        else:       
-            ch_list=ChoiceLists.objects.filter(user=user)
-            queryset = self.filter_queryset(ch_list)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = ChoiceListsSerializer(pagin_tc, many=True)
-            return self.get_paginated_response(serializer.data)
-            # choice_serializer=ChoiceListsSerializer(ch_list,many=True)
-            # return Response(choice_serializer.data)
+#     def list(self,request):
+#         project = request.GET.get('project',None)
+#         #choice=request.GET.get('choice_list_id',None)
+#         user = request.user.team.owner  if request.user.team  else request.user
+#         # if choice:
+#         #     ch_list=self.get_object(request,choice)
+#         #     self_learning=SelflearningAsset.objects.filter(choice_list=ch_list).order_by("-id")
+#         #     queryset = self.filter_queryset(self_learning)
+#         #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         #     serializer = SelflearningAssetSerializer(pagin_tc, many=True)
+#         #     return self.get_paginated_response(serializer.data)
+#         if project:
+#             project=get_object_or_404(Project,id=project)
+#             lang=project.get_target_languages
+#             ch_list=ChoiceLists.objects.filter(language__language__in=lang,user=user)
+#             queryset = self.filter_queryset(ch_list)
+#             #pagin_tc = self.paginate_queryset(queryset, request , view=self) 
+#             choice_serializer=ChoiceListsSerializer(queryset,many=True)
+#             return Response(choice_serializer.data)
+#         else:       
+#             ch_list=ChoiceLists.objects.filter(user=user)
+#             queryset = self.filter_queryset(ch_list)
+#             pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#             serializer = ChoiceListsSerializer(pagin_tc, many=True)
+#             return self.get_paginated_response(serializer.data)
+#             # choice_serializer=ChoiceListsSerializer(ch_list,many=True)
+#             # return Response(choice_serializer.data)
 
-    def retrieve(self,request,pk):
-        ch_list =self.get_object(request,pk)
-        choice_serializer=ChoiceListsSerializer(ch_list,many=False)
-        return Response(choice_serializer.data)
+#     def retrieve(self,request,pk):
+#         ch_list =self.get_object(request,pk)
+#         choice_serializer=ChoiceListsSerializer(ch_list,many=False)
+#         return Response(choice_serializer.data)
 
-    def create(self,request): 
-        lang=request.POST.get('language',None)
-        name=request.POST.get('name',None)
-        lang=get_object_or_404(Languages,id=lang)
-        #user=self.request.user
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        choice_serializer= ChoiceListsSerializer(data={'name':name,'language':lang.id,'user':user.id})
-        if choice_serializer.is_valid():
-            choice_serializer.save()
-            return Response(choice_serializer.data)
-        return Response(choice_serializer.errors)
+#     def create(self,request): 
+#         lang=request.POST.get('language',None)
+#         name=request.POST.get('name',None)
+#         lang=get_object_or_404(Languages,id=lang)
+#         #user=self.request.user
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         choice_serializer= ChoiceListsSerializer(data={'name':name,'language':lang.id,'user':user.id})
+#         if choice_serializer.is_valid():
+#             choice_serializer.save()
+#             return Response(choice_serializer.data)
+#         return Response(choice_serializer.errors)
 
-    def update(self,request,pk):
-        obj=self.get_object(request,pk)
-        print(obj,"object")
-        ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
-        if ser.is_valid():
-            ser.save()
-            return Response(ser.data)
-        return Response(ser.errors)
+#     def update(self,request,pk):
+#         obj=self.get_object(request,pk)
+#         print(obj,"object")
+#         ser = ChoiceListsSerializer(obj,data=request.POST.dict(), partial=True)
+#         if ser.is_valid():
+#             ser.save()
+#             return Response(ser.data)
+#         return Response(ser.errors)
 
-    def delete(self,request,pk):
-        ins=self.get_object(request,pk)
-        ins.delete()
-        return  Response(status=204)
+#     def delete(self,request,pk):
+#         ins=self.get_object(request,pk)
+#         ins.delete()
+#         return  Response(status=204)
     
 
-class Choicelistselectedview(viewsets.ModelViewSet):
-    queryset = ChoiceListSelected.objects.all()
-    permission_classes = [IsAuthenticated]
-    serializer_class = ChoiceListSelectedSerializer
-    # paginator = PageNumberPagination()
-    # paginator.page_size = 10
+# class Choicelistselectedview(viewsets.ModelViewSet):
+#     queryset = ChoiceListSelected.objects.all()
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ChoiceListSelectedSerializer
+#     # paginator = PageNumberPagination()
+#     # paginator.page_size = 10
 
-    def get_object(self,request,ids):
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        pk = self.kwargs.get("pk", 0)
-        try:
-            obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=user)
-        except:
-            raise Http404
-        return obj
+#     def get_object(self,request,ids):
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         pk = self.kwargs.get("pk", 0)
+#         try:
+#             obj = ChoiceListSelected.objects.filter(id__in=ids,choice_list__user=user)
+#         except:
+#             raise Http404
+#         return obj
     
-    def list(self,request):
-        project_id = request.GET.get('project')
-        user =self.request.user.team.owner  if self.request.user.team  else self.request.user
-        if not project_id:
-            return Response({"msg":"project_id required"})
-        project=get_object_or_404(Project,id=project_id)
-       # authorize(request, resource=project, actor=request.user, action="read")
-        choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=user)
-        Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
-        return Response(Choice_selected_ser.data)
+#     def list(self,request):
+#         project_id = request.GET.get('project')
+#         user =self.request.user.team.owner  if self.request.user.team  else self.request.user
+#         if not project_id:
+#             return Response({"msg":"project_id required"})
+#         project=get_object_or_404(Project,id=project_id)
+#        # authorize(request, resource=project, actor=request.user, action="read")
+#         choice=ChoiceListSelected.objects.filter(project=project,choice_list__user=user)
+#         Choice_selected_ser=ChoiceListSelectedSerializer(choice,many=True)
+#         return Response(Choice_selected_ser.data)
 
-    def create(self,request):
-        project_id = request.POST.get('project')
-        choice_list=request.POST.getlist('choice_list')
-        project=get_object_or_404(Project,id=project_id)
-       # authorize(request, resource=project, actor=request.user, action="read")
-        if choice_list:
-            data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
-            serializer = ChoiceListSelectedSerializer(data=data,many=True)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
+#     def create(self,request):
+#         project_id = request.POST.get('project')
+#         choice_list=request.POST.getlist('choice_list')
+#         project=get_object_or_404(Project,id=project_id)
+#        # authorize(request, resource=project, actor=request.user, action="read")
+#         if choice_list:
+#             data = [{"project":project_id, "choice_list": choice} for choice in choice_list]
+#             serializer = ChoiceListSelectedSerializer(data=data,many=True)
+#             if serializer.is_valid(raise_exception=True):
+#                 serializer.save()
+#                 return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         return Response(data={"Message":"choice list required"}, status=status.HTTP_400_BAD_REQUEST)
     
-    def destroy(self, request, *args, **kwargs):
-        choicelist_selected=request.query_params.get("remove_ids")
-        ids= choicelist_selected.split(",")
-        obj=self.get_object(request,ids)
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+#     def destroy(self, request, *args, **kwargs):
+#         choicelist_selected=request.query_params.get("remove_ids")
+#         ids= choicelist_selected.split(",")
+#         obj=self.get_object(request,ids)
+#         obj.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
     

@@ -47,6 +47,7 @@ from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
 from django.db import models
+from django.db.models import Prefetch
 from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
@@ -82,14 +83,14 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
-                          StepsSerializer, WorkflowsSerializer, \
+                          StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
-                   get_consumable_credits_for_speech_to_text, progress_filter
+                   get_consumable_credits_for_speech_to_text, progress_filter#,filter_status
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
@@ -693,6 +694,7 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        st_time = time.time()
         user = self.request.user
         assign_to = self.request.query_params.get('assign_to')
         if user.team and user in user.team.get_editors:
@@ -703,6 +705,8 @@ class ProjectFilter(django_filters.FilterSet):
         print("Editors--------->",assign_to_list)
         print("List--------------->",assign_to_list)
         queryset = progress_filter(queryset,value,assign_to_list)
+        et_time = time.time()
+        print("Timetaken in filter_status--------->",et_time-st_time)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -769,16 +773,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
+        st_time = time.time()
+        from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-        
-        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner',
-                    'project_jobs_set__job_tasks_set__task_info')\
-                    .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+
+        queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
+        et_time = time.time()
+        print("Time taken for get_queryset--------->",et_time-st_time)
         return queryset
 
     def get_user(self):
@@ -786,18 +792,49 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
 
-    #@method_decorator(cache_page(60 * 15, key_func=generate_list_cache_key))
-    #@custom_cache_page(60 * 15, key_func=generate_list_cache_key)
+
+
+    # def list(self, request, *args, **kwargs):
+    #     st_time = time.time()     
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     user_1 = self.get_user()
+    #     limit = request.query_params.get('limit')
+    #     offset = request.query_params.get('offset')
+    #     print("Limit Offset----------->",limit,offset)
+    #     if limit is not None and offset is not None:
+    #         queryset = queryset[int(offset):int(offset) + int(limit)]
+    #     din = AddStoriesView.check_user_dinamalar(user_1)
+    #     if din:
+    #         serializer = ProjectSimpleSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+    #     else:
+    #         serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request,'user_1':user_1})
+    #     et_time = time.time()
+    #     print("Time taken for list------------------>",et_time-st_time)
+    #     return Response(serializer.data)
+
+
     def list(self, request, *args, **kwargs):
         st_time = time.time()
+        
         queryset = self.filter_queryset(self.get_queryset())
+
         user_1 = self.get_user()
+
+        din = AddStoriesView.check_user_dinamalar(user_1)
+
+        if din: self.paginator.page_size = 10
         print("Final QR-------->",queryset)
+        st_time_1 = time.time()
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        et_time_1 = time.time()
+        print("Time taken for Paginate queryset------------------>",et_time_1-st_time_1, queryset.count())
+        if din:
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+        else:
+            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         et_time = time.time()
-        print("Time Taken-------------------->",et_time-st_time)
+        print("Time taken for list------------------>",et_time-st_time)
         return  response
 
     
@@ -939,20 +976,26 @@ class VendorDashBoardFilter(django_filters.FilterSet):
         print("Users------------->",users)
         if value == 'inprogress':
             if users:
-                queryset = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
+                            distinct().values_list('id',flat=True)
                 #print("QR------------->",queryset)
             else:
-                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+                tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
+                            distinct().values_list('id',flat=True)
         elif value == 'submitted':
             if users:
-                queryset = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+                tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
+                            distinct().values_list('id',flat=True)
             else:
-                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+                tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
+                            distinct().values_list('id',flat=True)
         elif value =='approved':
             if users:
-                queryset = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+                tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
+                            distinct().values_list('id',flat=True)
             else:
-                queryset = queryset.filter(Q(task_info__client_response = 1))
+                tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
+        queryset = queryset.filter(id__in=tsk_ids)
         return queryset
     
 
@@ -5024,7 +5067,7 @@ class AddStoriesView(viewsets.ModelViewSet):
     @staticmethod
     def check_user_dinamalar(request_user):
         user = request_user.team.owner if request_user.team else request_user
-        print("user--->",user)
+        #print("user--->",user)
         try:
             if user.user_enterprise.subscription_name == 'Enterprise - DIN':
                 return True
@@ -5561,3 +5604,5 @@ def get_ner(request):
     #     return JsonResponse({'Total':total,'TotalAssigned':total_assigned,'Inprogress':progress,'YetToStart':yts,'Completed':completed.count(),'TotalCompletedWords':total_completed_words,"TotalApprovedWords":total_approved_words,"Additional_info":res})
     # else:
     #     return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
+
+

@@ -4,6 +4,7 @@ from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
+#from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -84,7 +85,8 @@ def loader(file_id) -> None:
             instance.save()
             loader = TextLoader(instance.text_file.path)
         else:
-            loader = PDFMinerLoader(instance.file.path)
+            # loader = PyPDFLoader(instance.file.path,extract_images=True)
+            loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
         data = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
         texts = text_splitter.split_documents(data)
@@ -148,14 +150,14 @@ def load_embedding_vector(instance,query)->RetrievalQA:
  
         
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
-    retriever = vector_db.as_retriever(search_kwargs={"k": 20})
+    retriever = vector_db.as_retriever(search_kwargs={"k": 9})
     # v = vector_db.similarity_search(query=query,k=4)
 
     # result = querying_llm(llm=llm,chain_type="stuff",
                         #   chain_type_kwargs=prompt_template_chatbook(),
                         #   similarity_document=v,query=query) ##chatgpt
 
-    compressor = CohereRerank()
+    compressor = CohereRerank(user_agent="langchain")
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
     # compressed_docs = compression_retriever.get_relevant_documents(query)
     qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
