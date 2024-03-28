@@ -976,20 +976,26 @@ class VendorDashBoardFilter(django_filters.FilterSet):
         print("Users------------->",users)
         if value == 'inprogress':
             if users:
-                queryset = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users))
+                tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
+                            distinct().values_list('id',flat=True)
                 #print("QR------------->",queryset)
             else:
-                queryset = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2))
+                tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
+                            distinct().values_list('id',flat=True)
         elif value == 'submitted':
             if users:
-                queryset = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1)
+                tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
+                            distinct().values_list('id',flat=True)
             else:
-                queryset = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1)
+                tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
+                            distinct().values_list('id',flat=True)
         elif value =='approved':
             if users:
-                queryset = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)) 
+                tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
+                            distinct().values_list('id',flat=True)
             else:
-                queryset = queryset.filter(Q(task_info__client_response = 1))
+                tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
+        queryset = queryset.filter(id__in=tsk_ids)
         return queryset
     
 
