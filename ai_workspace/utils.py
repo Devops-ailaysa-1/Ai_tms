@@ -356,20 +356,17 @@ def progress_filter(queryset,value,users):
 			# print("QS------------>",qs)
 			# print("Filter------------->",filtered_qs)
 			# queryset = qs.exclude(id__in=filtered_qs)
-			pr_ids = queryset.filter(
-				Q(project_jobs_set__job_tasks_set__task_info__status=3)
-			).exclude(
-				id__in=queryset.filter(
-					Q(project_jobs_set__job_tasks_set__task_info__status=3)
-				).annotate(
+			qs = queryset.filter(
+				Q(project_jobs_set__job_tasks_set__task_info__status=3))
+			
+			filtered_ids =qs.annotate(
 					num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
 					num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
 				).filter(
 					num_tasks_with_status_3=F('num_tasks_with_client_response_1')
-				).values_list('id', flat=True)
-			)	
+				).values_list('id', flat=True)	
 
-			# pr_ids = queryset.exclude(id__in=filtered_ids).values('id')
+			pr_ids = qs.exclude(id__in=filtered_ids).values('id')
 	elif value == 'approved':
 		if users:
 			pr_ids = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),\
