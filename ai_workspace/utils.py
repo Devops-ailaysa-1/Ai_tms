@@ -330,6 +330,9 @@ def progress_filter(queryset,value,users):
 	st_time = time.time()
 	queryset = queryset.filter(project_type_id=8)
 	#queryset = queryset.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(project_type_id=8)
+	queryset = queryset.prefetch_related(
+        Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=TaskAssign.objects.all())
+    )
 	
 	if value == 'inprogress':
 		if users:
