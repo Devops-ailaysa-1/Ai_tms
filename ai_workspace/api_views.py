@@ -754,7 +754,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
-    paginator.page_size = 10
+    paginator.page_size = 20
 
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
@@ -820,12 +820,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         user_1 = self.get_user()
 
+        din = AddStoriesView.check_user_dinamalar(user_1)
+
+        if din: self.paginator.page_size = 10
         print("Final QR-------->",queryset)
         st_time_1 = time.time()
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         et_time_1 = time.time()
         print("Time taken for Paginate queryset------------------>",et_time_1-st_time_1, queryset.count())
-        if AddStoriesView.check_user_dinamalar(user_1):
+        if din:
             serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         else:
             serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
