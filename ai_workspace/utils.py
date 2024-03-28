@@ -351,22 +351,22 @@ def progress_filter(queryset,value,users):
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
 			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3,task_info__assign_to__in=users).count() == i.get_tasks.filter(task_info__client_response=1,task_info__assign_to__in=users).count()]
 		else:
-			# qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
-			# filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
+			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3))
+			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
 			# print("QS------------>",qs)
 			# print("Filter------------->",filtered_qs)
-			# queryset = qs.exclude(id__in=filtered_qs)
-			qs = queryset.filter(
-				Q(project_jobs_set__job_tasks_set__task_info__status=3))
+			# qs = queryset.filter(
+			# 	Q(project_jobs_set__job_tasks_set__task_info__status=3))
 			
-			filtered_ids =qs.annotate(
-					num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
-					num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
-				).filter(
-					num_tasks_with_status_3=F('num_tasks_with_client_response_1')
-				).values_list('id', flat=True)	
+			# filtered_ids =qs.annotate(
+			# 		num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
+			# 		num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
+			# 	).filter(
+			# 		num_tasks_with_status_3=F('num_tasks_with_client_response_1')
+			# 	).values_list('id', flat=True)	
 
-			pr_ids = qs.exclude(id__in=filtered_ids).values('id')
+			# pr_ids = qs.exclude(id__in=filtered_ids).values('id')
+		pr_ids = qs.exclude(id__in=filtered_qs).values_list('id',flat=True)
 	elif value == 'approved':
 		if users:
 			pr_ids = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1),\
