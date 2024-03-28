@@ -783,7 +783,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         # queryset = Project.objects.prefetch_related(prefetch_team_info)#, prefetch_task_info)
 
-        queryset = queryset.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+        queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
