@@ -23,7 +23,6 @@ class BookCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     author_name = models.CharField(max_length=250,blank=True,null=True)
     project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="book_create_project")
-    #document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='book_doc')
     description = models.TextField(null=True,blank=True)
     description_mt = models.TextField(null=True,blank=True)
     author_info = models.TextField(null=True,blank=True)
@@ -69,10 +68,7 @@ class AiPrompt(models.Model):
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='prompt_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # news_files = models.FileField(upload_to=user_directory_news_files,blank=True ,null=True)
 
-    # def __str__(self) -> str:
-    #     return self.description
 
     @property
     def source_prompt_lang_code(self):
@@ -109,23 +105,10 @@ class AiPromptResult(models.Model):
 def user_directory_path_image_gen_result(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
 
- # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
-# class ImageGeneratorPrompt(models.Model):
-#     prompt = models.TextField(null=True, blank=True)
-#     prompt_mt = models.TextField(null=True, blank=True)
-#     image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE)
-#     credits_used = models.IntegerField(null=True, blank=True)
-#     no_of_image = models.IntegerField(null=True, blank=True)
- 
-# class ImageGenerationPromptResponse(models.Model):
-#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-#     created_id = models.CharField(max_length = 50, null=True, blank=True)
-#     generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
-#     image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
+
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    #project = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE, related_name="blog_create_project")
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
@@ -171,8 +154,7 @@ class BlogOutline(models.Model):
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
     selected_group_num = models.IntegerField(null=True,blank=True)
     response_copies = models.IntegerField(null=True,blank=True,default=2)
-    # blog_outline_json=models.JSONField(null=True,blank=True)
-    # blog_outline_json_mt=models.JSONField(null=True,blank=True)
+
  
 
 class BlogOutlineSession(models.Model):
@@ -185,8 +167,6 @@ class BlogOutlineSession(models.Model):
     temp_order = models.IntegerField(null=True,blank=True) 
     group = models.IntegerField(null=True,blank=True)
 
-    # class Meta:
-    #     unique_together = ('group', 'custom_order',)
     def save(self, *args, **kwargs):
         
         self.order = self.temp_order
@@ -201,18 +181,7 @@ class BlogArticle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, null=True, blank=True,related_name = 'ai_doc_blog')
-    # blog_intro = models.TextField(null=True, blank=True)
-    # blog_intro_mt = models.TextField(null=True, blank=True)
-    # blog_conclusion = models.TextField(null=True, blank=True)
-    # blog_conclusion_mt=models.TextField(null=True, blank=True)
-    #blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline',null=True,blank=True)
-    # blog_title=  models.TextField(null=True, blank=True)
-    # selected_field = models.BooleanField()
-    # blog_keyword =  models.TextField(null=True, blank=True)
-    # blog_outlines = ArrayField(models.TextField(), blank=True, null=True)
-    # tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='article_tone',blank=True,null=True,default=1)
-
-
+  
 
 class TextgeneratedCreditDeduction(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -240,7 +209,6 @@ class AiPromptCustomize(models.Model):
 
 class TranslateCustomizeDetails(models.Model):
     customization = models.ForeignKey(AiPromptCustomize, on_delete=models.CASCADE, null=True, blank=True,related_name = 'customization')
-    #source_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='source_lang')
     target_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='target_lang')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True, blank=True, \
         on_delete=models.CASCADE, related_name="customization_mt_engine")
@@ -252,7 +220,7 @@ class TranslateCustomizeDetails(models.Model):
 def user_directory_path_image_gen_result(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
 
- # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+
 class ImageGeneratorPrompt(models.Model):
     prompt = models.TextField(null=True, blank=True)
     prompt_mt = models.TextField(null=True, blank=True)
@@ -358,22 +326,6 @@ class NewsTranscribeResult(models.Model):
     transcribe_result = models.TextField(null=True,blank=True)
     transcribed_news_report = models.TextField(null=True,blank=True)
     
-    # mt_engine = 
-    
-
-# class InstantTranslation(models.Model):
-#     # InstantChoice=[
-#     #     ('Shorten' , 'Shorten'),
-#     #     ('Simplify' ,'Simplify')
-#     # ]
-#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-#     instant_text = models.CharField(max_length=800)
-#     source_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='insta_trans_src_lang')
-#     target_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='insta_trans_tar_lang') 
-#     # instance_choice = models.CharField(max_length=30, choices=InstantChoice)
-#     customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'insta_cust')
-#     insta_usage = models.IntegerField()
-#     instant_result = models.CharField(max_length=800)
     
 
 # class NewsPrompt(models.Model):
