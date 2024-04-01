@@ -54,7 +54,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,ProzE
                             MtpeEngines, SubjectFields,ServiceTypeunits,ProzLanguagesCode)
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
-from ai_auth.tasks import shortlisted_vendor_list_send_email_new,check_dict
+from ai_auth.tasks import shortlisted_vendor_list_send_email_new
 from django.db.models import Count
 from django.http import JsonResponse
 from django.core.mail import EmailMessage
