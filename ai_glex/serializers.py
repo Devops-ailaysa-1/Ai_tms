@@ -21,11 +21,6 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
-    # def create(self,validated_data):
-        
-    #     return super().create(self,validated_data)
-
-
 
 class MyGlossarySerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,7 +45,6 @@ class GlossaryMtSerializer(serializers.ModelSerializer):
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)
-    # glossary_files = GlossaryFileSerializer(required= False,many= True,allow_null= True)
 
     class Meta(ProjectQuickSetupSerializer.Meta):
         fields = ProjectQuickSetupSerializer.Meta.fields + ('glossary',)
@@ -76,16 +70,13 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
         return project
 
     def update(self, instance, validated_data):
-        print("In update----------->",validated_data)
+    
         if 'glossary' in validated_data:
             glossary_serializer = self.fields['glossary']
             glossary_instance = instance.glossary_project
-            # glossary_instance = Glossary.objects.get(project_id = instance.id)
             glossary_data = validated_data.pop('glossary')
             glossary_serializer.update(glossary_instance, glossary_data)
-            # tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
-            #         project = instance)
-        # task_assign = TaskAssign.objects.assign_task(project=instance)
+
         return super().update(instance, validated_data)
 
 
@@ -95,7 +86,7 @@ class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_id = serializers.CharField(source = 'glossary_project.id')
     source_lang = serializers.SerializerMethodField()
     target_lang = serializers.SerializerMethodField()
-    #source_lang = serializers.CharField(source = 'project_jobs_set.first().source_language.language')
+    
     class Meta:
         model = Glossary
         fields = ("glossary_id", "glossary_name","source_lang", "target_lang",)
