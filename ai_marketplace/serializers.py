@@ -20,7 +20,6 @@ from ai_auth.serializers import ProfessionalidentitySerializer,HiredEditorSerial
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer,SavedVendorSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 from  django.utils import timezone
-from ai_auth.tasks import check_dict
 from ai_auth.validators import file_size
 from ai_vendor.models import SavedVendor
 from notifications.signals import notify
