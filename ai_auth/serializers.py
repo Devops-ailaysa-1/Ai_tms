@@ -100,8 +100,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         cv_file = self.validated_data.get('cv_file',None)
         is_agency = self.validated_data.get('is_agency',None)
 
-        print("Agency----->",is_agency)
-
         if 'is_agency' in self.validated_data:
             if is_agency == 'True':
                 sub = subscribe_lsp(user)
@@ -268,56 +266,13 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         data['user_type'] = user_type_serializer.data
         return data
 
-# class PersonalInformationSerializer(serializers.ModelSerializer):
-#    # country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
-#     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
-
-#     class Meta:
-#         model = PersonalInformation
-#         fields = ( 'timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
-#         read_only_fields = ('created_at','updated_at')
-
-#     def create(self, validated_data):
-#         print("validated==>",validated_data)
-#         request = self.context['request']
-#         personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)
-#         return  personal_info
-
-# class OfficialInformationSerializer(serializers.ModelSerializer):
-#     #country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
-#     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
-#     industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
-#     class Meta:
-#         model = OfficialInformation
-#         fields = ( 'id','company_name','designation','industry','timezone','website','linkedin','billing_email','created_at','updated_at')
-#         read_only_fields = ('id','created_at','updated_at')
-
-#     def create(self, validated_data):
-#         request = self.context['request']
-#         official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)
-#         return official_info
-
-
 
 class ProfessionalidentitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Professionalidentity
         fields = "__all__"
-        # fields = ( 'id','avatar','logo','header')
-        #read_only_fields = ('id','created_at','updated_at')
-
-
-    # def create(self, validated_data):
-    #     request = self.context['request']
-    #     print("validated data ",validated_data)
-    #     identity = Professionalidentity.objects.create(**validated_data,user=request.user)
-    #     return identity
-
-    # def save(self, *args, **kwargs):
-    #     if self.instance.avatar:
-    #         self.instance.avatar.delete()
-    #     return super().save(*args, **kwargs)
+        
 
 
 class AiUserDetailsSerializer(serializers.ModelSerializer):
@@ -508,7 +463,6 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
         request = self.context['request']
         if "fullname" in validated_data:
             fullname = validated_data.pop('fullname')
-            print(fullname)
             user = AiUser.objects.get(id=request.user.id)
             user.fullname = fullname
             user.save()
@@ -516,7 +470,6 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
         return profile
 
     def update(self, instance, validated_data):
-        print(validated_data)
         if "fullname" in validated_data:
             res = super().update(instance, validated_data)
             user = AiUser.objects.get(id=instance.user.id)
@@ -526,7 +479,6 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        print(instance)
         data["fullname"] = instance.user.fullname
         return data
 
@@ -632,8 +584,6 @@ class CampaignRegisterSerializer(serializers.Serializer):
         from ai_auth.api_views import check_campaign
         email = validated_data.get('email')
         campaign = validated_data.get('campaign')
-        # print("email-->",email)
-        # print("email-->",campaign)
         res = create_user(email=email,country=101)
         if res==None:
             raise ValueError('email already registerd')

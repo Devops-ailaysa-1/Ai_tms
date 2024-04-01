@@ -89,14 +89,6 @@ def authorize_list(obj_list,action,user):
 	return obj
 			
 
-	# 	try:
-	# 		obj_is_allowed()
-	# 		authorize(request ,resource=instance, actor=user, action=action)
-	# 		auth_ids.append(instance.id)
-	# 	except PermissionDenied:
-	# 		continue
-	# return query.filter(id__in = auth_ids)
-
 def obj_is_allowed(obj,action,user):
 	if not django_oso.oso.Oso.is_allowed(
 		actor=user, resource=obj, action=action
