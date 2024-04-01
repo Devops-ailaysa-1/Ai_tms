@@ -2840,10 +2840,6 @@ class AilaysaPurchasedUnits:
                 raise ValueError ('deducting more than available credits')
             
 
- 
-
-
-
 
 class MarketingBootcampViewset(viewsets.ViewSet):
     permission_classes = [AllowAny]
