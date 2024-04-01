@@ -6,7 +6,6 @@ from ai_staff.models import (Billingunits, CATSoftwares, ContentTypes,
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
-#from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
 from django.db.models.signals import post_save, pre_save
@@ -81,8 +80,6 @@ class VendorSubjectFields(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-    # class Meta:
-    #     unique_together = ("user", "subject")
 
 class VendorCATsoftware(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_software', on_delete=models.CASCADE)
@@ -98,17 +95,13 @@ class VendorMembership(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-    # class Meta:
-    #     unique_together = ("user", "membership")
 
 class VendorContentTypes(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_contentype', on_delete=models.CASCADE)
     contenttype = models.ForeignKey(ContentTypes, blank=True, null=True, related_name='vendor_contentype', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # class Meta:
-    #     unique_together = ("user", "contenttype")
+
 
 class VendorMtpeEngines(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_mtpe_engines', on_delete=models.CASCADE)
@@ -116,8 +109,6 @@ class VendorMtpeEngines(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-    # class Meta:
-    #     unique_together = ("user", "mtpe_engines")
 
 
 class VendorLanguagePair(ParanoidModel):
@@ -129,8 +120,7 @@ class VendorLanguagePair(ParanoidModel):
     primary_pair = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-   # created_at = models.CharField(max_length=100, null=True, blank=True)
-   # updated_at = models.CharField(max_length=100, null=True, blank=True)
+
 
     class Meta:
        constraints = [
@@ -141,7 +131,7 @@ class VendorLanguagePair(ParanoidModel):
             try:self.currency_id = self.user.currency_based_on_country_id
             except:self.currency_id = 144
         super().save()
-# post_save.connect(user_update, sender=VendorLanguagePair)
+
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
@@ -150,8 +140,7 @@ class VendorServiceInfo(ParanoidModel):
      mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='unit_type', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-     #created_at = models.CharField(max_length=100, null=True, blank=True)
-     #updated_at = models.CharField(max_length=100, null=True, blank=True)
+
 post_save.connect(user_update, sender=VendorServiceInfo)
 
 class VendorServiceTypes(ParanoidModel):
@@ -163,8 +152,7 @@ class VendorServiceTypes(ParanoidModel):
     minute_rate=models.DecimalField(max_digits=12,decimal_places=4,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    #created_at = models.CharField(max_length=100, null=True, blank=True)
-    #updated_at = models.CharField(max_length=100, null=True, blank=True)
+
 post_save.connect(user_update_1, sender=VendorServiceTypes)
 
 def user_directory_path(instance, filename):
@@ -175,9 +163,7 @@ class TranslationSamples(ParanoidModel):
     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    #created_at = models.CharField(max_length=100, null=True, blank=True)
-    #updated_at = models.CharField(max_length=100, null=True, blank=True)
-    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 def user_directory_path_1(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(lang_pair.instance.user.uid, "vendor","MtpeSamples",filename)
@@ -187,6 +173,4 @@ class MtpeSamples(ParanoidModel):
     sample_file = models.FileField(upload_to=user_directory_path_1, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    #created_at = models.CharField(max_length=100, null=True, blank=True)
-    #updated_at = models.CharField(max_length=100, null=True, blank=True)
-    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+

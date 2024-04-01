@@ -2864,20 +2864,6 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             instance = self.get_object(serializer.data.get('id',None))
             send_bootcamp_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
-            # if instance.file:
-            #     file_path = instance.file.path
-            # else:
-            #     file_path = None
-            # sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
-            #                                        user_email=instance.email,
-            #                                        file_path=file_path)
-            # auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
-            #                                             user_email=instance.email)
-            # if sent:
-
-            #     return Response({'msg':'Mail sent Successfully'})
-            # else:
-            #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
 @api_view(['GET'])
@@ -2894,18 +2880,6 @@ def internal_editors_list(request):
         return JsonResponse({'msg':'you are having no team'},status=400)
 
 
-
-# def send_email(subject,template,context):
-#     content = render_to_string(template, context)
-#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
-#     file_ =context.get('file')
-#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
-#     if file_:
-#         name = os.path.basename(file_.path)
-#         msg.attach(name, file_.file.read())
-#     msg.content_subtype = 'html'
-#     msg.send()
-#     print("Msg sent")
 
 
 def career_support_thank_mail(user_name,user_email):
