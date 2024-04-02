@@ -34,7 +34,6 @@ def create_project_dir(sender, instance, *args, **kwargs):
 def delete_project_dir(sender, instance, *args, **kwargs):
     print(instance.project_dir_path)
     shutil.rmtree(instance.project_dir_path)
-    print("<-----------------Deleted------------------>")
 
 def create_pentm_dir_of_project(sender, instance, created, *args, **kwargs):
     if created:
@@ -52,77 +51,30 @@ def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
         if not (instance.file.project == instance.job.project):
             raise IntegrityError("Project of a file and job should same!!!")
 
-    # if instance.job.project
 
-# def extract_project_instance(instance):
-#     if type(instance) is Project:
-#         return instance
-#     elif type(instance) is Task:
-#         return instance.job.project
-#     elif type(instance) is Document:
-#         return instance.job.project
-#     elif type(instance) is Glossary:
-#         return instance.project
-#     elif type(instance) is TermsModel:
-#         return instance.glossary.project
-#     elif type(instance) is Segment:
-#         return instance.text_unit.document.job.project   
-#     elif type(instance) is ExpressProjectDetail:
-#         return instance.task.job.project   
-#     elif type(instance) is TaskTranscriptDetails:
-#         return instance.task.job.project   
-#     return None
-
-# # Signal receiver for cache invalidation
-
-# @receiver(post_save, sender=Glossary)
-# @receiver(post_save, sender=TermsModel)
-# @receiver(post_save, sender=Project)
-# @receiver(post_save, sender=Document)
-# @receiver(post_save, sender=Task)
-# @receiver(post_save, sender= Segment)
-# @receiver(post_save, sender= ExpressProjectDetail)
-# @receiver(post_save, sender= TaskTranscriptDetails)
-# # @receiver(post_delete, sender=Glossary)
-# # @receiver(post_delete, sender=TermsModel)
-
-# def invalidate_project_cache(sender, instance, **kwargs):
-#     project = extract_project_instance(instance)
-#     if project:
-#         print("Inside if")
-#         cache_key = f'pr_progress_property_{project.pk}'
-#         cache.delete(cache_key)
-#         print("Deleted")
 from django.core.cache import cache
 from cacheops import invalidate_obj
 
 def invalidate_cache_on_save(sender, instance, **kwargs):
-    #print("instance----------->",instance)
     invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
-    #print("Keys on save----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
                 rt = cache.delete(cache_key)
                 rs = cache.delete_pattern(cache_key)
-                print('cache deleted------>',rt,rs)
             except:
-                print("Not found")
                 pass
                
                 
 
 def invalidate_cache_on_delete(sender, instance, **kwargs):
-    #print("instance----------->",instance)
     invalidate_obj(instance)
     cache_keys = instance.generate_cache_keys()
-    #print("Keys on delete----------->",cache_keys)
     if cache_keys:
         for cache_key in cache_keys:
             try:
                 cache.delete(cache_key)
                 cache.delete_pattern(cache_key)
             except:
-                print("Not found")
                 pass

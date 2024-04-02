@@ -122,8 +122,6 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	try:json_data = json_file['news'][0]
 	except: json_data = json_file
 	json_file_copy = copy.deepcopy(json_data)
-	# for json_data in json_file:
-	# 	json_file_copy = copy.deepcopy(json_data)
 	for key,value in json_file_copy.items():
 		if key in TRANSLATABLE_KEYS_FEDARAL:
 			format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
@@ -143,7 +141,6 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 
 
 def split_file_by_size(input_file, output_directory, lang_code, max_size):
-    print("LangCode------------->",lang_code.split('-')[0])
     from .api_views import cust_split
     with open(input_file, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -166,7 +163,6 @@ def split_file_by_size(input_file, output_directory, lang_code, max_size):
             output_file = f"{output_directory}/output_{part_number}.txt"
             with open(output_file, 'w', encoding='utf-8') as output:
                 output.write("\n".join(current_content))
-            print(f"File {output_file} created with {current_size} bytes")
             part_number += 1
             current_content = []
             current_size = 0
@@ -178,7 +174,6 @@ def split_file_by_size(input_file, output_directory, lang_code, max_size):
         output_file = f"{output_directory}/output_{part_number}.txt"
         with open(output_file, 'w', encoding='utf-8') as output:
             output.write("\n".join(current_content))
-        print(f"File {output_file} created with {current_size} bytes")
 
 
 
@@ -208,8 +203,6 @@ def split_dict(single_data):
 
 
 def merge_dict(translated_json,raw_json):
-	#print("Tar---------->",translated_json)
-	#print("Raw---------->", raw_json)
 	raw_json_trans = copy.deepcopy(raw_json)
 	translated_json_copy = copy.deepcopy(translated_json)
 	for key,values in list(LIST_KEYS_FEDARAL.items()):
@@ -228,11 +221,9 @@ def merge_dict(translated_json,raw_json):
 import json
 import pypandoc
 from docx import Document
-#import markdown
-#pypandoc.pandoc_download.download_pandoc()
+
  
 def html_to_docx(html_content, docx_filename):
-	print("Html------------>",html_content)
 	if html_content == None:
 		html_content = "<p>"
 
@@ -243,84 +234,13 @@ def html_to_docx(html_content, docx_filename):
 
 
 def add_additional_content_to_docx(docx_filename, additional_content):
-    # Open the existing DOCX file using python-docx
     doc = Document(docx_filename)
     for key, value in additional_content.items():
         print(key)
         if key!='story':
-            doc.add_paragraph(f'{key.capitalize()}:')# {value}')
+            doc.add_paragraph(f'{key.capitalize()}:')
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
-
-
-# def filter_status(request_user,queryset,value,assign_to):
-# 	user = request_user
-# 	if user.team and user in user.team.get_editors:
-# 		assign_to_list = [user]
-# 	elif assign_to:
-# 		assign_to_list = assign_to.split(',')
-# 	else: assign_to_list = []
-# 	print("Editors--------->",assign_to_list)
-# 	print("List--------------->",assign_to_list)
-# 	queryset = progress_filter(queryset,value,assign_to_list)
-# 	return queryset 
-
-
-
-# from django.db.models import Q, Prefetch, F, Count
-# import time
-
-# def progress_filter(queryset,value,users):
-# 	from ai_workspace.models import TaskAssign
-# 	st_time = time.time()
-# 	queryset = queryset.filter(project_type_id=8)
-
-# 	task_info_queryset_inprogress = TaskAssign.objects.filter(
-# 									Q(status__in=[1, 2, 4]) | Q(client_response=2))
-
-# 	task_info_queryset_submitted = TaskAssign.objects.filter(status=3)
-
-# 	task_info_queryset_approved = TaskAssign.objects.filter(client_response = 1)
-
-	
-# 	if value == 'inprogress':
-# 		if users:
-# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-# 		queryset = queryset.prefetch_related\
-# 						(Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_inprogress)).filter(Q(project_jobs_set__job_tasks_set__task_info__status__in = [1,2,4])|\
-#  			Q(project_jobs_set__job_tasks_set__task_info__client_response = 2)).distinct()
-# 	elif value == 'submitted':
-# 		if users:
-# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-# 		queryset = queryset.prefetch_related(\
-# 						Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_submitted))\
-# 						.filter(project_jobs_set__job_tasks_set__task_info__status=3).distinct()\
-# 						.annotate(
-# 							num_tasks_with_status_3=Count(
-# 							'project_jobs_set__job_tasks_set__task_info',
-# 							filter=Q(project_jobs_set__job_tasks_set__task_info__status=3),
-# 							distinct=True
-# 							),
-# 							num_tasks_with_client_response_1=Count(
-# 							'project_jobs_set__job_tasks_set__task_info',
-# 							filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1),
-# 							distinct=True
-# 							)
-# 						).exclude(
-# 							Q(num_tasks_with_status_3=F('num_tasks_with_client_response_1')) |
-# 							Q(num_tasks_with_status_3=0)
-# 							)
-# 	elif value == 'approved':
-# 		if users:
-# 			queryset = queryset.filter(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,project_jobs_set__job_tasks_set__task_info__assign_to__in=users)
-# 		queryset = queryset.prefetch_related(
-# 		Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=task_info_queryset_approved)
-# 	).filter(project_jobs_set__job_tasks_set__task_info__client_response=1).distinct()
-		
-# 	et_time = time.time()
-# 	print("Time taken for assign filter------------>",et_time-st_time)
-# 	return queryset
-
 
 
 
@@ -328,8 +248,8 @@ from django.db.models import Q, Prefetch, Count, F
 import time
 def progress_filter(queryset,value,users):
 	from ai_workspace.models import TaskAssign
-	st_time = time.time()
-	queryset = queryset.filter(project_type_id=8)
+
+	queryset = queryset.filter(project_type_id=8) #News project
 
 	queryset = queryset.prefetch_related(
         Prefetch('project_jobs_set__job_tasks_set__task_info', queryset=TaskAssign.objects.all())
@@ -364,62 +284,6 @@ def progress_filter(queryset,value,users):
 			pr_ids = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__client_response = 1)).distinct().values_list('id',flat=True)
 
 	queryset = queryset.filter(id__in = pr_ids)
-	
-	et_time = time.time()
-	print("Time taken for assign filter------------>",et_time-st_time)
+
 	return queryset
 
-
-	
-# # Example usage:
-# sample_json_data = {"name": "John Doe", "age": 30, "body": "<p>New York</p>"}
-
-# # Convert HTML to DOCX
-# html_to_docx(sample_json_data['body'], 'output.docx')
-
-# # Add additional content to the DOCX file
-# add_additional_content_to_docx('output.docx', sample_json_data)
-
-
-
-			# print("QS------------>",qs)
-			# print("Filter------------->",filtered_qs)
-			# qs = queryset.filter(
-			# 	Q(project_jobs_set__job_tasks_set__task_info__status=3))
-			
-			# filtered_ids =qs.annotate(
-			# 		num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
-			# 		num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
-			# 	).filter(
-			# 		num_tasks_with_status_3=F('num_tasks_with_client_response_1')
-			# 	).values_list('id', flat=True)	
-
-			# pr_ids = qs.exclude(id__in=filtered_ids).values('id')
-
-
-		# 	if users:
-		# 	qs = queryset.filter(
-		# 				Q(project_jobs_set__job_tasks_set__task_info__status=3),project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
-		# 				project_jobs_set__job_tasks_set__task_info__assign_to__in = users)
-		# 	filtered_ids = qs.annotate(
-		# 				num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
-		# 				num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
-		# 				).\
-		# 				filter(
-		# 				num_tasks_with_status_3=F('num_tasks_with_client_response_1')
-		# 				).values_list('id', flat=True)
-						
-		# 	pr_ids = qs.exclude(id__in=filtered_ids).values_list('id',flat=True)
-
-		# else:
-		# 	qs = queryset.filter(
-		# 			Q(project_jobs_set__job_tasks_set__task_info__status=3))
-
-		# 	filtered_ids = qs.annotate(
-		# 			num_tasks_with_status_3=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__status=3)),
-		# 			num_tasks_with_client_response_1=Count('project_jobs_set__job_tasks_set__task_info', filter=Q(project_jobs_set__job_tasks_set__task_info__client_response=1))
-		# 			).filter(
-		# 			num_tasks_with_status_3=F('num_tasks_with_client_response_1')
-		# 			).values_list('id', flat=True)
-
-		# 	pr_ids = qs.exclude(id__in=filtered_ids).values_list('id',flat=True)
