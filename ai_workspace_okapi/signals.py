@@ -11,8 +11,7 @@ def set_segment_tags_in_source_and_target(sender, instance, created, *args, **kw
             set_ref_tags_to_runs(instance.coded_source, get_runs_and_ref_ids(instance.
                 coded_brace_pattern, instance.coded_ids_aslist))
         )
-        # print("Tagged source ---> ", instance.tagged_source)
-        # print("Target tags ---> ", instance.target_tags)
+
         instance.save()
 
 def create_segment_controller(sender, instance, created, *args, **kwargs):

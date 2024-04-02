@@ -221,13 +221,11 @@ class Segment(BaseSegment):
     def get_merge_segment_count(self):
         count = 0
         if self.is_merged and self.is_merge_start:
-            #count = self.segments_merge_segments_set.all().count() - 1
             count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
         return count
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            #return self.segments_merge_segments_set.first()
             return MergeSegment.objects.get(id=self.id)
         return self
 
@@ -272,7 +270,7 @@ class MergeSegment(BaseSegment):
         for seg in segs:
             if hasattr(seg,'seg_mt_raw'):
                 merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
-        print("Merr------------->",merged_seg_mt_raw)
+
         if merged_seg_mt_raw != '':
             obj = self.segments.first().seg_mt_raw
             obj.mt_raw = merged_seg_mt_raw
@@ -315,65 +313,6 @@ class MergeSegment(BaseSegment):
         return  super(MergeSegment, self).delete(using=using,
             keep_parents=keep_parents)
 
-    # objects = MergeSegmentManager()
-
-    # def update_segments(self, segs):
-    #     print("SEGS------------>",segs)
-    #     self.source = "".join([seg.source for seg in segs])
-    #     self.target = "".join([seg.target for seg in segs if seg.target])
-    #     self.coded_source = "".join([seg.coded_source for seg in segs])
-    #     self.temp_target = "".join([seg.temp_target for seg in segs if seg.temp_target])
-    #     self.target_tags = "".join([seg.target_tags for seg in segs])
-    #     self.tagged_source = "".join([seg.tagged_source for seg in segs])
-    #     self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
-        # merged_seg_mt_raw = ''
-        # for seg in segs:
-        #     if hasattr(seg,'seg_mt_raw'):
-        #         merged_seg_mt_raw+= seg.seg_mt_raw.mt_raw
-        # print("Merr------------->",merged_seg_mt_raw)
-        # if merged_seg_mt_raw != '':
-        #     obj = self.segments.first().seg_mt_raw
-        #     obj.mt_raw = merged_seg_mt_raw
-        #     obj.save()
-    #     self.status_id = 103
-    #     ids_seq = []
-    #     for seg in segs:
-    #         ids_seq+=json.loads(seg.coded_ids_sequence)
-    #     self.coded_ids_sequence = json.dumps(ids_seq)
-
-    #     random_ids = []
-    #     for seg in segs:
-    #         random_ids+=json.loads(seg.random_tag_ids)
-    #     self.random_tag_ids = json.dumps(random_ids)
-
-    #     self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
-    #     self.save()
-    #     self.update_segment_is_merged_true(segs=segs)
-    #     return self
-
-        
-
-    # def delete(self, using=None, keep_parents=False):
-    #     for seg in self.segments.all():
-    #         seg.is_merged = False
-    #         seg.is_merge_start = False
-    #         seg.status_id = 103
-    #         seg.temp_target = ""
-    #         seg.target = ""
-    #         seg.save()
-
-    #     # Resetting the raw MT once a merged segment is restored
-    #     first_seg_in_merge = self.segments.all().first()
-    #     try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
-    #     except: print("No translation done for merged segment yet !!!")
-
-    #     # Clearing the relations between MergeSegment and Segment
-    #     self.segments.clear()
-
-    #     return  super(MergeSegment, self).delete(using=using,
-    #         keep_parents=keep_parents)
-
-    # # objects = MergeSegmentManager()
 
     @property
     def is_merged(self):
@@ -427,6 +366,7 @@ class SplitSegment(BaseSegment):
 
         string = re.sub(f'</?\d+>', "", str(tagged_source))
         return str(string), str(target_tags)
+
     def update_segments(self, tagged_source, is_first=None):
         self.tagged_source = str(tagged_source)
         self.source, self.target_tags = self.remove_tags(tagged_source)
@@ -511,11 +451,6 @@ class Document(models.Model):
             f'pr_progress_property_{self.job.project.id}_*',
         ]
         return cache_keys
-        # cache_key = f'task_word_count_{self.pk}'
-        # cache.delete(cache_key)
-        # cache_key = f'task_char_count_{self.pk}'
-        # cache.delete(cache_key)
-        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
 
 
     def get_user_email(self):
@@ -523,7 +458,6 @@ class Document(models.Model):
 
     def get_segments(self):
         return Segment.objects.filter(text_unit__document=self)
-
 
     # def get_text_segments(self):
     #     return [i.id for i in self.get_segments() if bleach.clean(i.source, tags=[], strip=True).strip() != '']
@@ -533,20 +467,14 @@ class Document(models.Model):
     def segments_without_blank(self):
         query = self.get_segments().exclude(source__exact='')
         return query.order_by("id")
-        # if self.job.project.project_type_id != 8:
-        #     return query.order_by("id")
-        # else:
-        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
+
 
     @property
     def segments_for_workspace(self):
         query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False))))
         return query.order_by("id")
-        # if self.job.project.project_type_id != 8:
-        #     return query.order_by("id")
-        # else:
-        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
+
             
 
 
@@ -554,10 +482,7 @@ class Document(models.Model):
     def segments_for_find_and_replace(self):
         query = self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True))
         return query.order_by("id")
-        # if self.job.project.project_type_id != 8:
-        #     return query.order_by("id")
-        # else:
-        #     return query.filter(id__in=self.get_text_segments()).order_by("id")
+
 
     @property
     def segments_with_blank(self):
@@ -670,26 +595,14 @@ class Document(models.Model):
         from ai_workspace.models import Task,TaskTranscriptDetails
         try:
             voice_pro = self.job.project.voice_proj_detail
-            #if self.job.project.voice_proj_detail.project_type_sub_category_id != 1:
             task = Task.objects.filter(document=self).first()
             task_transcript = TaskTranscriptDetails.objects.filter(task=task).last()
             if task_transcript and (task_transcript.translated_audio_file!='') and (task_transcript.translated_audio_file!=None):
                 return True
             else:
                 return False
-            #else:return None
         except:
             return None
-    # @property
-    # def download_audio_output_choices(self):
-    #     try:
-    #         voice_pro = self.job.project.voice_proj_detail
-    #         if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-    #             return True
-    #         else:
-    #             return False
-    #     except:
-    #         return None
 
 
     @property
@@ -764,13 +677,12 @@ class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
     target=models.TextField(null=True, blank=True)
-    #step = models.ForeignKey(Steps, on_delete=models.CASCADE,null=True,blank=True,related_name="seg_save_step")
     status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user=models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
     created_at=models.DateTimeField(auto_now_add=True)
-    
-    # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
-    # save_type=models.CharField(max_length=100,blank=True,null=True)
+
+
+
 class ChoiceLists(models.Model):
     name = models.CharField(max_length=230,null=True,blank=True)
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -810,8 +722,6 @@ class ChoiceLists(models.Model):
 
 class SelflearningAsset(models.Model):
     choice_list = models.ForeignKey(ChoiceLists, null=True, on_delete=models.CASCADE,related_name='choice_list')
-    # user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    # target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
     source_word=models.CharField(max_length=100,null=True,blank=True)
     edited_word=models.CharField(max_length=100,null=True,blank=True)
     occurance=models.IntegerField(default=1,null=True,blank=True)
@@ -819,11 +729,6 @@ class SelflearningAsset(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
-    # def __str__(self) -> str:
-    #     return self.source_word+'--'+self.edited_word
-    
-# from ai_workspace_okapi.api_views import update_self_learning
-# post_save.connect(update_self_learning, sender=SegmentHistory)
 class ChoiceListSelected(models.Model):
     project = models.ForeignKey("ai_workspace.Project", on_delete=models.CASCADE,related_name='choicelist_project')
     choice_list = models.ForeignKey(ChoiceLists,on_delete=models.CASCADE,related_name='choicelist')
