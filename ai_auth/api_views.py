@@ -346,7 +346,6 @@ def send_email_with_multiple_files(subject,template,context):
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
-
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
         if serializer.is_valid():

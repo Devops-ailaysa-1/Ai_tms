@@ -118,35 +118,6 @@ class FileSerializerv3(FileSerializer):
 			"file_path", "source_language_code", "target_language_code"
 		)
 
-class ProjectSetupSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
-	files = FileSerializer(many=True, source="project_files_set", write_only=True)
-	project_name = serializers.CharField(required=False)
-
-	class Meta:
-		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url",
-					"id", "progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", ) #"project_analysis"
-
-	def to_internal_value(self, data):
-		source_language = json.loads(data.pop("source_language", "0"))
-		target_languages = json.loads(data.pop("target_languages", "[]"))
-		if source_language and target_languages:
-			data["jobs"] = [{"source_language": source_language, "target_language": \
-				target_language} for target_language in target_languages]
-		else:
-			raise ValueError("source or target values could not json loadable!!!")
-		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		return super().to_internal_value(data=data)
-
-	def create(self, validated_data):
-		ai_user = self.context["request"].user
-		project_jobs_set = validated_data.pop("project_jobs_set")
-		project_files_set = validated_data.pop("project_files_set")
-		project = Project.objects.create(**validated_data,  ai_user=ai_user)
-		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
-		[project.project_files_set.create(**file_data) for file_data in project_files_set]
-		return project
 
 class ProjectSubjectSerializer(serializers.ModelSerializer):
 	class Meta:

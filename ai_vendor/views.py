@@ -16,6 +16,7 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 from ai_workspace_okapi.models import Document
 from django_oso.auth import authorize
 from django.http import Http404
+#from drf_yasg.utils import swagger_auto_schema
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -57,6 +58,12 @@ class VendorsInfoCreateView(APIView):
         put(request): Update the vendor's profile.
         delete(request): Delete vendor's CV file.
     """
+
+    # @swagger_auto_schema(
+    #     operation_description="Retrieve the vendor's profile",
+    #     responses={200: VendorsInfoSerializer(many=True)},
+    #     tags=['VendorsInfo']
+    # )
 
     def get(self, request):
         """
@@ -227,6 +234,7 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
 
 class VendorsBankInfoCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         try:
             queryset = VendorBankDetails.objects.get(user_id=request.user.id)
