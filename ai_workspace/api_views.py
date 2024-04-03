@@ -76,7 +76,7 @@ from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSeg
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
-                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          ProjectSubjectSerializer, TempProjectSetupSerializer, \
                           TaskSerializer, FileSerializerv2, TmxFileSerializer, \
                           PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
                           VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
@@ -114,23 +114,11 @@ class IsCustomer(permissions.BasePermission):
         if request.user.user_permissions.filter(codename="user-attribute-exist").first():
             return True
 
-class ProjectView(viewsets.ModelViewSet):
-    permission_classes = [IsCustomer]
-    serializer_class = ProjectSerializer
-
-    def get_queryset(self):
-        return Project.objects.filter(ai_user=self.request.user)
-
-    def create(self, request):
-        serializer = ProjectSerializer(data=request.data, context={"request": request})
-        if serializer.is_valid(raise_exception=True):
-            try:
-                serializer.save()
-            except IntegrityError:
-                return Response(status=409)
-            return Response(serializer.data)
 
 class JobView(viewsets.ModelViewSet):
+    ''' 
+    Used in QuickSetupProject view internally to create and delete jobs. 
+    '''
     serializer_class = JobSerializer
 
     def get_object(self, many=False):
@@ -174,7 +162,11 @@ class JobView(viewsets.ModelViewSet):
         authorize(request,resource=obj,action="delete",actor=self.request.user)
         return super().destroy(request, *args, **kwargs)
 
+
 class ProjectSubjectView(viewsets.ModelViewSet):
+    ''' 
+    Used in QuickSetupProject view internally to create and delete subject fields.
+    '''
     serializer_class = ProjectSubjectField
 
     def get_object(self, many=False):
@@ -223,7 +215,11 @@ class ProjectSubjectView(viewsets.ModelViewSet):
             return Response(status=204)
         return super().destroy(request, *args, **kwargs)
 
+
 class ProjectContentTypeView(viewsets.ModelViewSet):
+    ''' 
+    Used in QuickSetupProject view internally to create and delete content_type.
+    '''
     serializer_class = ProjectContentTypeSerializer
 
     def get_object(self, many=False):
@@ -272,7 +268,11 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
             return Response(status=204)
         return super().destroy(request, *args, **kwargs)
 
+
 class FileView(viewsets.ModelViewSet):
+    ''' 
+    Used in QuickSetupProject view internally to create and delete files.
+    '''
     serializer_class = FileSerializer
     parser_classes = [MultiPartParser, FormParser]
 
@@ -337,84 +337,7 @@ def integrity_error(func):
     return decorator
 
 
-
-
-
-
-class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
-    serializer_class = ProjectSetupSerializer
-    parser_classes = [MultiPartParser, JSONParser]
-    permission_classes = [IsAuthenticated]
-    page_size = 20
-
-
-    def get_queryset(self):
-        return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
-
-    @integrity_error
-    def create(self, request):
-        serializer = ProjectSetupSerializer(data={**request.POST.dict(),
-            "files":request.FILES.getlist('files')},context={"request":request})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data, status=201)
-
-        else:
-            return Response(serializer.errors, status=409)
-
-    def list(self,request):
-        queryset = self.get_queryset()
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = ProjectSetupSerializer(pagin_tc, many=True, context={'request': request})
-        response = self.get_paginated_response(serializer.data)
-        print(response)
-        return  response
-
-
-    def retrieve(self, request, pk=None):
-        queryset = self.get_queryset()
-        project = get_object_or_404(queryset, pk=pk)
-        serializer = ProjectSetupSerializer(project)
-        return Response(serializer.data)
-
-class ProjectCreateView(viewsets.ViewSet):
-    serializer_class = ProjectCreationSerializer
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
-    permission_classes = []
-
-    def get_queryset(self):
-        return Project.objects.filter(ai_user_id=8)
-
-    def create(self, request):
-        print("data---->",request.data)
-        serializer = ProjectCreationSerializer(data={**request.POST.dict(),
-            "files":request.FILES.getlist('files')},context={"request":request})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-
-            return Response(serializer.data, status=201)
-
-        else:
-            return Response(serializer.errors, status=409)
-
-    def list(self,request):
-        queryset = self.get_queryset()
-        # pagin_tc = self.paginate_queryset( queryset, request , view=self )
-        serializer = ProjectCreationSerializer(queryset, many=True, context={'request': request})
-        # response =self.get_paginated_response(serializer.data)
-        return  Response(serializer.data)
-
-
-    def retrieve(self, request, pk=None):
-        queryset = self.get_queryset()
-        project = get_object_or_404(queryset, pk=pk)
-        serializer = ProjectCreationSerializer(project)
-        return Response(serializer.data)
-
-    def update(self, request, pk=None):
-        pass
-
-
+# convert text to file
 def text_file_processing(text_data):
     name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
     f1 = open(name, 'w')
@@ -427,6 +350,9 @@ def text_file_processing(text_data):
 
 
 class TempProjectSetupView(viewsets.ViewSet):
+    ''' 
+    Project creation before user logs in..  Not using now.
+    '''
     serializer_class = TempProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
     permission_classes = [AllowAny,]
@@ -457,8 +383,13 @@ class TempProjectSetupView(viewsets.ViewSet):
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
 
+
 class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
+
+    ''' 
+    Retrive all related objects associated with project.
+    '''
 
     def get_queryset(self, project_id):
         project = get_object_or_404(Project.objects.all(), id=project_id)
@@ -488,6 +419,8 @@ class Files_Jobs_List(APIView):
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
+
+
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -592,6 +525,7 @@ class TbxUploadView(APIView):
             return Response(serializer.errors)
 
 
+# conversion of pdf to docx
 def docx_save_pdf(pdf_obj):
     from docx import Document
     from htmldocx import HtmlToDocx
@@ -607,7 +541,7 @@ def docx_save_pdf(pdf_obj):
     pdf_obj.save()
 
 
-
+# Get file object from pdf creation
 def get_file_from_pdf(pdf_obj_id,pdf_task_id):
     from ai_exportpdf.models import Ai_PdfUpload
     from ai_exportpdf.views import get_docx_file_path
@@ -671,6 +605,7 @@ class ProjectFilter(django_filters.FilterSet):
 
 
     def filter_team(self, queryset, name, value):
+        #it checks for the user is having team or not
         if value=="None":
             lookup = '__'.join([name, 'isnull'])
             return queryset.filter(**{lookup: True})
@@ -679,6 +614,7 @@ class ProjectFilter(django_filters.FilterSet):
             return queryset.filter(**{lookup: value})
 
     def filter_status(self, queryset, name, value):
+        #It is to check for the assigned user work status
         user = self.request.user
         assign_to = self.request.query_params.get('assign_to')
         if user.team and user in user.team.get_editors:
@@ -690,6 +626,7 @@ class ProjectFilter(django_filters.FilterSet):
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
+        #project type filter
         if value == "assets":
             queryset = queryset.filter(Q(glossary_project__isnull=False))
         elif value == "voice":
@@ -722,6 +659,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_serializer_class(self):
+        #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
         if project_type == 3:
             return GlossarySetupSerializer
@@ -741,6 +679,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
+        #checking for team access and indivual user access
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
@@ -749,11 +688,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return queryset
 
     def get_user(self):
+        # returns main account holder 
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
 
 
+    # Tried project list with limit and offset instead of pagination to minimize time taken
 
     # def list(self, request, *args, **kwargs):
     #     st_time = time.time()     
@@ -774,6 +715,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     return Response(serializer.data)
 
 
+    
     def list(self, request, *args, **kwargs):
         
         queryset = self.filter_queryset(self.get_queryset())
@@ -786,11 +728,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             self.paginator.page_size = 10
         
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        
+
+        # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
+                         context={'request': request,'user_1':user_1})
         else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
+            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
+                         context={'request': request,'user_1':user_1})
+        
         response = self.get_paginated_response(serializer.data)
         
         return  response
@@ -799,29 +745,35 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
-        serializer = ProjectQuickSetupSerializer(query, many=False, context={'request': request,'user_1':user_1})
+        serializer = ProjectQuickSetupSerializer(query, many=False,\
+                     context={'request': request,'user_1':user_1})
         return Response(serializer.data)
 
     def create(self, request):
+
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         audio_file = request.FILES.getlist('audio_file',None)
         user_1 = self.get_user()
+
+        # project create with text data
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
             name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
             serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
-            
+        
+        # project create from pdf 
         elif pdf_obj_id:
             files_ = request.FILES.getlist('files')
             file_obj = get_file_from_pdf(pdf_obj_id,None)
             files_.append(file_obj)
             serlzr = ser(data={**request.data,"files":files_},context={"request": request,'user_1':user_1})    
-             
+        
+        # normal create
         else:
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
@@ -829,6 +781,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
+            #checks for pre-translation option and initiates the celery task
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)),queue='high-priority' )
             return Response(serlzr.data, status=201)
@@ -857,6 +810,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         step_delete_ids = self.request.query_params.get(\
             "step_delete_ids", [])
 
+        #Deletion of steps,files,jobs,content_type,subject_fields
         if step_delete_ids:
             for task_obj in instance.get_tasks:
                 task_obj.task_info.filter(task_assign_info__isnull=True).filter(step_id__in=step_delete_ids).delete()
@@ -881,11 +835,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if not team:
             team = True if instance.team else False
         
+        # update from writer
         if task_id:
             file_obj = update_project_from_writer(task_id)
             serlzr = ser(instance, data=\
                 {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
-            
+
+        # update from pdf flow    
         elif pdf_obj_id or pdf_task_id:
             if pdf_obj_id:file_obj = get_file_from_pdf(pdf_obj_id,None)
             else:file_obj = get_file_from_pdf(None,pdf_task_id)
@@ -900,6 +856,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
+            # checks for project_type and create extra info needed for it
             if pr.project_type_id == 8:
                 NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
@@ -957,6 +914,7 @@ class VendorDashBoardFilter(django_filters.FilterSet):
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
+    ''' To get task details with project id '''
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     paginator.page_size = 20
@@ -964,6 +922,12 @@ class VendorDashBoardView(viewsets.ModelViewSet):
 
     @staticmethod
     def get_tasks_by_projectid(request, pk):
+        ''' 
+        checking for team access 
+        if user is admin or project_owner, it will return all tasks in that project.
+        otherwise it will return only assigned tasks.
+        '''
+    
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
         pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
@@ -978,6 +942,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         else:
             return project.get_tasks.filter(task_info__assign_to=user_1)
 
+    # To get the account holder and project_managers
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
@@ -1000,35 +965,36 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         status = request.query_params.get('status')
         tasks = self.get_tasks_by_projectid(request=request,pk=pk)
+        # filter the tasks based on working status. currently it is used in dinamalar flow.
         queryset = self.filter_queryset(tasks)
         tasks = queryset.order_by('-id')
         user,pr_managers = self.get_user()
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
         return Response(serlzr.data, status=200)
 
-class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
-    paginator = PageNumberPagination()
-    paginator.page_size = 20
+# class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated]
+#     paginator = PageNumberPagination()
+#     paginator.page_size = 20
     
 
-    def get_user(self):
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        project_managers.append(user)
-        return user,project_managers
+#     def get_user(self):
+#         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+#         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
+#         project_managers.append(user)
+#         return user,project_managers
 
 
-    def get_object(self, project_id):
-        tasks = Task.objects.filter(job__project_id=project_id).all()
-        tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
-        return tasks
+#     def get_object(self, project_id):
+#         tasks = Task.objects.filter(job__project_id=project_id).all()
+#         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
+#         return tasks
 
-    def list(self, request, project_id, *args, **kwargs):
-        tasks = self.get_object(project_id)
-        user,pr_managers = self.get_user()
-        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
-        return Response(serlzr.data, status=200)
+#     def list(self, request, project_id, *args, **kwargs):
+#         tasks = self.get_object(project_id)
+#         user,pr_managers = self.get_user()
+#         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request,'user':user,'pr_managers':pr_managers})
+#         return Response(serlzr.data, status=200)
 
 class TM_FetchConfigsView(viewsets.ViewSet):
     def get_object(self, pk):
@@ -1149,7 +1115,7 @@ class TmxList(APIView):
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
 
-
+#### Glossary template lite #############
 @api_view(['GET',])
 def glossary_template_lite(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
@@ -1201,7 +1167,14 @@ def tbx_download(request,tbx_file_id):
     return download_file(tbx_asset.path)
 
 
+
 class UpdateTaskCreditStatus(APIView):
+    '''
+    The code defines a class UpdateTaskCreditStatus with static methods to update user credits and addon credits based on actual used credits and credit differences.
+    The update_addon_credit method deducts credits from addon credit packs based on the actual used credits or credit differences.
+    The update_usercredit method updates user subscription credits, considering expiry dates and available credits.
+    The update_credits method orchestrates the credit update process, handling user and addon credits within a transaction.
+    '''
 
     permission_classes = [IsAuthenticated]
 
@@ -1267,6 +1240,9 @@ class UpdateTaskCreditStatus(APIView):
 
             return {"msg" : msg}, status
 
+
+
+########### To get User credit balance #################
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
@@ -1330,10 +1306,15 @@ class TaskView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
+################# Create Project from Temp project ################
 @api_view(['POST',])
 @permission_classes([AllowAny])
 def create_project_from_temp_project_new(request):
+    '''
+    The function extracts user and project details from the request data.
+    It retrieves files and jobs associated with the temporary project, prepares data for the new project, and creates a project using a serializer.
+    If the serializer is valid, the new project is saved, and the serialized data is returned; otherwise, errors are returned.
+    '''
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
     user_1 = ai_user.team.owner if ai_user.team and ai_user.team.owner.is_agency and (ai_user in ai_user.team.get_project_manager) else ai_user
@@ -1358,6 +1339,11 @@ def create_project_from_temp_project_new(request):
 ##############   PROJECT ANALYSIS BY STORING ONLY COUNT DATA   ###########
 
 class ProjectAnalysisProperty(APIView):
+    '''
+    This view ProjectAnalysisProperty that checks all the tasks in the project is analysed or not. 
+    if analysed, it returns the word_count, char_count and seg_count of each task.
+    if it is not analysed, then it will initiate celery task and return the result.
+    '''
 
     permission_classes = [IsAuthenticated]
 
@@ -1442,7 +1428,6 @@ class ProjectAnalysisProperty(APIView):
                 })
 
                 try:
-                    print("status----->",doc.status_code)
                     if doc.status_code == 200 :
                         doc_data = doc.json()
                         task_write_data = json.dumps(doc_data, default=str)
@@ -1500,6 +1485,7 @@ class ProjectAnalysis(APIView):
 #########################################
 
 
+########### To send message notifying assign status #####################
 def msg_send(sender,receiver,task,step):
     obj = Task.objects.get(id=task)
     work = "Post Editing" if int(step) == 1 else "Reviewing"
@@ -1521,7 +1507,14 @@ def msg_send(sender,receiver,task,step):
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
 
+
 class TaskAssignUpdateView(viewsets.ViewSet):
+
+    '''
+    This view is to update Task Assign Information, 
+    it takes task, step, and reassigned as the input
+    In this we can also add instruction file addition and deletion for particular task.
+    '''
     permission_classes = [IsAuthenticated]
 
     def update(self, request,pk=None):
@@ -1618,10 +1611,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             return "user is not an agency. Reassign is not allowed"
         
 
-        
-
     @integrity_error
     def create(self,request):
+
+        ''' 
+            Create TaskAssignInfo by getting list of tasks and assign to. 
+            Checks for reassigned. it is the boolean field to be set to know whether it is the first time sign or reassign
+            It edits assign_to in TaskAssign(change assign_to from self_assign to editor) and then create TaskAssignInfo 
+            It also create InstructionFile associated with task. 
+        '''
+
         step = request.POST.get('step')
         task_assign_detail = request.POST.get('task_assign_detail')
         files=request.FILES.getlist('instruction_file')
@@ -1669,6 +1668,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             
         task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
         if task_assgn_objs.count() >0 :
+            # this is to update count based on tm_analysis
             weighted_count_update.apply_async((receiver,sender.id,assignment_id),queue='medium-priority')
 
             try:msg_send(sender,Receiver,tasks[0],step)
@@ -1682,8 +1682,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     def delete(self,request):
+        
+        ''' 
+        Flow 1: Customer--->Editor. if taskassign is deleted, then delete the taskassign info and reassign back to customer(self-assign) and update status and client_response
+        Flow 2: Customer---->Agency---->Editor. if taskassign is reassigned and deleted, then delete the taskassign info and assign back to the first user(agency) and update status and client_response
+        In Both flows, History is maintained to know details of previous assigned user and their word count at the time of reassign.
+        '''
+
         task = request.GET.getlist('task')
         steps = request.GET.getlist('step')
         reassigned = request.GET.get('reassigned',False)
@@ -3830,6 +3836,11 @@ class CombinedProjectListView(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
+    '''
+    This is to combine all projects, documents(general+blogs+books) and PDF
+    with general name search and ordering.
+    '''
+
     def list(self,request):
         view_instance_1 = QuickProjectSetupView()
 
@@ -3879,6 +3890,9 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
 
 def analysed_true(pr,tasks):
+    '''
+    it returns total word_count, char_count and segment_count of all tasks in the project.
+    '''
     task_words = []
     if pr.is_all_doc_opened:
         [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
@@ -3904,7 +3918,9 @@ def analysed_true(pr,tasks):
 from .serializers import AssertSerializer
 from ai_workspace_okapi.models import ChoiceLists
 class AssertList(viewsets.ModelViewSet):
-
+    '''
+    combined list view for assets (glossary and choicelist)
+    '''
     serializer_class = AssertSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
@@ -3965,6 +3981,9 @@ class AssertList(viewsets.ModelViewSet):
 
 
 def get_news_federal_key_and_url(lang):
+    ''' 
+    This function is to get the federal CMS KEY and URL based on language. 
+    '''
     if lang == "Kannada":
         key = os.getenv("KARNATAKA-FEDARAL-KEY")
         integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
@@ -3979,7 +3998,10 @@ def get_news_federal_key_and_url(lang):
 class GetNewsFederalView(generics.ListAPIView):
     pagination.PageNumberPagination.page_size = 20
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
-
+    '''
+    This is to list all the news from federal CMS. 
+    pagination, common search and category filter is connected
+    '''
 
     @staticmethod
     def check_user_federal(request_user):
@@ -4049,6 +4071,11 @@ from ai_workspace.utils import split_dict
 class NewsProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
+    '''
+    This is to create project for federal by getting news_id as input.
+
+    '''
+
     def get_files(self,news,lang):
         files =[]
         key,federal_api_url = get_news_federal_key_and_url(lang)
@@ -4074,6 +4101,13 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
         
     def create(self, request):
+        '''
+        It will get list of news_id and source language to fetch news from respective CMS.
+        get_files() is to get the news from news_id and create json file and returns it.
+        create_news_detail() is to create the record that the task is created for this news_id in lang pair to avoid duplication.
+        ProjectFilesCreateType is updated to refer that file is createed from CMS.
+
+        '''
         from ai_workspace.models import ProjectFilesCreateType
         from ai_staff.models import Languages
         allow = GetNewsFederalView.check_user_federal(request.user)
@@ -4142,6 +4176,10 @@ class TaskNewsDetailsViewSet(viewsets.ViewSet):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_federal_categories(request):
+    '''
+    This function is to get federal categories from their CMS. 
+    This is for filter the news with category. to get category id and show the category for the user.
+    '''
     page = request.query_params.get('page', 1)
     count = request.query_params.get('count', 20)
 
@@ -4173,6 +4211,10 @@ def get_federal_categories(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def push_translated_story(request):
+    '''
+    This function is to push back to the federal CMS.
+    with task_id, we identify target language and push back to that CMS.
+    '''
     from ai_workspace_okapi.api_views import DocumentToFile
     task_id = request.GET.get('task_id')
     feed_id = request.GET.get('feed_id')
@@ -4245,7 +4287,13 @@ def push_translated_story(request):
 
 class AddStoriesView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
-
+    ''' This view is to add stories for dinamalar.
+        For Dinamalar, we are creating one project for one date and 
+        update all the stories created in that date as the task in that project.
+        In this, we get input as text (internally convert it into txt file) or files and checks for the project already exists. 
+        if exists then we will add this as task or else create the project and then 
+        create the task by preparing the data and send it to ProjectQuickSetupSerializer. 
+    '''
 
     def pr_check(self,src_lang,tar_langs,user):
         today_date = date.today()
@@ -4263,7 +4311,7 @@ class AddStoriesView(viewsets.ModelViewSet):
         for i in tasks:
             tt = TaskNewsDetails.objects.get_or_create(task=i)
 
-
+    # To check the user is dinamalar or not
     @staticmethod
     def check_user_dinamalar(request_user):
         user = request_user.team.owner if request_user.team else request_user
@@ -4416,6 +4464,12 @@ from datetime import datetime, timedelta
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_task_count_report(request):
+    '''
+    This function will take input as date range and what type of report needs to be calculated.
+    if it is billing then it will calculate the number of approved words of each project_owner in the team within the time range. 
+    if it is glossary then it will calculate the number of terms added by terminologist within the time range.
+    else it will generate the general report with number of tasks assigned, with the status yet-to-start, inprogress, completed, approved 
+    '''
     user = request.user
     time_range = request.GET.get('time_range', None)
     from_date = request.GET.get('from_date',None)
@@ -4456,7 +4510,7 @@ def get_task_count_report(request):
     
  
 
-
+# Use pandas to write the data from db to excel
 def download_editors_report(res,from_date,to_date):
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
@@ -4488,9 +4542,17 @@ def get_file_url(path):
     url = path.replace(settings.MEDIA_ROOT,media_url)
     return url
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def get_news_detail(request):
+
+    ''' 
+    This fuction takes task_id as the input, 
+    and returns source_json, target_json, source_file_path
+    and target_file_path. This is for news preview. 
+    '''
+
     from ai_workspace_okapi.api_views import DocumentToFile
     task_id = request.GET.get('task_id')
     obj = Task.objects.get(id=task_id)
@@ -4531,6 +4593,12 @@ def get_news_detail(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated,IsEnterpriseUser])
 def federal_segment_translate(request):
+    '''
+    This is to get the raw_mt of text. With task_id, we will get source lang and target_lang and checks for
+    user_credit and call get_translation to translate the text and returns the result if the credits exists or 
+    It will return insufficient credits.
+    It is now used for federal flow.
+    '''
     task_id = request.query_params.get('task_id',None)
     text =  request.query_params.get('text',None)
     task_instance =  Task.objects.get(id=task_id)
@@ -4549,10 +4617,14 @@ def federal_segment_translate(request):
             return Response({'msg':'Insufficient Credits'},status=400)
     else:
         return Response({'msg':'Text field empty'},status=400)
-    
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def get_ner(request):
+    '''
+    This function is to get the text and find the NER with nlp and returns the list.
+    '''
     text = request.POST.get('text')
     doc = nlp(text)
     exclude_labels = ['DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL', 'LANGUAGE']
