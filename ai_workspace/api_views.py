@@ -2512,6 +2512,9 @@ def convert_text_to_speech_source(request):
 @api_view(["GET"])
 #@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
+    '''
+    This function is to download Text_to_speech(with only source_lang) task.
+    '''
     task = request.GET.get('task')
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender')
@@ -2523,23 +2526,26 @@ def download_text_to_speech_source(request):
 
 
 
-
-@api_view(["GET"])
-#@permission_classes([IsAuthenticated])
-def download_speech_to_text_source(request):
-    task = request.GET.get('task')
-    obj = Task.objects.get(id = task)
-    authorize(request,resource=obj,action="download",actor=request.user)
-    try:
-        output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
-        return download_file(output_from_writer.path)
-    except BaseException as e:
-        print(f"Error : {str(e)}")
-        return Response({'msg':'something went wrong'})
+#######################Not using now ###############################################
+# @api_view(["GET"])
+# #@permission_classes([IsAuthenticated])
+# def download_speech_to_text_source(request):
+#     task = request.GET.get('task')
+#     obj = Task.objects.get(id = task)
+#     authorize(request,resource=obj,action="download",actor=request.user)
+#     try:
+#         output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
+#         return download_file(output_from_writer.path)
+#     except BaseException as e:
+#         print(f"Error : {str(e)}")
+#         return Response({'msg':'something went wrong'})
 
 @api_view(["GET"])
 #@permission_classes([IsAuthenticated])
 def download_task_target_file(request):
+    '''
+    This function is to download "google file translate" flow task
+    '''
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
     authorize(request,resource=obj,action="download",actor=request.user)
@@ -2552,6 +2558,7 @@ def download_task_target_file(request):
 
 
 def zipit(folders, zip_filename):
+    # used in project_download
     zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
 
     for folder in folders:
@@ -2566,6 +2573,9 @@ def zipit(folders, zip_filename):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def project_list_download(request):
+    '''
+    This function is to download list of projects as one zip file.
+    '''
     projects = request.GET.getlist('project')
 
     pro = get_list_or_404(Project,id__in=projects)
@@ -2604,7 +2614,7 @@ def task_unassign(request):
             return Response({'msg':'Permission Denied'})
     return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
-
+###########Not using now ###############
 def docx_save(name,data):
     from docx import Document
     document = Document()
@@ -2627,6 +2637,7 @@ def target_exists(project):
 
 
 def update_project_from_writer(task_id):
+    # used in QuickProjectSetupView update to update transcripted project
     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     writer_project_updated_count = 1 if obj.writer_project_updated_count==None else obj.writer_project_updated_count+1
     obj.writer_project_updated_count = writer_project_updated_count
@@ -2637,8 +2648,7 @@ def update_project_from_writer(task_id):
 
 
 
-
-@api_view(['GET',])
+####################### Not using now ############################
 @permission_classes([IsAuthenticated])
 def get_quill_data(request):
     task_id = request.GET.get('task_id')
@@ -2663,6 +2673,7 @@ def update_task_assign(task_obj,user):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def writer_save(request):
+    # This is to update task_transcripted text from writer
     task_id = request.POST.get('task_id')
     transcripted_file_writer = request.FILES.get('file',None)
     task_obj = Task.objects.get(id=task_id)
@@ -2678,6 +2689,7 @@ def writer_save(request):
         ser1 = TaskTranscriptDetailSerializer(data=data1,partial=True)#"transcripted_file_writer":file_obj,
     if ser1.is_valid():
         ser1.save()
+        # this is to update editor status to inprogress
         update_task_assign(task_obj,request.user)
         return Response(ser1.data)
     return Response(ser1.errors)
@@ -2686,6 +2698,9 @@ def writer_save(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_voice_task_status(request):
+    '''
+    it returns pre_translation status of all tasks in voice project. 
+    '''
     from ai_workspace.models import MTonlytaskCeleryStatus
     from ai_auth.tasks import transcribe_long_file_cel,google_long_text_file_process_cel
     project_id = request.GET.get('project')
@@ -2715,6 +2730,7 @@ def get_voice_task_status(request):
 
 
 def celery_check(obj):
+    # used in get_task_status
     from ai_auth.tasks import pre_translate_update
     state = None
     if obj.task_name == 'mt_only':
@@ -2733,6 +2749,9 @@ def celery_check(obj):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_task_status(request):
+    '''
+    it returns pre_translation status of single task or all tasks in project. 
+    '''
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
     from ai_tm.api_views import get_json_file_path
@@ -2773,7 +2792,9 @@ def get_task_status(request):
 
 class ExpressProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-
+    '''
+    This view is to create instant project.
+    '''
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         text_data=request.POST.get('text_data')
@@ -2794,6 +2815,9 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
 
 
 def get_consumable_credits_for_text(source,target_lang,source_lang):
+    '''
+    This is to calculate the credits for text by calling API in spring_boot which intern returns word_count.
+    '''
     seg_data = { "segment_source" : source,
                  "source_language" : source_lang,
                  "target_language" : target_lang,
@@ -2810,6 +2834,10 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
         raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
 def exp_proj_save(task_id,mt_change):
+    '''
+    This function is to get all the segments of latest version from task_id 
+    and group it with text_unit_id for maintaining paragraphs and returns it.
+    '''
     vers = ExpressProjectSrcSegment.objects.filter(task_id = task_id).last().version
     exp_obj = ExpressProjectSrcSegment.objects.filter(task_id = task_id,version=vers)
     obj = Task.objects.get(id=task_id)
@@ -2834,6 +2862,10 @@ def exp_proj_save(task_id,mt_change):
 
 
 def seg_create(task_id,content,from_mt_edit=None):
+    '''
+    This is to tokenize sentences from input text and get its translation and store it in
+    ExpressProjectSrcSegment.
+    '''
     from ai_workspace.models import ExpressProjectSrcSegment,ExpressProjectSrcMTRaw
     obj = Task.objects.get(id=task_id)
     lang_code = obj.job.source_language_code
@@ -2886,6 +2918,7 @@ def cust_split(text):
 
 
 def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
+    # called in task_segments_save
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     NEWLINES_RE = re.compile(r"\n{1,}")
@@ -2934,6 +2967,10 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def task_get_segments(request):
+    '''
+    This function is to get Instant project task's translation (sentence tokenization-->translation-->merging back translated as like original)
+    and return
+    '''
     from ai_workspace.models import ExpressProjectDetail
     user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
@@ -2971,6 +3008,7 @@ def task_get_segments(request):
 
 
 def seg_get_new_mt(task,mt_engine_id,user,express_obj):
+    # called in task_segments_save
     exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task.id).last()
     if not exp_src_obj:
         seg_create(task.id,express_obj.source_text,True)
@@ -2986,12 +3024,17 @@ def seg_get_new_mt(task,mt_engine_id,user,express_obj):
         exp_proj_save(task.id,True)
 
 def inst_create(obj,option):
+    # called in task_segments_save
     customize = AiCustomize.objects.get(customize = option)
     created_obj = ExpressProjectAIMT.objects.create(express_id=obj.id,source=obj.source_text,customize_id=customize.id,mt_engine_id=obj.mt_engine_id)
     return created_obj
 
 
 def sent_tokenize(text,lang_code):
+    # called in task_segments_save
+    '''
+    This is to sent tokenize the text in instant translation
+    '''
     lang_list = ['hi','bn','or','ne','pa']
     lang_list_2 = ['zh-Hans','zh-Hant','ja']
     NEWLINES_RE = re.compile(r"\n{1,}")
@@ -3013,6 +3056,9 @@ import difflib
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def task_segments_save(request):
+    '''
+    This function is to update instant project's task.
+    '''
     task_id = request.POST.get('task_id')
     task=get_object_or_404(Task,id=task_id)
     if not task_id:
@@ -3030,6 +3076,7 @@ def task_segments_save(request):
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     authorize(request,resource=express_obj,actor=request.user,action="update")
 
+    # This is to replace src_text and tar_txt from history obj
     if from_history:
         task_hist_obj = ExpressTaskHistory.objects.get(id = from_history)
         express_obj.source_text = task_hist_obj.source_text
@@ -3038,11 +3085,12 @@ def task_segments_save(request):
         express_obj.save()
         ExpressProjectSrcSegment.objects.filter(task_id = task_id).delete()
 
-    
+    # This is to update target_text
     elif target_text:# or target_text!=None:
         express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
 
+    # This is to update simplified text 
     elif simplified_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
         if not inst_cust_obj:
@@ -3050,6 +3098,7 @@ def task_segments_save(request):
         inst_cust_obj.final_result = simplified_text
         inst_cust_obj.save()
 
+    # This is to update shortened text 
     elif shortened_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Shorten').last()
         if not inst_cust_obj:
@@ -3057,13 +3106,20 @@ def task_segments_save(request):
         inst_cust_obj.final_result = shortened_text
         inst_cust_obj.save()
 
+    # This is to update rewrite text 
     elif rewrite_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Rewrite').last()
         if not inst_cust_obj:
             inst_cust_obj = inst_create(express_obj,'Rewrite')
         inst_cust_obj.final_result = rewrite_text
         inst_cust_obj.save()
-
+      
+    
+    #In instant translation, we seperate text into sentences by using segmentation rules(adapting different langs) 
+    #   and then translate and then stored in the model ExpressProjectSrcSegment with version detail for history.
+    #This is to update source_text and mt_engine_id, 
+    #   which intern checks for new addition of sentences from previous stored text and translate that alone.
+    
     elif ((source_text) or (source_text and mt_engine_id)):
         source_text = source_text.replace('\r','')
         if mt_engine_id:
@@ -3095,7 +3151,7 @@ def task_segments_save(request):
                 else:
                     seg_edit(express_obj,i.id,source_text)
 
-
+    # This is to update mt_engine, which intern checks for already existing or else called get_translation and then returns the result.
     elif mt_engine_id:
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_text(express_obj.source_text,target_lang=None,source_lang=obj.job.source_language_code)
@@ -3112,6 +3168,9 @@ def task_segments_save(request):
 @api_view(['GET'])
 #@permission_classes([IsAuthenticated])
 def express_task_download(request,task_id):###############permission need to be added and checked##########################
+    '''
+    This is for instant project download
+    '''
     obj = Task.objects.get(id = task_id)
     proj_name = obj.job.project.project_name
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
@@ -3153,6 +3212,10 @@ def express_task_download(request,task_id):###############permission need to be 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def express_project_detail(request,project_id):
+    '''
+    This function is to give instant project details. 
+    this is called when instant project edit action is initiated. 
+    '''
     obj = Project.objects.get(id=project_id)
     jobs = obj.project_jobs_set.all()
     authorize(request,resource=obj,actor=request.user,action="read")
@@ -3170,6 +3233,11 @@ def express_project_detail(request,project_id):
 
 
 def voice_project_progress(pr,tasks):
+    '''
+    This function is to calculate the progress of Voice projects.
+    it checks for source_only tasks and mtpe_tasks in that project.
+    Do calculation seperately for both and return the combined result.
+    '''
     from ai_workspace_okapi.models import Document, Segment
     count=0
     progress = 0
@@ -3220,7 +3288,7 @@ def voice_project_progress(pr,tasks):
     elif count != tasks.count() or progress != 0:
         return "In Progress"
 
-
+### Not using now ############
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def translate_from_pdf(request,task_id):
@@ -3258,6 +3326,9 @@ from ai_openai.models import BlogCreation,BookCreation
 from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
+    '''
+    This view is to list, create, update and delete Documents in AIWriter.
+    '''
 
     serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
@@ -3271,6 +3342,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
+    # it combines multiple models MyDocument,BlogCreation,BookCreation querysets into one queryset and return it.
     def get_queryset_new(self):
         query = self.request.GET.get('doc_name')
         ordering = self.request.GET.get('ordering')
@@ -3296,7 +3368,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
             return queryset
         
         return final_queryset
-        
+
+    # It is to return combined list of blogs and documents    
     def get_queryset_for_combined(self):
         user = self.request.user
         project_managers = user.team.get_project_manager if user.team else []
@@ -3307,8 +3380,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         q3 = list(chain(q1, q2))
         return q3
 
-
-
+    # It is to return only documents
     def get_queryset(self):
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -3319,6 +3391,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
         queryset = self.get_queryset_new()
+        # Pagination=false is used for the purpose of list the documents in open_document inside Aiwriter.
         if paginate == 'False':
             serializer = MyDocumentSerializer(self.filter_queryset(self.get_queryset()), many=True)
             return Response(serializer.data)
@@ -3360,6 +3433,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         return Response(ser.errors)
 
     def destroy(self, request, pk):
+        # it is to delete the document instance and its related blog_creation and blog_articles and its files if any
         ins = MyDocuments.objects.get(id=pk)
         ins.blog_doc.all().delete()
         ins.ai_doc_blog.all().delete()
@@ -3372,6 +3446,9 @@ from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
+    '''
+    This is to get user's recent source and target languages and mt_engine
+    '''
     last_pr = Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).last()
     if last_pr:
         query =  Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).exclude(project_jobs_set__target_language=None).exclude(project_type_id=3).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
@@ -3389,6 +3466,12 @@ def default_proj_detail(request):
 
 
 def express_custom(request,exp_obj,option):
+    '''
+    This function is to call customization function (instant_customize_response) in ai_openai
+    and then stores the result in ExpressProjectAIMT. 
+    it will update, if the instance already exists in ExpressProjectAIMT else it will create new_instance.
+    returns ExpressProjectAIMTSerializer data
+    '''
     from ai_openai.serializers import AiPromptSerializer
     from ai_openai.api_views import instant_customize_response
     user = exp_obj.task.job.project.ai_user
@@ -3455,6 +3538,12 @@ def express_custom(request,exp_obj,option):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def instant_translation_custom(request):
+    '''
+    This function is to use customization options in instant translation.
+    It will check for changes in incoming source_text with already existing source_text with difflib library.
+    if change detected, then it calls for the customize option again in the function express_custom(), 
+    else it will return the already stored one from the model ExpressProjectAIMT.
+    '''
     from ai_openai.serializers import AiPromptSerializer
     from ai_openai.api_views import customize_response
     task = request.POST.get('task')
@@ -3506,6 +3595,9 @@ def instant_translation_custom(request):
 class DocumentImageView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    '''
+    This view is to list, create and delete document related images in AIWriter.
+    '''
     def list(self,request):
         user = request.user
         image = DocumentImages.objects.filter(ai_user_id=user.id).all()
@@ -3558,6 +3650,11 @@ class DocumentImageView(viewsets.ViewSet):
 
 
 class ExpressTaskHistoryView(viewsets.ViewSet):
+
+    '''
+    This View is for instant task translation history list, create and delete.
+    '''
+
     permission_classes = [IsAuthenticated]
 
     # def get_queryset(self):
@@ -3633,6 +3730,12 @@ def docx_convertor(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_word_char_count(request):
+    '''
+    It will get the list of project_ids.
+    This function is to check project analysis property of each project. 
+    if it is analysed, it will return char_count, word_count and seg_count.
+    else it will initiate celery task of project_analysis_property
+    '''
     from .api_views import ProjectAnalysisProperty
     from .models import MTonlytaskCeleryStatus
     prs = request.GET.getlist('project_id')
@@ -3685,6 +3788,10 @@ from celery import Celery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
+    '''
+    This is to stop the celery task after it gets intiated. but it's not working in main code.
+    Need to debug.
+    '''
     app = Celery('ai_tms')
     task_id = request.GET.get('task_id')
     task = AsyncResult(task_id)
@@ -3704,6 +3811,11 @@ from django.core.mail import send_mail
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def msg_to_extend_deadline(request):
+    '''
+    This function is to extend the deadline. 
+    if deadline exceeded, then user can't accept the PO. 
+    so he will send message and email to extend deadline to project_manager and admin.
+    '''
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     task = request.POST.get('task')
@@ -3754,6 +3866,13 @@ def msg_to_extend_deadline(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def translate_file(request):
+    '''
+    This function is to initiate the google file_translate process.
+    In this function, it takes input as list of task_ids and project_id. 
+    For each task, First we are checking credits(calculating credits with number of pages)
+    then, we are intiating celery task which internally calls google file translate 
+    and returns the boolean true or false.
+    '''
     tasks = request.GET.getlist('task')
     project  = request.GET.get('project')
     user = request.user
@@ -3779,6 +3898,10 @@ def translate_file(request):
 
 from ai_exportpdf.utils import pdf_char_check
 def translate_file_process(task_id):
+    '''
+    This function is to call google file translate and store the translated file in the
+    model TaskTranslatedFile.
+    '''
     tsk = Task.objects.get(id=task_id)
     file,name = file_translate(tsk,tsk.file.get_source_file_path,tsk.job.target_language_code)
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
@@ -3789,6 +3912,11 @@ def translate_file_process(task_id):
 
 
 def translate_file_task(task_id):
+    '''
+    For task, First we are checking credits(calculating credits with number of pages)
+    then, we are intiating celery task which internally calls google file translate and return
+    celery task status.
+    '''
     from .models import MTonlytaskCeleryStatus
     from ai_auth.tasks import translate_file_task_cel
     from ai_workspace_okapi.utils import get_consumption_of_file_translate
@@ -3838,7 +3966,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
 
     '''
     This is to combine all projects, documents(general+blogs+books) and PDF
-    with general name search and ordering.
+    with general name search and ordering(created_at).
     '''
 
     def list(self,request):
@@ -4212,7 +4340,7 @@ def get_federal_categories(request):
 @permission_classes([IsAuthenticated])
 def push_translated_story(request):
     '''
-    This function is to push back to the federal CMS.
+    This function is to push back translated story to the federal CMS.
     with task_id, we identify target language and push back to that CMS.
     '''
     from ai_workspace_okapi.api_views import DocumentToFile

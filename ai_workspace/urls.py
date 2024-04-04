@@ -74,7 +74,7 @@ urlpatterns += [
 	path('convert_and_download_text_to_speech_source/',api_views.convert_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
 	path('convert_text_to_speech_source/',api_views.convert_text_to_speech_source),
-	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
+	#path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('download_task_target_file/',api_views.download_task_target_file),
 	path('task/unassign/',api_views.task_unassign),
 	path('get_quill_data/',api_views.get_quill_data),
