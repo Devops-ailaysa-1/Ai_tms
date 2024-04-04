@@ -103,8 +103,10 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         file=request.FILES.get('file',None)
         if not file:
             return Response({'msg':'no file attached'})
+        print(str(file))
         user,pr_managers = self.get_user() 
-        data = {'user':user.id,'managers':pr_managers,'file':file}
+        data = {'user':user.id,'managers':pr_managers,'file':file} #,'file_name':str(file)
+
         serializer = PdffileUploadSerializer(data={**data},context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -147,10 +149,15 @@ from ai_workspace_okapi.utils import get_translation
 from googletrans import Translator
 from rest_framework import serializers
 from ai_staff.models import Languages ,LanguagesLocale
+from ai_nlp.models import ContentPageReference
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
     file_id=request.query_params.get('file_id',None)
+    if not file_id:
+        raise serializers.ValidationError({'msg':'Need File id'}, code=400) #Insufficient Credits
+
     chat_text=request.query_params.get('chat_text',None)
     language = request.query_params.get('language',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
@@ -162,23 +169,29 @@ def pdf_chat(request):
     user = request.user
 
     if chat_text: 
-        if unit_chk['total_units_left']>0:   
-            lang = detector.detect(chat_text).lang
+        if unit_chk['total_units_left']>0:   ### remove not
+            # language = Languages.objects.get(id=language)
+            # lang = detector.detect(chat_text).lang
             
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text) #,language=language)
             
-            if lang!= 'en':
-        
-                chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
-                                            target_lang_code='en',user_id=user.id,from_open_ai=True)
+            
+            # consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
 
-                pdf_chat_instance.question_mt = chat_text 
+            # if lang!= 'en':
+                # print(lang,language,"--",consumable_credits_user_text)
+                # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
+                                            # target_lang_code='en',user_id=user.id,from_open_ai=True)
 
-            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            if  openai_available_langs: #language.id not in
-                pdf_chat_instance.answer_mt=chat_QA_res
-                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
-                                              target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
+                # pdf_chat_instance.question_mt = chat_text 
+
+            chat_QA_res ,page_number= load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
+            for i in page_number:
+                ContentPageReference.objects.create(pdf_chat=pdf_chat_instance,page_no=i)
+            # if  openai_available_langs: #language.id not in
+                # pdf_chat_instance.answer_mt=chat_QA_res
+                # chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
+                                            #   target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
 
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
