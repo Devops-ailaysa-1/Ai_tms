@@ -234,7 +234,7 @@ def vendor_request_admin_mail(instance):
     print("mailsent>>")
 
 def vendor_accepted_freelancer_mail(user):
-    # print("User----<>",user)
+    
     today = date.today()
     context = {'email': user.email,'name':user.fullname,'date':today}
     msg_html = render_to_string("vendor_accepted_freelancer_mail.html", context)
@@ -285,22 +285,6 @@ def vendor_notify_post_jobs(detail):
             html_message=msg_html,
         )
         print("available job alert mail sent>>")
-
-
-# def vendor_notify_post_jobs(detail):
-#     #pass
-#     for i in detail:
-#         context = detail.get(i)
-#         email = context.get('user_email')
-#         msg_html = render_to_string("job_alert_email.html",context)
-#         send_mail(
-#             'Available jobs alert from ailaysa',None,
-#             settings.DEFAULT_FROM_EMAIL,
-#             [email],
-#             html_message=msg_html,
-#         )
-#         print("available job alert mail sent>>")
-
 
 
 def external_member_invite_mail(context,email):

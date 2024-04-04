@@ -106,7 +106,7 @@ def Temperature_and_degree_signs(user_input,target):
     out1=degree.finditer(target)
     for i in out1:
         tar.append(i.group(0))
-    print(src,tar)
+    
     if src==[] and tar==[]:
         return {'source':src, 'target':tar , 'ErrorNote':message}
     # This needs to be checked. As degree sign can also be used for angles
@@ -154,7 +154,6 @@ def Uppercase_After_Lowercase(user_input,target):
     data=[]
     src=re.findall(r'(\b\p{Ll}+\p{Lu}+\p{L}*\d*)',user_input)
     tar=re.findall(r'(\b\p{Ll}+\p{Lu}+\p{L}*\d*)',target)
-    print(src,tar)
     return src,tar
 
 def inconsistent_url(source,target):
@@ -228,9 +227,7 @@ def is_matched(expr):
 
 def is_quote_matched(expr):
     import regex as re
-    # sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
     sent = re.sub("(?<=\p{Ll})'(?=\p{Ll})", "", expr)###############to remove apostrophe
-    print("Sent------------->",sent)
     expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
@@ -408,6 +405,8 @@ class UntranslatableFileView(viewsets.ViewSet):
         file_obj = Untranslatable.objects.get(id=pk)
         file_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 # class UntranslatableFileUploadViewSet(ModelViewSet):
 #     queryset = Untranslatable.objects.all()
 #     serializer_class = UntranslatableSerializer
@@ -441,7 +440,6 @@ def forbidden_words_view(source, target, doc_id):
     query_set_1 = ForbiddenWords.objects.filter(job=doc.job)
     if query_set_1:queryset = ForbiddenWords.objects.filter(Q(job=doc.job)|(Q(job=None) & Q(project=doc.job.project))).filter(query).distinct('words')
     else:queryset = queryset = ForbiddenWords.objects.filter(Q(job=None) & Q(project=doc.job.project)).filter(query).distinct('words')
-    #queryset = ForbiddenWords.objects.filter(job=doc.job).filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
     if queryset:
         forbidden_words = [i.words for i in queryset]
         forbidden_out['source'] = []
@@ -474,8 +472,7 @@ def untranslatable_words_view(source, target, doc_id):
     query_set_1 = UntranslatableWords.objects.filter(job=doc.job)
     if query_set_1:queryset = UntranslatableWords.objects.filter(Q(job=doc.job)|(Q(job=None) & Q(project=doc.job.project))).filter(query).distinct('words')
     else:queryset = UntranslatableWords.objects.filter(Q(job=None) & Q(project=doc.job.project)).filter(query).distinct('words')
-    #queryset = UntranslatableWords.objects.filter(job=doc.job).filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
-    #queryset = UntranslatableWords.objects.filter(words__in = search_words)
+
     if queryset:
         untranslatable_words = [i.words for i in queryset]
         untranslatable_out['source'] = untranslatable_words
@@ -531,65 +528,11 @@ def numbers_view(source, target):
         num_out['ErrorNote'] = msg
         return num_out if msg!=[] else None
 
-# def stripNum(num):
-#     num_str = str(num)
-#     punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
-#     for ele in num_str:
-#         if ele in punc:
-#             num_str = num_str.replace(ele, "")
-#     return num_str
-
-# def numbers_view(source, target):
-#     #number = re.findall('[0-9]+', str)
-#     number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]') # Better regex needs to be added
-#     src_list = number.findall(source)
-#     tar_list = number.findall(target)
-#     src_numbers = []
-#     tar_numbers = []
-#     src_missing = []
-#     tar_missing = []
-#     num_out = {}
-#     if src_list==[] and tar_list==[]:
-#         return None
-#     elif src_list==[] and tar_list!=[]:
-#         num_out['source'] = ["No numbers in source"]
-#         num_out['target'] = tar_list
-#         num_out['ErrorNote'] = ["Numbers mismatch or missing"]
-#         return num_out
-#     else:
-#         if tar_list:
-#             for i in src_list:
-#                 src_numbers.append(stripNum(i))
-#             for i in tar_list:
-#                 tar_numbers.append(stripNum(i))
-#
-#             for tar in tar_list:
-#                 tar_str = stripNum(tar)
-#                 if tar_str not in src_numbers:
-#                     tar_missing.append(tar)
-#             for src in src_list:
-#                 src_str = stripNum(src)
-#                 if src_str not in tar_numbers:
-#                     src_missing.append(src)
-#             msg = ["Numbers mismatch or missing"] if len(src_list)==len(tar_list) else ["Numbers mismatch or missing", "Numbers count mismatch"]
-#             num_out['source'] = src_missing
-#             num_out['target'] = tar_missing
-#             num_out['ErrorNote'] = msg
-#             if num_out['source']==[] and num_out['target']==[]:
-#                 return None
-#             else:
-#                 return num_out
-#         else:
-#             num_out['source'] = src_list
-#             num_out['target'] = ['No numbers in target']
-#             num_out['ErrorNote'] = ["Numbers mismatch or missing"]
-#             return num_out
 
 
 #########  REPEATED WORDS  #######################
 def repeated_words_view(source,target):
     src_words = source.split()
-    print("SOURCE WORDS--->", src_words)
     tgt_words = target.split()
     i=0
     j=0
@@ -599,12 +542,12 @@ def repeated_words_view(source,target):
     for i in range(len(src_words)-1):
         if src_words[i] == src_words[i+1]:
             src_repeated.append(src_words[i])
-    # if src_repeated:
+
     output.append(src_repeated)
     for j in range(len(tgt_words)-1):
         if tgt_words[j] == tgt_words[j+1]:
             tgt_repeated.append(tgt_words[j])
-    # if tgt_repeated:
+   
     output.append(tgt_repeated)
 
     if output != [[],[]]:

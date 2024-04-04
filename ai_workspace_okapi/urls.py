@@ -9,11 +9,7 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
-# router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
-# router.register(r'segment_diff',api_views.SegmentDiffViewset,basename='segment_difference')
-router.register(r"selflearn",api_views.SelflearningView,basename="self_learn")
-router.register(r"choicelist",api_views.ChoicelistView,basename="choice_list")
-router.register(r"choicelistselected",api_views.Choicelistselectedview,basename="choice_list")
+
 
 urlpatterns = router.urls
 
@@ -23,7 +19,6 @@ myobject_detail = api_views.SegmentsUpdateView.as_view({
 })
 
 urlpatterns+=[
-    # path("task/", TaskView.as_view(), name = "tasks"),
     path("document/<int:task_id>/", api_views.DocumentViewByTask.as_view(), name="document"),
     path("document_by_doc_id/<int:document_id>", api_views.DocumentViewByDocumentId.as_view(),\
          name="document-by-document-id"),
@@ -38,8 +33,6 @@ urlpatterns+=[
          name="segment-update"),
     path('split/segment/', api_views.SplitSegmentView.as_view({"post": "create"}), name='split-segment'),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
-
-    
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
@@ -49,11 +42,8 @@ urlpatterns+=[
          name="seg-filter"),
     path("target/segments/filter/<int:document_id>", api_views.TargetSegmentsListAndUpdateView.as_view(\
         {"post": "post", "put":"update"}), name="seg-filter"),
-    # path("target/segment/filter/update/<int:segment_id>", api_views.FindAndReplaceTargetBySegment.as_view(\
-    #     {"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
-    #path("page_size", api_views.SegmentSizeView.as_view(), name='default-page-size'),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views
          .GetPageIndexWithFilterApplied.as_view(), name="get-page-id-of-segment-on-apply-filter"),
@@ -71,7 +61,7 @@ urlpatterns+=[
     path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
     path("download_federal_file/",api_views.download_federal)
-    #path('get_mt_raw/<int:task_id>/',api_views.get_mt_raw),
+
 ]
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),

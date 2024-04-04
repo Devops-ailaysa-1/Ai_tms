@@ -6,14 +6,14 @@ from nltk import word_tokenize
 from nltk.util import ngrams
 from rest_framework import status
 from django.http import HttpResponse
-from ai_nlp.models import PdffileUpload,PdffileChatHistory #,PdfBookChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory 
 import django_filters
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from ai_nlp.utils import load_embedding_vector
 from rest_framework.response import Response
 from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,
-                              PdffileShowDetailsSerializer,PublicBookSerializer) #PdfBookChatHistorySerializer
+                              PdffileShowDetailsSerializer,PublicBookSerializer) 
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
@@ -35,8 +35,6 @@ def named_entity(request):
     doc = nlp(src_segment)
     data = []
     for entity in doc.ents:
-        # print(entity.text, entity.label_)
-        # words={'text':entity.text,'label':entity.label_,'explanation':spacy.explain(entity.label_)}
         data.append(entity.text)
     return JsonResponse({"src_ner": data}, safe=False)
 
@@ -97,8 +95,6 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        #project_managers.append(user)
-        print("Pms----------->",project_managers)
         return user,project_managers
 
 
@@ -158,7 +154,6 @@ from ai_nlp.models import ContentPageReference
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
-    # user = request.user
     file_id=request.query_params.get('file_id',None)
     if not file_id:
         raise serializers.ValidationError({'msg':'Need File id'}, code=400) #Insufficient Credits

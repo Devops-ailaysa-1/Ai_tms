@@ -75,7 +75,6 @@ class SegmentSerializer(serializers.ModelSerializer):
 
 
     def to_internal_value(self, data):
-        # print(self)
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
         data["random_tag_ids"] = json.dumps(data["random_tag_ids"])
         return super().to_internal_value(data=data)
@@ -116,12 +115,6 @@ class SegmentSerializerV2(SegmentSerializer):
         else:
             return target
 
-    # def his_check(self,instance,temp_target,content,user):
-    #     if temp_target != content:
-    #         return True
-    #     else:
-    #         SegmentHistory.objects.filter(seg)
-
 
     def update_task_assign(self,task_obj,user,status_id):
         try:
@@ -132,15 +125,15 @@ class SegmentSerializerV2(SegmentSerializer):
                 task_assign_obj = task_assign_query.filter(task_assign__step_id=step_id).first()
             else:
                 task_assign_obj = task_assign_query.first()
-            print("t_a_o----->",task_assign_obj)         
             obj = task_assign_obj.task_assign
+
             if obj.status != 2:
                 obj.status = 2
                 obj.client_response = None
                 obj.save()
+
             if task_assign_obj.task_assign.reassigned == True:
                 assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__step=obj.step).filter(task_assign__reassigned=False)
-                print("Assigns---------->",assigns)
                 for i in assigns:
                     print(i.task_assign)
                     if i.task_assign.status != 2:
@@ -149,23 +142,9 @@ class SegmentSerializerV2(SegmentSerializer):
                         i.task_assign.save()
         except:pass
 
-    # def update_pushed_state(self,task_obj):
-    #     print("Inside")
-    #     if task_obj.job.project.project_type_id == 8:
-    #         if task_obj.news_task.exists():
-    #             news_obj = task_obj.news_task.first()
-    #             if news_obj.pushed != False:
-    #                 print("In inside")
-    #                 news_obj.pushed = False
-    #                 news_obj.save()
-    #                 print("news------------------>",news_obj)
-
 
     def update(self, instance, validated_data):
-        print("VD----------->",validated_data)
-        print("Ins-------->",instance)
         status = validated_data.get('status',None)
-        print("St---------->>>",validated_data.get('status'))
         if validated_data.get('target'):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
@@ -183,38 +162,28 @@ class SegmentSerializerV2(SegmentSerializer):
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
-        print("Seg-His-Create--------------->",seg_his_create)
-        # if "target"  in validated_data:
-        #     print("Inside if target")
+
         if instance.target == '' and instance.temp_target == '':
-            print("In target empty")
             if (instance.text_unit.document.job.project.mt_enable == False)\
             or status_id in [101,102,105,106,109,110]:
-                print("mt dable and manual confirm check")
                 user = instance.text_unit.document.doc_credit_debit_user
                 initial_credit = user.credit_balance.get("total_left")
-                start_time = time.time()
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                end_time = time.time()
-                print("Total time taken for getting word count---------->",end_time-start_time)
                 consumable = max(round(consumable_credits/3),1) 
                 if initial_credit < consumable:
                     raise serializers.ValidationError("Insufficient Credits")
                 else:
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
-                    print("Credit Debited",status_code)
+
         res = super().update(instance, validated_data)
         if instance.target != '':
             instance.temp_target = instance.target 
             instance.save()
-            # self.update_task_assign(task_obj,user_1,status_id)
-            # if seg_his_create:
-            #     SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
-            #return res
+
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
-        # self.update_pushed_state(task_obj)
+
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
@@ -230,8 +199,7 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
         trim_whitespace=False)
     merge_segment_count = serializers.IntegerField(read_only=True,
         source="get_merge_segment_count", )
-    # mt_raw_target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
-    #     trim_whitespace=False)
+
 
     class Meta:
         # pass
@@ -254,25 +222,10 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MergeSegment
         fields = ("segments", "text_unit")
+
+
     def validate(self, data):
         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
-
-        # Resetting the raw MT for normal segments once merged
-        # merged_seg = ''
-        # for segment in segments:
-        #     if segment.target or segment.temp_target:
-        #         merged_seg+=segment.target
-        # if merged_seg != '':
-        #     segments[0].temp_target = merged_seg
-        #     segments[0].target = merged_seg
-        #     segments[0].save()
-        #     print("SEG[0]--------------->",segments[0])
-        # for segment in segments:
-        #     try:
-        #         MT_RawTranslation.objects.get(segment_id = segment.id).delete()
-        #     except:
-        #         print(f"No raw MT available for this segment --> {segment.id}")
-
         text_unit = data["text_unit"]
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("Segments for merging should have same text_unit_id")
@@ -284,6 +237,7 @@ class SplitSegmentSerializer(serializers.ModelSerializer):
         fields = ("segment",
                   "text_unit",
                   )
+
         def validate(self, data):
             segment = data['segment']
             if segment.is_merged == True or segment.is_split == True:
@@ -316,11 +270,10 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
         # Set context data to be passed to SegmentSerializerV3
         if extra_context:
             self.fields['segment_ser'] = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set",context=extra_context)
-            #self.fields['segment_ser'].context['extra_context'] = extra_context
+        
         else:
             self.fields['segment_ser'] = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
 
-    #segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
 
     class Meta:
         model = TextUnit
@@ -355,7 +308,6 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             "job": {"write_only": True},
             "created_by": {"write_only": True},
             "id": {"read_only": True, "source": "get_user_email"},
-            # "text_unit_ser": dict(source="document_text_unit_set", write_only=True)
         }
 
     def to_internal_value(self, data):
@@ -375,7 +327,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         from .api_views import MT_RawAndTM_View
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source) if source else 0
-        print("Consum Credits------------>",consumable_credits)
+       
         if initial_credit > consumable_credits:
             try:
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk,cc=consumable_credits)
@@ -387,7 +339,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     temp_target = mt
                     target = mt
                 status_id = TranslationStatus.objects.get(status_id=103).id
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+
                 return target,temp_target,status_id
             except:
                 target=""
@@ -402,12 +354,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
-        start_time = time.time()
         from .api_views import MT_RawAndTM_View,remove_random_tags
 
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
-        #print("Text Unit Data----------------->",text_unit_ser_data)
-        #text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
         pr_obj = document.job.project
@@ -457,14 +406,13 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), status_id , text_unit_id, str(seg["random_tag_ids"])])
-        st_time_query = time.time()
+       
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, status_id, text_unit_id, random_tag_ids) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
-        et_time_query = time.time()
-        print("Transaction Time------------->",et_time_query-st_time_query)
+
 
         if target_get == True:
             mt_params = []
@@ -484,8 +432,6 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 with closing(connection.cursor()) as cursor:
                     cursor.execute(mt_raw_sql, mt_params)
 
-        end_time = time.time()
-        print("Total time taken---------------->",end_time-start_time)
         return document
 
 class DocumentSerializerV2(DocumentSerializer):
@@ -495,12 +441,10 @@ class DocumentSerializerV2(DocumentSerializer):
     def to_internal_value(self, data):
         job_id=data["job"]
         job = Job.objects.get(id=job_id)
-        st_time = time.time()
         data["text_unit_ser"] = [
             {key:value} for key, value in data.pop("text", {}).items()
         ]
-        tt_time = time.time()
-        print("Time taken in inter--------------->",tt_time-st_time)
+
         data["created_by"] = (job.project.ai_user_id)
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
@@ -542,59 +486,6 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
-from .models import SelflearningAsset,ChoiceLists,ChoiceListSelected
-class SelflearningAssetSerializer (serializers.ModelSerializer):
-    document = serializers.PrimaryKeyRelatedField(required=False,write_only=True, queryset=Document.objects.all())
-    class Meta():
-        model=SelflearningAsset
-        fields=("source_word","edited_word","occurance","choice_list","created_at","updated_at","document")
-
-    def create(self,validated_data):
-        print("Validated Data------------->",validated_data)
-        edited = validated_data.get('edited_word',None)
-        source = validated_data.get('source_word',None)
-        document = validated_data.get('document', None)
-        choice_list = validated_data.get('choice_list', None)
-        print("ChList---------->",choice_list)
-
-        # user = validated_data.get('user',None)
-        if document:
-            project = document.job.project
-        if source and edited and document:
-            if choice_list:
-                choice_list = ChoiceLists.objects.get(id = choice_list)
-            else:
-                choice_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=document.job.target_language_id,is_default=True)
-            cl_selected = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=document.job.target_language_id)
-            if not cl_selected:
-                cl_selected, created = ChoiceListSelected.objects.get_or_create(project=project,choice_list=choice_list)
-        slf_lrn_list=SelflearningAsset.objects.filter(choice_list=choice_list,source_word=source)
-
-        if  slf_lrn_list.filter(edited_word=edited):
-            ins = slf_lrn_list.filter(edited_word=edited).last()
-            ins.occurance +=1
-            ins.save()         
-        else:
-            if slf_lrn_list.count() >= 5:
-                first_out=slf_lrn_list.first().delete()
-            ins=SelflearningAsset.objects.create(choice_list=choice_list,source_word=source,edited_word=edited,occurance=1)  
-        return ins
-
-
-class ChoiceListsSerializer (serializers.ModelSerializer):
-
-    class Meta:
-        model = ChoiceLists
-        fields = "__all__"
-
-class ChoiceListSelectedSerializer (serializers.ModelSerializer):
-    language=serializers.SerializerMethodField()
-    class Meta:
-        model = ChoiceListSelected
-        fields = ("id","project","choice_list","language")
-    
-    def get_language(self,obj):
-        return obj.choice_list.language.id
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
@@ -646,23 +537,18 @@ class MT_RawSerializer(serializers.ModelSerializer):
         tl_code = doc.target_language_code
 
         seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField())).filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
-        print("SEG OBJ---------------------------------------------->",seg_obj)
+
         if seg_obj:
-            print("No Translation")
             if seg_obj.first().target:
                 validated_data["mt_raw"] = seg_obj.first().target
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
-                print("get trans")
                 validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
         else:
-            print("In Translation")
             validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
 
-        #word update in mt_raw
-        #instance=self.slf_learning_word_update(instance,doc)
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
@@ -714,8 +600,6 @@ class FilterSerializer(serializers.Serializer):
 
 class PentmUpdateParamSerializer(serializers.ModelSerializer):
     source_text = serializers.CharField(source="source", read_only=True)
-    # target_language_code = serializers.CharField(\
-    #     source="target_language_code", read_only=True)
     target_text = serializers.CharField(source="target", read_only=True)
 
     class Meta:
@@ -741,18 +625,6 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
     def get_pentm_update_params(self, object):
         return json.dumps(PentmUpdateParamSerializer(object).data)
 
-
-# class MergeSegmentSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = MergeSegment
-#         fields = ("segments", "text_unit")
-#
-#     def validate(self, data):
-#         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
-#         text_unit = data["text_unit"]
-#         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
-#             raise serializers.ValidationError("all segments should be have same text unit id...")
-#         return super().validate(data)
 
 class ListSegmentIntgerationUpdateSerializer(serializers.ListSerializer):
     def create(self, validated_data, text_unit):
@@ -781,12 +653,10 @@ class SegmentIntgerationUpdateSerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {
-            #"is_merged": {"required": False, "default": False},
             "text_unit": {"required": False},
         }
 
     def to_internal_value(self, data):
-        print("child internal")
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
         data["random_tag_ids"] = json.dumps(data["random_tag_ids"])
         return super().to_internal_value(data=data)
@@ -827,42 +697,6 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         return text_unit
 
 
-# from ai_workspace_okapi.models import SegmentDiff
-
-# class SegmentDiffSerializer(serializers.ModelSerializer):
-#     # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
-#     class Meta:
-#         model=SegmentDiff
-#         fields=('id','sentense_diff_result','save_type')
-
-# class SegmentHistorySerializer(serializers.ModelSerializer):
-#     segment_difference=SegmentDiffSerializer(many=True)
-#     step_name=serializers.SerializerMethodField()
-#     status_id=serializers.ReadOnlyField(source='status.status_id')
-#     user_name=serializers.ReadOnlyField(source='user.fullname')
-#     class Meta:
-#         model = SegmentHistory
-#         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
-#         # extra_kwargs = {
-#         #     "status": {"write_only": True}}
-
-
-#     def to_representation(self, instance):
-#         from ai_workspace_okapi.api_views import segment_difference
-#         s=SegmentDiff.objects.filter(seg_history=instance)
-#         if not s:
-#             seg_diff=segment_difference(sender=None, instance=instance)
-#         return super().to_representation(instance)
-
-#     def get_step_name(self,obj):
-#         try:
-#             step = TaskAssign.objects.filter(
-#                 Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
-#                 Q(assign_to = obj.user)).first().step
-#             return step.name
-#         except:
-#             return None
-        
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()
     synonyms_form =serializers.ListField()
@@ -873,7 +707,7 @@ class VerbSerializer(serializers.Serializer):
 from ai_workspace_okapi.models import SegmentDiff
 
 class SegmentDiffSerializer(serializers.ModelSerializer):
-    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+
     class Meta:
         model=SegmentDiff
         fields=('id','sentense_diff_result','save_type')
@@ -886,16 +720,7 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SegmentHistory
         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
-        # extra_kwargs = {
-        #     "status": {"write_only": True}}
 
-
-    # def to_representation(self, instance):
-    #     from ai_workspace_okapi.api_views import segment_difference
-    #     s=SegmentDiff.objects.filter(seg_history=instance)
-    #     if not s:
-    #         seg_diff=segment_difference(sender=None, instance=instance)
-    #     return super().to_representation(instance)
 
     def get_step_name(self,obj):
         try:
@@ -905,95 +730,5 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return step.name
         except:
             return None
-
-
-
-
-
-
-#For copy_from command
-
-# okapi Execution time----------------> 48.274311780929565
-# Command Execution: 0.3987123966217041 seconds
-# Execution time: 44.15513563156128 seconds
-# postman: 1 m 34.44 s
-
-
-# CSV Writer Execution time 43.151642084121704 seconds
-# Command Execution: 0.0005958080291748047 seconds
-# Execution time: 43.4935302734375 seconds
-# Postman: 1 m 2.82 s
-
-# CSV Writer Execution time 43.607571840286255 seconds
-# Command Execution: 0.0005240440368652344 seconds
-# Execution time: 43.95321273803711 seconds
-
-
-
-# For insert_into command
-
-# okapi Execution time----------------> 48.53391695022583
-# Command Execution time: 0.9105117321014404 seconds
-# Execution time: 44.53358769416809 seconds
-# Postman: 1 m 35.04 s
-
-# okapi Execution time----------------> 49.68941617012024
-# Command Execution time: 0.9043436050415039 seconds
-# Execution time: 44.367270708084106 seconds
-# Postman: 1 m 36.06 s
-
-# class SegmentSerializerNew(serializers.ModelSerializer):# For Read only
-#     target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
-#         trim_whitespace=False)
-#     merge_segment_count = serializers.IntegerField(read_only=True,
-#         source="get_merge_segment_count", )
-
-#     class Meta:
-#         # pass
-#         model = Segment
-#         fields = ['id','source', 'target', 'coded_source', 'coded_brace_pattern',
-#             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
-#         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
-#             'coded_ids_sequence']
-#     def to_representation(self, instance):
-#         ret = super().to_representation(instance)
-#         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
-#         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
-#         return ret
-
-
-# class TextUnitSerializerNew(serializers.ModelSerializer):
-#     segment_ser = SegmentSerializerNew(many=True ,read_only=True, source="text_unit_segment_set")
-
-#     class Meta:
-#         model = TextUnit
-#         fields = (
-#             "segment_ser","okapi_ref_translation_unit_id"
-#         )
-
-#     def to_representation(self, instance):
-#         ret = super(TextUnitSerializerNew, self).to_representation(instance=instance)
-#         ret[ret.pop("okapi_ref_translation_unit_id")] = (
-#             ret.pop("segment_ser")
-#         )
-#         return ret
-
-
-# class DocumentSerializerNew(DocumentSerializerV2):
-#     text = TextUnitSerializerNew(many=True,  read_only=True, source="document_text_unit_set")
-#     filename = serializers.CharField(read_only=True, source="file.filename")
-#     class Meta(DocumentSerializerV2.Meta):
-#         model = Document
-#         fields = (
-#             "text",  'total_word_count', 'total_char_count', 'total_segment_count', "filename"
-#         )
-
-#     def to_representation(self, instance):
-#         ret = super().to_representation(instance=instance)
-#         coll = {}
-#         for itr in ret.pop("text", []):
-#             coll.update(itr)
-#         ret["text"] = coll
-#         return ret
 
 

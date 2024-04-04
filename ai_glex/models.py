@@ -116,14 +116,8 @@ class TermsModel(models.Model):
 
 post_save.connect(invalidate_cache_on_save, sender=TermsModel)
 pre_delete.connect(invalidate_cache_on_delete, sender=TermsModel) 
-    # @property
-    # def source_language(self):
-    #     return str(self.job.source_language)
-    #
-    # @property
-    # def target_language_script(self):
-    #     target_lang_id = self.job.target_language.id
-    #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
+
+
 class GlossaryMt(models.Model):
     task        = models.ForeignKey(Task, null=True, on_delete=models.CASCADE,related_name='term_task')
     source      = models.CharField(max_length=200, null=True, blank=True)

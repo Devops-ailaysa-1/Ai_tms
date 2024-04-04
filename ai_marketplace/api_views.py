@@ -54,7 +54,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,ProzE
                             MtpeEngines, SubjectFields,ServiceTypeunits,ProzLanguagesCode)
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
-from ai_auth.tasks import shortlisted_vendor_list_send_email_new,check_dict
+from ai_auth.tasks import shortlisted_vendor_list_send_email_new
 from django.db.models import Count
 from django.http import JsonResponse
 from django.core.mail import EmailMessage
@@ -90,7 +90,6 @@ def get_vendor_detail(request):
 def post_project_primary_details(request):
     project_id=request.POST.get('project_id')
     project = get_object_or_404(Project.objects.all(), id=project_id)
-                     # ai_user=self.request.user)
     jobs = project.project_jobs_set.all()
     try:
         if project.voice_proj_detail.project_type_sub_category_id == 2:     ###########text-to-speech
@@ -107,7 +106,6 @@ def post_project_primary_details(request):
     jobs = JobSerializer(jobs, many=True)
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
-    # tasks = project.get_tasks
     task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,\
                         'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
     result = {'project_name':project.project_name,'project_type':project.project_type_id,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
@@ -137,16 +135,13 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if projectpost_id:
             queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
         else:
-            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = user.id)).order_by('-id').distinct()# | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
-            # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = user.id)).order_by('-id').distinct()
         queryset = self.filter_queryset(queryset)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
         response = self.get_paginated_response(serializer.data)
         return response
-            #return Response(serializer.data)
-        # except:
-        #     return Response(status=status.HTTP_204_NO_CONTENT)
+
 
     def retrieve(self, request, pk):
         query = ProjectboardDetails.objects.get(id=pk)
@@ -160,12 +155,11 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             serializer1 = ProjectPostTemplateSerializer(data={**request.POST.dict(),'customer_id':customer.id})
             if serializer1.is_valid():
                 serializer1.save()
-        # customer = request.user.id
+        
         serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer.id,'posted_by_id':request.user.id},context={'request':request})
 
         if serializer.is_valid():
             serializer.save()
-            print("ID------------------->",serializer.data.get('id'))
             shortlisted_vendor_list_send_email_new.apply_async((
             serializer.data.get('id'),
             ),queue='low-priority')
@@ -214,7 +208,7 @@ def user_projectpost_list(request):
     new=[]
     try:
         queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)|Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
-        # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
+        
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             projectpost_title = i.proj_name
@@ -255,7 +249,7 @@ def project_post_template_delete(request,id):
 @permission_classes([IsAuthenticated])
 def project_post_template_get(request):
     template = request.GET.get('template')
-    query = ProjectboardTemplateDetails.objects.filter(Q(id=template))# & Q(customer = request.user))
+    query = ProjectboardTemplateDetails.objects.filter(Q(id=template))
     if query:
         ser = ProjectPostTemplateSerializer(query,many=True)
         return Response(ser.data)
@@ -294,15 +288,14 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
                 serializer = BidPropasalDetailSerializer(pagin_tc,many=True,context={'request':request})
                 response = self.get_paginated_response(serializer.data)
                 return response
-                # serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
-                # return Response(serializer.data)
+
             except:
                 return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({'msg':'user is not a vendor'})
 
     @integrity_error
-    def create(self, request):###########Need to check#############
+    def create(self, request):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
         if user.is_vendor == True:
@@ -314,7 +307,6 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
-                    #print("data----------->",serializer.data)
                 queryset = BidPropasalDetails.objects.filter(projectpost_id= post_id).all()
                 serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response({"msg":"Bid Posted","data":serializer.data})
@@ -324,8 +316,7 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
 
     def update(self,request,pk):
-        Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
-        # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
+        Bid_info = BidPropasalDetails.objects.get(id=pk)
         sample_file=request.FILES.get('sample_file')
         if sample_file:
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file':sample_file},context={'request':request},partial=True)
@@ -387,7 +378,6 @@ def bid_proposal_status(request):
                 BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
                 return Response({"msg":"Already in HiredEditors List....Redirect to Assign Page"})
             elif created == True:
-                print(obj)
                 uid = urlsafe_base64_encode(force_bytes(tt.id))
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
@@ -396,7 +386,7 @@ def bid_proposal_status(request):
                             'unit_rate':str(unit_price_float_format(obj.mtpe_rate)) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
                             'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
                             'date':obj.created_at.date().strftime('%d-%m-%Y')}
-                print("Mail------>",obj.vendor.email)
+
                 m_forms.external_member_invite_mail_after_bidding(context,obj.vendor.email)
                 msg_send(user,obj.vendor)
             BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
@@ -409,7 +399,6 @@ def bid_proposal_status(request):
 
 def notification_read(thread_id,user):
     list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
-    # print(list)
     list.mark_all_as_read()
 
 class ChatMessageListView(viewsets.ModelViewSet):
@@ -417,13 +406,11 @@ class ChatMessageListView(viewsets.ModelViewSet):
     serializer_class = ChatMessageSerializer
     filter_backends = [DjangoFilterBackend,SF,OF]
     ordering_fields = ['timestamp']
-    # search_fields = ['chatmessage_thread__message',]
-    # ordering=('-timestamp')
+
 
     def list(self, request,thread_id):
         queryset = Thread.objects.filter(id = thread_id).all()
         if queryset:
-            # queryset_1=self.filter_queryset(queryset)
             serializer = ChatMessageByDateSerializer(queryset,many=True,context={'request':request})
             user = self.request.user
             notification_read(thread_id,user)
@@ -460,16 +447,6 @@ class ChatMessageListView(viewsets.ModelViewSet):
         return Response({'msg':'deleted'})
 
 
-# class IncompleteProjectListView(generics.ListAPIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = SimpleProjectSerializer
-#     pagination.PageNumberPagination.page_size = 20
-#
-#     def get_queryset(self):
-#         query = ProjectboardDetails.objects.filter(customer = self.request.user.id)
-#         projects = [i.project_id for i in query] if query else []
-#         queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
-#         return queryset
 class IncompleteProjectListFilter(django_filters.FilterSet):
 
     def filter(self, qs, value):
@@ -501,32 +478,10 @@ class IncompleteProjectListView(viewsets.ModelViewSet):
 
 
 
-# @api_view(['GET',])
-# @permission_classes([IsAuthenticated])
-# def get_incomplete_projects_list(request):
-#     queryset=Project.objects.filter(Q(ai_user=request.user)\
-#                 |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
-#                 exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=request.user)).order_by('-id').distinct()
-#     filtered = (x for x in queryset if x.get_assignable_tasks_exists == True)
-#     ser = SimpleProjectSerializer(filtered,many=True)
-#     return Response(ser.data)
-
-
-    # query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)\
-    #         |Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
-    # projects = [i.project_id for i in query] if query else []
-    # queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
-    #             |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
-    #             filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" and x.get_assignable_tasks != []]#.filter(voice_proj_detail__isnull=True)
-
-
-
 class JobFilter(django_filters.FilterSet):
     fullname = django_filters.CharFilter(field_name='customer__fullname',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='projectpost_jobs__src_lang__language',lookup_expr='icontains')
     target = django_filters.CharFilter(field_name='projectpost_jobs__tar_lang__language',lookup_expr='icontains')
-    #subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
-    #content = django_filters.CharFilter(field_name='projectpost_subject__content',lookup_expr='icontains')
     subject = django_filters.CharFilter(method='filter_subject')
 
     def filter_subject(self, queryset, name, value):
@@ -537,9 +492,7 @@ class JobFilter(django_filters.FilterSet):
         model = ProjectboardDetails
         fields = ('fullname', 'source','target','subject',)#'content',)
         together = ['source','target']
-        # groups = [
-        #     RequiredGroup(['source', 'target']),
-        #  ]
+
 class NoPagination(PageNumberPagination):
       page_size = None
 
@@ -566,7 +519,6 @@ class AvailableJobsListView(generics.ListAPIView):
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         present = timezone.now()
         queryset= ProjectboardDetails.objects.filter(~Q(customer=user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
-        print("@@@@@@@@@@@2",queryset)
         return queryset
 
 
@@ -596,7 +548,7 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
-    # name = request.GET.get('name')
+
     threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
     receivers_list =[]
     for i in threads:
@@ -636,7 +588,6 @@ def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
     notification_details=[]
     notification=[]
-    # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
             user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
@@ -730,12 +681,6 @@ class GetVendorListViewNew(generics.ListAPIView):
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
 
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     serializer = self.serializer_class(queryset, context={'request': request, 'user': request.user},many=True)
-    #     return Response(serializer.data)
-
-
 
 
 @api_view(['GET',])
@@ -746,7 +691,6 @@ def get_last_messages(request):
     for i in threads:
         ins = {'thread_id':i.id}
         count = request.user.notifications.filter(Q(data=ins) & Q(verb='Message')).unread().count()
-        # print("RR--->",count)
         obj =  ChatMessage.objects.filter(thread_id = i.id).last()
         data.append({'thread_id':i.id,'last_message':obj.message,'unread_count':count,'last_timestamp':obj.timestamp})
     return JsonResponse({"data":data},safe=False)
@@ -777,89 +721,15 @@ def get_previous_accepted_rate(request):
         tot_2=[]
         for i in query_1:
             currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
-            print("SS---------->",i.get('service__mtpe_rate'))
             if i.get('service__mtpe_rate') != None:
                 print("Inside if")
                 out_1 = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
                         'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
                 if out_1:
                     tot_2.extend(out_1)
-        #if tot_2:
         rates_given[j] = tot_2
         final_rates_given.append(rates_given)
     return JsonResponse({"Previously Agreed Rates":final_rates,"Given Rates":final_rates_given})
-
-
-
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def get_previous_accepted_rate(request):
-#     user = request.user
-#     vendor_id = request.POST.get('vendor_id')
-#     jobs = request.POST.getlist('job_id')
-#     final_rates =[]
-#     final_rates_given=[]
-#     for j in jobs:
-#         job_obj = Job.objects.get(id=j)
-#         authorize(request, resource=job_obj, actor=request.user, action="read")
-#         print(job_obj.source_language,job_obj.target_language)
-#         vendor = AiUser.objects.get(id=vendor_id)
-#         print(vendor)
-#         #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-#         query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
-#         query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language)).last()
-#         rates ={}
-#         tot =[]
-#         for i in query_final:
-#             out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
-#             if out:
-#                 tot.extend(out)
-#         #if tot:
-#         rates[j] = tot
-#         final_rates.append(rates)
-#         rates_given={}
-#         query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
-#                 .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
-#         tot_2=[]
-#         for i in query_1:
-#             currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
-#             out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
-#                         'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
-#             if out:
-#                 tot_2.extend(out)
-#         #if tot_2:
-#         rates_given[j] = tot_2
-#         final_rates_given.append(rates_given)
-#     return JsonResponse({"Previously Agreed Rates":final_rates,"Given Rates":final_rates_given})
-
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def get_previous_accepted_rate(request):
-#     user = request.user
-#     vendor_id = request.POST.get('vendor_id')
-#     job_id = request.POST.get('job_id')
-#     job_obj = Job.objects.get(id=job_id)
-#     authorize(request, resource=job_obj, actor=request.user, action="read")
-#     print(job_obj.source_language,job_obj.target_language)
-#     vendor = AiUser.objects.get(id=vendor_id)
-#     print(vendor)
-#     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-#     query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
-#     query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
-#     rates =[]
-#     for i in query_final:
-#         out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
-#         rates.append(out)
-#     rates_given=[]
-#     query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
-#              .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
-#     for i in query_1:
-#         currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
-#         out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
-#                     'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
-#         rates_given.extend(out)
-#     return JsonResponse({"Previously Agreed Rates":rates,"Given Rates":rates_given})
-
 
 
 
@@ -870,8 +740,7 @@ def customer_mp_dashboard_count(request):
     present = datetime.now()
     query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user.id)\
                                     |Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
-    # query = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
-    #query = ProjectboardDetails.objects.filter(customer = user)
+
     posted_project_count = query.count()
     inprogress_project_count = query.filter(bid_deadline__gte = present).filter(closed_at = None).count()
     bid_deadline_expired_project_count = query.filter(bid_deadline__lte = present).count()
@@ -924,13 +793,8 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
                 res[tt] = [ser.data]
         return Response(res)
-        #print("Res-------------->",res)
-        # print("Len of RES-------->",len(res))
-        # return Response(res)
-        # if len(res)>=3:return Response(self.dt(res,1))
-        # elif len(res)==2:return Response(self.dt(res,2))
-        # elif len(res)==1:return Response(self.dt(res,3))
-        # else:return Response([])
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -939,53 +803,6 @@ def get_talents(request):
     ser = GetTalentSerializer(user,context={'request':request})
     return Response(ser.data)
 
-
-# class GetVendorListBasedonProjects(generics.ListAPIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = GetVendorListSerializer
-#
-#     def get_queryset(self):
-#         user = self.request.user
-#         sltl_list = Project.objects.filter(ai_user = user).distinct().\
-#                 values('project_jobs_set__source_language','project_jobs_set__target_language').\
-#                 annotate(sltl=Count('project_jobs_set__source_language__language')).order_by('-sltl')[:5]
-#         query = AiUser.objects.none()
-#         for i in sltl_list:
-#             source_lang = i.get('project_jobs_set__source_language')
-#             target_lang = i.get('project_jobs_set__target_language')
-#             queryset = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-#                         .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-#                         .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
-#             query = query.union(queryset)
-#         return query
-        # lang_pair = VendorLanguagePair.objects.none()
-        # for i in sltl_list:
-        #     query = VendorLanguagePair.objects.filter(Q(source_lang=i.get('project_jobs_set__source_language'))\
-        #             &Q(target_lang=i.get('project_jobs_set__target_language'))&Q(deleted_at=None)).values_list('user_id',flat=True)
-        #     lang_pair = lang_pair.union(query)
-        # users_list = AiUser.objects.filter(id__in = lang_pair).distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
-        # return users_list
-
-
-
-
-# class BidPostUpdateView(viewsets.ViewSet):
-#     permission_classes = [IsAuthenticated]
-#
-#     def update(self,request,pk):
-#         if self.request.user.is_vendor == True:
-#             Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
-#             sample_file=request.FILES.get('sample_file')
-#             if sample_file:
-#                 serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
-#             else:
-#                 serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict()},partial=True)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data)
-#             return Response(serializer.errors)
-#         else:
-#             return Response({'msg':'user is not a vendor'})
 
 
 @api_view(['GET',])
@@ -1025,9 +842,7 @@ def get_native_langs(langs):
 
 def get_proz_expertize(sub_id_list):
     queryset = ProzExpertize.objects.filter(subject_field__id__in = sub_id_list)
-    print("Queur----------->",queryset)
     expertize_ids_list = [obj.expertize_ids for obj in queryset if obj.expertize_ids]
-    print("ES------------->",expertize_ids_list)
     if expertize_ids_list:
         expertize_str = ",".join(expertize_ids_list)
         return expertize_str
@@ -1038,14 +853,12 @@ def get_sub_data(expertise_data):
     seen_ids = set()
     for expertise in expertise_data:
         disc_spec_id = expertise['disc_spec_id']
-        #print("$$$$$$$$$$$$$$$---------------------->",expertise['disc_spec_name'])
         expertize_obj = ProzExpertize.objects.filter(expertize_ids__contains=str(disc_spec_id))
         if expertize_obj:
             sub_obj = expertize_obj.first().subject_field
             if sub_obj.id not in seen_ids:
                 subject_data.append({"subject": sub_obj.id, "subject_name": sub_obj.name})
                 seen_ids.add(sub_obj.id)
-            #print("EXprtz-------------->",sub_obj.name)
     return subject_data
 
 
@@ -1067,7 +880,6 @@ class ProzVendorListView(generics.ListAPIView):
         year_of_experience = self.request.query_params.get('year_of_experience')
         country = self.request.query_params.get('country',None)
         fullname = self.request.query_params.get('fullname',None)
-        #contenttype = self.request.query_params.get('content')
         account_type = self.request.query_params.get('account_type',None)
         subject=self.request.query_params.get('subject')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
@@ -1077,11 +889,9 @@ class ProzVendorListView(generics.ListAPIView):
             }
         
         offset = (int(page) - 1) * int(limit)
-        print("Limit------->",limit)
-        print("Offset-------->",offset)
         
         lang_pair = get_proz_lang_pair(source_lang,target_lang)
-        print("LangPair-------->",lang_pair)
+       
         params={
             'language_service_id':service,
             'language_pair':lang_pair,
@@ -1105,25 +915,19 @@ class ProzVendorListView(generics.ListAPIView):
 
         integration_api_url = os.getenv("PROZ_URL")+"freelancer-matches"
         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params=params)
-        print("Status---------->",integration_users_response)
         if integration_users_response.status_code == 500:
             return {'msg':"something wrong with ProZ API"},None
         integration_users = integration_users_response.json()
-        print("Integration--------------->",integration_users.get('success'))
         common_users = []
         total = 0
         if integration_users and integration_users.get('success') == 1:
-            print("Inside If")
             total = integration_users.get('meta').get('num_results')
             for vendor in integration_users.get('data'):
-                print("Inside For")
                 ven = vendor.get('freelancer')
                 verified = False
                 bio = None
                 qs = SocialAccount.objects.filter(provider = 'proz').filter(uid=ven.get('uuid'))
-                print("Queryset------------>",qs)
                 ailaysa_user_uid = qs.last().user.uid if qs else None
-                print("AilaysaUserUID------------>",ailaysa_user_uid)
                 for i in ven.get('qualifications').get('credentials',{}):
                     if i.get('pair_code') == lang_pair:
                         verified = True
@@ -1133,7 +937,6 @@ class ProzVendorListView(generics.ListAPIView):
                 native_langs = ven.get('qualifications').get("native_language")
                 native_lang_names = get_native_langs(native_langs) if native_langs else None
                 subs = get_sub_data(ven.get('skills').get("specific_disciplines"))
-                #print("----------------------------------------------------------------------------")        
                 
                 common_users.append({
                     'uid': ven.get('uuid'),
@@ -1152,13 +955,10 @@ class ProzVendorListView(generics.ListAPIView):
                     'verified': verified,
                     'vendor_subject':subs,
                 })
-            print("----------------------------------------------------------------------------")
         return common_users,total
 
     def list(self, request, *args, **kwargs):
-        print("Inside List")
         queryset,total = self.get_queryset()
-        print("QS-------------->",queryset)
         if queryset.get('msg'):
             return Response({"msg":queryset.get('msg')},status=400)
         serializer = self.get_serializer(queryset, many=True)
@@ -1192,7 +992,7 @@ def proz_send_message(request):
                 'body': body,
                 'subject': subject,
                 'sender_name': user.fullname}
-    print("Payload------------->",payload)
+
     response = requests.request("POST", url, headers=headers, data=payload)
     res_data = response.json()
     if res_data.get('success') == 1:
@@ -1205,155 +1005,4 @@ def proz_send_message(request):
     else:
         return Response({'msg':'api response error'})
 
-    # response = requests.request("POST", url, headers=headers, data=payload)
-    # return Response(response.json())
-
-
-
-# def get_proz_lang_pair(source,target):
-#     source_lang = Languages.objects.get(id=source).lang.first().language_code
-#     target_lang = Languages.objects.get(id=target).lang.first().language_code
-#     return source_lang + '_' + target_lang
-
-# from .serializers import CommonSPSerializer
-
-# class CommonSPListView(generics.ListAPIView):
-#     serializer_class = CommonSPSerializer
-#     pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
-
-#     def get_queryset(self):
-#         page = self.request.query_params.get('page', 1)
-#         limit = self.request.query_params.get('limit', 20)
-#         source_lang=self.request.query_params.get('source_lang')
-#         target_lang=self.request.query_params.get('target_lang')
-
-#         user = self.request.user.team.owner if self.request.user.team else self.request.user
-
-#         headers = {
-#             'X-Proz-API-Key': os.getenv("PROZ-KEY"),
-#             }
-#         offset = (int(page) - 1) * int(limit)
-#         print("Limit------->",limit)
-#         print("Offset-------->",offset)
-#         app_users = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-#                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-#                     .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(is_active=False).exclude(deactivate=True)
-
-#         lang_pair = get_proz_lang_pair(source_lang,target_lang)
-#         print("LangPair-------->",lang_pair)
-
-#         integration_api_url = ""
-#         integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
-#         integration_users = integration_users_response.json()
-#         #print("IU---------------------->",integration_users)
-#         common_users = []
-
-#         for vendor in app_users:
-#             common_users.append({
-#                 'id': vendor.id,
-#                 'name': vendor.fullname,
-#                 'email': vendor.email,
-#                 'source': 'App User'
-#             })
-
-#         if integration_users:
-#             for vendor in integration_users.get('data'):
-#                 common_users.append({
-#                     'id': vendor.get('freelancer').get('uid'),
-#                     'name': vendor.get('freelancer').get('site_name'),
-#                     'email': vendor.get('freelancer').get('contact_info').get('email',None),
-#                     'source': 'Integrated User'
-#                 })
-#         print("CU----------->",common_users)
-#         print("Length------------>",len(common_users))
-#         return common_users
-
-#     def list(self, request, *args, **kwargs):
-#         queryset = self.get_queryset()
-#         page = self.paginate_queryset(queryset)
-#         serializer = self.get_serializer(page, many=True)
-#         return Response(serializer.data)
-        
-
-    # def get_queryset(self):
-    #     page = self.request.query_params.get('page', 1)
-    #     limit = self.request.query_params.get('limit', 20)
-    #     source_lang = self.request.query_params.get('source_lang')
-    #     target_lang = self.request.query_params.get('target_lang')
-
-    #     user = self.request.user.team.owner if self.request.user.team else self.request.user
-
-    #     app_users = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-    #                 .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-    #                 .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(is_active=False).exclude(deactivate=True)
-                
-    #     common_users = []
-
-    #     for vendor in app_users:
-    #         common_users.append({
-    #             'id': vendor.id,
-    #             'name': vendor.fullname,
-    #             'email': vendor.email,
-    #             'source': 'App User'
-    #         })
-    #     return common_users
-           # queryset = SocialAccount.objects.filter(provider = 'proz')
-        # print("Queryset----------->",queryset)
-        # existing_uuids = [{'uuid':i.extra_data.get('uuid'),'uid':i.user.uid} for i in queryset]
-        # print("Exist---------------->",existing_uuids)
-        # for d in existing_uuids:
-        #     if d.get('uuid') == ven.get('uuid'):
-        #         common_users['ailaysa_detail'] = d.get('uid')
-        #         break
-
-    # def get_proz_users(self):
-    #     page = self.request.query_params.get('page', 1)
-    #     limit = self.request.query_params.get('limit', 20)
-    #     source_lang = self.request.query_params.get('source_lang')
-    #     target_lang = self.request.query_params.get('target_lang')
-    #     lang_pair = get_proz_lang_pair(source_lang,target_lang)
-    #     offset = (int(page) - 1) * int(limit)
-    #     print("Limit------->",limit)
-    #     print("Offset-------->",offset)
-    #     print("LangPair-------->",lang_pair)
-    #     headers = {
-    #         'X-Proz-API-Key': os.getenv("PROZ-KEY"),
-    #         }
-    #     integration_api_url = ""
-    #     integration_users_response = requests.request("GET", integration_api_url, headers=headers, params={'language_service_id':1,'language_pair':lang_pair,'limit':limit,'offset':offset})
-    #     integration_users = integration_users_response.json()
-    #     common_users = []
-
-    #     if integration_users:
-    #         for vendor in integration_users.get('data'):
-    #             common_users.append({
-    #                 'id': vendor.get('freelancer').get('uid'),
-    #                 'name': vendor.get('freelancer').get('site_name'),
-    #                 'email': vendor.get('freelancer').get('contact_info').get('email',None),
-    #                 'source': 'Integrated User'
-    #             })
-    #     print("CU----------->",common_users)
-    #     return common_users
-
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.get_queryset()
-    #     page = self.paginate_queryset(queryset)
-    #     serializer = self.get_serializer(page, many=True)
-    #     res = self.get_paginated_response(serializer.data)
-    #     print("REs------------>",res.data.get('next'))
-    #     # return res
-    #     if res.data['next'] == None:
-    #         print("$$$$$$$$$$$$$$$$$$$$")
-    #         queryset = self.get_proz_users()
-    #         page = self.paginate_queryset(queryset)
-    #         serializer = self.get_serializer(page, many=True)
-    #         res = self.get_paginated_response(serializer.data) 
-    #         return res
-    #     else:
-    #         return res
-
-   
-# def proz_ailaysa_user_map():
-#     queryset = SocialAccount.objects.filter(provider = 'proz')
-#     existing_uuids = [i.get('extra_data').get('uuid') for i in queryset]
     

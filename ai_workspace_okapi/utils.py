@@ -20,7 +20,7 @@ spring_host = os.environ.get("SPRING_HOST")
 client = translate.Client()
 
 
-# from ai_workspace_okapi.models import SelflearningAsset
+
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
 
@@ -239,7 +239,6 @@ def ms_translation(source_string, source_lang_code, target_lang_code):
     request = requests.post(constructed_url, params=params, headers=headers, json=body)
     return request.json()[0]["translations"][0]["text"]
 
-    # print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
 
 def aws_translate(source_string, source_lang_code, target_lang_code):
     translate = boto3.client(service_name = 'translate',
@@ -303,15 +302,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         else:
             cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
-    print("Init-------->",initial_credit)
-    print("cc-------->",cc)
-    print("from_open_ai---------->",from_open_ai)
-    print("source----------->",source_string)
-    print("format----------->",format_)
-    # initial_credit =200
      
     if isinstance(source_string,str) and special_character_check(source_string)  :
-        print("Inside--->")
         mt_called = False
         translate = source_string
     
@@ -340,15 +332,13 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = lingvanex(source_string, source_lang_code, target_lang_code)
     
-    print("Mt called------->",mt_called)
+
     if mt_called == True and from_open_ai == None:
         if user:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
-            print("status_code---------->",status_code)
-            print("Debited----------->",cc,user.credit_balance.get("total_left"))
     else:
         print('Not debited in this func')
-    print("Translate---------->",translate)
+
     return translate
     
 
@@ -358,14 +348,13 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     from google.cloud import texttospeech
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
-    #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
-    #print("Len of input text in API---------------->",len(input_text))
+
     voice = texttospeech.VoiceSelectionParams(
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
@@ -381,13 +370,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
     return file_obj,f2
-    # dir = os.path.join(path,"Audio")
-    # if not os.path.exists(dir):
-    #     os.mkdir(dir)
-    # with open(os.path.join(dir,filename), "wb") as out:
-    #     out.write(response.audio_content)
-    #     print('Audio content written to file',filename)
-    # return os.path.join(dir,filename)
+
 
 
 def get_res_path(source_lang):
@@ -434,14 +417,13 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else \
         MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
-    #filename = filename + "_out"+ ".mp3"
+
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r", encoding='utf-8') as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
-    #print("File----------->",ssml_file)
-    #print("Len of input text in API---------------->",len(ssml))
+
     voice = texttospeech.VoiceSelectionParams(
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
@@ -451,7 +433,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
     )
-    #print("Response------------>",response)
+
     if len(response.audio_content) != 0:
         with open(filename,"wb") as out:
             out.write(response.audio_content)
@@ -548,41 +530,6 @@ def get_prompt_sent(opt,sent):
         prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
     return prompt
 
-    # if subs == []:
-    #     subs = 'English language'
-    # if cont == []:
-    #     cont = 'easy-to-understand content'
-    # if subs == [] or conts == []: 
-    #     if len(sent)>200:
-    #         prompt = '''
-
-    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
-
-
-    #                 1. Split the given sentence into multiple sentences.
-    #                 2. Rewrite each sentence to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-    #                 3. Additionally, simplify each sentence by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-
-    #                 If the provided text contains idioms or phrases, follow steps 1 and 3. Otherwise, follow steps 1 and 2.
-
-    #                 Text: '''+sent 
-                       # Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.
-    #     else:
-    #         prompt = '''
-
-    #                 As an English language specialist and a writer skilled in creating easy-to-understand content, please perform the following tasks and provide only one final result without any prefix:
-
-    #                 1. Rewrite the provided text to be understandable for non-native English speakers or language learners while keeping technical terms when possible.
-    #                 2. Additionally, simplify text by replacing idioms, phrases, or phrasal verbs with clearer and direct words, without altering the meaning or tone.
-
-    #                 If the provided text contains idioms or phrases, follow step 2. Otherwise, follow step 1.
-
-    # #                 Text: '''+sent
-    #                   Subject Fields: {} 
-    #             Content Types: {} 
-    #             Please execute the prompt with the necessary inputs, and the final result will only include the rewritten and simplified sentences.'''.format(sent,subs,cont) 
-    # else:
-
 
 GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
 GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
@@ -599,8 +546,7 @@ google_mime_type = {'doc':'application/msword',
 
 from google.cloud import translate_v3beta1 as translate
 from django import core
-import requests, os #, logger
-#from pptx import Presentation
+import requests, os
 
 def file_translate(task,file_path,target_language_code):
     from ai_auth.tasks import record_api_usage
@@ -610,7 +556,6 @@ def file_translate(task,file_path,target_language_code):
     file_format=file_type[-1]   
     file_name = file_type[0]
     client = translate.TranslationServiceClient()
-    #logger.info('file_translate fn called')
     if file_format not in google_mime_type.keys():
         print("file not support")
     mime_type = google_mime_type.get(file_format,None)
@@ -669,8 +614,6 @@ def page_count_in_docx(docx_path):
     file_path = '/tmp/'+filename.rsplit('.',1)[0]+'.pdf'
     # Read the generated PDF into memory
     pages = count_pdf_pages(file_path)
-    # pdf = PdfFileReader(open(file_path,'rb') ,strict=False)
-    # pages = pdf.getNumPages()
     return pages,file_path
 
 # def page_count_in_docx(docx_path):
@@ -710,7 +653,6 @@ def get_word_count(task):
         "doc_req_params":json.dumps(params_data),
         "doc_req_res_params": json.dumps(res_paths)
     })
-    print("status------------>",doc.status_code)
     if doc.status_code == 200:
         doc_data = doc.json()
         return doc_data.get('total_word_count')
@@ -732,7 +674,6 @@ def pdf_char_check_for_document_trans(file_path):
         for i in range(len(pdfdoc.pages)):
             current_page = pdfdoc.pages[i]
             current_page.extract_text()
-                # if len(current_page.extract_text()) >=700:
             tot_str = tot_str+current_page.extract_text()
             if len(tot_str) >=100:
                 return ["text" , len(pdfdoc.pages)]
@@ -743,11 +684,8 @@ def pdf_char_check_for_document_trans(file_path):
 
 
 def get_consumption_of_file_translate(task):
-    # from ai_exportpdf.utils import pdf_char_check
     file,ext = os.path.splitext(task.file.file.path)
     if ext == '.pdf':
-        # pdf = PdfFileReader(open(task.file.file.path,'rb') ,strict=False)
-        # pages = pdf.getNumPages()
         frmt,page_len = pdf_char_check_for_document_trans(task.file.file.path)
         if page_len >=300:
              return "exceeded"
@@ -757,7 +695,6 @@ def get_consumption_of_file_translate(task):
 
     if ext == '.docx' or ext == '.doc':
         page_count,file_path = page_count_in_docx(task.file.file.path)
-        print("PC----------->",page_count)
         os.remove(file_path)
         return consumption_of_credits_for_page(page_count)
 

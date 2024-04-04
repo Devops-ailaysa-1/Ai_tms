@@ -157,81 +157,6 @@ class UserAttributeView(APIView):
 
 
 
-# class PersonalInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = PersonalInformation.objects.get(user_id=request.user.id)
-#         except PersonalInformation.DoesNotExist:
-#             return Response(status=204)
-
-#         serializer = PersonalInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-#     def post(self, request):
-#         data = request.data
-#         print("Data==>",data)
-#         serializer = PersonalInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         print(request.data)
-#         personal_info = PersonalInformation.objects.get(user_id=request.user.id)
-#         serializer = PersonalInformationSerializer(personal_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class OfficialInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = OfficialInformation.objects.get(user_id=request.user.id)
-#         except OfficialInformation.DoesNotExist:
-#             return Response(status=204)
-#         serializer = OfficialInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-
-#     def post(self, request):
-#         data = request.data
-#         serializer = OfficialInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
-#         serializer = OfficialInformationSerializer(officaial_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 # class JPEGRenderer(renderers.BaseRenderer):
 #     media_type = 'image/png'
 #     format = 'png'
@@ -421,7 +346,6 @@ def send_email_with_multiple_files(subject,template,context):
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
-
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
@@ -2840,10 +2764,6 @@ class AilaysaPurchasedUnits:
                 raise ValueError ('deducting more than available credits')
             
 
- 
-
-
-
 
 class MarketingBootcampViewset(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -2864,20 +2784,6 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             instance = self.get_object(serializer.data.get('id',None))
             send_bootcamp_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
-            # if instance.file:
-            #     file_path = instance.file.path
-            # else:
-            #     file_path = None
-            # sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
-            #                                        user_email=instance.email,
-            #                                        file_path=file_path)
-            # auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
-            #                                             user_email=instance.email)
-            # if sent:
-
-            #     return Response({'msg':'Mail sent Successfully'})
-            # else:
-            #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
 @api_view(['GET'])
@@ -2894,18 +2800,6 @@ def internal_editors_list(request):
         return JsonResponse({'msg':'you are having no team'},status=400)
 
 
-
-# def send_email(subject,template,context):
-#     content = render_to_string(template, context)
-#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
-#     file_ =context.get('file')
-#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
-#     if file_:
-#         name = os.path.basename(file_.path)
-#         msg.attach(name, file_.file.read())
-#     msg.content_subtype = 'html'
-#     msg.send()
-#     print("Msg sent")
 
 
 def career_support_thank_mail(user_name,user_email):
