@@ -2056,6 +2056,9 @@ def project_download(request,project_id):
 
 
 class ShowMTChoices(APIView):
+    '''
+    This class is to return all MT results for given text. 
+    '''
     permission_classes = [AllowAny]
 
     @staticmethod
@@ -2064,6 +2067,10 @@ class ShowMTChoices(APIView):
 
     @staticmethod
     def reduce_text(text,lang_code):
+        '''
+        split the text into sentences and checks for total word count of 100. if it exceeds then strip it and return the text
+        else return the input text.
+        '''
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         info =''
         lang_list = ['hi','bn','or','ne','pa']
@@ -2118,6 +2125,12 @@ class ShowMTChoices(APIView):
 ###########################Transcribe Short File#####################################
 
 def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
+    '''
+    This is to transcribe short files with google API 
+    and update transcripted text in TaskTranscriptDetail model using TaskTranscriptDetailSerializer
+    and returns serializer.data
+    '''
+
     news_transcribe = False
     if obj:
         ai_user = obj.job.project.ai_user
@@ -2138,10 +2151,10 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         response = client.recognize(config=config, audio=audio)
         transcript=''
         for result in response.results:
-            #print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
+
         file_length = int(response.total_billed_time.seconds)
-        #print("Length return from api--------->",file_length)
+        
         record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
 
         if news_transcribe:
@@ -2153,6 +2166,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         return (ser.errors)
     except:
         return ({'msg':'Something  went wrong in Google Cloud Api'})
+
+
+
 
 ###########################Transcribe Long File##############################
 
@@ -2181,6 +2197,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     source_file_name = speech_file
     destination_blob_name = filename
     
+    #Upload long audio file in bucket
     upload_blob(bucket_name, source_file_name, destination_blob_name)
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
@@ -2192,14 +2209,23 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
 
 
-    # Detects speech in the audio file
+    # Detects speech in the audio file and call the API
     operation = client.long_running_recognize(config=config, audio=audio)
     response = operation.result(timeout=10000)
     for result in response.results:
+        #concatenate the results
         transcript += result.alternatives[0].transcript
+    
+    # Take the file_length from response
     file_length = int(response.total_billed_time.seconds)
+
+    #Delete long audio file in bucket
     delete_blob(bucket_name, destination_blob_name)
+
+    #Record API Usage
     record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
+
+    #Save the transcripted_data in TaskTranscriptDetail model using TaskTranscriptDetailSerializer and return serializer.data
     ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
@@ -2208,6 +2234,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
 
 
 def audio_read(speech_file):
+    # used in transcribe_file() to return length and hertz
     audio = AudioSegment.from_file(speech_file)
     length = int(audio.duration_seconds)###seconds####
     hertz = audio.frame_rate
@@ -2216,10 +2243,16 @@ def audio_read(speech_file):
 
 
 
-################################speech-to-text############# working#############################3
+################################speech-to-text##################################
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
+    '''
+    This is to convert audio file to text using google's API.
+    In this, we first calculate the audio file length. 
+    If the length is greater than 60 seconds then it will intiate transcribe_long_file celery task and return task status.
+    else it calls transcribe_short_file and return TaskTranscriptDetailSerializer data.
+    '''
     from ai_workspace.models import MTonlytaskCeleryStatus
     task_id = request.POST.get('task')
     user = request.user
@@ -2290,7 +2323,9 @@ def transcribe_file_get(request):
     return Response(ser.data)
 
 def google_long_text_file_process(file,obj,language,gender,voice_name):
-    #print("Main func Voice Name---------->",voice_name)
+    '''
+    This is to convert long text to file of translated task.
+    '''
     final_name,ext =  os.path.splitext(file)
     size_limit = 4500 
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
@@ -2309,9 +2344,8 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
             text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
-    #list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
+    
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
-    #print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
         combined += aud
@@ -2334,10 +2368,16 @@ def long_text_source_process(consumable_credits,user,file_path,task,language,voi
     
     f2.close()
 
-#####################Need to work###########################################
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
-    #print("Lang-------------->",obj.job.source_language_code)
+
+    '''
+    For source only files.
+    This function is to split the long data into small chunks
+    and then send it to google speech to task and returns the audio_file 
+    by merging multiple audio files with numbers in series.
+    '''
+    
     project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
@@ -2349,6 +2389,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     out_filename = final_name + '_out.txt'
     size_limit = 4000 #if obj.job.source_language_code in ['ta','ja'] else 3500
     lang = language if language else obj.job.source_language_code
+
+    ## split_file_by_size is the python library used to split by size
     split_file_by_size(file, dir_1, lang, size_limit)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
@@ -2359,26 +2401,30 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            #print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
             rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
+
+    # Merging audio files by sorting with AudioSegment and returns the file
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob(os.path.join(dir, '*.mp3')),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
-    #print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
         combined += aud
     combined.export(final_audio, format="mp3")
     f2 = open(final_audio, 'rb')
     file_obj = DJFile(f2,name=os.path.basename(final_audio))
+
+    # Remove temporary directories created for splitting and merging back
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
     os.remove(final_audio)
-    #os.remove(out_filename)
     return file_obj,f2
 
 
 @api_view(["GET"])
 #@permission_classes([IsAuthenticated])
-def convert_and_download_text_to_speech_source(request):#########working############Transcribe and Download
+def convert_and_download_text_to_speech_source(request):
+    '''
+    It is to convert text_to_speech by internally calling text_to_speech_task and called download_file()
+    '''    
     tasks =[]
     user = request.user
     project = request.GET.get('project',None)
@@ -2398,13 +2444,21 @@ def convert_and_download_text_to_speech_source(request):#########working########
 
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
+    '''
+    it will call text_to_speech_celery_task and returns TaskTranscriptDetailSerializer data
+    '''
     
     from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
     ai_user = project.ai_user
-    account_debit_user = project.team.owner if project.team else project.ai_user
+    
+    # Take the filepath and get the extention.
+    
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
+
+    # If ext is docx, it will convert it to txt and read the content and store it in data variable
+
     if ext == '.docx':
         name = file + '.txt'
         data = docx2txt.process(obj.file.file.path)
@@ -2415,16 +2469,26 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file = open(name, "r")
         data = text_file.read()
         text_file.close()
-    consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
-    initial_credit = account_debit_user.credit_balance.get("total_left")
+
+    # calculate the word_count of data by calling spring API, it returns word count.
+    # update word_count and char_count in TaskDetails database
     seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
                  "processor_name":"plain-text-processor", "extension":".txt"}
     res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
     wc = res1.json() if res1.status_code == 200 else None
     TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc,"task_char_count":len(data)})
+
+    # checking for available credits, if credits available initiate the celery task else return insufficient_credits
+    account_debit_user = project.team.owner if project.team else project.ai_user
+    consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
+    initial_credit = account_debit_user.credit_balance.get("total_left")
     if initial_credit > consumable_credits:
         record_api_usage.apply_async(("GCP","Text to Speech",ai_user.uid,ai_user.email,consumable_credits), queue='low-priority')
+        
+        #checking for data len and decide either it is a text_to_speech_long or text_to_speech_short
         if len(data.encode("utf8"))>4500:
+
+            # if length exceeds 4500(google's limit is 5000) then initiate text_to_speech_long celery task and returns celery status
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             if state == 'PENDING' or state == 'STARTED':
@@ -2439,10 +2503,15 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
         else:
             audio_file = name_ + "_source" + "_" + obj.job.source_language_code + ".mp3"#+ "_" + obj.ai_taskid
-            #print("Args short------->",name,language,obj.job.source_language_code,audio_file,gender,voice_name)
+            
+            # calling text_to_speech of google with required args and returns audio file object
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
+            
+            # Debit the used credits from main account
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
+
+            # Returns serializer data
             ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
             if ext == '.docx':
                 os.remove(name)
@@ -2457,21 +2526,31 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         return Response({'msg':'Insufficient Credits'},status=400)
 
 
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_media_link(request,task_id):
-    obj = Task.objects.get(id = task_id)
-    try:
-        task_transcript_obj = TaskTranscriptDetails.objects.filter(task = obj).first()
-        return Response({'url':task_transcript_obj.source_audio_file.url})
-    except:
-        return Response({'msg':'something went wrong'})
+###########Not used for now#################
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def get_media_link(request,task_id):
+#     obj = Task.objects.get(id = task_id)
+#     try:
+#         task_transcript_obj = TaskTranscriptDetails.objects.filter(task = obj).first()
+#         return Response({'url':task_transcript_obj.source_audio_file.url})
+#     except:
+#         return Response({'msg':'something went wrong'})
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
+    '''
+    This function is to call text_to_speech_task of source_only_tasks. 
+    it will get input either as task or project
+    if task 
+        it will call the celery task and return its status, if it is in PENDING or STARTED.
+        if status is in SUCCESS, then it returns TaskTranscriptDetailSerializer data
+    if project
+        it will get source_only_tasks within project and repeat above and returns 
+        TaskTranscriptDetailSerializer data
+    '''
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
@@ -2539,6 +2618,8 @@ def download_text_to_speech_source(request):
 #     except BaseException as e:
 #         print(f"Error : {str(e)}")
 #         return Response({'msg':'something went wrong'})
+
+
 
 @api_view(["GET"])
 #@permission_classes([IsAuthenticated])
@@ -2615,24 +2696,24 @@ def task_unassign(request):
     return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 ###########Not using now ###############
-def docx_save(name,data):
-    from docx import Document
-    document = Document()
-    new_parser = HtmlToDocx()
-    quill_data = data.get('ops')
-    docx = html.render(quill_data)
-    new_parser.add_html_to_document(docx, document)
-    document.save(name)
-    f2 = open(name, 'rb')
-    file_obj = DJFile(f2)
-    return file_obj,name,f2
+# def docx_save(name,data):
+#     from docx import Document
+#     document = Document()
+#     new_parser = HtmlToDocx()
+#     quill_data = data.get('ops')
+#     docx = html.render(quill_data)
+#     new_parser.add_html_to_document(docx, document)
+#     document.save(name)
+#     f2 = open(name, 'rb')
+#     file_obj = DJFile(f2)
+#     return file_obj,name,f2
 
 
-def target_exists(project):
-    for i in project.project_jobs_set.all():
-        if i.target_language != None:
-            return True
-    return False
+# def target_exists(project):
+#     for i in project.project_jobs_set.all():
+#         if i.target_language != None:
+#             return True
+#     return False
 
 
 
