@@ -143,7 +143,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
     page_numbers = []
     for i in compressed_docs:
-        if 'page' in i.metadata['page']:
+        if 'page' in i.metadata:
             page_numbers.append(i.metadata['page']+1)
     page_numbers = list(set(page_numbers))
     result = qa.run(query=query)
