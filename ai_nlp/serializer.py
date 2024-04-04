@@ -1,7 +1,17 @@
 from rest_framework import serializers
-from ai_nlp.models import PdffileUpload,PdffileChatHistory ,PdfQustion#,PdfBookChatHistory #ChatEmbeddingLLMModel
+from ai_nlp.models import PdffileUpload,PdffileChatHistory ,PdfQustion,ContentPageReference #,PdfBookChatHistory #ChatEmbeddingLLMModel
 from ai_nlp.utils import loader #,thumbnail_create
+import os
+from PyPDF2 import PdfFileReader 
+from PyPDF2.errors import FileNotDecryptedError
+from ai_nlp.utils import epub_processing
+import logging
+logger = logging.getLogger('django')
 
+class ContentPageReferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =ContentPageReference
+        fields =('page_no',)
 
 class PdfQustionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,9 +20,12 @@ class PdfQustionSerializer(serializers.ModelSerializer):
 
 
 class PdffileChatHistorySerializer(serializers.ModelSerializer):
+    pdf_chat_page_ref = ContentPageReferenceSerializer(many=True,required=False)
+     
     class Meta:
         model = PdffileChatHistory
-        fields ='__all__'
+        fields =('id','pdf_file','question','answer','question_mt','answer_mt',
+                 'created_at','updated_at','pdf_chat_page_ref')
 
 class PdffileShowDetailsSerializer(serializers.ModelSerializer):
     pdf_file_chat=PdffileChatHistorySerializer(many=True)
@@ -37,11 +50,7 @@ def check_txt(path):
         tot_tokens = num_tokens(str(fp.read()))
     return tot_tokens
 
-from PyPDF2 import PdfFileReader 
-from PyPDF2.errors import FileNotDecryptedError
-from ai_nlp.utils import epub_processing
-import logging
-logger = logging.getLogger('django')
+
 
 def chat_page_chk(instance):
     from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
@@ -70,6 +79,9 @@ def chat_page_chk(instance):
 
 
 
+ 
+
+
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     pdf_file_question = PdfQustionSerializer(many=True,required=False)
@@ -88,6 +100,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
         # unit_chk['total_units_left'] = 90
         if unit_chk['total_units_left']>0: 
             instance = PdffileUpload.objects.create(**validated_data)
+            
             page_count,file_format = chat_page_chk(instance)
             if file_format in ["pdf","docx"] and page_count > 300:
                 instance.delete()
@@ -98,11 +111,19 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':'File word limit should be less than 200,000' }, code=400)
             
             instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
+
             instance.status="PENDING"
             instance.save()
-            celery_id = loader.apply_async(args=(instance.id,),) #loader(instance.id)#
-            print(celery_id)
-            print("vector chromadb created")
+
+            count = PdffileUpload.objects.filter(file_name__contains=instance.file_name).exclude(id=instance.id).count()
+            print("count--->", count)
+            # if count!=0:
+            #     extension = instance.file_name.split(".")[-1]
+            #     print(extension)
+            #     file_name = os.path.basename(os.path.splitext(instance.file_name)[0])
+            #     instance.file_name = str(file_name).split(".pdf")[0] + "(" + str(count) + ")."+extension
+            #     print("count",count,"---",instance.file_name)
+            celery_id = loader.apply_async(args=(instance.id,),)  
             instance.celery_id=celery_id
             instance.is_train=False
             chat_unit_obj = AilaysaPurchasedUnits(user=instance.user)
