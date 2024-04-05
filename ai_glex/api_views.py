@@ -107,6 +107,14 @@ class TermUploadView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
 
+    def edit_allowed(self,obj):
+        request_obj = self.request
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+
+
     def edit_allowed_check(self,job):
         from ai_workspace.models import Task,TaskAssignInfo
         user = self.request.user
@@ -142,9 +150,9 @@ class TermUploadView(viewsets.ModelViewSet):
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
-        edit_allow = self.edit_allowed_check(job)
+        edit_allow = self.edit_allowed(job)
         additional_info = [{'project_name':project_name,'source_language':source_language,
-                            'target_language':target_language, 'edit_allowed':edit_allow}]
+                            'target_language':target_language,'edit_allowed':edit_allow}]
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
