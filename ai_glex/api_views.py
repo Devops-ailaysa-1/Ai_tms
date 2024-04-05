@@ -142,7 +142,9 @@ class TermUploadView(viewsets.ModelViewSet):
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
-        additional_info = [{'project_name':project_name,'source_language':source_language,'target_language':target_language}]
+        edit_allow = self.edit_allowed_check(job)
+        additional_info = [{'project_name':project_name,'source_language':source_language,
+                            'target_language':target_language, 'edit_allowed':edit_allow}]
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
