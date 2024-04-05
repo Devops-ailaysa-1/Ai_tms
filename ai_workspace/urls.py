@@ -42,7 +42,7 @@ urlpatterns += [
 		 name="get-files-jobs-by-project_id"),
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(),\
 		 name="source-tmx-files"),
-	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
+	#path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
 	#path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView\
 	#	 .as_view({"get":"list"}), name="vendor-dashboard-proj-based"),

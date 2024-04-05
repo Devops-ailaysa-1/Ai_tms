@@ -507,22 +507,22 @@ class TmxFileView(viewsets.ViewSet):
             ser.save()
             return self.TmxToPenseiveWrite(ser.data)
 
-class TbxUploadView(APIView):
-    def post(self, request):
-        tbx_files = request.FILES.get('tbx_files')
-        project_id = request.POST.get('project', 0)
-        doc_id = request.POST.get('doc_id', 0)
-        if doc_id != 0:
-            job_id = Document.objects.get(id=doc_id).job_id
-            project_id = Job.objects.get(id=job_id).project_id
-        pro=get_object_or_404(Project,id=project_id)
-        authorize(request,resource=pro,action="create",actor=self.request.user)
-        serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors)
+# class TbxUploadView(APIView):##currently not using
+#     def post(self, request):
+#         tbx_files = request.FILES.get('tbx_files')
+#         project_id = request.POST.get('project', 0)
+#         doc_id = request.POST.get('doc_id', 0)
+#         if doc_id != 0:
+#             job_id = Document.objects.get(id=doc_id).job_id
+#             project_id = Job.objects.get(id=job_id).project_id
+#         pro=get_object_or_404(Project,id=project_id)
+#         authorize(request,resource=pro,action="create",actor=self.request.user)
+#         serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         else:
+#             return Response(serializer.errors)
 
 
 # conversion of pdf to docx
@@ -647,6 +647,9 @@ class ProjectFilter(django_filters.FilterSet):
     
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
+    '''
+    This view is to list, create, update and delete the projects
+    '''
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
@@ -717,7 +720,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     
     def list(self, request, *args, **kwargs):
-        
+
+        # filter the projects with task_assign_status. Now it is used for Dinamalar flow 
         queryset = self.filter_queryset(self.get_queryset())
 
         user_1 = self.get_user()
@@ -725,6 +729,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         din = AddStoriesView.check_user_dinamalar(user_1)
 
         if din: 
+            # to increase performence time
             self.paginator.page_size = 10
         
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
@@ -886,15 +891,19 @@ class VendorDashBoardFilter(django_filters.FilterSet):
         assign_filter = self.request.query_params.get('assign_to')
         users = assign_filter.split(',') if assign_filter else None
         queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
-    
+        
         if value == 'inprogress':
+            # it filters the task which is in status inprogress,yet_to_start,return_request
+            # and client_response in rework
             if users:
+                # it is for editors filter
                 tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
                             distinct().values_list('id',flat=True)
             else:
                 tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
                             distinct().values_list('id',flat=True)
         elif value == 'submitted':
+            # it filters the task which is in status completed exclude the client_response approved
             if users:
                 tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
                             distinct().values_list('id',flat=True)
@@ -902,6 +911,7 @@ class VendorDashBoardFilter(django_filters.FilterSet):
                 tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
                             distinct().values_list('id',flat=True)
         elif value =='approved':
+            # it filters the task in which client_response is approved
             if users:
                 tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
                             distinct().values_list('id',flat=True)
@@ -1012,7 +1022,10 @@ class TM_FetchConfigsView(viewsets.ViewSet):
 
 
 class ReferenceFilesView(viewsets.ModelViewSet):
-
+    '''
+    This view is to add, delete reference files to project.
+    Not using now
+    '''
     serializer_class = ReferenceFileSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
@@ -1068,6 +1081,10 @@ def test_internal_call(request):
 
 
 class TbxFileListCreateView(APIView):
+    '''
+    This view is to list and add tbx files for the project
+    returns TbxFileSerializer data
+    '''
 
     def get(self, request, project_id):
         files = TbxFile.objects.filter(project_id=project_id).all()
@@ -1085,6 +1102,11 @@ class TbxFileListCreateView(APIView):
         return Response(serializer.data, status=201)
 
 class TbxFileDetail(APIView):
+
+    '''
+    This view is to update and delete tbx files for the project
+    returns TbxFileSerializer data
+    '''
 
     def get_object(self, id):
         try:
@@ -1128,7 +1150,9 @@ def tbx_template(request):
     return response
 
 class TbxTemplateUploadView(APIView):
-
+    '''
+    This function is to upload tbx_template file in project.
+    '''
     def post(self, request, project_id):
         pro=get_object_or_404(Project,id=project_id)
         authorize(request,resource=pro,action="create",actor=self.request.user)
