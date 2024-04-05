@@ -11,6 +11,11 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
 import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
+
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
 from ai_nlp.models import PdffileUpload ,PdfQustion
@@ -66,9 +71,6 @@ def epub_processing(file_path,text_word_count_check=False):
     else:
         return core.files.File(core.files.base.ContentFile(text_str),file_name+".txt")
 
-
-
- 
 
 
 @task(queue='default')
@@ -130,6 +132,23 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
 
 
 
+
+
+def load_chat_history(instance):
+    # if not instance.pdf_file_chat.all():
+    memory = ConversationBufferMemory(memory_key='chat_history', output_key="answer",input_key='question',return_messages=True)
+    # else:
+        # memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    for i in instance.pdf_file_chat.all():
+        if i.question and i.answer:
+            memory.save_context({"question": i.question}, {"answer": i.answer})
+    print("memory-->",memory)
+    return memory
+
+
+
+
+
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)  
@@ -137,18 +156,23 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
     compressor = CohereRerank(user_agent="langchain")
-    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor,
-                                                           base_retriever=retriever)    
+    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
     compressed_docs = compression_retriever.get_relevant_documents(query=query)
-    qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
+    
+    
+    memory = load_chat_history(instance)
+    # qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,retriever=compression_retriever, return_source_documents=True)
+    
     page_numbers = []
     for i in compressed_docs:
-
         if 'page' in i.metadata:
             page_numbers.append(i.metadata['page']+1)
     page_numbers = list(set(page_numbers))
-    result = qa.run(query=query)
-    return result,page_numbers
+    # result = qa.run(query=query)
+    result = qa(query) 
+    print(result)
+    return result['answer'] ,page_numbers
 
 
 def prompt_temp_context_question(context,question):
