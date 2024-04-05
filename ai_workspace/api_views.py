@@ -4588,12 +4588,13 @@ def push_translated_story(request):
 
 class AddStoriesView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
-    ''' This view is to add stories for dinamalar.
-        For Dinamalar, we are creating one project for one date and 
-        update all the stories created in that date as the task in that project.
-        In this, we get input as text (internally convert it into txt file) or files and checks for the project already exists. 
-        if exists then we will add this as task or else create the project and then 
-        create the task by preparing the data and send it to ProjectQuickSetupSerializer. 
+    ''' 
+    This view is to add stories for dinamalar.
+    For Dinamalar, we are creating one project for one date and 
+    update all the stories created in that date as the task in that project.
+    In this, we get input as text (internally convert it into txt file) or files and checks for the project already exists. 
+    if exists then we will add this as task or else create the project and then 
+    create the task by preparing the data and send it to ProjectQuickSetupSerializer. 
     '''
 
     def pr_check(self,src_lang,tar_langs,user):
@@ -4666,6 +4667,11 @@ class AddStoriesView(viewsets.ModelViewSet):
 ##########################################Dinamalar Report########################################################################################
 
 def task_count_report(user,owner,start_date,today):
+    '''
+    This function is to get general report for dinamalar.
+    it will get all editors from team and calculate number of tasks in each status during particular data_range
+    and return the values
+    '''
     managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
     team_members = user.team.get_team_members if user.team else []
     team_members.append(owner)
@@ -4707,6 +4713,11 @@ def task_count_report(user,owner,start_date,today):
     return data,res
 
 def billing_report(user,owner,start_date,today):
+    '''
+    This function is to get billing report for dinamalar.
+    it will get all project_managers from team and calculate approved_words in particular data_range
+    and return the values
+    '''
     managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
     team_members = user.team.get_team_members if user.team else []
     team_members.append(owner)
@@ -4737,6 +4748,11 @@ def billing_report(user,owner,start_date,today):
     return data,res
 
 def glossary_report(user,owner,start_date,today):
+    '''
+    This function is to get glossary report for dinamalar.
+    it will get all terminologists from team and calculate terms added in particular data_range
+    and return the value
+    '''
     from ai_glex.models import MyGlossary
     managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
     team_members = user.team.get_team_members if user.team else []
@@ -4747,6 +4763,7 @@ def glossary_report(user,owner,start_date,today):
         editors = user.team.get_terminologist if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
+            # it is to know the user is deleted or not.
             state = "active" if i.is_active == True else "deleted"
             additional_details = {}
             query = queryset.filter(created_by=i)
@@ -4813,6 +4830,11 @@ def get_task_count_report(request):
 
 # Use pandas to write the data from db to excel
 def download_editors_report(res,from_date,to_date):
+    '''
+    This function is to download editors report. 
+    It uses pandas to write the data from db to excel.
+    Called internally in get_task_count_report()
+    '''
     from ai_workspace_okapi.api_views import  DocumentToFile
     import pandas as pd
     output = io.BytesIO()
