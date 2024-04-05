@@ -1688,7 +1688,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 
 
 		if instance.target_json == None:
-			
+			# Translate the needed keys in CMS source json and returns the trnslated json
 			translated_json = federal_json_translate(json_file=json_data,tar_code=tar_code,src_code=src_code,user=user)
 
 			instance.source_json=json_data
@@ -1716,6 +1716,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 		if target_json:
 			instance.target_json = target_json
 			instance.save()
+			# if target_json is updated after pushed, then it will again get_back to push the updated_one
 			self.update_pushed_state(instance.task)
 			ser = SegmentSerializerV2(context=self.context)
 			ser.update_task_assign(instance.task,self.context.get('request').user,None)
