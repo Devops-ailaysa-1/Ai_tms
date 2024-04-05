@@ -26,7 +26,7 @@ router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
 router.register(r'doc_image',api_views.DocumentImageView,basename="doc-image")
 router.register(r'steps',api_views.StepsView,basename='steps')
-router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
+#router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
 router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
@@ -51,14 +51,14 @@ urlpatterns += [
 	path("tbx_list_create/<int:project_id>", api_views.TbxFileListCreateView.as_view(), name='tbx-list-create'),
 	path("tbx_detail/<int:id>", api_views.TbxFileDetail.as_view(), name='tbx-detail'),
 	path("tmx_list/<int:project_id>", api_views.TmxList.as_view(), name='tmx-list'),
-	path("tbx_template_download", api_views.glossary_template_lite, name="tbx-template-download"),
+	path("tbx_template_download", api_views.tbx_template, name="tbx-template-download"),
 	path("tbx_template_upload/<int:project_id>", api_views.TbxTemplateUploadView.as_view(), name="tbx-template-upload"),
 	path("tbx_download/<int:tbx_file_id>", api_views.tbx_download, name="tbx-download"),
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
 	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
-	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
+	#path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
 	path('file_project_list/',api_views.WriterProjectListView.as_view({'get':'list'})),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
