@@ -4438,6 +4438,9 @@ from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
+    '''
+    This view is to list,create,update and delete TaskNewsDetail in Federal flow. 
+    '''
     permission_classes = [IsAuthenticated,IsEnterpriseUser]
 
     def list(self,request):

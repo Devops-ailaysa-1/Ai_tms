@@ -28,9 +28,15 @@ class MyGlossarySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TermsSerializer(serializers.ModelSerializer):
+    #edit_allowed = serializers.SerializerMethodField()
+
     class Meta:
         model = TermsModel
-        fields ="__all__"
+        fields ="__all__" 
+        # fields = ('sl_term', 'tl_term', 'pos', 'sl_definition', 'tl_definition', 'context', 'note', 
+        #           'sl_source', 'tl_source', 'gender', 'termtype', 'geographical_usage', 'usage_status', 
+        #           'term_location', 'created_date', 'modified_date', 'glossary', 'file', 'job', 'edit_allowed', )
+    
 
 class GlossarySelectedSerializer(serializers.ModelSerializer):
     glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
