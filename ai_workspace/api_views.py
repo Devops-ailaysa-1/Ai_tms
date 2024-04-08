@@ -626,9 +626,6 @@ class ProjectFilter(django_filters.FilterSet):
             assign_to_list = assign_to.split(',')
         else: assign_to_list = []
         queryset = progress_filter(queryset,value,assign_to_list)
-        end_time = time.time()
-        time_taken = end_time - start_time
-        print("Time Taken to filter-------------------->",time_taken)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
