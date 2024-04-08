@@ -633,8 +633,10 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_not_empty(self,queryset, name, value):
         #project type filter
-        if value == "assets":
-            queryset = queryset.filter(Q(glossary_project__isnull=False))
+        # if value == "assets":
+        #     queryset = queryset.filter(Q(glossary_project__isnull=False))
+        if value == "glossary":
+            queryset = queryset.filter(Q(glossary_project__isnull=False)).exclude(project_type_id=10)
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
         elif value == "transcription":
@@ -670,6 +672,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
+        #if project_type == 3 or project_type == 10:
         if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
