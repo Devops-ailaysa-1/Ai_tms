@@ -93,3 +93,82 @@ def convertImage(image_path)->PIL.Image:
         return cmyk_from_PIL(outImage)
     
     raise Exception("Undefinied Color type of Image.Avaliable types RBG  & CMYK")
+
+
+# import PIL
+# import numpy as np
+# import littlecms as lc
+# from PIL import Image
+# from functools import lru_cache
+
+# class RGBImage(object):
+#     def __init__(self, image):
+#         self._image = image
+
+#     @property
+#     def image(self):
+#         return self._image
+
+#     @property
+#     def r(self):
+#         return self._image.getchannel("R")
+
+#     @property
+#     def g(self):
+#         return self._image.getchannel("G")
+
+#     @property
+#     def b(self):
+#         return self._image.getchannel("B")
+
+#     def show(self):
+#         self._image.show()
+
+# class CMYKImage(object):
+#     def __init__(self, image):
+#         self._image = image
+
+#     @property
+#     def image(self):
+#         return self._image
+
+#     @property
+#     def c(self):
+#         return self._image.getchannel("C")
+
+#     @property
+#     def m(self):
+#         return self._image.getchannel("M")
+
+#     @property
+#     def y(self):
+#         return self._image.getchannel("Y")
+
+#     @property
+#     def k(self):
+#         return self._image.getchannel("K")
+
+#     def show(self):
+#         self._image.show()
+
+# @lru_cache(maxsize=128)
+# def convert_image(image_path):
+#     image = Image.open(image_path)
+#     conversion_type = "RGB2CMYK"
+#     src_color_type, dst_color_type = conversion_type.split("2")
+
+#     cms_color_type = {"RGB": lc.TYPE_RGB_8, "CMYK": lc.TYPE_CMYK_8}
+
+#     src_profile = lc.cmsOpenProfileFromFile('/content/ICC_profile/sRGB.icm', 'r')
+#     dst_profile = lc.cmsOpenProfileFromFile('/content/ICC_profile/USWebCoatedSWOP.icc', 'r')
+
+#     transform = lc.cmsCreateTransform(src_profile, cms_color_type[src_color_type],
+#                                       dst_profile, cms_color_type[dst_color_type],
+#                                       lc.INTENT_RELATIVE_COLORIMETRIC, lc.cmsFLAGS_NOCACHE)
+
+#     image_data = np.array(image)
+#     transformed_data = lc.cmsDoTransform(transform, image_data.flatten())
+
+#     transformed_image = PIL.Image.fromarray(transformed_data.reshape(image_data.shape))
+
+#     return CMYKImage(transformed_image) if dst_color_type == "CMYK" else RGBImage(transformed_image)

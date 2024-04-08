@@ -4,12 +4,18 @@ from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
-import random,re
+import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
+
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
 from ai_nlp.models import PdffileUpload ,PdfQustion
@@ -23,9 +29,6 @@ from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
 import os
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import CohereRerank
-emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 import spacy
 import yake
 import requests
@@ -35,6 +38,12 @@ from docx import Document
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CohereRerank
+# llm = ChatOpenAI(model_name='gpt-4')
+emb_model = "sentence-transformers/all-MiniLM-L6-v2"
+ 
 
 
 def tag_visible(element):
@@ -73,39 +82,39 @@ def epub_processing(file_path,text_word_count_check=False):
 @task(queue='default')
 def loader(file_id) -> None:
     instance = PdffileUpload.objects.get(id=file_id)
-    website = instance.website
-    if website:
-        loader = BSHTMLLoader(instance.website)
-    else:
-        path_split=instance.file.path.split(".")
+    path_split=instance.file.path.split(".")
+    try:
         persistent_dir=path_split[0]+"/"
         os.makedirs(persistent_dir,mode=0o777)
-        print(persistent_dir)
-        if instance.file.name.endswith(".docx"):
-            loader = Docx2txtLoader(instance.file.path)
-        elif instance.file.name.endswith(".txt"):
-            loader = TextLoader(instance.file.path)
-        elif instance.file.name.endswith(".epub"):
-            text = epub_processing(instance.file.path,text_word_count_check=False)
-            instance.text_file = text
-            instance.save()
-            loader = TextLoader(instance.text_file.path)
-        else:
-            loader = PDFMinerLoader(instance.file.path)
-        data = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
-        texts = text_splitter.split_documents(data)
-        embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
-        print("emb----------------->>>>>>>>>>")
-        # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
-        print("--------->>>>> multilingual-22-12")
-        save_prest(texts, embeddings, persistent_dir,instance)
-        instance.vector_embedding_path = persistent_dir
-        instance.status = "SUCCESS"
+    except:
+        num = str(uuid.uuid4())
+        persistent_dir=path_split[0]+"_"+str(num)+"/"
+        os.makedirs(persistent_dir,mode=0o777)
+    print(persistent_dir)
+    if instance.file.name.endswith(".docx"):
+        loader = Docx2txtLoader(instance.file.path)
+    elif instance.file.name.endswith(".txt"):
+        loader = TextLoader(instance.file.path)
+    elif instance.file.name.endswith(".epub"):
+        text = epub_processing(instance.file.path,text_word_count_check=False)
+        instance.text_file = text
         instance.save()
-        # except:
-        #     instance.status ="ERROR"  #####need to add if error 
-        #     instance.save()
+        loader = TextLoader(instance.text_file.path)
+    else:
+        loader = PyPDFLoader(instance.file.path,extract_images=False)
+        # loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
+    data = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
+    texts = text_splitter.split_documents(data)
+    embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
+
+    save_prest(texts, embeddings, persistent_dir,instance)
+    instance.vector_embedding_path = persistent_dir
+    instance.status = "SUCCESS"
+    instance.save()
+ 
+
+ 
 
 
 def save_prest(texts,embeddings,persistent_dir,instance):
@@ -129,34 +138,47 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
 
 
 
+
+
+def load_chat_history(instance):
+    # if not instance.pdf_file_chat.all():
+    memory = ConversationBufferMemory(memory_key='chat_history', output_key="answer",input_key='question',return_messages=True)
+    # else:
+        # memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    for i in instance.pdf_file_chat.all():
+        if i.question and i.answer:
+            memory.save_context({"question": i.question}, {"answer": i.answer})
+    print("memory-->",memory)
+    return memory
+
+
+
+
+
 def load_embedding_vector(instance,query)->RetrievalQA:
-
     vector_path = instance.vector_embedding_path
- 
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
-    embed = OpenAIEmbeddings() #model="text-embedding-3-large"
-        
-    # else: 
-    #     print(model_name,"cohere")
- 
-    #     llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-    #     embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
- 
-        
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)  
+    embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
-    retriever = vector_db.as_retriever(search_kwargs={"k": 20})
-    # v = vector_db.similarity_search(query=query,k=4)
-
-    # result = querying_llm(llm=llm,chain_type="stuff",
-                        #   chain_type_kwargs=prompt_template_chatbook(),
-                        #   similarity_document=v,query=query) ##chatgpt
-
-    compressor = CohereRerank()
-    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
-    # compressed_docs = compression_retriever.get_relevant_documents(query)
-    qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
-    result = qa.run(query=query)
-    return result
+    retriever = vector_db.as_retriever(search_kwargs={"k": 9})
+    compressor = CohereRerank(user_agent="langchain")
+    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
+    compressed_docs = compression_retriever.get_relevant_documents(query=query)
+    
+    
+    memory = load_chat_history(instance)
+    # qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,retriever=compression_retriever, return_source_documents=True)
+    
+    page_numbers = []
+    for i in compressed_docs:
+        if 'page' in i.metadata:
+            page_numbers.append(i.metadata['page']+1)
+    page_numbers = list(set(page_numbers))
+    # result = qa.run(query=query)
+    result = qa(query) 
+    print(result)
+    return result['answer'] ,page_numbers
 
 
 def prompt_temp_context_question(context,question):
@@ -183,6 +205,7 @@ def gen_text_context_question(vectors_list,question):
 
 def generate_question(document):
     collections = document._collection
+    print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
@@ -225,9 +248,6 @@ def remove_number_from_sentence(sentence):
     pattern = r'^\d+.'
     cleaned_sentence = re.sub(pattern, '', sentence)
     return cleaned_sentence
-
-
-
 
  
 def keyword_extract(text):

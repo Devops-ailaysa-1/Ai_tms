@@ -151,6 +151,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
+    #"drf_yasg",
     #"silk",
 ]
 
@@ -172,12 +173,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
+    #'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     #'silk.middleware.SilkyMiddleware',
     
 ]
+
+#SILKY_PYTHON_PROFILER = True
+
 
 ROOT_URLCONF = 'ai_tms.urls'
 AUTH_USER_MODEL="ai_auth.AiUser"
@@ -339,6 +343,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+        #'rest_framework.permissions.AllowAny',
     ],
     # 'DEFAULT_THROTTLE_CLASSES': [
     # 'rest_framework.throttling.AnonRateThrottle',

@@ -24,7 +24,6 @@ urlpatterns = router.urls
 urlpatterns += [
     path("prompt_result/",api_views.AiPromptResultViewset.as_view()),
     path("customize_text_generate",api_views.customize_text_openai),
-    #path("customize_refer",api_views.customize_refer),
     path("history/",api_views.history_delete),
     path("prompt_image_generations/" ,api_views.image_gen),
     path('customize_history/',api_views.AiPromptCustomizeViewset.as_view()),
@@ -35,15 +34,12 @@ urlpatterns += [
     # path('article_generate_test/',api_views.test_stream), #event_stream generate
     path('image_history/<pk>/',api_views.ImageGeneratorPromptDelete.as_view()),
     path('download_ai_image_generated_file/<int:id>/',api_views.download_ai_image_generated_file),
- 
-    # path('stream_article/',api_views.PostStreamView.as_view()),
     path('credit_blog_check/',api_views.credit_check_blog),
-    # path('article_generate_test/',api_views.generate),
     path('book_chapter_generate/',api_views.generate_chapter),
     path('docx_merger/',api_views.docx_merger),
     path('ner_generate',api_views.ner_generate),
     path('transcribe_to_news',api_views.transcribe_to_news_report_generate)
-    #path('instant_translation_custom',api_views.instant_translation_custom)
+
 ]
 
 

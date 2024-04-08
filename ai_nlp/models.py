@@ -46,9 +46,10 @@ class PdffileUpload(models.Model):
 
 
 
+
 class PdffileChatHistory(models.Model):
-    pdf_file =models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
-    question =models.CharField(max_length=2000,null=True,blank=True)
+    pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
+    question = models.CharField(max_length=2000,null=True,blank=True)
     answer = models.CharField(max_length=2000,null=True,blank=True)
     question_mt = models.CharField(max_length=2000,null=True,blank=True)
     answer_mt = models.CharField(max_length=2000,null=True,blank=True)
@@ -58,15 +59,9 @@ class PdffileChatHistory(models.Model):
     language  = models.ForeignKey(Languages,related_name='pdf_chat_lang', on_delete=models.CASCADE,null=True,blank=True)
 
 
-
-# class PdfBookChatHistory(models.Model):
-#     pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_book")
-#     pdf_chats =models.ForeignKey(PdffileChatHistory,on_delete=models.CASCADE,related_name="pdf_chat_his")
-#     chat_name = models.CharField(max_length=200,null=True,blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-#     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
-
-
+class ContentPageReference(models.Model):
+    pdf_chat =  models.ForeignKey(PdffileChatHistory,on_delete=models.CASCADE,related_name="pdf_chat_page_ref")
+    page_no = models.IntegerField(null=True,blank=True)
 
 
 class PdfQustion(models.Model):
@@ -74,15 +69,12 @@ class PdfQustion(models.Model):
     question = models.CharField(max_length=500,null=True,blank=True)
     
 
-
 def user_directory_path_public_pdf(filename):
     return '{0}/{1}'.format("public_pdf_book/semantic_search_file",filename)
 
 
 def user_directory_pdf_publicbook_thumbnail(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_public_book_chat_doc/thumbnail",filename)
-
-
 
 
 class PublicBook(models.Model):

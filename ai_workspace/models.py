@@ -38,8 +38,6 @@ from .signals import (create_allocated_dirs, create_project_dir, \
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
 from django.db.models.fields import Field
-# from integerations.github_.models import ContentFile
-# from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
 from ai_workspace_okapi.models import Document, Segment
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
@@ -94,8 +92,7 @@ class PenseiveTM(models.Model):
     project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.\
         CASCADE, related_name="project_penseivetm")
 
-    # class Meta:
-    #     managed = False
+
     @property
     def owner_pk(self):
         return self.project.owner_pk
@@ -199,7 +196,6 @@ class MyDocuments(models.Model):
 ##########################Need to add project type################################
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)
-    # project_type_detail = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
     project_name = models.CharField(max_length=1000, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
@@ -227,7 +223,6 @@ class Project(models.Model):
 
     class Meta:
         unique_together = ("project_name", "ai_user")
-        #managed = False
 
     objects = ProjectManager()
 
@@ -241,7 +236,6 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         
         with transaction.atomic():
-            #transaction.set_isolation_level(transaction.ISOLATION_SERIALIZABLE)
 
             queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
 
@@ -273,13 +267,6 @@ class Project(models.Model):
             return super().save()
 
 
-    # def generate_cache_keys(self):
-    #     from .utils import get_pr_list_cache_key
-    #     cache_keys = [
-    #         get_pr_list_cache_key(self.ai_user_id)
-    #     ]
-    #     return cache_keys
-
     def get_prefix(self):
         if self.project_type_id == 7:
             prefix = 'Book Project-'
@@ -287,8 +274,6 @@ class Project(models.Model):
             prefix = 'Designer Project-'
         elif self.project_type_id == 8:
             prefix = 'News Story-'
-        elif self.project_type_id == 10:
-            prefix = 'Word Choice-'
         else:
             prefix = 'Project-'
         return prefix
@@ -305,7 +290,6 @@ class Project(models.Model):
                 des_proj_detail = {'des_proj_id':des_obj.last().id,'type':'image_design','pages':pages}
             else:
                 img_trans_obj = ImageTranslate.objects.filter(project=self)
-                print("IMage------------->",img_trans_obj)
                 if img_trans_obj:
                     des_proj_detail = {'des_proj_id':img_trans_obj.last().id,'type': 'image_translate','pages':None}
         return des_proj_detail
@@ -318,14 +302,10 @@ class Project(models.Model):
     def files_count(self):
         return self.project_files_set.all().count()
 
-    # @property
-    # def get_project_type(self):
-    #     return self.project_type.id
-
   
     def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
-        if self.project_type_id  in  [3,10]:
+        if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
             if terms.count() == 0:
                 return "Yet to start"
@@ -362,9 +342,6 @@ class Project(models.Model):
             task_jobs = [i.job.id for i in tasks]
             task_files = [i.file.id for i in tasks]
             docs = Document.objects.filter(job__in=task_jobs,file__in=task_files).all()
-            print("Docs------------------->",docs)
-            #docs = Document.objects.filter(job__project_id=self.id).all()
-            #tasks = len(tasks)
             total_segments = 0
             if not docs:
                 return "Yet to start"
@@ -435,7 +412,7 @@ class Project(models.Model):
     def get_assignable_tasks_exists(self):
         cache_key = f'pr_get_assignable_tasks_exists_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in Assignable---------->",cached_value)
+    
         if cached_value is None:
             tasks=[]
             for task in self.get_tasks:
@@ -468,14 +445,7 @@ class Project(models.Model):
         tasks_list = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
                      Prefetch('job', queryset=Job.objects.select_related('project'))).distinct()
         return tasks_list
-        # cache_key = f'pr_get_tasks_{self.pk}'
-        # cached_value = cache.get(cache_key)
-        # print("Cached Value in get_tasks---------->",cached_value)
-        # if cached_value is None:
-        #     cached_value = Task.objects.filter(job__project=self).order_by('id').prefetch_related(
-        #             Prefetch('job', queryset=Job.objects.select_related('project')))
-        #     cache.set(cache_key,cached_value)
-        # return cached_value
+
         
 
     @property
@@ -486,10 +456,8 @@ class Project(models.Model):
 
     @property
     def tasks_count(self):
-        #return self.get_tasks.count()
         cache_key = f'pr_tasks_count_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in tasks_count---------->",cached_value)
         if cached_value is None:
             cached_value = self.get_tasks.count() 
             cache.set(cache_key,cached_value)
@@ -537,7 +505,7 @@ class Project(models.Model):
     def get_steps_name(self):
         return [obj.steps.name for obj in self.proj_steps.all()]
 
-    @property#@cached_property #Need to check
+    @property#@cached_property 
     def PR_step_edit(self):
         if self.proj_detail.exists():
             if self.proj_detail.first().projectpost_steps.filter(steps_id=2).exists():
@@ -610,47 +578,27 @@ class Project(models.Model):
         if self.get_tasks:
             cache_key = f'pr_assigned_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in assigned---------->",cached_value)
             if cached_value is None:
                 cached_value =False # Initialize
                 for task in self.get_tasks:
                     if task.task_info.filter(task_assign_info__isnull=False):
                         cached_value = True
                         break
-                print("CV in  prop--------->",cached_value)
                 cache.set(cache_key,cached_value)
             return cached_value
         else:
             return False
-                #     assigned = False
-        #     for task in self.get_tasks:
-        #         if task.task_info.filter(task_assign_info__isnull=False):
-        #             assigned = True
-        #             break
-        #     return assigned
-        # else: return False
+
 
     @property
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
 
-    # @property
-    # def clone_available(self):
-    #     from ai_glex.models import TermsModel
-    #     if self.project_type_id == 3:
-    #         if self.get_tasks.count() >1:
-    #             jobs = [i.job.id for i in self.get_tasks]
-    #             if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
-    #                 return True
-    #             else:return False
-    #         else:return False
-    #     else:return None
 
     @property
     def clone_available(self):
         cache_key = f'pr_clone_available_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value in clone available---------->",cached_value)
         if cached_value is None:
             from ai_glex.models import TermsModel
             if self.project_type_id == 3:
@@ -679,28 +627,26 @@ class Project(models.Model):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
                             
-    def project_analysis(self,tasks):
+    def project_analysis(self,tasks,din=None):
         from ai_auth.tasks import project_analysis_property
         from .models import MTonlytaskCeleryStatus
-        from .api_views import analysed_true,GetNewsFederalView
+        from .api_views import analysed_true, GetNewsFederalView, AddStoriesView
 
-        if not tasks or self.project_type_id in [6,7] or self.file_translate == True\
-            or((self.project_type_id == 8) and (GetNewsFederalView.check_user_federal(self.ai_user))):
-            print("In")
+        if not tasks or self.project_type_id in [6,7] or self.file_translate == True:
             return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]} 
-        #print("PR_AN------------------->",self.is_proj_analysed)
+
         if self.is_proj_analysed == True:
+            if din:
+                return None
             return analysed_true(self,tasks)
 
         else:
             from .api_views import ProjectAnalysisProperty,analysed_true
             
             try:
-                print("Inside Try. Checking celery")
                 obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
                 state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
-                print("st------->",state)
                 if state == 'STARTED':
                     return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
                 elif state == 'SUCCESS' and self.is_proj_analysed == True:
@@ -708,88 +654,15 @@ class Project(models.Model):
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
-                #return ProjectAnalysisProperty.get(self.id)
             except:
-                print("Inside Except")
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]}
 
 
-    # def project_analysis(self,tasks):
-    #     from .api_views import ProjectAnalysisProperty
-    #     from .models import MTonlytaskCeleryStatus
-    #     from ai_auth.tasks import project_analysis_property
-    #     print("Model---------->",tasks)
-    #     print("Proj--------->",self.id)
-    #     obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
-    #     print("Obj---------->",obj)
-    #     state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
-    #     print("Called in model")
-    #     #print("State------------>",state)
-    #     if state == 'STARTED':
-    #         return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-    #     # elif state == 'PENDING' or state =='None' or state == 'FAILURE':
-    #     #     celery_task = project_analysis_property.apply_async((self.id,), )
-    #     #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
-    #     elif state == "SUCCESS" or self.is_proj_analysed == True:
-    #         print("inside if analyse")
-    #         task_words = []
-    #         if self.is_all_doc_opened:
-    #             print("Doc opened")
-    #             [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
-    #             out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
-    #                 Sum('total_char_count'),Sum('total_segment_count'))
-
-    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
-    #                               "task_words" : task_words }
-    #         else:
-    #             print("Not Doc Opened")
-    #             out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-    #             task_words = []
-    #             [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
-
-    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-    #                 "proj_seg_count":out.get('task_seg_count__sum'),
-    #                             "task_words":task_words}
-    #     else:
-            # print("Not Analysed")
-            # from .api_views import ProjectAnalysisProperty
-            # try:
-            #     print("Inside Try")
-            #     celery_task = project_analysis_property.apply_async((self.id,), )
-            #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
-            #     #return ProjectAnalysisProperty.get(self.id)
-            # except:
-            #     print("Inside Except")
-            #     return {"proj_word_count": 0, "proj_char_count": 0, \
-            #     "proj_seg_count": 0, "task_words":[]}
-             # rr = analysed_true(self,tasks)
-            # print("RRRRRRRRRR------------------------>",rr)
-            # return rr
-            # task_words = []
-            # if self.is_all_doc_opened:
-            #     [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
-            #     out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
-            #         Sum('total_char_count'),Sum('total_segment_count'))
-
-            #     return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-            #         "proj_seg_count":out.get('total_segment_count__sum'),\
-            #                       "task_words" : task_words }
-            # else:
-            #     out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-            #     task_words = []
-            #     [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
-
-            #     return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-            #         "proj_seg_count":out.get('task_seg_count__sum'),
-            #                     "task_words":task_words}
-
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 post_delete.connect(delete_project_dir, sender=Project)
-# post_save.connect(invalidate_cache_on_save, sender=Project)
-# pre_delete.connect(invalidate_cache_on_delete, sender=Project)
+
 
 class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
@@ -840,9 +713,7 @@ class VoiceProjectDetail(models.Model):
     project = models.OneToOneField(Project, on_delete = models.CASCADE,related_name="voice_proj_detail")
     source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language")
     project_type_sub_category = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
-    # source_language_locale = models.ForeignKey(LanguagesLocale, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language_locale")
-    # has_male = models.BooleanField(blank=True,null=True)
-    # has_female = models.BooleanField(blank=True,null=True)
+
 
     @property
     def owner_pk(self):
@@ -900,10 +771,9 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.job_id:
-            # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project)\
                 .count()+1)
-        super().save()#*args, **kwargs)
+        super().save()
 
     @property
     def can_delete(self):
@@ -948,8 +818,6 @@ class Job(models.Model):
 
     @property
     def source__language(self):  #used in task serilaizer
-        #print("called first time!!!")
-        # return self.source_language.locale.first().language
         return self.source_language_code
 
     @property
@@ -969,8 +837,6 @@ class Job(models.Model):
 
     @property
     def target__language(self):
-        #print("called every time!!!")
-        # return self.target_language.locale.first().language
         return  self.target_language_code
 
     @property
@@ -987,11 +853,6 @@ class Job(models.Model):
         except:
             return self.source_language.language
 
-# class ProjectTeamInfo(models.Model):
-#     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
-#                 CASCADE, related_name="team_project_info")
-#     team = models.ForeignKey(Team, null=False, blank=False, on_delete=models.\
-#                 CASCADE, related_name="project_team_info")
 
 class FileTypes(models.Model):
     TERMBASE = "termbase"
@@ -1017,7 +878,6 @@ class FileTypes(models.Model):
 def get_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
             instance.usage_type.type_path)
-    print("Upload file path ----> ", file_path)
     instance.filename = filename
     return os.path.join(file_path, filename)
 
@@ -1034,27 +894,11 @@ class File(models.Model):
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
-    # content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
-    #     related_name="contentfile_files_set")
 
-    # def update_file(self, file_content):
-    #     if not self.is_upload_from_integeration:
-    #         raise ValueError( "This file cannot be update. Since it"
-    #         " is not uploaded from integeration!!!" )
-    #     upload_file_name = self.file.name.split("/")[-1]
-    #     print("file path---->", self.file.name)
-    #     SpacesService.delete_object(file_path=self.file.name)
-    #     im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
-    #         file_name=upload_file_name)
-    #     self.file = im
-    #     self.save()
 
     class Meta:
-        managed = True #False
-    #
-    # @property
-    # def is_upload_from_integeration(self):
-    #     return self.content_file!=None
+        managed = True 
+
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -1171,12 +1015,7 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
         if not self.ai_taskid:
             self.ai_taskid = create_task_id()
-        super().save()#*args, **kwargs)
-        # cache_key_1 = f'audio_file_exists_{self.pk}'
-        # cache_key_2 = f'pr_tasks_count_{self.job.project.pk}'
-        # cache.delete(cache_key_1)
-        # cache.delete(cache_key_2)
-        # cache.delete_pattern(f'pr_progress_property_{self.job.project.id}_*')
+        super().save()
 
     def generate_cache_keys(self):
         cache_keys = [
@@ -1205,7 +1044,7 @@ class Task(models.Model):
             if self.document:
                 cached_value = self.document.converted_audio_file_exists
             else:
-                cached_value = None#'null'#None#'Not exists'
+                cached_value = None
             cache.set(cache_key, cached_value)
         return cached_value
 
@@ -1220,7 +1059,7 @@ class Task(models.Model):
                 cached_value = self.document.download_audio_output_file
                 cache.set(cache_key,cached_value)
             else:
-                cached_value = None#'null'
+                cached_value = None
                 cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1228,7 +1067,6 @@ class Task(models.Model):
     def converted(self):
         cache_key = f'task_converted_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -1273,7 +1111,7 @@ class Task(models.Model):
     def is_task_translated(self):
         cache_key = f'task_translated_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+
         if cached_value is None:
             if self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
                 if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
@@ -1299,15 +1137,15 @@ class Task(models.Model):
     def transcribed(self):
         cache_key = f'transcribed_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                     if self.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
                         cached_value = True
                     else:cached_value = False
-                else:cached_value = None#"null"#"Not exists"
-            else:cached_value= None#"null"#"Not exists"
+                else:cached_value = None
+            else:cached_value= None
             cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1316,7 +1154,7 @@ class Task(models.Model):
     def text_to_speech_convert_enable(self):
         cache_key = f'txt_to_spc_convert_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
+       
         if cached_value is None:
             if self.job.project.project_type_id == 4 :
                 if  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
@@ -1324,39 +1162,11 @@ class Task(models.Model):
                         if self.task_transcript_details.exists():
                             cached_value = False
                         else:cached_value =  True
-                    else:cached_value = None#"null"# None# "Not exists"
-                else:cached_value =  None#"null"#None#"Not exists"
-            else:cached_value = None#"null"# None#"Not exists"
+                    else:cached_value = None
+                else:cached_value =  None
+            else:cached_value = None
             cache.set(cache_key,cached_value)
         return cached_value
-
-    # @property
-    # def open_in(self):
-    #     try:
-    #         if self.job.project.project_type_id == 5:
-    #             return "ExpressEditor"
-    #         elif self.job.project.project_type_id == 4:
-    #             if  self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-    #                 if self.job.target_language==None:
-    #                     return "Ailaysa Writer or Text Editor"
-    #                 else:
-    #                     return "Transeditor"
-    #             elif  self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-    #                 if self.job.target_language==None:
-    #                     return "Download"
-    #                 else:return "Transeditor"
-    #         elif self.job.project.project_type_id == 1 or self.job.project.project_type_id == 2:
-    #             if self.job.target_language==None and os.path.splitext(self.file.file.path)[1] == '.pdf':
-    #                 try:return self.pdf_task.last().pdf_api_use
-    #                 except:return None
-    #             else:return "Transeditor"	
-    #         else:return "Transeditor"
-    #     except:
-    #         try:
-    #             if self.job.project.glossary_project:
-    #                 return "GlossaryEditor"
-    #         except:
-    #             return "Transeditor"
 
  
     @property
@@ -1364,7 +1174,6 @@ class Task(models.Model):
         from .api_views import GetNewsFederalView
         cache_key = f'task_open_in_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
         if cached_value is None:
             try:
                 if self.job.project.project_type_id == 5:
@@ -1439,19 +1248,18 @@ class Task(models.Model):
         if self.document_id:
             cache_key = f'task_word_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_word_count---------->",cached_value)
             if cached_value is None:
                 document = Document.objects.get(id = self.document_id)
                 cached_value =  document.total_word_count
+
         elif self.task_details.exists():
             cache_key = f'task_word_count_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_word_count---------->",cached_value)
             if cached_value is None:
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_word_count
         else:
-            cached_value = None#"null"#None #"Not exists"
+            cached_value = None
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1462,19 +1270,18 @@ class Task(models.Model):
         if self.document_id:
             cache_key = f'task_char_count_{self.document.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_char_count---------->",cached_value)
             if cached_value is None:
                 document = Document.objects.get(id = self.document_id)
                 cached_value =  document.total_char_count
+
         elif self.task_details.first():
             cache_key = f'task_char_count_{self.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in task_char_count---------->",cached_value)
             if cached_value is None:
                 t = TaskDetails.objects.filter(task_id = self.id).first()
                 cached_value = t.task_char_count
         else:
-            cached_value =None#"null"#None #"Not exists"
+            cached_value =None
         cache.set(cache_key,cached_value)
         return cached_value
 
@@ -1490,7 +1297,6 @@ class Task(models.Model):
     def download_audio_source_file(self):
         cache_key = f'task_audio_source_file_{self.pk}'
         cached_value = cache.get(cache_key)
-        print("Cached Value---------->",cached_value)
         if cached_value is None:
             try:
                 if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
@@ -1527,7 +1333,6 @@ class Task(models.Model):
             doc = self.document
             if doc:
                 segs = Segment.objects.filter(text_unit__document=doc)
-                print("Segs------------->",segs)
             if segs:
                 for seg in segs:
 
@@ -1561,7 +1366,6 @@ class Task(models.Model):
         else:
             cache_key = f'seg_progress_{self.job.pk}'
             cached_value = cache.get(cache_key)
-            print("Cached Value in progress---------->",cached_value)
             if cached_value is None:
                 target_words = self.job.term_job.filter(Q(tl_term__isnull=False)).exclude(tl_term='').count()
                 source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
@@ -1593,7 +1397,6 @@ pre_delete.connect(invalidate_cache_on_delete, sender=Task)
 
 
 def target_file_upload_path(instance, filename):
-    print("Ins,name--------->",instance,filename)
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,'source',filename)
     return file_path
 
@@ -1642,9 +1445,7 @@ class ExpressProjectDetail(models.Model):
         ]
         return cache_keys
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
-    #     cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+
 post_save.connect(invalidate_cache_on_save, sender=ExpressProjectDetail)
 pre_delete.connect(invalidate_cache_on_delete, sender=ExpressProjectDetail) 
 
@@ -1747,9 +1548,7 @@ class TaskAssign(models.Model):
                 task_assign=self,
                 field_name=field_name,
                 new_status=getattr(self, field_name),
-                #timestamp=timezone.now()
             )
-            print("-------------------Created-----------")
         
 
     def generate_cache_keys(self):
@@ -1762,11 +1561,7 @@ class TaskAssign(models.Model):
             f'pr_assigned_{self.task.job.project.pk}'
         ]
         return cache_keys
-        # cache.delete_pattern('task_assign_info_*')
-        # cache.delete_pattern('task_reassign_info_*')
-        # cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
-        # cache_key = f'task_assign_info_{self.task.pk}'
-        # cache.delete(cache_key)
+
 
     @property
     def owner_pk(self):
@@ -1778,11 +1573,7 @@ class TaskAssign(models.Model):
 
 post_save.connect(invalidate_cache_on_save, sender=TaskAssign)
 pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssign) 
-    # task_assign_obj = TaskAssign.objects.filter(
-    #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
-    #     Q(step_id=1)
-    # ).first()
-    # return TaskAssignSerializer(task_assign_obj).data
+
 
 
 class TaskAssignStatusChangeHistory(models.Model):
@@ -1824,7 +1615,7 @@ class TaskAssignInfo(models.Model):
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
-        super().save()#*args, **kwargs)
+        super().save()
 
     def generate_cache_keys(self):
         cache_keys = [
@@ -1836,11 +1627,7 @@ class TaskAssignInfo(models.Model):
             f'pr_assigned_{self.task_assign.task.job.project.pk}'
         ]
         return cache_keys
-        # cache.delete_pattern('task_assign_info_*')
-        # cache.delete_pattern('task_reassign_info_*')
-        # cache.delete_pattern(f'pr_progress_property_{self.task_assign.task.job.project.id}_*')
-        # cache_key = f'task_assign_info_{self.task_assign.task.pk}'
-        # cache.delete(cache_key)
+
 
     @property
     def owner_pk(self):
@@ -1852,104 +1639,7 @@ class TaskAssignInfo(models.Model):
 
 post_save.connect(invalidate_cache_on_save, sender=TaskAssignInfo)
 pre_delete.connect(invalidate_cache_on_delete, sender=TaskAssignInfo)
-# class TaskReassign(models.Model):
-#     YET_TO_START = 1
-#     IN_PROGRESS = 2
-#     COMPLETED = 3
-#     STATUS_CHOICES = [
-#         (YET_TO_START,'Yet to start'),
-#         (IN_PROGRESS, 'In Progress'),
-#         (COMPLETED, 'Completed'),
-#     ]
-#     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
-#             related_name="task_reassign_info")
-#     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
-#              related_name="task_reassign_step")
-#     re_assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
-#             related_name="user_reassign_tasks_set")
-#     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
-#         on_delete=models.CASCADE, related_name="reassign_task_mt_engine")
-#     pre_translate = models.BooleanField(null=True, blank=True)
-#     mt_enable = models.BooleanField(null=True, blank=True)
-#     copy_paste_enable = models.BooleanField(null=True, blank=True)
-#     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
-#     # objects = TaskAssignManager()
-
-#     # @property
-#     # def owner_pk(self):
-#     #     return self.task.owner_pk
-
-#     # @property
-#     # def task_obj(self):
-#     #     return self.task
-
-
-#     # task_assign_obj = TaskAssign.objects.filter(
-#     #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
-#     #     Q(step_id=1)
-#     # ).first()
-#     # return TaskAssignSerializer(task_assign_obj).data
-
-# class TaskReassignInfo(models.Model):
-#     task_reassign = models.OneToOneField(TaskReassign,on_delete=models.CASCADE, null=False, blank=False,
-#                     related_name="task_reassign_info")
-#     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
-#                     ("stripe","stripe")]
-#     ACCEPT_STATUS =[("task_accepted","task_accepted"),
-#                     ("change_request","change_request")]
-#     instruction = models.TextField(max_length=1000, blank=True, null=True)
-#     assignment_id = models.CharField(max_length=191, blank=True, null=True)
-#     deadline = models.DateTimeField(blank=True, null=True)
-#     total_word_count = models.IntegerField(null=True, blank=True)
-#     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
-#     estimated_hours = models.IntegerField(blank=True,null=True)
-#     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_mtpe_unit', on_delete=models.CASCADE,blank=True, null=True)
-#     currency = models.ForeignKey(Currencies,related_name='accepted_rate_currency', on_delete=models.CASCADE,blank=True, null=True)
-#     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
-#             related_name="user_reassign_info")
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
-#     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
-#     billable_char_count = models.IntegerField(blank=True,null=True)
-#     billable_word_count = models.IntegerField(blank=True,null=True)
-#     account_raw_count = models.BooleanField(default=True)
-
-    # def save(self, *args, **kwargs):
-    #     if not self.assignment_id:
-    #         self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
-    #     super().save()
-
-    # @property
-    # def owner_pk(self):
-    #     return self.task_assign.owner_pk
-
-    # @property
-    # def task_obj(self):
-    #     return self.task_assign.task_obj
-
-
-
-# post_save.connect(assign_object_task, sender=TaskAssignInfo)
-
-# class TaskAssignBillDetail(models.Model):
-#     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
-#                     related_name="task_assign_word_info")
-#     billable_char_count = models.IntegerField(blank=True,null=True)
-#     billable_word_count = models.IntegerField(blank=True,null=True)
-# class TaskAssignRateInfo(models.Model):
-#     task_assign_info = models.OneToOneField(TaskAssignInfo,on_delete=models.CASCADE, null=False, blank=False,
-#             related_name="task_assign_rate_info")
-#     total_word_count = models.IntegerField(null=True, blank=True)
-#     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
-#     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
-#     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
-    # @property
-    # def filename(self):
-    #     try:
-    #         return  os.path.basename(self.instruction_file.file.name)
-    #     except:
-    #         return None
 
 
 class Instructionfiles(models.Model):
@@ -1971,7 +1661,7 @@ class Instructionfiles(models.Model):
     @property
     def task_obj(self):
         return self.task_assign_info.task_obj
-# post_save.connect(generate_client_po, sender=TaskAssignInfo)
+
 
 class TaskAssignHistory(models.Model):
     task_assign = models.ForeignKey(TaskAssign, on_delete=models.CASCADE, null=False, blank=False,
@@ -2011,10 +1701,7 @@ class TaskDetails(models.Model):
         return cache_keys
 post_save.connect(invalidate_cache_on_save, sender=TaskDetails)
 pre_delete.connect(invalidate_cache_on_delete, sender=TaskDetails)
-        # cache_key_1 = f'task_word_count_{self.task.pk}'
-        # cache.delete(cache_key_1)
-        # cache_key_2 = f'task_char_count_{self.task.pk}'
-        # cache.delete(cache_key_2)
+
 
 
 def audio_file_path(instance, filename):
@@ -2030,7 +1717,6 @@ def edited_file_path(instance, filename):
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField(null=True,blank=True)
-    #source_lang_locale = models.TextField(null=True,blank=True)#for reference
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
@@ -2059,30 +1745,10 @@ class TaskTranscriptDetails(models.Model):
             f'task_converted_{self.task.pk}',
         ]
         return cache_keys
-        # cache_key_1 = f'audio_file_exists_{self.task.pk}'
-        # cache.delete(cache_key_1)
-        # cache_key_2 = f'transcribed_{self.task.pk}'
-        # cache.delete(cache_key_2)
-        # cache_key_3 = f'txt_to_spc_convert_{self.task.pk}'
-        # cache.delete(cache_key_3)
-        # cache.delete_pattern(f'pr_progress_property_{self.task.job.project.id}_*')
+
 post_save.connect(invalidate_cache_on_save, sender=TaskTranscriptDetails)
 pre_delete.connect(invalidate_cache_on_delete, sender=TaskTranscriptDetails) 
 
-    # @property
-    # def writer_filename(self):
-    #     if self.writer_edited_count == None:
-    #         return  os.path.basename(self.transcripted_file_writer.file.name)
-    #     else:
-    #         name = os.path.basename(self.transcripted_file_writer.file.name)
-    #         filename,ext = os.path.splitext(name)
-    #         return filename+ '_edited_'+ str(self.writer_edited_count)+ ext
-# class FileReferenceVoiceProject(models.Model):
-#     source_file = models.OneToOneField(File, on_delete=models.CASCADE,related_name="source")
-#     created_file = models.ForeignKey(File, on_delete=models.CASCADE,related_name='created')
-
-# class TaskAudioDetails(models.Model):
-#     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
 
 class TmxFile(models.Model):
 
@@ -2174,7 +1840,6 @@ class TbxTemplateFiles(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE ,null=False, blank=False)
     tbx_template_file = models.FileField(upload_to=tbx_template_file_upload_path,
                                     validators=[FileExtensionValidator(allowed_extensions=["xlsx"])])
-    # upload_date = models.DateTimeField(auto_now_add=True)
 
     @property
     def filename(self):
@@ -2203,6 +1868,8 @@ class TaskCreditStatus(models.Model):
     allocated_credits = models.IntegerField()
     actual_used_credits = models.IntegerField()
     word_char_ratio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    
     @property
     def owner_pk(self):
         return self.task.owner_pk
@@ -2246,11 +1913,9 @@ class AiRoleandStep(models.Model):
 
 
 class ExpressProjectSrcSegment(models.Model):
-    #src_text_unit = models.ForeignKey(ExpressProjectSrcTextUnit, on_delete=models.CASCADE,related_name="exp_src_seg")
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_src_text_unit")
     src_text_unit = models.IntegerField()
     src_segment = models.TextField(null=True,blank=True)
-    #tar_segment = models.TextField(null=True,blank=True)
     seq_id=models.IntegerField()
     version = models.IntegerField()
 
@@ -2274,7 +1939,6 @@ class TaskNewsDetails(models.Model):
     news_id = models.CharField(max_length=250,blank=True, null=True)
     source_json = models.JSONField(blank=True, null=True)
     target_json = models.JSONField(blank=True, null=True)
-    #heading = models.TextField(blank=True, null=True)
     pushed = models.BooleanField(default=False)
     feed_id = models.CharField(max_length=250,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

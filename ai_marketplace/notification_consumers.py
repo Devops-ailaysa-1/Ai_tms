@@ -2,7 +2,6 @@ import json
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.consumer import AsyncConsumer
 from asgiref.sync import async_to_sync
-# from channels.generic.websocket import AsyncWebsocketConsumer, JsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from notifications.signals import notify
@@ -13,47 +12,11 @@ from django.db.models import Q
 User = get_user_model()
 
 
-
-# class EventConsumer(JsonWebsocketConsumer):
-#     def connect(self):
-#         print('inside EventConsumer connect()')
-#         async_to_sync(self.channel_layer.group_add)(
-#             'events',
-#             self.channel_name
-#         )
-#         self.accept()
-#
-#     def disconnect(self, close_code):
-#         print('inside EventConsumer disconnect()')
-#         print("Closed websocket with code: ", close_code)
-#         async_to_sync(self.channel_layer.group_discard)(
-#             'events',
-#             self.channel_name
-#         )
-#         self.close()
-#
-#     def receive_json(self, content, **kwargs):
-#         print('inside EventConsumer receive_json()')
-#         print("Received event: {}".format(content))
-#         self.send_json(content)
-#
-#     def events_alarm(self, event):
-#         print('inside EventConsumer events_alarm()')
-#         self.send_json(
-#             {
-#                 'type': 'events.alarm',
-#                 'content': event['content']
-#             }
-#         )
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         # """
         # Called when the websocket is handshaking as part of initial connection.
         # """
-        # await self.channel_layer.group_add(
-        #     events,
-        #     self.channel_name
-        # )
         print("NotificationConsumer: connect: " + str(self.scope["user"]) )
         await self.accept()
 
@@ -65,13 +28,11 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         print("NotificationConsumer: disconnect")
 
     async def receive_json(self, content):
-        print(content)
         # """
         # Called when we get a text frame. Channels will JSON-decode the payload
         # for us and pass it as the first argument.
         # """
         command = content.get("command", None)
-        print("NotificationConsumer: receive_json. Command: ",command)
         try:
             if command == "get_unread_chat_notifications_count":
                 try:

@@ -2,7 +2,6 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver,Signal
 from django.contrib.auth import settings
 from django.utils.text import slugify
-#from ai_auth.api_views import update_billing_address
 from ai_auth import models as auth_model
 from ai_staff import models as staff_model
 import os, requests
@@ -44,12 +43,9 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 def vendor_status_send_email(sender, instance, *args, **kwargs):
     from ai_auth.api_views import subscribe_vendor
-    print("status----->",instance.get_status_display())
+    
     if instance.get_status_display() == "Accepted":
        user = auth_model.AiUser.objects.get(email = instance.email)
-       # user.is_vendor = True
-       # user.save()
-       # sub = subscribe_vendor(user)
        email = instance.email
        auth_forms.vendor_status_mail(email,instance.get_status_display())
     elif (instance.get_status_display() == "Waitlisted"):
@@ -66,12 +62,11 @@ def create_lang_details(lang_pairs,instance):
         if i.get('services')[0].get('service_id') == 1:
             pairs = i.get('pair_code')
             src,tar = pairs.split('_')
-            print(src,tar)
+            
             source = staff_model.ProzLanguagesCode.objects.filter(language_code = src).first().language.id
             target = staff_model.ProzLanguagesCode.objects.filter(language_code = tar).first().language.id
             try:
                 lang,created = VendorLanguagePair.objects.get_or_create(source_lang_id=source,target_lang_id=target,user=instance)
-                print(lang, created)
             except:pass
 
 def proz_msg_send(user,msg,vendor,timestamp):
@@ -85,14 +80,14 @@ def proz_msg_send(user,msg,vendor,timestamp):
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
-    print("Thread--->",thread_id)
+    
     if thread_id:
         message = '''Message: {} 
                      Contacted Date: {}
                      Contacted Time: {} [UTC]'''.format(msg,timestamp.date(),timestamp.time())
-        print("Message----------->",message)
+        
         msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
-        print("Chat------>",msg)
+        
         notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))  
 
 @receiver(user_signed_up)
@@ -103,7 +98,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
     from ai_marketplace.models import ProzMessage
     instance = user
     if sociallogin and instance.socialaccount_set.filter(provider='proz'):
-        print("---------------In------------------------>")
+        
         uuid = instance.socialaccount_set.filter(provider='proz').last().uid
         url = os.getenv('PROZ_URL')+"freelancer/{uuid}".format(uuid = uuid)
         headers = {
@@ -112,7 +107,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
         response = requests.request("GET", url, headers=headers)
         res = response.json()
         if res and res.get('success') == 1:
-            print("-------------success----------------------")
+           
             ven = res.get('data')
             if ven.get('qualifications',False):
                 cv_file = ven.get('qualifications').get('cv_url',None)
@@ -140,7 +135,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
             if lang_pairs:
                 create_lang_details(lang_pairs,instance)
         queryset = ProzMessage.objects.filter(proz_uuid = uuid)
-        print("Queryset------------->",queryset)
+
         for i in queryset:
             proz_msg_send(i.customer,i.message,instance,i.timestamp)
 
@@ -151,16 +146,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
 #     res=update_billing_address(address=instance)
 #     print("-----------updated customer address-------")
 
-# def vendorsinfo_update(sender, instance, created, *args, **kwargs):
-# 	from ai_vendor.models import VendorsInfo
-# 	if created:
-# 		try:
-# 			user = AiUser.objects.get(email = instance.email)
-# 			query = VendorsInfo.objects.filter(user=user)
-# 			tt = query.update(cv_file=instance.cv_file)
-# 			print("@@@@",tt)
-# 		except:
-# 			pass
+
 
 
 # def update_billing_address(address):
@@ -284,8 +270,7 @@ def password_changed_handler(request, user,instance, **kwargs):
         cust = Customer.get_or_create(subscriber=user)
         customer = cust[0]
     stripe.api_key = api_key
-    # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
-    #response = stripe.Customer.retrieve(customer.id)
+
 
     response =stripe.Customer.modify(
     customer.id,
@@ -314,7 +299,6 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
             obj = auth_model.InternalMember.objects.filter(internal_member = instance).exclude(role_id__in=[4,5]).first()
             obj.status = 2
             obj.save()
-            # add_internal_member_group(user=instance.internal_member)
             print("status updated")
 
 
@@ -324,22 +308,27 @@ def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
             instance.currency_based_on_country_id = 144
             instance.save()
         else:
-            print("Inside Signal")
             queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
-            print("Qr--------->",queryset)
             if queryset:
-                print("Ins-------->",instance.id)
-                print("inside if------>",queryset.first().currency_id)
                 instance.currency_based_on_country_id = queryset.first().currency_id
                 instance.save()
             else:
                 instance.currency_based_on_country_id = 144
                 instance.save()
 
+from ai_auth.utils import get_plan_name
+def update_member_count(sender, instance, created, *args, **kwargs):
+    if created:
+        plan = get_plan_name(instance.owner)
+        if plan in os.getenv('ENTERPRISE_PLANS'):
+            instance.team_member_count = 100
+        elif plan in os.getenv('TEAM_PLANS'):
+            instance.team_member_count = 20
+        else:
+            instance.team_member_count = 0
+        instance.save()
 
 
-
-# def updated_user_taxid(sender, instance, *args, **kwargs):
 def create_postjob_id(sender, instance, *args, **kwargs):
     if instance.postjob_id == None:
         instance.postjob_id = str(random.randint(1,10000))+"j"+str(instance.id)
@@ -384,9 +373,7 @@ def assign_object_task(sender, instance,user,role,*args, **kwargs):
     from ai_auth.models import TaskRoles
     from ai_staff.models import TaskRoleLevel
     from django.db import transaction
-    # instance.step = 
-    # role_name = {1:''Project owner'}  
-    # tsk.task_assign.task.job.project.project_manager
+
     with transaction.atomic():
         ins=taskrole_update(instance,user)
         role = TaskRoleLevel.objects.get(role__name=role)

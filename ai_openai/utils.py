@@ -34,8 +34,6 @@ def get_consumable_credits_for_openai_text_generator(total_token):
     return total_consumable_token_credit
  
 def get_consumable_credits_for_image_gen(image_resolution,number_of_image):
-    print("ImgRes------->",image_resolution)
-    print("No---------->",number_of_image)
     if image_resolution == 1:
         return number_of_image * 70
     if image_resolution == 2:
@@ -52,7 +50,6 @@ def openai_text_trim(text):
 import backoff
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt(prompt ,model_name , max_token ,n ):
-    #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
@@ -75,20 +72,13 @@ def get_prompt_freestyle(prompt):
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
 def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,) # temperature=0.7,
-                # top_p=1,    
+    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,)
     return response
     
 #DALLE
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt_image_generations(prompt,size,no_of_image):
-    #prompt = "Generate an image based on the following text description: " + prompt
-    print("Prompt--------->",prompt)
-    # try:
     response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
-         
-     
-        # response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
 
 
@@ -106,18 +96,11 @@ def get_prompt_gpt_turbo_1106(messages):
     return completion
 
 
-# @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
-# def get_prompt_chatgpt_4(prompt,n,max_token=None):
-    
-
-
 OPEN_AI_GPT_MODEL = "gpt-3.5-turbo"   #"gpt-3.5-turbo" gpt-4 
 TEXT_DAVINCI = "text-davinci-003"
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
-    print("<--------------------------Inside------------------------------------->")
-    print("Max tokens------------>",max_token)
     if max_token:
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n,max_tokens=int(max_token))
     else:
@@ -147,9 +130,8 @@ async def generate_outline_response(prompt,n):
     return response 
  
 async def outline_co(prompt,n):
-    print("N-------------------------->",n)
     coroutines=[]
-    prompt = [prompt]#+" and every outline should be less than three words."]
+    prompt = [prompt]
     coroutines.append(generate_outline_response(prompt,n))
     return await asyncio.gather(*coroutines)
 
@@ -178,12 +160,6 @@ def replace_hex_colors_with_rgb(html):
     return html
 
 
-# updatedHtml = replace_hex_colors_with_rgb("html_file")  
-# htmlupdates = updatedHtml.replace('<br />', '')
-# new_parser.add_html_to_document(htmlupdates, document)
-# document.save('file_name.docx')s
-
-
 
 
 def get_summarize(text,bb_instance,lang):
@@ -191,7 +167,7 @@ def get_summarize(text,bb_instance,lang):
     from ai_openai.serializers import openai_token_usage
     from ai_workspace_okapi.utils import get_translation
     from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
-    print("Lang----------->",lang)
+
     if lang != 'en':
         consumable_credits_for_article_gen = get_consumable_credits_for_text(text,'en',lang)
         consumable = max(round(consumable_credits_for_article_gen/3),1) 
@@ -210,16 +186,12 @@ Summary:
     summary = response["choices"][0]["message"]["content"]
     token_usage = openai_token_usage(response)
     token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
-    print("TUR--------------->",token_usage_to_reduce)
     AiPromptSerializer().customize_token_deduction(bb_instance,token_usage_to_reduce,user=bb_instance.book_creation.user)
-    print("Summary---------------->",summary)
     return summary 
 
 
 def get_chapters(pr_response):
     data = pr_response
-    print("DT------------>",data)
-    print("Type---------->",type(data))
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
@@ -227,18 +199,17 @@ def get_chapters(pr_response):
     chapters = []
     for title in data:
         chapters.append(title)
-    print("Chapters------------->",chapters)
     return chapters 
 
 def get_sub_headings(title, pr_response):
     value = None
     data = pr_response
-    #json_str_corrected = data.replace("'", '"')
+ 
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
         print("JSON decoding error:", e)
-    print("subheading data------------>",data)
+
     if title in data:
         value = data.get(title)
     return value
@@ -285,8 +256,6 @@ def search_wiktionary(search_term,lang):
         language = LanguagesLocale.objects.filter(locale_code = 'en').first().language.language
     user_input=search_term.strip()
     parser = WiktionaryParser()
-    print("Search term--------->",search_term)
-    print("Lang---------->",lang)
     parser.set_default_language(language)
     word = parser.fetch(user_input)
     if word:

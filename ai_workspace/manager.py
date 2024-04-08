@@ -84,29 +84,11 @@ class ProjectManager(models.Manager):
         return None
 
 
-
-    # def add_default_choice_list_for_project(self,project):
-    #     if project.project_type_id not in [3,5]:
-    #         from ai_workspace_okapi.models import ChoiceLists,ChoiceListSelected
-    #         jobs = project.project_jobs_set.all()
-    #         target_languages = [i.target_language_id for i in jobs if i.target_language]
-    #         print("TL----------->", target_languages)
-    #         for i in target_languages:
-    #             ch_list,created = ChoiceLists.objects.get_or_create(user=project.ai_user,language_id=i,is_default=True)
-    #             exists = ChoiceListSelected.objects.filter(project=project,choice_list__language_id=i)
-    #             if not exists:
-    #                 ChoiceListSelected.objects.get_or_create(project=project,choice_list=ch_list)
-    #         return None
-
-
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
         files = [self.create(**item, project=project) for item in data]
         return files
-
-    # def epub_file_create(self,files,project):
-    #     files = [self.create(file = file,usage_type_id = 1,project=project) for file in files]
 
 class JobManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -117,8 +99,6 @@ class JobManager(models.Manager):
     def pdf_job_create(self, \
             data, project, klass):
         job,created = self.get_or_create(**data, project=project)
-        print("job------>",job)
-        print("created--------------->",created)
         return job
 
     def bulk_create_of_design_project(self, \
@@ -208,7 +188,6 @@ class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs_by_project(self, project):
         files = project.project_files_set.all()
         jobs = project.project_jobs_set.all()
-        print(files,jobs,project)
         return self.create_tasks_of_files_and_jobs(
             files=files, jobs=jobs, klass=None, project=project
         )
@@ -229,7 +208,6 @@ class TaskManager(models.Manager):
 
     def create_glossary_tasks_of_jobs_by_project(self, project):
         jobs = project.project_jobs_set.all()
-        print([[job.source_language,job.target_language] for job in jobs ])
         return self.create_glossary_tasks_of_jobs(
             jobs=jobs, klass=None)
 
@@ -256,7 +234,6 @@ class TaskManager(models.Manager):
     def create_tasks_of_audio_files_by_project(self, project):
         files = project.project_files_set.all()
         jobs = project.project_jobs_set.all()
-        print(files,jobs,project)
         return self.create_tasks_of_audio_files(
             files=files, jobs=jobs, klass=None, project=project
         )
@@ -267,27 +244,21 @@ class TaskAssignManager(models.Manager):
         self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
 
     def assign_task(self,project):
-        print("PRO---->",project.id)
         if hasattr(project, "ai_user"):
             assign_to = project.created_by
         tasks = project.get_tasks
-        print("Tasks------->",tasks)
         mt_engine = project.mt_engine_id
         mt_enable = project.mt_enable
         pre_translate = project.pre_translate
         steps = project.get_steps
-        copy_paste_enable = project.copy_paste_enable
-        print("Inside Manager---------->",pre_translate)
-        print("Inside---->",steps)     
+        copy_paste_enable = project.copy_paste_enable  
         task_assign = [self.get_or_create(task=task,step=step,reassigned=False,\
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
                          "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
                         for task in tasks for step in steps]
-        print("Insideeee-------->",task_assign)
         data = [i[0].id for i in task_assign if i[1]==False]
         #data = list(map(lambda i: i[0].id, filter(lambda i: not i[1], task_assign)))
         self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
-        print("tASK ASSIGN --> ", task_assign)
         return task_assign
  
 

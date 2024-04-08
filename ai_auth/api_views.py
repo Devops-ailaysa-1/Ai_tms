@@ -111,7 +111,14 @@ def get_stripe_api_key():
 def striphtml(data):
     p = re.compile(r'<.*?>')
     return p.sub('', data)
+# class MyObtainTokenPairView(TokenObtainPairView):
+#     permission_classes = (AllowAny,)
+#     serializer_class = MyTokenObtainPairSerializer
 
+# class RegisterView(generics.CreateAPIView):
+#     queryset = AiUser.objects.all()
+#     permission_classes = (AllowAny,)
+#     serializer_class = RegisterSerializer
 
 class UserAttributeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -150,6 +157,14 @@ class UserAttributeView(APIView):
 
 
 
+# class JPEGRenderer(renderers.BaseRenderer):
+#     media_type = 'image/png'
+#     format = 'png'
+#     charset = None
+#     render_style = 'binary'
+
+#     def render(self, data, media_type=None, renderer_context=None):
+#         return data
 
 
 class ProfessionalidentityView(APIView):
@@ -331,7 +346,6 @@ def send_email_with_multiple_files(subject,template,context):
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
-
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
@@ -1551,6 +1565,16 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
+    # def list(self, request):
+    #     queryset_all = self.get_queryset()
+    #     if not queryset_all.exists():
+    #         return Response(status=204)
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+    #     serializer = InternalMemberSerializer(pagin_tc,many=True)
+    #     response = self.get_paginated_response(serializer.data)
+    #     return response
+
     def list(self, request):
         queryset = self.get_queryset()
         serializer = InternalMemberSerializer(queryset,many=True)
@@ -1595,16 +1619,18 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         data = request.POST.dict()
         email = data.get('email')
-        team_name = Team.objects.get(id=data.get('team')).name
+        team = Team.objects.get(id=data.get('team'))
+        team_name = team.name
         role_name = Role.objects.get(id=data.get('role')).name
-        enterprise_plans = os.getenv("ENTERPRISE_PLANS")
         existing = self.check_user(email,team_name)
+        owner = self.request.user.team.owner
+        
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
-        print("plan_name----------->",get_plan_name(self.request.user.team.owner))
-        if not get_plan_name(self.request.user.team.owner) in enterprise_plans:
-            if InternalMember.objects.filter(team = self.request.user.team).count()>=20:
-                return Response({'msg':'internal member count execeeded'},status=400)
+        print("plan_name----------->",get_plan_name(owner))
+        if InternalMember.objects.filter(team = team).count() >= team.team_member_count:
+            return Response({'msg':'internal member count execeeded'},status=400)
+            
         user,password = self.create_internal_user(data.get('name'),email)
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
         serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
@@ -2739,10 +2765,6 @@ class AilaysaPurchasedUnits:
                 raise ValueError ('deducting more than available credits')
             
 
- 
-
-
-
 
 class MarketingBootcampViewset(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -2763,20 +2785,6 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             instance = self.get_object(serializer.data.get('id',None))
             send_bootcamp_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
-            # if instance.file:
-            #     file_path = instance.file.path
-            # else:
-            #     file_path = None
-            # sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
-            #                                        user_email=instance.email,
-            #                                        file_path=file_path)
-            # auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
-            #                                             user_email=instance.email)
-            # if sent:
-
-            #     return Response({'msg':'Mail sent Successfully'})
-            # else:
-            #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
 @api_view(['GET'])
@@ -2793,18 +2801,6 @@ def internal_editors_list(request):
         return JsonResponse({'msg':'you are having no team'},status=400)
 
 
-
-# def send_email(subject,template,context):
-#     content = render_to_string(template, context)
-#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
-#     file_ =context.get('file')
-#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
-#     if file_:
-#         name = os.path.basename(file_.path)
-#         msg.attach(name, file_.file.read())
-#     msg.content_subtype = 'html'
-#     msg.send()
-#     print("Msg sent")
 
 
 def career_support_thank_mail(user_name,user_email):

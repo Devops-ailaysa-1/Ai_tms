@@ -21,11 +21,6 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
-    # def create(self,validated_data):
-        
-    #     return super().create(self,validated_data)
-
-
 
 class MyGlossarySerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,13 +28,15 @@ class MyGlossarySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TermsSerializer(serializers.ModelSerializer):
-    #pos = serializers.CharField(required=False,allow_null=True,allow_blank=True)
+    #edit_allowed = serializers.SerializerMethodField()
+
     class Meta:
         model = TermsModel
-        fields = "__all__" #('sl_term','tl_term','pos','sl_definition','tl_definition','context',
-                #'note','sl_source','tl_source','gender','termtype','geographical_usage',
-                #'usage_status','term_location','created_date','modified_date','glossary',
-                #'file','job','created_at','created_by')
+        fields ="__all__" 
+        # fields = ('sl_term', 'tl_term', 'pos', 'sl_definition', 'tl_definition', 'context', 'note', 
+        #           'sl_source', 'tl_source', 'gender', 'termtype', 'geographical_usage', 'usage_status', 
+        #           'term_location', 'created_date', 'modified_date', 'glossary', 'file', 'job', 'edit_allowed', )
+    
 
 class GlossarySelectedSerializer(serializers.ModelSerializer):
     glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
@@ -54,7 +51,6 @@ class GlossaryMtSerializer(serializers.ModelSerializer):
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)
-    # glossary_files = GlossaryFileSerializer(required= False,many= True,allow_null= True)
 
     class Meta(ProjectQuickSetupSerializer.Meta):
         fields = ProjectQuickSetupSerializer.Meta.fields + ('glossary',)
@@ -69,7 +65,6 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        print("In create--------->", validated_data)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
@@ -81,26 +76,23 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
         return project
 
     def update(self, instance, validated_data):
-        print("In update----------->",validated_data)
+    
         if 'glossary' in validated_data:
             glossary_serializer = self.fields['glossary']
             glossary_instance = instance.glossary_project
-            # glossary_instance = Glossary.objects.get(project_id = instance.id)
             glossary_data = validated_data.pop('glossary')
             glossary_serializer.update(glossary_instance, glossary_data)
-            # tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
-            #         project = instance)
-        # task_assign = TaskAssign.objects.assign_task(project=instance)
+
         return super().update(instance, validated_data)
 
 
 
 class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_name = serializers.CharField(source = 'project_name')
-    glossary_id = serializers.IntegerField(source = 'glossary_project.id')
+    glossary_id = serializers.CharField(source = 'glossary_project.id')
     source_lang = serializers.SerializerMethodField()
     target_lang = serializers.SerializerMethodField()
-    #source_lang = serializers.CharField(source = 'project_jobs_set.first().source_language.language')
+    
     class Meta:
         model = Glossary
         fields = ("glossary_id", "glossary_name","source_lang", "target_lang",)
@@ -122,8 +114,3 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
-
-
-class ChoicelistSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = "__all__"

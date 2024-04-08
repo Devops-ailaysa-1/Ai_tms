@@ -48,7 +48,6 @@ def update_words_from_template(sender, instance, *args, **kwargs):
                 value.file_id = instance.id
                 value.job_id = instance.job_id
                 value.save()
-                #print("ID----------->",value.id)
     else:
         for data in imported_data:
             print("Data in else------->",data)
@@ -62,7 +61,6 @@ def update_words_from_template(sender, instance, *args, **kwargs):
             value.file_id = instance.id
             value.job_id = instance.job_id
             value.save()
-            #print("ID----------->",value.id)
     print("Terms Uploaded")
 
 def delete_words_from_term_model(sender, instance, *args, **kwargs):
