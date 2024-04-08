@@ -31,6 +31,12 @@ openai.api_key = OPENAI_API_KEY
 import os
 import spacy
 import yake
+import requests
+from string import punctuation
+from langdetect import detect
+from docx import Document
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from langchain.retrievers import ContextualCompressionRetriever
@@ -295,45 +301,136 @@ def extract_entities(sentence):
     return ner_dict
 
 
+ 
+
+def lang_det_word_choice(text):
+    if len(text) > 500:
+        text = text[:450]
+    lang_code = detect(text)
+    return lang_code
 
 
+def check_file_language(list_of_file_path):
+    file_paths = []
+    extracted_text_list = []
+    for file_path in list_of_file_path:
+        print("file_path-->",file_path)
+        if file_path.endswith('.txt'):
+            with open(file_path,'r',encoding='utf-8') as fp:
+                text = fp.read()
+                
+                lang_code = lang_det_word_choice(text)
+                print("lang_code--->",lang_code)
+                if lang_code == "en":
+                    file_paths.append(file_path)
+                    extracted_text_list.append(text)
+
+        if file_path.endswith('.docx'):
+            document = Document(file_path)
+            extracted_text = ""
+            for p in document.paragraphs:
+                extracted_text = extracted_text+" "+p.text
+            
+            lang_code = lang_det_word_choice(extracted_text)
+            if lang_code == "en":
+                file_paths.append(file_path)
+                extracted_text_list.append(extracted_text)
+    print("extracted_text_list",extracted_text_list)
+    return file_paths ,extracted_text_list
 
 
-# def thumbnail_create(path) -> core :
-#     img_io = io.BytesIO()
-#     images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]
-#     images.save(img_io, format='PNG')
-#     img_byte_arr = img_io.getvalue()
-#     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
-
-
-
-    # vector_db=Chroma.from_documents(documents=doc,embedding=embeddings )
-    # chain = RetrievalQA.from_chain_type(llm=llm,retriever =vector_db.as_retriever(search_type="similarity", search_kwargs={"k":4}),chain_type="stuff")
-  
-    # qa_chain = RetrievalQA.from_chain_type(llm=OpenAI(),
-    #                               chain_type="stuff",
-    #                               retriever=retriever,
-    #                               return_source_documents=True)
-    # print("-------------------")
-    # print(qa_chain(query) ) #chain.run(query).strip()
-
-
-import requests
-import os
-def ner_terminology_finder(file_path):
-    file_name = os.path.basename(file_path)
-
-    url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
-
-    payload = {}
-    files=[
-    ('file',(file_name,open(file_path,'rb'),'text/plain'))]
-    headers = {}
-    response = requests.request("POST", url, headers=headers, data=payload, files=files)
-    if response.status_code == 200:
-        ner = response.json()['ner'].split(",")
-        terminology = response.json()['terminology'].split(",")
-        return {'ner':ner,'terminology':terminology}
+def prompt_to_extract_ner_terms(terms):
+    
+    prompt = """context_list : {} 
+    
+    
+    Extract only list of named entity and terminology from the above list of context result should be in comma separated""".format(",".join(terms))
+    result = get_prompt_chatgpt_turbo(prompt=prompt,n=1) # Note: Remove stop words ,pronoun,verbs,adverb
+    generated_text =result['choices'][0]['message']['content']
+    if generated_text:
+        generated_text = generated_text.split(",")
+        print("generated_text",generated_text)
+        return generated_text
     else:
         return None
+
+# def ner_terminology_finder(file_paths):
+#     file_paths = check_file_language(file_paths)
+#     if not file_paths:
+#         raise  'please upload English language files' 
+#     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
+
+#     payload = {}
+#     headers = {}
+#     files = []
+#     for file_path in file_paths:
+#         file_name = os.path.basename(file_path)
+#         files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
+    
+#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+#  #   project_instance --> list of job --> get_lang_code --> translation --> {"s_term":"", "t_term":"","lang_code":,"job":""}
+    
+
+#     if response.status_code in [200,201]:
+#         terminology = []
+#         pos = []
+#         tem_list = []
+#         duplicate_list = []
+ 
+#         for i in response.json():
+#             terminology.extend(i['ner'].split(","))
+#             terminology.extend(i['terminology'].split(","))
+#             pos.extend(i['pos_user'])
+
+#         terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
+#         terminology = prompt_to_extract_ner_terms(terminology)
+        
+#         for i in terminology:
+#             if i.lower() not in duplicate_list:
+#                 duplicate_list.append(i.lower())
+#                 tem_list.append({'term':i,'pos':'Noun'})
+#         duplicate_list = []
+#         for i in pos:
+#             if i['term'].lower() not in duplicate_list:
+#                 duplicate_list.append(i['term'].lower())
+#                 tem_list.append(i) #{'term':i,'pos':'Noun'}
+
+#         return {'terminology':tem_list} 
+#     else:
+#         return None
+
+
+
+ 
+prompt = """Context: {} 
+
+
+Extract key phrases and Named Entity Recognition (NER) from the given context give only Person, Nationalities or Religious or Political Groups (NORP), Facilities, Organizations, Geopolitical Entities (GPE), Locations, Products, Works of Art, and Laws for NER and 
+give only the word and don't include NER names in results and the output should be in the format of {"key": key pharas list , "ner": list of ners } and eliminate the repeated words 
+"""
+
+import json
+
+def ner_terminology_finder(file_paths):
+    file_paths ,extracted_text_list = check_file_language(file_paths)
+    if not file_paths:
+        raise  'please upload English language files' 
+    terms = []
+    for extracted_text in extracted_text_list:
+        prompt = prompt.format(extracted_text)
+        result = mistral_chat_api(prompt)
+        try:
+            result = json.loads(chat_response.choices[0].message.content)
+        except Exception as e:
+            print("ERROR in JSON DECODE-------->",e)
+    print("terms",terms)
+    if terms:
+         return {'terminology':terms} 
+    else:
+        return None
+
+
+
+        
+    

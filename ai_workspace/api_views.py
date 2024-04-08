@@ -82,9 +82,9 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
                           TbxTemplateSerializer, TaskTranslatedFileSerializer,\
                           TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
-                          GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
+                          GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,\
                           StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,\
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
                           WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
@@ -410,6 +410,7 @@ class Files_Jobs_List(APIView):
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
+        wc_selected = True if project.project.filter(glossary__project__project_type_id =10).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
@@ -418,7 +419,7 @@ class Files_Jobs_List(APIView):
         return Response({"files":files.data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
-                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
+                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, "wc_selected":wc_selected}, status=200)
 
 
 
@@ -525,8 +526,9 @@ class TmxFileView(viewsets.ViewSet):
 #             return Response(serializer.errors)
 
 
-# conversion of pdf to docx
+
 def docx_save_pdf(pdf_obj):
+    # conversion of pdf to docx
     from docx import Document
     from htmldocx import HtmlToDocx
 
@@ -541,8 +543,9 @@ def docx_save_pdf(pdf_obj):
     pdf_obj.save()
 
 
-# Get file object from pdf creation
+
 def get_file_from_pdf(pdf_obj_id,pdf_task_id):
+    # Get file object from pdf creation
     from ai_exportpdf.models import Ai_PdfUpload
     from ai_exportpdf.views import get_docx_file_path
     if pdf_obj_id:
@@ -623,12 +626,17 @@ class ProjectFilter(django_filters.FilterSet):
             assign_to_list = assign_to.split(',')
         else: assign_to_list = []
         queryset = progress_filter(queryset,value,assign_to_list)
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print("Time Taken to filter-------------------->",time_taken)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
         #project type filter
-        if value == "assets":
-            queryset = queryset.filter(Q(glossary_project__isnull=False))
+        # if value == "assets":
+        #     queryset = queryset.filter(Q(glossary_project__isnull=False))
+        if value == "glossary":
+            queryset = queryset.filter(Q(glossary_project__isnull=False)).exclude(project_type_id=10)
         elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
         elif value == "transcription":
@@ -664,6 +672,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
+        #if project_type == 3 or project_type == 10:
         if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer

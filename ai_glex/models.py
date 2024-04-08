@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
-from ai_glex.signals import update_words_from_template,delete_words_from_term_model
+from ai_glex.signals import update_words_from_template,delete_words_from_term_model,update_proj_settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
@@ -153,6 +153,8 @@ class GlossarySelected(models.Model):
     class Meta:
         unique_together = ("project", "glossary")
 
+post_save.connect(update_proj_settings, sender=GlossarySelected) 
+
 
 class MyGlossary(models.Model):######Default Glossary For Each User###################
     user            = models.ForeignKey(AiUser, on_delete=models.CASCADE, related_name='default_glossary')
@@ -171,3 +173,10 @@ class MyGlossary(models.Model):######Default Glossary For Each User#############
 
     class Meta:
         unique_together = ("sl_term", "user")
+
+
+class Terminologyextract(models.Model):
+    project = models.ForeignKey(Project, null=True, on_delete=models.SET_NULL,related_name = 'my_choice_list_project')
+    file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

@@ -411,7 +411,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	file_translate = serializers.BooleanField(required=False,allow_null=True)
-	
+	#glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 
 	class Meta:
 		model = Project
@@ -420,7 +420,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate',)
+					'file_translate',)#'glossary_id',)
 	
 
 	def run_validation(self,data):
@@ -444,7 +444,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
-		data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
+		#data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 		data['file_translate'] =data.get('file_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -472,6 +472,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 			data['pre_translate'] = data.get('pre_translate',['false'])[0]
+			data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 			data['from_text'] =  data.get('from_text',[0])[0]
 
 		else:
@@ -479,6 +480,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				target_language} for target_language in data.get("target_languages", [])]
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
+			if data.get('get_mt_by_page'):
+				data['get_mt_by_page'] = data.get('get_mt_by_page')[0]
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
@@ -712,10 +715,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							contents_data, subjects_data, steps_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
-		if project_type in [1,2,5]:
+		if project_type in [1,2,5,9,8]:
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
-		if project_type == 3:
+		if project_type in [3,10]:
 			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
 			        project = instance)
 
@@ -1732,32 +1735,15 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned","assign_enable",
-				"created_at",'get_project_type',"project_analysis",)
+		fields = ("id", "project_name","assigned","assign_enable","project_analysis", \
+				"created_at",'get_project_type')
 
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
 
-	def get_project_analysis(self,instance):
-		din = True
-		user_1 = self.context.get('user_1')
-		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
-			return None		
-		
-		user = self.context.get("request").user if self.context.get("request")!=None else self\
-			.context.get("ai_user", None)
-
-		if instance.ai_user == user:
-			tasks = instance.get_analysis_tasks
-		elif instance.team:
-			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
-				tasks = instance.get_analysis_tasks
-			else:
-				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
-
-		else:
-			tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
-		res = instance.project_analysis(tasks,din)
-		return res
+	def get_project_analysis(self,obj):
+		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
+		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
+		return result

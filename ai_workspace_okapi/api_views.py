@@ -555,7 +555,13 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
-           mt_raw_update(task.id,page_segments)
+            # ser = SegmentSerializer(page_segments, many=True)
+            # page_objects = json.dumps(ser.data)
+            # cel_task = mt_raw_update.apply_async((task.id,page_objects,), queue='high-priority')
+            # state = mt_raw_update.AsyncResult(cel.celery_task_id).state
+            # if state == 'STARTED':
+            #     return Response({'msg':'celery running','celery_id':cel.id})
+            mt_raw_update(task.id,page_segments)
         segments_ser = SegmentSerializer(page_segments, many=True)
 
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
@@ -909,6 +915,10 @@ class MT_RawAndTM_View(views.APIView):
     def get_data(request, segment_id, mt_params):
 
         
+        user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+        task = Task.objects.get(job=doc.job)
+        seg  = Segment.objects.get(id=segment_id)
+
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
@@ -916,6 +926,10 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
+                
+                replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
+                mt_raw.mt_raw = replaced
+                mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
@@ -930,7 +944,6 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = user.credit_balance.get("total_left")
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
-
         
         if initial_credit > consumable_credits :
             if mt_raw:
@@ -938,6 +951,7 @@ class MT_RawAndTM_View(views.APIView):
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                #translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -965,6 +979,10 @@ class MT_RawAndTM_View(views.APIView):
 
         split_seg = SplitSegment.objects.filter(id=segment_id).first()
 
+        user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
+
+        task = Task.objects.get(job=doc.job)
+
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
 
@@ -977,13 +995,15 @@ class MT_RawAndTM_View(views.APIView):
                     =split_seg.segment_id).first().mt_engine
 
             if proj_mt_engine == task_assign_mt_engine:
+                replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
+                mt_raw_split.mt_raw = replaced
+                mt_raw_split.save()
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
-        user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
@@ -998,6 +1018,7 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                #translation = replace_with_gloss(split_seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1007,7 +1028,7 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-
+                #translation = replace_with_gloss(split_seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -1102,20 +1123,20 @@ class MT_RawAndTM_View(views.APIView):
         project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_split_segment_set=segment_id).first()
         return project
 
-    @staticmethod
-    def get_words_list(sent):
-        punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-        tokens=word_tokenize(sent)
-        target = [word for word in tokens if word not in punctuation]
-        words=[]
-        tg_word = [word for word in target] 
-        unigram = ngrams(tg_word , 1)
-        words.extend(list(" ".join(i) for i in unigram))
-        bigrams = ngrams(tg_word , 2)
-        words.extend(list(" ".join(i) for i in bigrams))
-        trigrams = ngrams(tg_word , 3)
-        words.extend(list(" ".join(i) for i in trigrams))
-        return words
+    # @staticmethod
+    # def get_words_list(sent):
+    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+    #     tokens=word_tokenize(sent)
+    #     target = [word for word in tokens if word not in punctuation]
+    #     words=[]
+    #     tg_word = [word for word in target] 
+    #     unigram = ngrams(tg_word , 1)
+    #     words.extend(list(" ".join(i) for i in unigram))
+    #     bigrams = ngrams(tg_word , 2)
+    #     words.extend(list(" ".join(i) for i in bigrams))
+    #     trigrams = ngrams(tg_word , 3)
+    #     words.extend(list(" ".join(i) for i in trigrams))
+    #     return words
 
 
 
@@ -2244,6 +2265,7 @@ def paraphrasing_for_non_english(request):
         doc_obj = Document.objects.get(id=doc_id)
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
+        task_obj = Task.objects.get(document=doc_obj)
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
@@ -2267,6 +2289,7 @@ def paraphrasing_for_non_english(request):
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+            replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         prompt_usage = result_prompt['usage']
@@ -2292,9 +2315,11 @@ def paraphrasing(request):
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
     option = request.POST.get('option')
+    segment_id = request.POST.get('seg_id')
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         user = doc_obj.doc_credit_debit_user
+        task_obj = Task.objects.get(document = doc_obj)
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         user = task_obj.job.project.ai_user
@@ -2302,7 +2327,6 @@ def paraphrasing(request):
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
-    
     tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
@@ -2310,6 +2334,12 @@ def paraphrasing(request):
         prompt = get_general_prompt(option,clean_sentence)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
+        if segment_id:
+            seg = Segment.objects.get(id=segment_id)
+            print("Seg--------->",seg)
+            replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+        else:
+            replaced = para_sentence
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
@@ -2716,6 +2746,43 @@ def symspellcheck(request):
     
 
 
+def check_source_words(user_input,task):
+    from ai_glex.models import TermsModel,GlossarySelected
+    proj = task.job.project
+    target_language = task.job.target_language
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+                .filter(job__target_language=target_language).filter(tl_term__isnull=False).exclude(tl_term='')\
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
+                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_at').distinct('sl_term')
+
+    gloss = [i for i in queryset]
+    words = [i.get('sl_term') for i in queryset]
+    return words,gloss
+
+def target_source_words(target_mt,task):
+    from ai_glex.models import TermsModel,GlossarySelected
+    proj = task.job.project
+    target_language = task.job.target_language
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+                .filter(job__target_language=target_language)\
+                .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
+                      params=[target_mt]).distinct().values('sl_term','tl_term')
+    
+    gloss = [i for i in queryset]
+
+    word_list = [i.get('tl_term') for i in queryset]
+
+    input_sentence_lower = target_mt.lower()
+    word_list_lower = [word.lower() for word in word_list]
+    
+    for word in word_list_lower:
+        
+        if word not in input_sentence_lower:
+            return False, gloss 
+    
+    return True, gloss
 
 
 

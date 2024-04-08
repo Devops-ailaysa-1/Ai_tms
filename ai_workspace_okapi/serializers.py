@@ -544,6 +544,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
+        #         translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+        #         validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+        # else:
+        #     translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+        #     validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
                 validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
         else:
             validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)

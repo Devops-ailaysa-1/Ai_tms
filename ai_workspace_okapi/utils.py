@@ -12,6 +12,7 @@ from PyPDF2.errors import FileNotDecryptedError
 from pptx import Presentation
 import string
 import backoff
+from ai_staff.models import InternalFlowPrompts
 
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -497,13 +498,16 @@ def seq_match_seg_diff(words1,words2):
 def get_general_prompt(opt,sent):
 
     if opt == "Rewrite":
-        prompt = '''Paraphrase the given text. Text: {} '''.format(sent)
+        prompt_phrase = InternalFlowPrompts.objects.get(name='eng_rewrite').prompt_phrase
+        prompt = prompt_phrase.format(sent)
 
     elif opt == "Simplify":
-        prompt = '''Simplify the given text. Text: {}'''.format(sent)
+        prompt_phrase = InternalFlowPrompts.objects.get(name='eng_simplify').prompt_phrase
+        prompt = prompt_phrase.format(sent)
 
     elif opt == "Shorten":
-        prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+        prompt_phrase = InternalFlowPrompts.objects.get(name='eng_shorten').prompt_phrase
+        prompt = prompt_phrase.format(sent)
 
     return prompt
 
@@ -519,15 +523,22 @@ def get_prompt_sent(opt,sent):
 
     if opt == "Rewrite":
         if len(sent)>200:
-            prompt = '''Split the following text into multiple simple sentences:
-                {}'''.format(sent)
+            prompt_phrase = InternalFlowPrompts.objects.get(name='non_eng_rewrite_long').prompt_phrase
+            prompt = prompt_phrase.format(sent)
+
         else:
-            prompt = '''Paraphrase the given text: {} '''.format(sent)
+            prompt_phrase = InternalFlowPrompts.objects.get(name='non_eng_rewrite_short').prompt_phrase
+            prompt = prompt_phrase.format(sent)
+
     elif opt == "Simplify":
-        prompt = '''Simplify the given text so that even a non-native English speaker can easily understand it. Text: {}'''.format(sent)
+        prompt_phrase = InternalFlowPrompts.objects.get(name='non_eng_simplify').prompt_phrase
+        prompt = prompt_phrase.format(sent)
+       
 
     elif opt == "Shorten":
-        prompt = '''Shorten the given text without losing any significant information in it. Text: {}'''.format(sent)                
+        prompt_phrase = InternalFlowPrompts.objects.get(name='non_eng_shorten').prompt_phrase
+        prompt = prompt_phrase.format(sent)
+
     return prompt
 
 
