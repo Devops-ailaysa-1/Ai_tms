@@ -52,9 +52,15 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
     return({"res":res1})
 
 
-
 @api_view(['POST',])
 def TermSearch(request):
+
+    '''search term from tbx file for segment
+    
+        args: user_input: Segment text (str)
+              doc_id : Document id 
+              task_id : Task id'''
+
     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
     out1 = []
     data = request.POST.dict()

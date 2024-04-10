@@ -927,9 +927,9 @@ class MT_RawAndTM_View(views.APIView):
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
                 
-                replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
-                mt_raw.mt_raw = replaced
-                mt_raw.save()
+                # replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
+                # mt_raw.mt_raw = replaced
+                # mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
@@ -981,7 +981,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        task = Task.objects.get(job=doc.job)
+        # task = Task.objects.get(job=doc.job)
 
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
@@ -995,9 +995,9 @@ class MT_RawAndTM_View(views.APIView):
                     =split_seg.segment_id).first().mt_engine
 
             if proj_mt_engine == task_assign_mt_engine:
-                replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
-                mt_raw_split.mt_raw = replaced
-                mt_raw_split.save()
+                # replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
+                # mt_raw_split.mt_raw = replaced
+                # mt_raw_split.save()
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
@@ -2289,7 +2289,7 @@ def paraphrasing_for_non_english(request):
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
-            replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
+            # replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         prompt_usage = result_prompt['usage']
@@ -2337,7 +2337,7 @@ def paraphrasing(request):
         if segment_id:
             seg = Segment.objects.get(id=segment_id)
             print("Seg--------->",seg)
-            replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+            # replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
         else:
             replaced = para_sentence
         prompt_usage = result_prompt['usage']
