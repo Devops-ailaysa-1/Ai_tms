@@ -2847,3 +2847,40 @@ class AilaysaCallCenterView(viewsets.ViewSet):
             send_ailaysa_call_center.apply_async((instance.id,),queue='low-priority')
             return JsonResponse({'msg':'message sent successfully'},status=200)
         return Response(serializer.errors, status=400)
+
+
+
+
+
+class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+     
+
+    def create(self,request):
+        name = request.POST.get('name',None)
+        email = request.POST.get('email',None)
+        company_name = request.POST.get('company_name',None)
+        message = request.POST.get('message',None)
+
+        subject = "New Enquiry"
+        template = 'career_support_email.html'
+        email = 'hr@ailaysa.com'
+
+        context = {'name':name,'email':email,
+                'company_name':company_name, 
+                'service_description':message,
+                 }
+        send_email(subject,template,context,email)
+        return JsonResponse({'msg':'message sent successfully'},status=200)
+
+
+
+
+
+
+
+
+#     name = models.CharField(max_length=100,blank=True,null=True)
+#     email = models.EmailField(unique=True,blank=True,null=True)
+#     company_name = models.CharField(max_length=50,blank=True,null=True)
+#     message = models.CharField(max_length=600,blank=True,null=True)

@@ -869,5 +869,8 @@ class AilaysaCallCenter(models.Model):
     service_description = models.CharField(max_length=600,blank=True,null=True)
 
 
-    def __str__(self) -> str:
-        return super().__str__() 
+ 
+    
+
+
+
