@@ -1,25 +1,19 @@
 from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, \
     MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
-import json, copy
+import json
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job, TaskAssign
-from ai_auth.models import AiUser
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
-from django.apps import apps
-from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
-import collections
-import csv
-import io,time
 from django.db.models import Func, F, CharField
 
 client = translate.Client()
@@ -707,10 +701,7 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-
-
 from ai_workspace_okapi.models import SegmentDiff
-
 class SegmentDiffSerializer(serializers.ModelSerializer):
 
     class Meta:
