@@ -85,4 +85,5 @@ urlpatterns+= [
     path('editors_list/',api_views.internal_editors_list),
     path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register'), 
     path('career_support_ai/',api_views.CareerSupportAICreateView.as_view({'post':'create'}), name= 'ml-career-support' ),
+    path('ailaysa_cc',api_views.AilaysaCallCenterView.as_view({'post':'create'}), name= 'ailaysa-call-center' ),
 ]
