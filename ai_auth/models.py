@@ -857,3 +857,20 @@ class CareerSupportAI(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
 
+class AilaysaCallCenter(models.Model):
+    name = models.CharField(max_length=100,blank=True,null=True)
+    email = models.EmailField(unique=True,blank=True,null=True)
+    company_name = models.CharField(max_length=50,blank=True,null=True)
+    address = models.CharField(max_length=250,blank=True,null=True)
+    service_type = models.CharField(max_length=100,blank=True,null=True)
+    source_language = models.CharField(max_length=25,blank=True,null=True)
+    target_language = models.CharField(max_length=25,blank=True,null=True)
+    file = models.FileField(upload_to="ailaysa_call_center",blank=True,null=True)
+    service_description = models.CharField(max_length=600,blank=True,null=True)
+
+
+ 
+    
+
+
+

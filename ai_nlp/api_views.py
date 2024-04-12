@@ -231,8 +231,6 @@ class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
     search_fields =['file_name','status']
     page_size=20
 
-
-
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user
         queryset = PdffileUpload.objects.filter(user=user).order_by("created_at")

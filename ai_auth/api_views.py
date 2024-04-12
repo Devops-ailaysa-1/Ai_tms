@@ -21,7 +21,8 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,CareerSupportAISerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,
+                                CareerSupportAISerializer,AilaysaCallCenterSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -34,7 +35,7 @@ from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionali
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
-                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI)
+                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI,AilaysaCallCenter)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -2832,3 +2833,54 @@ class CareerSupportAICreateView(viewsets.ViewSet):
             send_career_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
+    
+import os
+class AilaysaCallCenterView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        from .tasks import send_ailaysa_call_center
+        file = request.FILES.get('file')
+        serializer = AilaysaCallCenterSerializer(data={**request.POST.dict(),'file':file})
+        if serializer.is_valid():
+            serializer.save()
+            instance = AilaysaCallCenter.objects.get(id=serializer.data.get('id'))
+            send_ailaysa_call_center.apply_async((instance.id,),queue='low-priority')
+            return JsonResponse({'msg':'message sent successfully'},status=200)
+        return Response(serializer.errors, status=400)
+
+
+
+
+
+class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+     
+
+    def create(self,request):
+        name = request.POST.get('name',None)
+        email = request.POST.get('email',None)
+        company_name = request.POST.get('company_name',None)
+        message = request.POST.get('message',None)
+
+        subject = "New Enquiry"
+        template = 'career_support_email.html'
+        email = 'hr@ailaysa.com'
+
+        context = {'name':name,'email':email,
+                'company_name':company_name, 
+                'service_description':message,
+                 }
+        send_email(subject,template,context,email)
+        return JsonResponse({'msg':'message sent successfully'},status=200)
+
+
+
+
+
+
+
+
+#     name = models.CharField(max_length=100,blank=True,null=True)
+#     email = models.EmailField(unique=True,blank=True,null=True)
+#     company_name = models.CharField(max_length=50,blank=True,null=True)
+#     message = models.CharField(max_length=600,blank=True,null=True)

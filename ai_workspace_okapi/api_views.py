@@ -432,7 +432,8 @@ class DocumentViewByDocumentId(views.APIView):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
-        if not task_assigned_info:return True
+        if not task_assigned_info:
+            return True
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
     
         if user not in assigners:
