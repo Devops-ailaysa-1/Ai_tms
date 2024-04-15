@@ -867,6 +867,8 @@ class AilaysaCallCenter(models.Model):
     target_language = models.CharField(max_length=25,blank=True,null=True)
     file = models.FileField(upload_to="ailaysa_call_center",blank=True,null=True)
     service_description = models.CharField(max_length=600,blank=True,null=True)
+    mobile_number = models.IntegerField(blank=True,null=True)
+    phone_number = models.IntegerField(blank=True,null=True)
 
 
  

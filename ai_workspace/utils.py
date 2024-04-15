@@ -35,9 +35,9 @@ def create_dirs_if_not_exists(path):
 		return  path
 	return create_dirs_if_not_exists(path+random.choice(["-", "_","@", "!"])+str(random.randint(1,100)))
 
-def print_key_value(keys, values):
-	for i, j in zip(keys, values):
-		print(f'{i}--->{j}')
+# def print_key_value(keys, values):
+# 	for i, j in zip(keys, values):
+# 		print(f'{i}--->{j}')
 
 
 def create_assignment_id():
