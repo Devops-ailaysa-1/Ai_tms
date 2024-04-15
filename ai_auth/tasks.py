@@ -290,6 +290,7 @@ def send_ailaysa_call_center(obj_id):
                'company_name':instance.company_name,'address':instance.address,'service_type':instance.service_type,
                'source_language':instance.source_language,'target_language':instance.target_language,
                'service_description':instance.service_description,
+               'phone_number':instance.phone_number,'mobile': instance.mobile_number,
                'file':instance.file}
     send_email(subject,template,context,email)
     delete_ailaysa_call_center_instance(instance=instance)
