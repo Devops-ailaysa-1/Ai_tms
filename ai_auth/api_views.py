@@ -327,8 +327,9 @@ def send_email(subject,template,context,email=None):
     file_ =context.get('file')
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
-        name = os.path.basename(file_.path)
-        msg.attach(name, file_.file.read())
+        for i in file_:
+            name = os.path.basename(i.file.path)
+            msg.attach(name, i.file.file.read())
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -2835,15 +2836,18 @@ class CareerSupportAICreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=400)
     
 import os
+from ai_auth.models import AilaysaCallCenterFile
 class AilaysaCallCenterView(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self,request):
         from .tasks import send_ailaysa_call_center
-        file = request.FILES.get('file')
-        serializer = AilaysaCallCenterSerializer(data={**request.POST.dict(),'file':file})
+        file = request.FILES.getlist('file')
+        serializer = AilaysaCallCenterSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()
             instance = AilaysaCallCenter.objects.get(id=serializer.data.get('id'))
+            for i in file:
+                AilaysaCallCenterFile.objects.create(file=i,ailaysa_call_center=instance)
             send_ailaysa_call_center.apply_async((instance.id,),queue='low-priority')
             return JsonResponse({'msg':'message sent successfully'},status=200)
         return Response(serializer.errors, status=400)
