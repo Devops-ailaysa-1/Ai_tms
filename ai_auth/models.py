@@ -857,6 +857,8 @@ class CareerSupportAI(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
 
+
+
 class AilaysaCallCenter(models.Model):
     name = models.CharField(max_length=100,blank=True,null=True)
     email = models.EmailField(unique=True,blank=True,null=True)
@@ -865,14 +867,19 @@ class AilaysaCallCenter(models.Model):
     service_type = models.CharField(max_length=100,blank=True,null=True)
     source_language = models.CharField(max_length=25,blank=True,null=True)
     target_language = models.CharField(max_length=25,blank=True,null=True)
-    file = models.FileField(upload_to="ailaysa_call_center",blank=True,null=True)
     service_description = models.CharField(max_length=600,blank=True,null=True)
-    mobile_number = models.CharField(max_length=20,blank=True,null=True)
+    whatsapp_number = models.CharField(max_length=20,blank=True,null=True)
     phone_number = models.CharField(max_length=20,blank=True,null=True)
 
 
  
+class AilaysaCallCenterFile(models.Model):
+    file = models.FileField(upload_to="ailaysa_call_center",blank=True,null=True)
+    ailaysa_call_center = models.ForeignKey(AilaysaCallCenter,related_name='ailaysa_call_ctr',on_delete=models.CASCADE)
+
+
     
+ 
 
 
 
