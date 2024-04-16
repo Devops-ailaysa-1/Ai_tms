@@ -421,19 +421,23 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
 					'file_translate',)#'glossary_id',)
-	
 
-	def run_validation(self,data):
-		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
-				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
-				if pt not in [4 ,3, 8] and data.get('target_languages')==None:
-						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
-		if data.get('target_languages')!=None:
-			comparisons = [source == target for (source, target) in itertools.
-				product(data['source_language'],data['target_languages'])]
+	def run_validation(self, data):
+		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
+			# Setting the project type as Standard project
+			pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
+
+			# Validation 1: Making target language mandatory. Excluding Voice, Glossary & News Project, as it not mandatory
+			if pt not in [4, 3, 8] and data.get('target_languages') is None:
+				raise serializers.ValidationError({"msg": "target languages needed for translation project"})
+
+		# Validation 2: Checking if the source language and target language are same
+		if data.get('target_languages') is not None:
+			comparisons = [source == target for (source, target) in
+						   itertools.product(data['source_language'], data['target_languages'])]
 			if True in comparisons:
-				raise serializers.ValidationError({"msg":"source and target "
-					"languages should not be same"})
+				raise serializers.ValidationError({"msg": "source and target languages should not be same"})
+
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):

@@ -9,7 +9,7 @@ from celery.decorators import task
 from celery import shared_task
 from datetime import date
 from django.utils import timezone
-from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits,CareerSupportAI
+from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits,CareerSupportAI,AilaysaCallCenter
 import datetime,os,json, collections
 from djstripe.models import Subscription,Invoice,Charge
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
@@ -270,6 +270,30 @@ def send_career_mail(obj_id):
     context = {'name':instance.name,'email':instance.email,'college':instance.college,'applied_for':instance.get_apply_for_display(),'file':instance.cv_file}
     send_email(subject,template,context,email)
     career_support_thank_mail(instance.name,instance.email)
+
+
+##### delete this ailaysa instance after email sent to admin
+def delete_ailaysa_call_center_instance(instance):
+    file_path = instance.file.path
+    instance.delete()
+    os.remove(file_path)
+
+@task(queue='low-priority')
+def send_ailaysa_call_center(obj_id):
+    from ai_auth.api_views import send_email
+    instance = AilaysaCallCenter.objects.get(id=obj_id)
+    subject = "New Enquiry"
+    template = 'career_support_email.html'
+    email = 'hr@ailaysa.com'
+
+    context = {'name':instance.name,'email':instance.email,
+               'company_name':instance.company_name,'address':instance.address,'service_type':instance.service_type,
+               'source_language':instance.source_language,'target_language':instance.target_language,
+               'service_description':instance.service_description,
+               'phone_number':instance.phone_number,'mobile': instance.mobile_number,
+               'file':instance.file}
+    send_email(subject,template,context,email)
+    delete_ailaysa_call_center_instance(instance=instance)
 
 
 

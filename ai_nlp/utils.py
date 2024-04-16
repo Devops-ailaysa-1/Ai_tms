@@ -421,7 +421,7 @@ def ner_terminology_finder(file_paths):
         prompt = prompt.format(extracted_text)
         result = mistral_chat_api(prompt)
         try:
-            result = json.loads(chat_response.choices[0].message.content)
+            result ="" #json.loads(chat_response.choices[0].message.content)
         except Exception as e:
             print("ERROR in JSON DECODE-------->",e)
     print("terms",terms)

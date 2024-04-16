@@ -17,12 +17,8 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
-print("MISTRAL_AI_API_KEY",MISTRAL_AI_API_KEY)
+# print("MISTRAL_AI_API_KEY",MISTRAL_AI_API_KEY)
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
-
-
-
-
 
 
 def ceil_round_off(token_len):

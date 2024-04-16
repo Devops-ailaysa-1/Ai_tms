@@ -73,7 +73,7 @@ class TaskListForm(forms.Form):
 class ProjectFormv2(forms.ModelForm):
     source_language = forms.ModelChoiceField(queryset=Languages.objects.all())
     target_languages = forms.ModelMultipleChoiceField(queryset=Languages.objects.all())
-    files = forms.FileField(widget=forms.ClearableFileInput(attrs={"multiple": True}))
+    files = forms.FileField(widget=forms.ClearableFileInput(attrs={"allow_multiple_selected": True}))
 
     class Meta:
         model = Project

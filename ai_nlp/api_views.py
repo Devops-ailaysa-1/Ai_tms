@@ -164,9 +164,9 @@ def pdf_chat(request):
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
 
-    openai_available_langs = [17]
-    detector = Translator()
-    user = request.user
+    # openai_available_langs = [17]
+    # detector = Translator()
+    # user = request.user
 
     if chat_text: 
         if unit_chk['total_units_left']>0:   ### remove not
@@ -208,7 +208,7 @@ def pdf_chat(request):
 @permission_classes([IsAuthenticated])
 def pdf_chat_remaining_units(request):
     if request.user.is_internal_member == True:
-        user = getattr(user.team, 'owner', None) if user.team is not None else None
+        user = getattr(request.user.team, 'owner', None) if user.team is not None else None
     else:
         user = request.user
     chat_unit_obj = AilaysaPurchasedUnits(user=user)
@@ -230,8 +230,6 @@ class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
     filterset_fields =['file_name','status']
     search_fields =['file_name','status']
     page_size=20
-
-
 
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user

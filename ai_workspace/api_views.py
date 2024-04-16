@@ -763,20 +763,32 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def create(self, request):
 
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-        text_data=request.POST.get('text_data')
+
+        # Getting the direct text data if project is Express / Instant translation project
+
+        text_data = request.POST.get('text_data')
         ser = self.get_serializer_class()
-        pdf_obj_id = request.POST.get('pdf_obj_id',None)
+        pdf_obj_id = request.POST.get('pdf_obj_id', None)
+
+        # Getting the audio files if the project type is Voice project
+
         audio_file = request.FILES.getlist('audio_file',None)
+
+        # Finding the main account holder
         user_1 = self.get_user()
 
         # project create with text data
         if text_data:
             if urlparse(text_data).scheme:
-                return Response({"msg":"Url not Accepted"},status = 406)
-            name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
-            im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-            serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
-        
+                return Response({"msg": "Url not Accepted"}, status=406)
+
+            name = text_data.split()[0].strip(punctuation) + ".txt" if len(text_data.split()[0]) <= 15 else text_data[
+                                                                                                            :5].strip(
+                punctuation) + ".txt"
+            im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent=text_data.encode(), file_name=name)
+            serlzr = ser(data={**request.data, "files": [im_file], "from_text": ['true']}, context={"request": request})
+
+
         # project create from pdf 
         elif pdf_obj_id:
             files_ = request.FILES.getlist('files')
