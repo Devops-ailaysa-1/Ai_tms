@@ -727,7 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
 
-        # filter the projects with task_assign_status. Now it is used for Dinamalar flow 
+        # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.filter_queryset(self.get_queryset())
 
         user_1 = self.get_user()
