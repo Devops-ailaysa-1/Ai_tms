@@ -162,6 +162,9 @@ def delete_inactive_user_account():
 
 @task(queue='low-priority')
 def delete_express_task_history(): #30days
+    '''
+    This task is to delete instant_task_history after 30 days
+    '''
     queryset = ExpressTaskHistory.objects.annotate(
             diff=ExpressionWrapper(timezone.now() - F('created_at'), output_field=DurationField())
             ).filter(diff__gt=timedelta(30))
@@ -173,6 +176,9 @@ def delete_express_task_history(): #30days
 # def find_renewals():
 @task(queue='low-priority')
 def delete_hired_editors():
+    '''
+    This is to delete hired editors invite if he didn't accept for more than 7 days.
+    '''
     HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()
     print("deleted")
     logger.info("Delete Hired Editor")
@@ -180,6 +186,9 @@ def delete_hired_editors():
 
 @task(queue='low-priority')
 def send_notification_email_for_unread_messages():
+    '''
+    This task is to send notification to the users when they have unread messages in chat.
+    '''
     from ai_workspace.api_views import AddStoriesView
     query = Notification.objects.filter(Q(unread = True) & Q(emailed = False) & Q(verb= "Message"))
     try:
@@ -222,7 +231,7 @@ def email_send_subscription_extension():
 
 
 @task(queue='low-priority')
-def existing_vendor_onboard_check():
+def existing_vendor_onboard_check(): # For Vendor check. Not using now
     obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
     if obj:
         status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
@@ -242,6 +251,10 @@ def existing_vendor_onboard_check():
 
 @task(queue='low-priority')
 def send_bootcamp_mail(obj_id):
+    '''
+    This task is to send thanks message to the user after registering in camp
+    and notification mail to hr that user is registered.
+    '''
     from .models import MarketingBootcamp
     from ai_auth import forms as auth_forms
     instance = MarketingBootcamp.objects.get(id=obj_id)
@@ -262,6 +275,10 @@ def send_bootcamp_mail(obj_id):
 
 @task(queue='low-priority')
 def send_career_mail(obj_id):
+    '''
+    This task is to send thanks message to the user after submitting career form
+    and notification mail to hr that user is registered.
+    '''
     from ai_auth.api_views import send_email, career_support_thank_mail
     instance = CareerSupportAI.objects.get(id=obj_id)
     subject = "New Registration for AI/ML Openings"
@@ -316,6 +333,9 @@ def send_ailaysa_call_center(obj_id):
 
 @task(queue='low-priority')
 def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include agency's projectowner
+    '''
+    This task is to send email to all the shortlisted vendors about project post in marketplace
+    '''
     from ai_vendor.models import VendorLanguagePair
     from ai_auth import forms as auth_forms
     instance = ProjectboardDetails.objects.get(id=projectpost_id)
@@ -346,7 +366,9 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
 
 @task(queue='high-priority')
 def write_segments_to_db(validated_str_data, document_id): #validated_data
-
+    '''
+    To write segments from Json file(okapi) to segments database.
+    '''
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
     validated_data = decoder.decode(validated_str_data)
 
@@ -461,6 +483,9 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
 @task(queue='high-priority')
 def mt_only(project_id,token,task_id=None):
+    '''
+    This function is for pre-translation flow called in project creation
+    '''
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
@@ -486,7 +511,9 @@ def mt_only(project_id,token,task_id=None):
 
 @task(queue='high-priority')
 def write_doc_json_file(doc_data, task_id):
-
+    '''
+    writing doc_data from spring endpoint to json file for furthur processing
+    '''
     from ai_workspace.serializers import TaskSerializer
     task = Task.objects.get(id=task_id)
     data = TaskSerializer(task).data
@@ -507,6 +534,9 @@ def write_doc_json_file(doc_data, task_id):
 
 @task(queue='high-priority')
 def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,language,voice_gender,voice_name):
+    '''
+    This celery task is for processing long source text to speech by splitting and calling google t2s API
+    '''
     from ai_workspace.api_views import text_to_speech_task,long_text_source_process
     obj = Task.objects.get(id=task_id)
     user = AiUser.objects.get(id=user_id)
@@ -519,6 +549,9 @@ def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,lang
 
 @task(queue='high-priority')
 def google_long_text_file_process_cel(consumable_credits,document_user_id,file_path,task_id,target_language,voice_gender,voice_name):
+    '''
+    This celery task is for processing long text to speech by splitting and calling google t2s API
+    '''
     from ai_workspace_okapi.api_views import long_text_process
     document_user = AiUser.objects.get(id = document_user_id)
     obj = Task.objects.get(id=task_id)
@@ -529,6 +562,9 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
 
 @task(queue='high-priority')
 def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
+    '''
+    This celery task is for processing long speech file to text by calling google s2t API
+    '''
     from ai_workspace.api_views import transcribe_long_file
     obj = Task.objects.get(id = task_id)
     user = AiUser.objects.get(id = user_id)
@@ -538,6 +574,10 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
 
 @task(queue='high-priority')
 def translate_file_task_cel(task_id):
+    '''
+    This celery task is for processing file as by calling 'Document translate API of google'
+    and return the translated file
+    '''
     from ai_workspace.api_views import translate_file_process
     MTonlytaskCeleryStatus.objects.create(task_id=task_id,status=1,task_name='translate_file_task_cel',celery_task_id=translate_file_task_cel.request.id)
     translate_file_process(task_id)
@@ -545,6 +585,9 @@ def translate_file_task_cel(task_id):
 
 @task(queue='high-priority')
 def pre_translate_update(task_id):
+    '''
+    This celery task is called when pre-translate option is updated after project creation
+    '''
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -569,7 +612,7 @@ def pre_translate_update(task_id):
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
-    for seg in final_segments:###############Need to revise####################
+    for seg in final_segments:
 
         if seg.target == '' or seg.target==None:
             initial_credit = user.credit_balance.get("total_left")
@@ -632,7 +675,7 @@ def pre_translate_update(task_id):
     MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
     logger.info("pre_translate_update")
 
-
+########################### QA Related Tasks ###########################################
 @task(queue='low-priority')
 def update_untranslatable_words(untranslatable_file_id):
     from ai_qa.models import Untranslatable,UntranslatableWords
@@ -647,8 +690,14 @@ def update_forbidden_words(forbidden_file_id):
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
 
+#########################################################################################
+
+
 @task(queue='high-priority')
 def project_analysis_property(project_id, retries=0, max_retries=3):
+    '''
+    This task is to execute project analysis property for the tasks
+    '''
     logger.info("Executing high-priority task")
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
@@ -665,7 +714,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
             raise MaxRetriesExceededError("Maximum retries reached.") from e
             logger.info("retries exceeded")
 
-
+##################################### Tasks Related to ai_tm ##################################
 
 @task(queue='medium-priority')
 def analysis(tasks,project_id):
@@ -721,6 +770,59 @@ def count_update(job_id):
     logger.info('billable count updated')
 
 
+@task(queue='medium-priority')
+def weighted_count_update(receiver,sender,assignment_id):
+    from ai_workspace import forms as ws_forms
+    from ai_workspace.models import TaskAssignInfo
+    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
+    task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    task_assign_obj_ls=[]
+    for obj in task_assgn_objs:
+        existing_wc = obj.task_assign.task_assign_info.billable_word_count
+        existing_cc = obj.task_assign.task_assign_info.billable_char_count
+        if obj.account_raw_count == False:
+            word_count = get_weighted_word_count(obj.task_assign.task)
+            char_count = get_weighted_char_count(obj.task_assign.task)
+        else:
+            word_count = obj.task_assign.task.task_word_count
+            char_count = obj.task_assign.task.task_char_count
+        obj.billable_char_count =  char_count
+        obj.billable_word_count = word_count
+        obj.save()
+
+        if existing_wc != word_count and existing_cc != char_count:
+            task_assign_obj_ls.append(obj)
+
+        try:
+            if receiver !=None and sender!=None:
+                Receiver = AiUser.objects.get(id = receiver)
+                receivers = []
+                receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
+                receivers.append(Receiver)
+                Sender = AiUser.objects.get(id = sender)
+                hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
+                for i in [*set(receivers)]:
+                    if i in hired_editors or (i.team and i.team.owner) in hired_editors:
+                        ws_forms.task_assign_detail_mail(i,assignment_id)
+            else:
+                assigns = task_assgn_objs[0].task_assign
+                if assigns.task_assign_info.mtpe_count_unit_id != None:
+                    if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                        if existing_wc != word_count:
+                            notify_word_count(assigns,word_count,char_count)
+                    else:
+                        if existing_cc != char_count:
+                            notify_word_count(assigns,word_count,char_count)
+        except Exception as e:
+            print(f'Error in notify: {e}')
+            pass
+    logger.info('billable count updated and mail sent')
+
+    if len(task_assign_obj_ls) != 0:
+         po_modify_weigted_count(task_assign_obj_ls)
+
+
+############################ For wordchoice ############################################
 
 OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
@@ -755,9 +857,14 @@ def replace_with_gloss(src,raw_mt,task):
     print("FinalMT------------>",final_mt)
     return final_mt
       
+##################################################################################################################
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
+    '''
+    This task is mainly used for get_mt (mt-only download) for the source files.
+    This is called for page-wise translation.
+    '''
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -868,63 +975,6 @@ def mt_raw_update(task_id,segments):
     tr = MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
    
     logger.info("mt_raw_update")
-
-
-
-
-
-
-
-@task(queue='medium-priority')
-def weighted_count_update(receiver,sender,assignment_id):
-    from ai_workspace import forms as ws_forms
-    from ai_workspace.models import TaskAssignInfo
-    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
-    task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
-    task_assign_obj_ls=[]
-    for obj in task_assgn_objs:
-        existing_wc = obj.task_assign.task_assign_info.billable_word_count
-        existing_cc = obj.task_assign.task_assign_info.billable_char_count
-        if obj.account_raw_count == False:
-            word_count = get_weighted_word_count(obj.task_assign.task)
-            char_count = get_weighted_char_count(obj.task_assign.task)
-        else:
-            word_count = obj.task_assign.task.task_word_count
-            char_count = obj.task_assign.task.task_char_count
-        obj.billable_char_count =  char_count
-        obj.billable_word_count = word_count
-        obj.save()
-
-        if existing_wc != word_count and existing_cc != char_count:
-            task_assign_obj_ls.append(obj)
-
-        try:
-            if receiver !=None and sender!=None:
-                Receiver = AiUser.objects.get(id = receiver)
-                receivers = []
-                receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) else []
-                receivers.append(Receiver)
-                Sender = AiUser.objects.get(id = sender)
-                hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
-                for i in [*set(receivers)]:
-                    if i in hired_editors or (i.team and i.team.owner) in hired_editors:
-                        ws_forms.task_assign_detail_mail(i,assignment_id)
-            else:
-                assigns = task_assgn_objs[0].task_assign
-                if assigns.task_assign_info.mtpe_count_unit_id != None:
-                    if assigns.task_assign_info.mtpe_count_unit_id == 1:
-                        if existing_wc != word_count:
-                            notify_word_count(assigns,word_count,char_count)
-                    else:
-                        if existing_cc != char_count:
-                            notify_word_count(assigns,word_count,char_count)
-        except Exception as e:
-            print(f'Error in notify: {e}')
-            pass
-    logger.info('billable count updated and mail sent')
-
-    if len(task_assign_obj_ls) != 0:
-         po_modify_weigted_count(task_assign_obj_ls)
 
 
 @task
@@ -1079,6 +1129,10 @@ def sync_user_details_bi(test=False,is_vendor=False):
 
 
 def proz_list_send_email(projectpost_id):
+    '''
+    This task is to notify proz users about available projectpost. In this we are calling proz-API
+    by sending the custom message. Person from proz approves and forward it.(Is the flow)
+    '''
     instance = ProjectboardDetails.objects.get(id=projectpost_id)
     jobs = instance.get_postedjobs
     steps = instance.get_services
