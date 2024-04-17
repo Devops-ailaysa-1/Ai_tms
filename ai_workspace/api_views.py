@@ -1967,6 +1967,7 @@ class AssignToListView(viewsets.ModelViewSet):
     In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from
     job or project.get_jobs if project is the input.
     Returns serializer.data
+    
     '''
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
@@ -4013,6 +4014,7 @@ def msg_to_extend_deadline(request):
     step = request.POST.get('step')
     reassigned = request.POST.get('reassigned')
     task_assign = TaskAssign.objects.get(task=task,step=step,reassigned=reassigned)
+    
     sender = task_assign.assign_to
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by

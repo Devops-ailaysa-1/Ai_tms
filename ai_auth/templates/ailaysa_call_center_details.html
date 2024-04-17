@@ -7,17 +7,59 @@
     <title>Ailaysa</title>
   </head>
   <body>
-    Hello {{name}},
-    <p>{{email}} wants to get in touch with us, below are the details:</p>
-    <p><b>Name:</b> {{name}}</p>
-    <p><b>Whatsapp No.:</b> {{whatsapp_number}}</p>
-    <p><b>Other No.:</b> {{phone_number}}</p>
+    Hi admin,
+    <p>{{name}} wants to contact sales, below are the details:</p>
+    {% if {{name}} %}
+      <p><b>Name:</b> {{name}}</p>
+    {% else %}
+      <p><b>Name:</b> - </p>
+
+    {% if {{email}} %}
+      <p><b>Email: {{email}}</b></p>
+    {% else %}
+      <p><b>Email:</b> - </p>
+    
+    {% if {{whatsapp_number}} %}
+      <p><b>Whatsapp No.:</b> {{whatsapp_number}}</p>
+    {% else %}
+      <p><b>Whatsapp No.:</b> - </p>
+
+    {% if {{phone_number}} %}
+      <p><b>Other No.:</b> {{phone_number}}</p>
+    {% else %}
+      <p><b>Other No.:</b> - </p>
+
+    {% if {{company_name}} %}
     <p><b>Company/ org name:</b> {{company_name}}</p>
+    {% else %}
+    <p><b>Company/ org name:</b> - </p>
+
+
+    {% if {{address}} %}
     <p><b>Address:</b> {{address}}</p>
+    {% else %}
+    <p><b>Address:</b> - </p>
+
+    {% if {{service_type}} %}
     <p><b>Service type:</b> {{service_type}}</p>
+    {% else %}
+    <p><b>Service type:</b> - </p>
+
+    {% if {{source_language}} %}
     <p><b>Source language:</b> {{source_language}}</p>
+    {% else %}
+    <p><b>Source language:</b> - </p>
+
+    {% if {{target_language}} %}
     <p><b>Target language:</b> {{target_language}}</p>
+    {% else %}
+    <p><b>Target language:</b> - </p>
+
+    {% if {{service_description}} %}
+
     <p><b>Service description:</b> {{service_description}}</p>
+    {% else %}
+    <p><b>Service description:</b> - </p>
   </body>
 </html>
 
