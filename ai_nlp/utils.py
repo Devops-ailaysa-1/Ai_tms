@@ -205,7 +205,6 @@ def gen_text_context_question(vectors_list,question):
 
 def generate_question(document):
     collections = document._collection
-    print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
@@ -421,7 +420,7 @@ def ner_terminology_finder(file_paths):
         prompt = prompt.format(extracted_text)
         result = mistral_chat_api(prompt)
         try:
-            result = json.loads(chat_response.choices[0].message.content)
+            result ="" #json.loads(chat_response.choices[0].message.content)
         except Exception as e:
             print("ERROR in JSON DECODE-------->",e)
     print("terms",terms)

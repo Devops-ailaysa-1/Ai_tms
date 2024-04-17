@@ -10,7 +10,8 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
-                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp,CareerSupportAI)
+                            CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp,CareerSupportAI,
+                            AilaysaCallCenter,AilaysaCallCenterFile)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -636,3 +637,19 @@ class CareerSupportAISerializer(serializers.ModelSerializer):
     class Meta:
         model = CareerSupportAI
         fields = "__all__"
+
+
+class AilaysaCallCenterFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AilaysaCallCenterFile
+        fields = "__all__"
+
+class AilaysaCallCenterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AilaysaCallCenter
+        fields = "__all__"
+
+
+    def create(self, validated_data):
+        instance=AilaysaCallCenter.objects.create(**validated_data)
+        return instance

@@ -1,25 +1,19 @@
 from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, \
     MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
-import json, copy
+import json
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job, TaskAssign
-from ai_auth.models import AiUser
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
-from django.apps import apps
-from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
-import collections
-import csv
-import io,time
 from django.db.models import Func, F, CharField
 
 client = translate.Client()
@@ -544,12 +538,13 @@ class MT_RawSerializer(serializers.ModelSerializer):
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
         #         translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
         #         validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
         # else:
         #     translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         #     validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                
         else:
             validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
@@ -707,10 +702,7 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-
-
 from ai_workspace_okapi.models import SegmentDiff
-
 class SegmentDiffSerializer(serializers.ModelSerializer):
 
     class Meta:

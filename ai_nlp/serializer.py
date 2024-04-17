@@ -78,10 +78,6 @@ def chat_page_chk(instance):
     return page_count,file_format
 
 
-
- 
-
-
 class PdffileUploadSerializer(serializers.ModelSerializer):
     # website = serializers.CharField(required=False)
     pdf_file_question = PdfQustionSerializer(many=True,required=False)
@@ -110,19 +106,15 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
                 instance.delete()
                 raise serializers.ValidationError({'msg':'File word limit should be less than 200,000' }, code=400)
             
-            instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
+            if not validated_data.get('file_name',None):
+
+                instance.file_name = instance.file.name.split("/")[-1]#.split(".")[0] ###not a file
 
             instance.status="PENDING"
             instance.save()
 
             count = PdffileUpload.objects.filter(file_name__contains=instance.file_name).exclude(id=instance.id).count()
             print("count--->", count)
-            # if count!=0:
-            #     extension = instance.file_name.split(".")[-1]
-            #     print(extension)
-            #     file_name = os.path.basename(os.path.splitext(instance.file_name)[0])
-            #     instance.file_name = str(file_name).split(".pdf")[0] + "(" + str(count) + ")."+extension
-            #     print("count",count,"---",instance.file_name)
             celery_id = loader.apply_async(args=(instance.id,),)  
             instance.celery_id=celery_id
             instance.is_train=False

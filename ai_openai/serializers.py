@@ -266,11 +266,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
         return instance
 
 
-
-
-
-
-
 class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult

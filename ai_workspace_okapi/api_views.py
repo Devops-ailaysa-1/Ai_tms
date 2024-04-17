@@ -102,7 +102,11 @@ from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
-
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from .utils import get_prompt_sent
+from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+from .utils import get_general_prompt
 
 logger = logging.getLogger('django')
 
@@ -278,6 +282,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+
                 if state == 'STARTED' or state == 'PENDING':
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
@@ -285,12 +290,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     except TaskResult.DoesNotExist:
                         cel_task = pre_translate_update.apply_async((task.id,),queue='high-priority')
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
-                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
-                   
+                
+                
+                elif (not ins) or state == 'FAILURE' or state == 'REVOKED':   
                     cel_task = pre_translate_update.apply_async((task.id,),queue='high-priority')
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
-                elif state == "SUCCESS":
-                    
+
+
+                elif state == "SUCCESS":     
                     if ins.error_type == "Insufficient Credits" or get_empty_segments(task.document) == True:
                         initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
                         seg = task.document.get_segments().filter(target='').first().source
@@ -426,13 +433,16 @@ class DocumentViewByDocumentId(views.APIView):
 
 
     def edit_allow_check(self, task_obj, given_step):
+        # This function is to check whether the request user has access to edit the document or not.
+
         from ai_workspace.models import Task, TaskAssignInfo
         
         given_step = int(given_step) if given_step else None
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
         user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
-        if not task_assigned_info:return True
+        if not task_assigned_info:
+            return True
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
     
         if user not in assigners:
@@ -555,13 +565,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
-            # ser = SegmentSerializer(page_segments, many=True)
-            # page_objects = json.dumps(ser.data)
-            # cel_task = mt_raw_update.apply_async((task.id,page_objects,), queue='high-priority')
-            # state = mt_raw_update.AsyncResult(cel.celery_task_id).state
-            # if state == 'STARTED':
-            #     return Response({'msg':'celery running','celery_id':cel.id})
-            mt_raw_update(task.id,page_segments)
+            mt_raw_update(task.id,page_segments) # to pretranslate segments in that page
         segments_ser = SegmentSerializer(page_segments, many=True)
 
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
@@ -755,6 +759,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def split_update(self, request_data, segment):
+        # To update split segments
         org_segment = SplitSegment.objects.get(id=segment.id).segment_id
         status = request_data.get("status",None)
         if status:
@@ -832,6 +837,12 @@ class MergeSegmentDeleteView(viewsets.ModelViewSet):
         return  MergeSegment.objects.all()
 
 class MT_RawAndTM_View(views.APIView):
+    '''
+    This view is to create MT of segment
+    first, it will check for tmxfiles and for TM options if it is then it will return TM Results 
+    or it will get word count of the segment and checking credit balance
+    and then calling MT and return MT_RawSerializer data
+    '''
 
     @staticmethod
     def can_translate(request, debit_user):
@@ -927,9 +938,9 @@ class MT_RawAndTM_View(views.APIView):
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
                 
-                replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
-                mt_raw.mt_raw = replaced
-                mt_raw.save()
+                # replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
+                # mt_raw.mt_raw = replaced
+                # mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
@@ -981,7 +992,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        task = Task.objects.get(job=doc.job)
+        # task = Task.objects.get(job=doc.job)
 
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
@@ -995,9 +1006,9 @@ class MT_RawAndTM_View(views.APIView):
                     =split_seg.segment_id).first().mt_engine
 
             if proj_mt_engine == task_assign_mt_engine:
-                replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
-                mt_raw_split.mt_raw = replaced
-                mt_raw_split.save()
+                # replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
+                # mt_raw_split.mt_raw = replaced
+                # mt_raw_split.save()
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
@@ -1236,6 +1247,10 @@ class ConcordanceSearchView(views.APIView):
 
 
 def long_text_process(consumable_credits,document_user,file_path,task,target_language,voice_gender,voice_name):
+    '''
+    This function is to call celery task of google_long_text_file_process 
+    and store the result in TaskTranscriptDetail and returns TaskTranscriptDetailSerializer data
+    '''
     from ai_workspace.api_views import google_long_text_file_process
     res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
    
@@ -1257,6 +1272,9 @@ def pre_process(data):
     return data
 
 def mt_raw_pre_process(data):
+    '''
+    This is to replace target key with mt_raw before going to okapi
+    '''
     for key in data['text'].keys():
         for d in data['text'][key]:
             if d.get('mt_raw_target') != None:
@@ -1269,6 +1287,9 @@ def mt_raw_pre_process(data):
     
 
 class DocumentToFile(views.APIView):
+    '''
+    This view is to download document with output_type as source,bilingual,mt_raw, audion and target file
+    '''
    
     @staticmethod
     def get_object(document_id):
@@ -1342,6 +1363,7 @@ class DocumentToFile(views.APIView):
         # return string
 
     def clean_text(self,string):
+        # To clean the tags from the string
         if string!=None:
             return bleach.clean(string, tags=[], strip=True)
 
@@ -1483,13 +1505,13 @@ class DocumentToFile(views.APIView):
                 if mt_process.get('status') == True:
                     doc = Document.objects.get(id=document_id)
                     res = self.document_data_to_file(request,document_id,True)  
-                    if doc.job.project.project_type_id == 8:
+                    if doc.job.project.project_type_id == 8: # For federal
                         res = DocumentToFile.json_key_manipulation(res.text)
                 else:
                     return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
             else:
                 res = self.document_data_to_file(request, document_id) 
-                if doc.job.project.project_type_id == 8:
+                if doc.job.project.project_type_id == 8: # For federal
                    res = DocumentToFile.json_key_manipulation(res.text) 
             
             if isinstance(res, str):
@@ -1512,6 +1534,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
 
         if mt_raw == True:
+            # This extra_context is to get the MT_raw of segments with the get_mt_raw_target_if_have() property 
             doc_serlzr = DocumentSerializerV3(document,extra_context={'mt_raw':True})
         else:
             doc_serlzr = DocumentSerializerV3(document)
@@ -1576,7 +1599,13 @@ class TranslationStatusList(views.APIView):
         ser = TranslationStatusSerializer(qs, many=True)
         return Response(ser.data, status=200)
 
+################## Find and Replace ################################################
+
+
 class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
+    '''
+    This view is to find the term in source segments and return SegmentSerializer data
+    '''
     PAGE_SIZE = page_size = 20
     lookup_field = "source"
     page_size_query_param = 'page_size'
@@ -1656,6 +1685,10 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
 class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     lookup_field = "temp_target"
 
+    '''
+    This view is to find and replace the term in target segments and return SegmentSerializer data
+    '''
+
     @staticmethod
     def unconfirm_status(segment):
         segment.status_id = {102:101, 104:103, 106:105, 110:109}.get(
@@ -1729,6 +1762,10 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
 
 
 class ProgressView(views.APIView):
+    '''
+    This view is to get the segments progress with document ID.
+    It returns total segment count and number of segments confirmed.
+    '''
     @staticmethod
     def get_object(document_id):
         document = get_object_or_404(
@@ -1778,6 +1815,9 @@ class ProgressView(views.APIView):
 
 
 class SegmentSizeView(viewsets.ViewSet): #User setting custom number of segments per page
+    '''
+    This view is to save and get number of segments per page for the user
+    '''
     permission_classes = [IsAuthenticated]
     def list(self,request):
         try:
@@ -1810,6 +1850,9 @@ class SegmentSizeView(viewsets.ViewSet): #User setting custom number of segments
 
 
 class FontSizeView(views.APIView):
+    '''
+    To get and save fontsize for the user
+    '''
     permission_classes = [IsAuthenticated]
 
     @staticmethod
@@ -1846,6 +1889,9 @@ class FontSizeView(views.APIView):
 
 
 class CommentView(viewsets.ViewSet):
+    '''
+    This view is to create, list, update and delete comments for segments.
+    '''
     @staticmethod
     def get_object(comment_id):
         qs = Comment.objects.all()
@@ -1978,9 +2024,16 @@ class GetPageIndexWithFilterApplied(views.APIView):
             res = ({"page_id": None}, 404)
         return  Response(*res)
 
+
+########  Workspace WIKI OPTIONS  ##########################
+
 ############ wiktionary quick lookup ##################
 @api_view(['GET', 'POST',])
 def WiktionaryParse(request):
+    '''
+    This is used to parse the wiktionary data with the library WiktionaryParser()
+    and return pos(noun,verb,adjective), definitions and its translation
+    '''
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
@@ -2023,7 +2076,15 @@ def WiktionaryParse(request):
     return JsonResponse({"Output":res},safe=False)
 
 
+
+
+
+############################# WIKIPEDIA ##############################################
 def wikipedia_ws(code,codesrc,user_input):
+    '''
+    calling wikipedia API with the term and source and target_lang.
+    if the result was found, it will return both source and target and its URL.
+    '''
     URL = f"https://{codesrc}.wikipedia.org/w/api.php"
     PARAMS = {
         "action": "query",
@@ -2055,7 +2116,7 @@ def wikipedia_ws(code,codesrc,user_input):
 
 
 
-########  Workspace WIKI OPTIONS  ##########################
+
 #WIKIPEDIA
 @api_view(['GET',])
 # @permission_classes((HasToken,))
@@ -2085,9 +2146,13 @@ def WikipediaWorkspace(request):
     res=wikipedia_ws(code,codesrc,user_input)
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
-
+############################## Wiktionary ###################################################
 
 def wiktionary_ws(code,codesrc,user_input):
+    '''
+    calling wiktionary API with the term and source and target_lang.
+    if the result not found it will the lower te term and search again and return url
+    '''
 
     URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
     PARAMS={
@@ -2155,6 +2220,7 @@ def WiktionaryWorkSpace(request):
 
 
 ######  USING PY SPELLCHECKER  AND HunSpell######
+#### Not using now, because of hunspell license issue. Now we are using symspell ###########
 @api_view(['GET', 'POST',])
 def spellcheck(request):
     import hunspell
@@ -2232,7 +2298,7 @@ def get_segment_history(request):
 
 
 
-
+##############  Transeditor Rewrite,shorten,simplify  #############################################
 
 
 def get_src_tags(sent):
@@ -2246,12 +2312,9 @@ def get_src_tags(sent):
 
     return result
 
-from ai_workspace.api_views import get_consumable_credits_for_text
-from ai_openai.utils import get_prompt_chatgpt_turbo
-from .utils import get_prompt_sent
-from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
-@api_view(['POST',])############### available for non english ###################
+
+@api_view(['POST',])############### available for NON ENGLISH ###################
 def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2260,7 +2323,7 @@ def paraphrasing_for_non_english(request):
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
-    option = request.POST.get('option')
+    option = request.POST.get('option')  #simplify,shorten,rewrite
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         project = doc_obj.job.project
@@ -2289,7 +2352,7 @@ def paraphrasing_for_non_english(request):
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
             rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
-            replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
+            # replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         prompt_usage = result_prompt['usage']
@@ -2302,10 +2365,7 @@ def paraphrasing_for_non_english(request):
         return  Response({'msg':'Insufficient Credits'},status=400)
 
 
-from ai_workspace.api_views import get_consumable_credits_for_text
-from ai_openai.utils import get_prompt_chatgpt_turbo
-from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
-from .utils import get_general_prompt
+
 
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
@@ -2337,7 +2397,7 @@ def paraphrasing(request):
         if segment_id:
             seg = Segment.objects.get(id=segment_id)
             print("Seg--------->",seg)
-            replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+            # replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
         else:
             replaced = para_sentence
         prompt_usage = result_prompt['usage']
@@ -2397,6 +2457,12 @@ from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDi
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_audio_output_file(request):
+    '''
+    This is for download audio file that is initiated already. so they will send celery_id and document_id.
+    check the status of celery_id, if it is success then the file will be downloaded.
+    if it is failure, then it will put back the credits deducted and return the error code.
+    else, it will return the pending status
+    '''
     from ai_workspace.models import MTonlytaskCeleryStatus
     celery_id = request.GET.get('celery_id')
     document_id = request.GET.get('document_id')
@@ -2428,6 +2494,10 @@ def download_audio_output_file(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_mt_file(request):
+    '''
+    This is for download mt_only. it will check with celery_id if it is success then it will download file
+    or else it will return status and error code
+    '''
     from ai_workspace.models import MTonlytaskCeleryStatus
     celery_id = request.GET.get('celery_id')
     document_id = request.GET.get('document_id')
@@ -2462,6 +2532,10 @@ def download_mt_file(request):
 
 
 def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
+    '''
+    This is to exclude unwanted keys and write the main keys with source and target in bilingual file.
+    clean_text is to remove html and other tags.
+    '''
     import pandas as pd
     import io
     output = io.BytesIO()
@@ -2489,6 +2563,9 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
+    '''
+    This is for Federal Task download. 
+    '''
     from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
     from ai_workspace.serializers import TaskNewsDetailsSerializer
@@ -2550,14 +2627,25 @@ def download_federal(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_converted_audio_file(request):
+    '''
+    This is to download already converted audio it it exists for that document
+    '''
     document_id = request.GET.get('document_id')
     doc = Document.objects.get(id=document_id)
     task = doc.task_set.first()
     return download_file(task.task_transcript_details.last().translated_audio_file.path)
 
-
+#########################################Voice Task Download###################################################
 
 def process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name):
+    '''
+    This function is internally used in document download with voice as output type.
+    this will get all the target segments in that document and write in a file. 
+    Then checks for the length limit and then for user credits.
+    if length is lower than 4500 then it will call for text_to_speech()
+    or else it will call for google_long_text_file_process_cel celery task .
+    stores the result in TaskTranscriptDetails table and return TaskTranscriptDetailSerializer data
+    '''
     from ai_workspace.models import MTonlytaskCeleryStatus
     temp_name = segments_with_target(document_id)
     doc = Document.objects.get(id = document_id)
@@ -2601,9 +2689,15 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
 
 
 def remove_tags(string):
+    # To remove tags from string
     return re.sub(rf'</?\d+>', "", string)
 
 def segments_with_target(document_id):
+    '''
+    This function is internally called in process_audio_file() to write the target segments in file to send to google text_to_speech.
+    For this we are first filtering non-empty targets.
+    and then write in temperory file and return it
+    '''
 
     document = Document.objects.get(id=document_id)
     segments = document.segments_for_workspace
@@ -2641,7 +2735,7 @@ def segments_with_target(document_id):
             counter = counter + len(i.encode("utf8"))
             out.write(' '+i)
             if counter>limit:
-                out.write('\n')
+                out.write('\n') # for bigger sentence, if it exceeds length then it will add new line
                 counter = 0
 
     return temp_name
@@ -2721,6 +2815,9 @@ post_save.connect(segment_difference, sender=SegmentHistory)
 
 @api_view(['POST'])
 def symspellcheck(request):
+    '''
+    This is for spellcheck used in transeditor. we are using symspell library and its free dictionaries
+    '''
     from ai_openai.serializers import lang_detector
     text = request.POST.get('target',None)
     doc_id = request.POST.get('doc_id')
@@ -2744,9 +2841,14 @@ def symspellcheck(request):
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'},status=400)
     
-
+######################################For WORDCHOICES Feature########################################
 
 def check_source_words(user_input,task):
+    '''
+    This is to check whether glossary(type 10- wordchoice) is selected for this task. 
+    if it is selected then search all the terms in the wordchoicelist is present in user_input(source segment)
+    if the terms are present then it will return source list and values list(sl_term,tl_term) 
+    '''
     from ai_glex.models import TermsModel,GlossarySelected
     proj = task.job.project
     target_language = task.job.target_language
@@ -2761,6 +2863,11 @@ def check_source_words(user_input,task):
     return words,gloss
 
 def target_source_words(target_mt,task):
+    '''
+    This is to check whether the tl_term is already present in target or not.
+    if it is present, then it is translated already with correct term so no need to send it to LLM is the basic idea. 
+    but it is not using bcoz of morphological issue.
+    '''
     from ai_glex.models import TermsModel,GlossarySelected
     proj = task.job.project
     target_language = task.job.target_language
