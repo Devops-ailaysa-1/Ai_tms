@@ -626,9 +626,6 @@ class ProjectFilter(django_filters.FilterSet):
             assign_to_list = assign_to.split(',')
         else: assign_to_list = []
         queryset = progress_filter(queryset,value,assign_to_list)
-        end_time = time.time()
-        time_taken = end_time - start_time
-        print("Time Taken to filter-------------------->",time_taken)
         return queryset
 
     def filter_not_empty(self,queryset, name, value):
@@ -1955,9 +1952,9 @@ def instruction_file_download(request,instruction_file_id):
 class AssignToListView(viewsets.ModelViewSet):
     '''
     This view is to list the editors who works in given language pair.
-    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from
-    job or project.get_jobs if project is the input.
-    Returns serializer.data
+    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from job 
+    or if project is the input then jobs = project.get_jobs.
+    Returns GetAssignToSerializer data
     '''
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
