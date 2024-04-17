@@ -292,8 +292,11 @@ def send_ailaysa_call_center(obj_id):
     template_detail = 'ailaysa_call_center_details.html'
     template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
 
-    email = 'sales@langsmart.com'
-    cc = 'senthil.nathan@ailaysa.com'
+    # email = 'sales@langsmart.com'
+    # cc = 'senthil.nathan@ailaysa.com'
+
+    email = 'hemanth@langscape.com'
+    cc = 'hemanthmurugan21@gmail.com'
 
     context_for_sales = {'name':instance.name,'email':instance.email,
                'company_name':instance.company_name,'address':instance.address,'service_type':instance.service_type,
@@ -304,8 +307,8 @@ def send_ailaysa_call_center(obj_id):
     
     context_get_in_touch = {'name':instance.name,'email':instance.email,
                             'service_description':instance.service_description,'company_name':instance.company_name}
-
-    subject_contact_sale = "Sales ({})".format(instance.name)
+    print(context_for_sales)
+    subject_contact_sale = "Sales ({})".format(instance.name) 
     subject_get_in_touch = "Contact ({})".format(instance.name)
 
 
