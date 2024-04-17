@@ -321,15 +321,19 @@ class ContactPricingCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email(subject,template,context,email=None):
+def send_email(subject,template,context,email=None,cc=None):
     email = email if email else 'support@ailaysa.com'
     content = render_to_string(template, context)
-    file_ =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])#to emailaddress need to change ['support@ailaysa.com',]
+    file_ = context.get('file')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,], cc=[cc,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
-        for i in file_:
-            name = os.path.basename(i.file.path)
-            msg.attach(name, i.file.file.read())
+        if isinstance(file_,list):
+            for i in file_:
+                name = os.path.basename(i.file.path)
+                msg.attach(name, i.file.file.read())
+        else:
+            name = os.path.basename(file_.path)
+            msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
