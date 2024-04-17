@@ -322,7 +322,6 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
-# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 
 # OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 
@@ -584,4 +583,6 @@ INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
 
 EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
+ 
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
  
