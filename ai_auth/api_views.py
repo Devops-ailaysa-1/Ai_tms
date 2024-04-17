@@ -2865,15 +2865,18 @@ class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
         company_name = request.POST.get('company_name',None)
         message = request.POST.get('message',None)
 
-        subject = "New Enquiry"
-        template = 'career_support_email.html'
-        email = 'hr@ailaysa.com'
+        subject_get_in_touch = "Contact ({})".format(name)
 
-        context = {'name':name,'email':email,
-                'company_name':company_name, 
-                'service_description':message,
-                 }
-        send_email(subject,template,context,email)
+        template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
+        # email = 'sales@langsmart.com'
+        # cc = 'senthil.nathan@ailaysa.com'
+
+        email = "hemanth@langscape.com"
+        cc = 'hemanthmurugan21@gmail.com'
+
+        context = {'name':name,'email':email,'company_name':company_name, 'service_description':message,}
+
+        send_email(subject_get_in_touch,template_get_in_touch,context,email,cc)
         return JsonResponse({'msg':'message sent successfully'},status=200)
 
 
