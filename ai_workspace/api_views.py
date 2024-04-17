@@ -1788,7 +1788,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
                 try:self.history(obj)
-                except:pass
+                except:
+                    pass
                 if obj.task_assign.reassigned == True:
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
                     obj.task_assign.status = 1
@@ -1823,7 +1824,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     role = get_assignment_role(obj,obj.task_assign.step,obj.task_assign.reassigned)
                     unassign_task(assigned_user,role,obj.task_obj)             
                     obj.delete()
-                
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 # Not using now

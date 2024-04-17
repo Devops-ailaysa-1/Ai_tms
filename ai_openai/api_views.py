@@ -28,13 +28,14 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 from googletrans import Translator
 from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
-openai_model = os.getenv('OPENAI_MODEL')
+from ai_tms.settings import OPENAI_MODEL
+openai_model = OPENAI_MODEL
 logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
 from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
-from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search,bing_news_search
+from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -872,7 +873,7 @@ from ai_staff.models import PromptSubCategories
 from rest_framework import serializers
 from ai_openai.serializers import lang_detector
  
-os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
 
 from ai_openai.models import MyDocuments

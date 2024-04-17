@@ -205,7 +205,6 @@ def gen_text_context_question(vectors_list,question):
 
 def generate_question(document):
     collections = document._collection
-    print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
