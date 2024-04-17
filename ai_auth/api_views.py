@@ -72,8 +72,6 @@ from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorOnboardingInfo
 from django.db import transaction
 from django.contrib.sites.shortcuts import get_current_site
 #for soc
-from django.test.client import RequestFactory
-from django.test import Client
 from allauth.socialaccount.providers.google.views import ( GoogleOAuth2Adapter,)
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -81,12 +79,9 @@ from allauth.socialaccount.providers.oauth2.views import (
     OAuth2LoginView,
 )
 from ai_auth.providers.proz.views import ProzAdapter
-from django.contrib.sessions.models import Session
-from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
-from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
@@ -94,7 +89,7 @@ from ai_auth.signals import send_campaign_email
 from django_oso.auth import authorize, authorize_model
 import os
 from ai_auth.reports import AilaysaReport
-
+from django.db.models.query import QuerySet
 logger = logging.getLogger('django')
 
 try:
@@ -327,7 +322,7 @@ def send_email(subject,template,context,email=None,cc=None):
     file_ = context.get('file')
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,], cc=[cc,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
-        if isinstance(file_,list):
+        if isinstance(file_,QuerySet):
             for i in file_:
                 name = os.path.basename(i.file.path)
                 msg.attach(name, i.file.file.read())
@@ -2870,15 +2865,18 @@ class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
         company_name = request.POST.get('company_name',None)
         message = request.POST.get('message',None)
 
-        subject = "New Enquiry"
-        template = 'career_support_email.html'
-        email = 'hr@ailaysa.com'
+        subject_get_in_touch = "Contact ({})".format(name)
 
-        context = {'name':name,'email':email,
-                'company_name':company_name, 
-                'service_description':message,
-                 }
-        send_email(subject,template,context,email)
+        template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
+        # email = 'sales@langsmart.com'
+        # cc = 'senthil.nathan@ailaysa.com'
+
+        email = "hemanth@langscape.com"
+        cc = 'hemanthmurugan21@gmail.com'
+
+        context = {'name':name,'email':email,'company_name':company_name, 'service_description':message,}
+
+        send_email(subject_get_in_touch,template_get_in_touch,context,email,cc)
         return JsonResponse({'msg':'message sent successfully'},status=200)
 
 

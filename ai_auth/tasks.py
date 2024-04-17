@@ -287,13 +287,12 @@ def send_ailaysa_call_center(obj_id):
     from ai_auth.api_views import send_email
     instance = AilaysaCallCenter.objects.get(id=obj_id)
 
-
-
     template_detail = 'ailaysa_call_center_details.html'
-    template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
+    # email = 'sales@langsmart.com'
+    # cc = 'senthil.nathan@ailaysa.com'
+    email = "hemanth@langscape.com"
+    cc = "hemanth@langscape.com"
 
-    email = 'sales@langsmart.com'
-    cc = 'senthil.nathan@ailaysa.com'
 
     context_for_sales = {'name':instance.name,'email':instance.email,
                'company_name':instance.company_name,'address':instance.address,'service_type':instance.service_type,
@@ -302,16 +301,8 @@ def send_ailaysa_call_center(obj_id):
                'phone_number':instance.phone_number,'whatsapp_number': instance.whatsapp_number,
                'file':instance.ailaysa_call_ctr.all()}
     
-    context_get_in_touch = {'name':instance.name,'email':instance.email,
-                            'service_description':instance.service_description,'company_name':instance.company_name}
-
-    subject_contact_sale = "Sales ({})".format(instance.name)
-    subject_get_in_touch = "Contact ({})".format(instance.name)
-
-
-    send_email(subject_get_in_touch,template_get_in_touch,context_get_in_touch,email,cc)
+    subject_contact_sale = "Sales ({})".format(instance.name) 
     send_email(subject_contact_sale,template_detail,context_for_sales,email,cc)
-
     delete_ailaysa_call_center_instance(instance=instance)
 
 
