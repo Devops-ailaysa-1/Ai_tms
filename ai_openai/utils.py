@@ -356,5 +356,3 @@ def mistral_chat_api(prompt):
     # return chat_response.choices[0].message.content
 
 
-    
-

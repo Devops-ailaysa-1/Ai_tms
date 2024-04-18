@@ -727,7 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
 
-        # filter the projects with task_assign_status. Now it is used for Dinamalar flow 
+        # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.filter_queryset(self.get_queryset())
 
         user_1 = self.get_user()
@@ -1964,10 +1964,9 @@ def instruction_file_download(request,instruction_file_id):
 class AssignToListView(viewsets.ModelViewSet):
     '''
     This view is to list the editors who works in given language pair.
-    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from
-    job or project.get_jobs if project is the input.
-    Returns serializer.data
-    
+    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from job 
+    or if project is the input then jobs = project.get_jobs.
+    Returns GetAssignToSerializer data
     '''
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
@@ -4426,7 +4425,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         It will get list of news_id and source language to fetch news from respective CMS.
         get_files() is to get the news from news_id and create json file and returns it.
         create_news_detail() is to create the record that the task is created for this news_id in lang pair to avoid duplication.
-        ProjectFilesCreateType is updated to refer that file is createed from CMS.
+        ProjectFilesCreateType is updated to refer that file is created from CMS.
 
         '''
         from ai_workspace.models import ProjectFilesCreateType
