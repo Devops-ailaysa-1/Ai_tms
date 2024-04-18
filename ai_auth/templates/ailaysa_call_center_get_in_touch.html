@@ -9,10 +9,29 @@
   <body>
     Hi admin,
     <p>{{name}} wants to get in touch with us, below are the details:</p>
-    <p><b>Name:</b> {{name}}</p>
-    <p><b>Email:</b> {{email}}</p>
-    <p><b>Message:</b> {{service_description}}</p>
-    <p><b>Company/ org name:</b> {{company_name}}</p>
- 
+    {% if name %}
+      <p><b>Name:</b> {{name}}</p>
+    {% else %}
+      <p><b>Name:</b> - </p>
+    {% endif %}
+
+    {% if email %}
+      <p><b>Email:</b> {{email}}</p>
+    {% else %}
+      <p><b>Email:</b> - </p>
+    {% endif %}
+
+    {% if company_name %}
+      <p><b>Company/ org name:</b> {{company_name}}</p>
+    {% else %}
+      <p><b>Company/ org name:</b> - </p>
+    {% endif %}  
+
+    {% if message %}
+      <p><b>Message:</b> {{message}}</p>
+    {% else %}
+      <p><b>Message:</b> - </p>
+    {% endif %}
+    
   </body>
 </html>
