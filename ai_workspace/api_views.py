@@ -727,7 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
 
-        # filter the projects with task_assign_status. Now it is used for Dinamalar flow 
+        # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.filter_queryset(self.get_queryset())
 
         user_1 = self.get_user()
@@ -1964,10 +1964,9 @@ def instruction_file_download(request,instruction_file_id):
 class AssignToListView(viewsets.ModelViewSet):
     '''
     This view is to list the editors who works in given language pair.
-    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from
-    job or project.get_jobs if project is the input.
-    Returns serializer.data
-    
+    In GetAssignToSerializer, it will filter editors with list of lang_pairs taken from job 
+    or if project is the input then jobs = project.get_jobs.
+    Returns GetAssignToSerializer data
     '''
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
