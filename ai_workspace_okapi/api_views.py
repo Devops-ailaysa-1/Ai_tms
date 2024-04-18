@@ -927,7 +927,7 @@ class MT_RawAndTM_View(views.APIView):
 
         
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        task = Task.objects.get(job=doc.job)
+        #task = Task.objects.get(document=doc)
         seg  = Segment.objects.get(id=segment_id)
 
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
@@ -992,7 +992,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        # task = Task.objects.get(job=doc.job)
+        # task = Task.objects.get(document=doc)
 
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)

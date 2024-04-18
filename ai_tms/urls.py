@@ -14,8 +14,9 @@ from allauth.socialaccount.providers.github import views
 from rest_framework import permissions
 # from drf_yasg.views import get_schema_view
 # from drf_yasg import openapi
+# from dj_rest_auth.jwt_auth import JWTCookieAuthentication
 
-# # Swagger documentation setup
+# Swagger documentation setup
 # schema_view = get_schema_view(
 #     openapi.Info(
 #         title="Ailaysa",
@@ -27,6 +28,7 @@ from rest_framework import permissions
 #     ),
 #     public=True,
 #     permission_classes=[permissions.AllowAny],
+#     authentication_classes = [JWTCookieAuthentication],
 # )
 
 
