@@ -1,0 +1,19 @@
+name: Push to Bitbucket
+
+on:
+  schedule:
+    - cron: '45 23 * * *'
+
+jobs:
+  push_to_bitbucket:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Push to Bitbucket
+        run: |
+          git fetch --unshallow origin
+          git fetch --all
+          git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git checkout "${remote#origin/}" && git pull; done
+          git remote add bitbucket https://Ailaysa:${{secrets.BITBUCKET}}@bitbucket.org/ailaysa/${{ github.event.repository.name }}.git
+          git push bitbucket --all --force 
