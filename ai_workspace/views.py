@@ -8,7 +8,7 @@ from django.forms import modelform_factory
 from django.forms import formset_factory
 import requests, json
 import requests
-from .serializers import ProjectSetupSerializer, TaskSerializer, TaskSerializerv2
+from .serializers import TaskSerializer, TaskSerializerv2
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import authenticate, login, logout
 from ai_workspace_okapi.api_views import DocumentViewByTask
@@ -40,23 +40,23 @@ class LoginOutView(views.View):
         logout(request)
         return redirect(reverse("dj-login"))
 
-class ProjectSetupDjView(LoginRequiredMixin, views.View):
+# class ProjectSetupDjView(LoginRequiredMixin, views.View):
 
-    def get(self, request):
-        print("user--->", request.user)
-        project_form = ProjectFormv2()
-        return render(request, "project-setup.html", context={"project_form":project_form})
+#     def get(self, request):
+#         print("user--->", request.user)
+#         project_form = ProjectFormv2()
+#         return render(request, "project-setup.html", context={"project_form":project_form})
 
-    def post(self, request):
-        project_form = ProjectFormv2(request.POST or None, request.FILES)
-        if project_form.is_valid():
-            project_serlzr = ProjectSetupSerializer(data=project_form.cleaned_data,
-                                context={"request": request})
-            if project_serlzr.is_valid(raise_exception=True):
-                project_serlzr.save()
-                return redirect(reverse("task-create-dj", kwargs={"project_id": project_serlzr.instance.id}))
-        else:
-            return render(request, "project-setup.html", context={"project_form":project_form})
+#     def post(self, request):
+#         project_form = ProjectFormv2(request.POST or None, request.FILES)
+#         if project_form.is_valid():
+#             project_serlzr = ProjectSetupSerializer(data=project_form.cleaned_data,
+#                                 context={"request": request})
+#             if project_serlzr.is_valid(raise_exception=True):
+#                 project_serlzr.save()
+#                 return redirect(reverse("task-create-dj", kwargs={"project_id": project_serlzr.instance.id}))
+#         else:
+#             return render(request, "project-setup.html", context={"project_form":project_form})
 
 class TaskCreateViewDj(LoginRequiredMixin, views.View):
 

@@ -6,14 +6,14 @@ from nltk import word_tokenize
 from nltk.util import ngrams
 from rest_framework import status
 from django.http import HttpResponse
-from ai_nlp.models import PdffileUpload,PdffileChatHistory #,PdfBookChatHistory
+from ai_nlp.models import PdffileUpload,PdffileChatHistory 
 import django_filters
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from ai_nlp.utils import load_embedding_vector
 from rest_framework.response import Response
 from ai_nlp.serializer import(  PdffileUploadSerializer, PdffileChatHistorySerializer,
-                              PdffileShowDetailsSerializer,PublicBookSerializer) #PdfBookChatHistorySerializer
+                              PdffileShowDetailsSerializer,PublicBookSerializer) 
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.permissions import IsAuthenticated
@@ -35,8 +35,6 @@ def named_entity(request):
     doc = nlp(src_segment)
     data = []
     for entity in doc.ents:
-        # print(entity.text, entity.label_)
-        # words={'text':entity.text,'label':entity.label_,'explanation':spacy.explain(entity.label_)}
         data.append(entity.text)
     return JsonResponse({"src_ner": data}, safe=False)
 
@@ -97,8 +95,6 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        #project_managers.append(user)
-        print("Pms----------->",project_managers)
         return user,project_managers
 
 
@@ -107,8 +103,9 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         file=request.FILES.get('file',None)
         if not file:
             return Response({'msg':'no file attached'})
+        print(str(file))
         user,pr_managers = self.get_user() 
-        data = {'user':user.id,'managers':pr_managers,'file':file}
+        data = {'user':user.id,'managers':pr_managers,'file':file,'file_name':file._get_name()}
         serializer = PdffileUploadSerializer(data={**data},context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -151,43 +148,49 @@ from ai_workspace_okapi.utils import get_translation
 from googletrans import Translator
 from rest_framework import serializers
 from ai_staff.models import Languages ,LanguagesLocale
+from ai_nlp.models import ContentPageReference
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pdf_chat(request):
-    # user = request.user
     file_id=request.query_params.get('file_id',None)
+    if not file_id:
+        raise serializers.ValidationError({'msg':'Need File id'}, code=400) #Insufficient Credits
+
     chat_text=request.query_params.get('chat_text',None)
     language = request.query_params.get('language',None)
     pdf_file=PdffileUpload.objects.get(id=int(file_id))
     chat_unit_obj = AilaysaPurchasedUnits(user=pdf_file.user)
     unit_chk = chat_unit_obj.get_units(service_name="pdf-chat")
 
-    openai_available_langs = [17]
-    detector = Translator()
-    user = request.user
+    # openai_available_langs = [17]
+    # detector = Translator()
+    # user = request.user
 
     if chat_text: 
         if unit_chk['total_units_left']>0:   ### remove not
             # language = Languages.objects.get(id=language)
-            lang = detector.detect(chat_text).lang
+            # lang = detector.detect(chat_text).lang
             
             pdf_chat_instance=PdffileChatHistory.objects.create(pdf_file=pdf_file,question=chat_text) #,language=language)
             
             
             # consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
 
-            if lang!= 'en':
+            # if lang!= 'en':
                 # print(lang,language,"--",consumable_credits_user_text)
-                chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
-                                            target_lang_code='en',user_id=user.id,from_open_ai=True)
+                # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
+                                            # target_lang_code='en',user_id=user.id,from_open_ai=True)
 
-                pdf_chat_instance.question_mt = chat_text 
+                # pdf_chat_instance.question_mt = chat_text 
 
-            chat_QA_res = load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
-            if  openai_available_langs: #language.id not in
-                pdf_chat_instance.answer_mt=chat_QA_res
-                chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
-                                              target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
+            chat_QA_res ,page_number= load_embedding_vector(instance = pdf_file ,query=chat_text) #chat_text is in eng
+            for i in page_number:
+                ContentPageReference.objects.create(pdf_chat=pdf_chat_instance,page_no=i)
+            # if  openai_available_langs: #language.id not in
+                # pdf_chat_instance.answer_mt=chat_QA_res
+                # chat_QA_res = get_translation(mt_engine_id=1,source_string = chat_QA_res,source_lang_code="en",
+                                            #   target_lang_code=lang,user_id=user.id,from_open_ai=True) #language.locale_code
 
             pdf_chat_instance.answer=chat_QA_res
             pdf_chat_instance.save()
@@ -204,7 +207,7 @@ def pdf_chat(request):
 @permission_classes([IsAuthenticated])
 def pdf_chat_remaining_units(request):
     if request.user.is_internal_member == True:
-        user = getattr(user.team, 'owner', None) if user.team is not None else None
+        user = getattr(request.user.team, 'owner', None) if user.team is not None else None
     else:
         user = request.user
     chat_unit_obj = AilaysaPurchasedUnits(user=user)
@@ -226,8 +229,6 @@ class PdffileHistorylistViewset(viewsets.ViewSet,PageNumberPagination):
     filterset_fields =['file_name','status']
     search_fields =['file_name','status']
     page_size=20
-
-
 
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user

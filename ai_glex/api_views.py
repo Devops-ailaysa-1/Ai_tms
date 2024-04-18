@@ -20,7 +20,7 @@ from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
-from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel,WriteToExcel_wordchoice
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django.db import transaction
@@ -42,79 +42,9 @@ from django_oso.auth import authorize
 from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
 
-# from ai_workspace.serializers import ProjectListSerializer
-
-# Create your views here.
-############ GLOSSARY GET & CREATE VIEW #######################
-# class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
-#     filter_backends = (filters.SearchFilter,DjangoFilterBackend,)
-#     search_fields = ('glossary_Name')
-#     ordering_fields = ['modified_date']
-#     ordering = ['-modified_date']
-#     permission_classes = [IsAuthenticated]
-#     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
-#
-#     def get_custom_page_size(self, request, view):
-#         try:
-#             self.page_size = self.request.query_params.get('limit', 10)
-#         except (ValueError, TypeError):
-#             pass
-#         return super().get_page_size(request)
-#
-#     def paginate_queryset(self, queryset, request, view=None):
-#         self.page_size = self.get_custom_page_size(request, view)
-#         return super().paginate_queryset(queryset, request, view)
-#
-#     def get_queryset(self):
-#         queryset = queryset_all = Glossary.glossaryobjects.filter(user=self.request.user.id).all().order_by('-modified_date')
-#         search_word =  self.request.query_params.get('search_word',0)
-#         status = 200
-#         if search_word:
-#             queryset = queryset.filter(
-#                         Q(glossary_Name__contains=search_word) | Q(subject_field__contains=search_word)
-#                     )
-#         if not queryset:
-#             queryset = queryset_all
-#             status = 422
-#         return queryset, status
-#
-#     def list(self, request):
-#         queryset, status = self.get_queryset()
-#         pagin_tc = self.paginate_queryset( queryset, request , view=self )
-#         serializer = GlossarySerializer(pagin_tc, many=True, context={'request': request})
-#         # return  self.get_paginated_response (serializer.data)
-#         response =self.get_paginated_response(serializer.data)
-#         return  Response(response.data, status=status)
-#
-#     def create(self, request):
-#         file = request.FILES.getlist("uploadfile")
-#         print(file)
-#         serializer = GlossarySerializer(data={**request.POST.dict(),"files":file},context={"request": request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(data={"Message":"Glossary created"}, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def update(self, request, pk):
-#         try:
-#             queryset = Glossary.objects.get(Q(id=pk) & Q(user=request.user))
-#         except Glossary.DoesNotExist:
-#             return Response(status=204)
-#         serializer =GlossarySerializer(queryset,data={**request.POST.dict()},partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def delete(self,request,pk):
-#         queryset = Glossary.objects.filter(user=request.user)
-#         glossary = get_object_or_404(queryset, pk=pk)
-#         glossary.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-#
 
 ######### Glossary FILE UPLOAD  #####################################
-#from ai_auth.tasks import update_words_from_template_task
+
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -132,29 +62,25 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
-        print(job_id)
+    
         if job_id:
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
-            print(data)
+            
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
             data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
         serializer=GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
-            print(serializer.is_valid())
             serializer.save()
-            # file_ids = [i.get('id') for i in serializer.data]
-            # update_words_from_template_task.apply_async((file_ids,))
             return Response(serializer.data, status=201)
         else:
             return Response (serializer.errors,status=400)
 
     def delete(self,request,pk=None):
         file_delete_ids = request.GET.get('file_delete_ids')
-        #print("FDI------->",file_delete_ids)
         delete_list = file_delete_ids.split(',')
         job = request.GET.get('job',None)
         project =request.GET.get('project')
@@ -179,6 +105,14 @@ class TermUploadView(viewsets.ModelViewSet):
     ordering = ('-id')
     paginator = PageNumberPagination()
     paginator.page_size = 20
+
+
+    def edit_allowed(self,obj):
+        request_obj = self.request
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.job_tasks_set.first(),given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
 
 
     def edit_allowed_check(self,job):
@@ -211,20 +145,24 @@ class TermUploadView(viewsets.ModelViewSet):
     def list(self, request):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
+        # word_choice = True if job.project.project_type_id == 10 else False
+        # print("WordChoice----------->",word_choice)
         project_name = job.project.project_name
         queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
-        additional_info = [{'project_name':project_name,'source_language':source_language,'target_language':target_language}]
+        edit_allow = self.edit_allowed(job)
+        additional_info = [{'project_name':project_name,'source_language':source_language,
+                            'target_language':target_language,'edit_allowed':edit_allow}]
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        # if word_choice:
+        #     get_terms_mt(task,pagin_tc)
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
         response.data['additional_info'] = additional_info
         return response
-        # serializer = TermsSerializer(queryset, many=True, context={'request': request})
-        #additional_info.extend(serializer.data)
-        #return  Response(additional_info)
+
 
     def create(self, request):
         user = self.request.user
@@ -258,7 +196,6 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         term_delete_ids =request.GET.get('term_delete_ids')
-        print("TDI------->",term_delete_ids)
         delete_list = term_delete_ids.split(',')
         TermsModel.objects.filter(id__in=delete_list).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -274,6 +211,18 @@ def glossary_template_lite(request):
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
+
+########################WordChoiceTemplateDownload###################################
+@api_view(['GET',])
+#@permission_classes([IsAuthenticated])
+def word_choice_template(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=word_choice_template.xlsx'
+    xlsx_data = WriteToExcel_wordchoice()
+    response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
+
 
 
 @api_view(['GET',])
@@ -330,7 +279,6 @@ def tbx_write(request,task_id):
             out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
         else:out_fileName= job.project.project_name+"(" + sl_code + ")" +".tbx"
         ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
-        #print("TBX FILE----------------->",out_fileName)
         fl_path=os.getcwd()+"/"+out_fileName
         filename = out_fileName
         fl = open(fl_path, 'rb')
@@ -359,10 +307,29 @@ def glossaries_list(request,project_id):
                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct()
+                .exclude(id=project.id).distinct().order_by('-id')
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
+
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def glossaries_list(request,project_id):
+#     project = Project.objects.get(id=project_id)
+#     option = request.GET.get('option')
+#     user = request.user.team.owner if request.user.team else request.user
+#     if option == 'glossary':
+#         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
+#     else:
+#         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
+#     target_languages = project.get_target_languages
+#     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+#                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
+#                 .filter(project_jobs_set__target_language__language__in = target_languages)\
+#                 .filter(glossary_project__term__isnull=False)\
+#                 .exclude(id=project.id).distinct().order_by('-id')
+#     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
+#     return Response(serializer.data)
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -459,23 +426,20 @@ class GetTranslation(APIView):#############Mt update need to work###############
         if target_mt:
             return Response(GlossaryMtSerializer(target_mt).data,status=200)
 
-        # Finding the debit user
+        
         project = task_obj.job.project
         user = project.team.owner if project.team else project.ai_user
 
         credit_balance = user.credit_balance.get("total_left")
-        #print("SOURCE---------->",source)
+        
         word_count = GetTranslation.word_count(source)
 
         if credit_balance > word_count:
 
             # get translation
             translation = get_translation(mt_engine_id, source, sl_code, tl_code,user_id=user.id,cc=word_count)
-            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
             tt = GlossaryMt.objects.create(task_id = task_id,source = source,target_mt = translation,mt_engine_id=mt_engine_id)
             return Response(GlossaryMtSerializer(tt).data,status=201)
-            #return Response({"res": translation}, status=200)
-
         else:
             return Response({"res": "Insufficient credits"}, status=424)
 
@@ -509,6 +473,115 @@ def adding_term_to_glossary_from_workspace(request):
 
 
 
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def adding_term_to_glossary_from_workspace(request):
+#     sl_term = request.POST.get('source')
+#     tl_term = request.POST.get('target',"")
+#     doc_id = request.POST.get("doc_id")
+#     doc = Document.objects.get(id=doc_id)
+#     glossary_id = request.POST.get('glossary',None)
+#     user = request.user.team.owner if request.user.team else request.user
+#     if glossary_id:
+#         glossary = Glossary.objects.get(id = glossary_id)
+#         glss,created = GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
+#         print("RRR------------->",glss, created)
+
+
+#     glossary = Glossary.objects.get(id = glossary_id)
+#     job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+#     serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"pos":pos,"job":job.id,"glossary":glossary.id,"created_by":request.user.id})
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+
+
+from ai_glex.models import Terminologyextract
+from ai_nlp.utils import ner_terminology_finder
+from ai_staff.models import Languages
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def get_ner_terminology_extract(request):
+    proj_id = request.POST.get('proj_id',None)
+    files = request.FILES.getlist('file',None)
+    language_ids = request.POST.getlist('language_id',None)
+    if not proj_id:
+        return Response({'msg':'need proj_id and file'},status=400)
+    proj = Project.objects.get(id=proj_id)
+
+    if language_ids:
+        for language_id in language_ids:
+            lang_instance = Languages.objects.get(id=language_id)
+            
+            job_instance = proj.project_jobs_set.get(target_language=lang_instance)
+            existing_job = proj.project_jobs_set.first()
+            term_list = TermsModel.objects.filter(job=existing_job)
+            objs = []
+            for  term in term_list:
+                objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,
+                                       pos=term.pos,glossary_id=proj.glossary_project.id))
+            print(objs,language_id)
+            if objs:
+                TermsModel.objects.bulk_create(objs)
+                choice_instance = TermsModel.objects.filter(job=job_instance)
+                ser = TermsSerializer(choice_instance,many=True)
+        
+    file_paths = []
+    if files:
+        for file in files:
+            terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
+            file_paths.append(terminology_instance.file.path)
+        print("FP----------->",file_paths)
+        ner_terminology= ner_terminology_finder(file_paths)
+        print("NER TERM--------------->",ner_terminology)
+        if ner_terminology:
+            obj =[
+                TermsModel(pk = None,
+                job_id = lang.id,
+                sl_term = i['term'],
+                pos = i['pos'],
+                glossary_id=proj.glossary_project.id,
+                )for i in ner_terminology['terminology'] for lang in proj.project_jobs_set.all()]
+    
+            TermsModel.objects.bulk_create(obj)    
+
+            choice_instance = TermsModel.objects.filter(glossary__project=proj)
+            
+            ser = TermsSerializer(choice_instance,many=True)
+            return Response(ser.data)
+        else:
+            return Response({'msg':'no terminology'})
+    return Response({'msg':"updated"})
+    
+            
+
+from ai_workspace.api_views import  get_consumable_credits_for_text
+from ai_workspace_okapi.utils import get_translation
+def get_terms_mt(task_id,terms):
+    task = Task.objects.get(id=task_id)
+    job = task.job
+    user  = job.project.ai_user
+    initial_credit = user.credit_balance.get("total_left")
+
+    term_instance = TermsModel.objects.filter(job=job)
+    tar_code = job.target_language_code
+    for term in terms:
+        if not term.tl_term:
+
+            consumed_credit = get_consumable_credits_for_text(term.sl_term,
+                                                                job.source_language_code,tar_code)
+
+            if initial_credit < consumed_credit:
+                return Response({'msg':'Insufficient credit'})
+
+            term.tl_term = get_translation(1,term.sl_term,source_lang_code=job.source_language_code,
+                                                                target_lang_code=tar_code,user_id=user.id) 
+            term.save()
+
+    print("Completed")
+
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -516,9 +589,7 @@ def clone_source_terms_from_multiple_to_single_task(request):
     current_task = request.GET.get('task_id')
     existing_task = request.GET.getlist('copy_from_task_id')
     current_job = Task.objects.get(id=current_task).job
-    #current_job_id = Task.objects.get(id=current_task).job_id
     existing_job = [i.job_id for i in Task.objects.filter(id__in=existing_task)]
-    print("Existing Job---->",existing_job)
     queryset = TermsModel.objects.filter(job_id__in = existing_job)
     with transaction.atomic():
         for i in queryset:
@@ -529,7 +600,6 @@ def clone_source_terms_from_multiple_to_single_task(request):
             i.tl_definition = None
             i.file_id = None
             i.glossary_id = current_job.project.glossary_project.id
-            #i.save()
         TermsModel.objects.bulk_create(queryset)
         invalidate_cache_on_save(sender=TermsModel, instance=queryset.last())
     return JsonResponse({'msg':'SourceTerms Cloned'})
@@ -555,15 +625,15 @@ def clone_source_terms_from_single_to_multiple_task(request):
             termtype=i.termtype,
             geographical_usage=i.geographical_usage,
             term_location=i.term_location,
-            glossary_id=Job.objects.get(id=j).project.glossary_project.id,#glossary_id,file_id clone need to revise
+            glossary_id=Job.objects.get(id=j).project.glossary_project.id
             )for j in to_job_ids for i in queryset ]
-    print(obj)
+    
     TermsModel.objects.bulk_create(obj)
     invalidate_cache_on_save(sender=TermsModel, instance=queryset.last())
     return JsonResponse({'msg':'SourceTerms Cloned'})
 
 
-#########################Not used, Need to test#################################
+
 class NoPagination(PageNumberPagination):
       page_size = None
 
@@ -576,7 +646,7 @@ class WholeGlossaryTermSearchView(generics.ListAPIView):
     ordering = ('-id')
     search_fields = ['sl_term','tl_term']
     pagination_class = NoPagination
-    # page_size = None
+   
 
     def get_queryset(self):
         user = self.request.user.team.owner if self.request.user.team else self.request.user
@@ -606,9 +676,9 @@ def whole_glossary_term_search(request):
         res = query.filter(Q(tl_term__icontains=search_term)).distinct('tl_term')
     else:
         res = query.filter(Q(sl_term__icontains=search_term)|Q(tl_term__icontains=search_term)).distinct('tl_term')
-    #ser = TermsSerializer(res,many=True)
+
     out = [{'term_id':i.id,'sl_term':i.sl_term,'tl_term':i.tl_term,'pos':i.pos,'glossary_name':i.glossary.project.project_name,'job':i.job.source_target_pair_names,'task_id':Task.objects.get(job_id=i.job_id).id} for i in res]
-    return JsonResponse({'results':out})#'data':ser.data})
+    return JsonResponse({'results':out})
 
 
 class GlossaryListView(viewsets.ViewSet):
@@ -621,7 +691,7 @@ class GlossaryListView(viewsets.ViewSet):
                     .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
         if task:
             task_obj = Task.objects.get(id=task)
-            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language))
+            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language)).order_by('-id')
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -636,16 +706,22 @@ def glossary_task_simple_download(request):
     gloss_id = request.GET.get('gloss_id')
     task_id  = request.GET.get('task')
     task_obj = Task.objects.get(id=task_id)
-    term_model = TermsModel.objects.filter(glossary=gloss_id).filter(job_id = task_obj.job.id).values("sl_term","tl_term")
+    # gloss_id = task_obj.job.project.glossary.id
+    term_model = TermsModel.objects.filter(job_id = task_obj.job.id).values("sl_term","tl_term","pos")
+
     if term_model:
         df = pd.DataFrame.from_records(term_model)
-        df.columns=['source_term','target_term']
+        df.columns=['source_term','target_term','pos']
         output = io.BytesIO()
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
         df.to_excel(writer, index=False, sheet_name='Sheet1')
         writer.save()
         response = HttpResponse(content_type='application/vnd.ms-excel')
-        response['Content-Disposition'] = 'attachment; filename=Glossary_simple.xlsx'
+        encoded_filename = 'word_choice.xlsx'
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
+        response['X-Suggested-Filename'] = encoded_filename
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         output.seek(0)
         response.write(output.read())
         return response
@@ -724,7 +800,6 @@ class MyGlossaryView(viewsets.ModelViewSet):
     def destroy(self,request,pk):
         user = request.user.team.owner if request.user.team else request.user 
         obj = MyGlossary.objects.get(Q(user=user) & Q(id=pk))
-        print("Obj----->",obj)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -740,14 +815,14 @@ def get_word_mt(request):
         sl_code = task_obj.job.source_language_code
         tl_code = task_obj.job.target_language_code
         text = source
-        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id)).last()
+        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
         if target_mt:
             return Response(GlossaryMtSerializer(target_mt).data,status=200)
     elif target:
         sl_code = task_obj.job.target_language_code
         tl_code = task_obj.job.source_language_code
         text = target
-        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id)).last()
+        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
         if source_mt:
             return Response(GlossaryMtSerializer(source_mt).data,status=200)
     
@@ -755,21 +830,28 @@ def get_word_mt(request):
     credit_balance = user.credit_balance.get("total_left")
     
     word_count = GetTranslation.word_count(source)
-    print("Task------------>",task_obj)
 
     if credit_balance > word_count:
 
-        # get translation
         translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
-        print("SRC----------------->",source)
-        print("TAR------------------>",target)
-        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
         tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
-        print(tt)
         return Response(GlossaryMtSerializer(tt).data,status=201)
-        #return Response({"res": translation}, status=200)
 
     else:
         return Response({"res": "Insufficient credits"}, status=424)
+
+
+class WordChoiceListView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        task = request.GET.get('task_id')
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = Project.objects.filter(ai_user=user).filter(project_type = 10).filter(glossary_project__isnull=False).distinct().order_by('-id')
+        if task:
+            task_obj = Task.objects.get(id=task)
+            queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language)).order_by('-id')
+        serializer = GlossaryListSerializer(queryset, many=True)
+        return Response(serializer.data)

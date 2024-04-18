@@ -157,3 +157,66 @@ def WriteToExcel():
     workbook.close()
     xlsx_data = output.getvalue()
     return xlsx_data
+
+
+
+
+def WriteToExcel_wordchoice():
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet_s = workbook.add_worksheet("WordChoice")
+    unlocked = workbook.add_format({'locked': False})
+    locked =  workbook.add_format({'locked': True})
+    header = workbook.add_format({
+        'bold': True,
+        'bg_color': '#ffffcc',
+        'color': 'black',
+        'align': 'centre',
+        'valign': 'top',
+        'border': 1,
+        'locked': True
+    })
+    cell = workbook.add_format({
+        'align': 'left',
+        'valign': 'top',
+        'text_wrap': True,
+        'border': 1
+    })
+    cell_center = workbook.add_format({
+        'align': 'center',
+        'valign': 'top',
+        'border': 1
+    })
+
+
+    worksheet_s.protect()
+    # write header
+    worksheet_s.write(0, 1, ugettext("ID"), header)
+    worksheet_s.write(0, 2, ugettext("Source language term"),header)
+    worksheet_s.write(0, 3, ugettext("Target language term"),header)
+    worksheet_s.write(0, 4, ugettext("POS"), header)
+
+    # column widths
+    sl_term_col_width       = 25
+    tl_term_col_width       = 25
+    sl_source_col_width     = 25
+
+
+    # change column widths
+    worksheet_s.set_column('C:C', sl_term_col_width,unlocked)  # SL_Term column
+    worksheet_s.set_column('D:D', tl_term_col_width,unlocked)  # TL_term column
+    worksheet_s.set_column('E:E', sl_source_col_width, unlocked) #POS
+
+    worksheet_s.set_column('A:A', None, None, {'hidden': True})
+    worksheet_s.set_column('B:B', None, None, {'hidden': True})
+
+
+    worksheet_s.data_validation('E2:E100000',
+                                    {'validate': 'list',
+                                    'source': ['Verb', 'Noun', 'Adjective', 'Adverb', 'Pronoun', 'Other']
+                                    }
+                            )
+
+    workbook.close()
+    xlsx_data = output.getvalue()
+    return xlsx_data
