@@ -305,11 +305,8 @@ def send_ailaysa_call_center(obj_id):
     instance = AilaysaCallCenter.objects.get(id=obj_id)
 
     template_detail = 'ailaysa_call_center_details.html'
-    # email = 'sales@langsmart.com'
-    # cc = 'senthil.nathan@ailaysa.com'
-    email = "hemanth@langscape.com"
-    cc = "hemanth@langscape.com"
-
+    email = 'sales@langsmart.com'
+    cc = 'senthil.nathan@ailaysa.com'
 
     context_for_sales = {'name':instance.name,'email':instance.email,
                'company_name':instance.company_name,'address':instance.address,'service_type':instance.service_type,

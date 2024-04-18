@@ -2409,7 +2409,6 @@ def paraphrasing(request):
         return  Response({'msg':'Insufficient Credits'},status=400)
 
 
-
 @api_view(['POST',])############### only available for english ###################
 def synonmys_lookup(request):
     if request.method == "POST":

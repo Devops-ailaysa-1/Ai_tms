@@ -2031,11 +2031,8 @@ def vendor_onboard_complete(request):#######while using social signups##########
     return JsonResponse({"msg": "Onboarding completed successfully"})
 
 
-
-
-
 import quickemailverification
-API_KEY = os.getenv('API_KEY')
+API_KEY = os.getenv('EMAIL_VERIFY_API_KEY')
 client = quickemailverification.Client(API_KEY)
 
 @api_view(['POST'])
@@ -2868,11 +2865,8 @@ class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
         subject_get_in_touch = "Contact ({})".format(name)
 
         template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
-        # email = 'sales@langsmart.com'
-        # cc = 'senthil.nathan@ailaysa.com'
-
-        email = "hemanth@langscape.com"
-        cc = 'hemanthmurugan21@gmail.com'
+        email = 'sales@langsmart.com'
+        cc = 'senthil.nathan@ailaysa.com'
 
         context = {'name':name,'email':email,'company_name':company_name, 'service_description':message,}
 
