@@ -2031,11 +2031,8 @@ def vendor_onboard_complete(request):#######while using social signups##########
     return JsonResponse({"msg": "Onboarding completed successfully"})
 
 
-
-
-
 import quickemailverification
-API_KEY = os.getenv('API_KEY')
+API_KEY = os.getenv('EMAIL_VERIFY_API_KEY')
 client = quickemailverification.Client(API_KEY)
 
 @api_view(['POST'])

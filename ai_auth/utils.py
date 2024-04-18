@@ -136,9 +136,6 @@ def record_usage(provider,service,uid,email,usage):
 		usage_obj.usage = usage_obj.usage + usage
 		usage_obj.save()
 
-
-
-
 company_members_list = [
 'thenmozhivijay20',
 'hemanthmurugan21',
