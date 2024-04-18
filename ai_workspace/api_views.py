@@ -4424,7 +4424,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         It will get list of news_id and source language to fetch news from respective CMS.
         get_files() is to get the news from news_id and create json file and returns it.
         create_news_detail() is to create the record that the task is created for this news_id in lang pair to avoid duplication.
-        ProjectFilesCreateType is updated to refer that file is createed from CMS.
+        ProjectFilesCreateType is updated to refer that file is created from CMS.
 
         '''
         from ai_workspace.models import ProjectFilesCreateType
