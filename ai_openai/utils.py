@@ -210,8 +210,7 @@ def get_sub_headings(title, pr_response):
         value = data.get(title)
     return value
         
-        
-        
+       
 def search_wikipedia(search_term,lang):
     # Search for the given search term
     endpoint = f"https://{lang}.wikipedia.org/w/api.php"
