@@ -12,8 +12,6 @@ from ai_workspace.models import TaskAssignInfo
 
 
 class JobForm(forms.ModelForm):
-    # project = forms.CharField(required=False)
-	# source_language = forms.ChoiceField(choices=[(lang.id, lang.language) for lang in Languages.objects.all()])
 	class Meta:
 		model = Job
 		fields = ( "source_language", "target_language")
@@ -61,7 +59,6 @@ class TaskForm(forms.ModelForm):
         valid = super().is_valid()
         if not valid:
             return valid
-        # set_ ids
         self.cleaned_data = { k:v.id for k, v in self.cleaned_data.items()}
         return valid
 
@@ -76,7 +73,7 @@ class TaskListForm(forms.Form):
 class ProjectFormv2(forms.ModelForm):
     source_language = forms.ModelChoiceField(queryset=Languages.objects.all())
     target_languages = forms.ModelMultipleChoiceField(queryset=Languages.objects.all())
-    files = forms.FileField(widget=forms.ClearableFileInput(attrs={"multiple": True}))
+    files = forms.FileField(widget=forms.ClearableFileInput(attrs={"allow_multiple_selected": True}))
 
     class Meta:
         model = Project
@@ -92,7 +89,7 @@ class ProjectFormv2(forms.ModelForm):
         self.cleaned_data["target_languages"] = json.dumps([tl.id for tl in self.cleaned_data["target_languages"]])
         self.cleaned_data["files"] = self.files.getlist("files")
         return valid
-        # self.cleaned_data
+
 
 
 def task_assign_detail_mail(Receiver,assignment_id):
@@ -110,7 +107,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"billable_char_count":billable_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
-    print("FileDetail----------------->",file_detail)
+    
     work = 'Post Editing' if ins.task_assign.step.id == 1 else 'Reviewing' 
     context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
     'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y') if ins.deadline else None, 'work':work}
@@ -131,9 +128,7 @@ def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reaso
     receivers =  receiver.team.get_project_manager if receiver.team else [] 
     receivers.append(task_assign.task_assign_info.assigned_by)
     emails = [i.email for i in [*set(receivers)]]
-    print("Emails-------------->",emails)
-   
-
+    
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
         'Task Assign Service Provider Status',None,

@@ -25,18 +25,17 @@ from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
-#from langdetect import detect
-#import langid
 from googletrans import Translator
 from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
-openai_model = os.getenv('OPENAI_MODEL')
+from ai_tms.settings import OPENAI_MODEL
+openai_model = OPENAI_MODEL
 logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
 from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
-from .utils import search_wikipedia,search_wiktionary,google_custom_search,bing_search,bing_news_search
+from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -48,10 +47,8 @@ class AiPromptViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description',None)
-        # news_files = request.FILES.get('news_files',None)
 
         if description:
             description=description.rstrip(punctuation)
@@ -111,7 +108,7 @@ class AiPromptResultViewset(generics.ListAPIView):
 
     def get_queryset(self):
         prmp_id = self.request.query_params.get('prompt_id')
-        #prmp_id = self.request.GET.get('prompt_id')
+
         if prmp_id:
             queryset = AiPrompt.objects.filter(id=prmp_id)
         else:
@@ -124,7 +121,7 @@ class AiPromptResultViewset(generics.ListAPIView):
  
 
 def instant_customize_response(customize ,user_text,used_tokens):
-    print("Initial----------->",used_tokens)
+    
     if customize.customize == 'Simplify':
         import re
         NEWLINES_RE = re.compile(r"\n{1,}")
@@ -137,43 +134,31 @@ def instant_customize_response(customize ,user_text,used_tokens):
     for text_ in split_text:
         text_ = text_ + '.'
         prompt = customize.prompt +' "{}"'.format(text_)
-        #prompt = customize.prompt+" "+text+"."
-        print("Prompt------------------->",prompt)
         response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
-        #text = response['choices'][0]['text']
         text = response["choices"][0]["message"]["content"]
         text = text.strip('\n').strip('\"')
         final = final + "\n\n" + text
         tokens = response['usage']['total_tokens']
-        print("Tokens from openai------------------>", tokens)
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
-        print("Calculated_token--------------->",total_tokens)
         cust_tokens = cust_tokens + total_tokens
-    print("Cust tokens---------->",cust_tokens)
     cust_tokens += used_tokens
-    print("Final----------->",cust_tokens)
     final = final.strip('\n')
     return final,cust_tokens
 
 
-def customize_response(customize ,user_text,tone,used_tokens):#percent
-    #print("Initial------->",used_tokens)
+def customize_response(customize ,user_text,tone,used_tokens):
     user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
-            prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
+            prompt = customize.prompt+' {} tone : '.format(tone_)+user_text
             response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =150,n=1)
         else:
             if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
             else:
                 user_text = user_text + '.'
-                # if customize.customize == 'Summarize':
-                #     prompt = customize.prompt.format(percent) +' "{}"'.format(user_text)
-                # else:
                 prompt = customize.prompt +' "{}"'.format(user_text)
-            print("Pr-------->",prompt)
             response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
@@ -182,7 +167,6 @@ def customize_response(customize ,user_text,tone,used_tokens):#percent
         total_tokens = 0
         prompt = None
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
-    #print("Final----------->",total_tokens)
     return response,total_tokens,prompt
 
 def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engine):
@@ -195,7 +179,6 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang_code,target_lang_code)
         if initial_credit >= consumable_credits_user_text:
             translation = get_translation(mt_engine_id, user_text, source_lang_code,target_lang_code,user_id=user.id)
-            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
             data = {'customization':customized_id,'target_language':i,
                 'mt_engine':mt_engine,'credits_used':consumable_credits_user_text,'result':translation}
             ser = TranslateCustomizeDetailSerializer(data=data)
@@ -228,9 +211,8 @@ def customize_text_openai(request):
     customize = AiCustomize.objects.get(id = customize_id)
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)
-    #percent = request.POST.get('percent',None)
     detector = Translator()
-    print("Text---------->",user_text)
+
     if task != None:
         obj = Task.objects.get(id=task)
         user = obj.job.project.ai_user
@@ -242,9 +224,6 @@ def customize_text_openai(request):
         user = obj.user
     else:    
         user = request.user.team.owner if request.user.team else request.user
-    print("User---------->",user)
-    print("Language------------->",language)
-        #project.team.owner if project.team else project.ai_user
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
@@ -253,7 +232,7 @@ def customize_text_openai(request):
         if isinstance(lang,list):
             lang = lang[0]
         lang = get_lang_code(lang)
-        print("lang---------------->",lang)
+
     
     if customize.id in [25,26,27,28]:
         result = customize_refer(customize,user_text,lang)
@@ -275,7 +254,6 @@ def customize_text_openai(request):
         ser = AiPromptCustomizeSerializer(data=data)
         if ser.is_valid():
             ser.save()
-        print(ser.errors)
         created_obj_id = ser.data.get('id') 
         res = translate_text(created_obj_id,user,user_text,language,target_langs,mt_engine)
         return Response(res)
@@ -294,22 +272,20 @@ def customize_text_openai(request):
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
-            #result_txt = response['choices'][0]['text']
 
             result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
-            #AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+            
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         
-    else:##english      
+    else:   
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-        #result_txt = response['choices'][0]['text']
         result_txt = response["choices"][0]["message"]["content"]
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
-    #print("TT---------->",prompt)
+   
     data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
@@ -372,13 +348,11 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
             else:
                 return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(data)
-                #data = {'user':user.id,'mt_engine':1,'append':True,'new_line':True}  
-            #return Response({'user':None,'mt_engine':None,'append':None,'new_line':None,'src':None,'tar':None,'mt_engine':None})
+
 
     def create(self,request):
         user = request.user.team.owner if request.user.team else request.user
         serializer = CustomizationSettingsSerializer(data={**request.POST.dict(),'user':user.id})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -390,7 +364,6 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
         if not obj:
             return Response({"msg":"No detail"})
         serializer = CustomizationSettingsSerializer(obj,data={**request.POST.dict(),'user':user.id},partial=True)
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -428,7 +401,6 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
     ordering_fields = ['id']
     ordering = ('-id')
-    #filterset_class = PromptFilter
     search_fields = ['user_text','customize__customize',]
     pagination_class = NoPagination
     page_size = None
@@ -446,12 +418,10 @@ class AiImageHistoryViewset(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
     ordering_fields = ['id']
     ordering = ('-id')
-    # pagination_class = AiImageHistoryPagination
-    #filterset_class = PromptFilter
     search_fields = ['prompt',]
     pagination_class = NoPagination
     page_size = None
-    #paginate_by=20
+
 
     def get_queryset(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
@@ -621,17 +591,14 @@ class BlogOutlineViewset(viewsets.ViewSet):
 class BlogOutlineSessionViewset(viewsets.ViewSet):
 
     def list(self, request):
-        #blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
         group = request.GET.get('group',None)
         title = request.GET.get('blog_title',None)
         
         if title and group:
-            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
             blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
 
         elif title:
-            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
             blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('id')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
@@ -657,7 +624,6 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         unselected = request.POST.getlist('unselected')
         order_list = request.POST.get('order_list')
         query_set = BlogOutlineSession.objects.get(id = pk)
-        print('qs------->',query_set)
         serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -685,26 +651,16 @@ class BlogArticleViewset(viewsets.ViewSet):
 
     def create(self,request):
         pass
-        # sub_categories = 64
-        # outline_list = request.POST.get('outline_section_list')
-        # blog_creation = request.POST.get('blog_creation')
-        # outline_section_list = list(map(int, outline_list.split(',')))
-        # print("outline_section_list------------>",outline_section_list)
-        # serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
-        # if serializer.is_valid():
-        #     serializer.save()
-        #     return Response(serializer.data)
-        # return Response(serializer.errors)
+
     
     def update(self,request, pk):
         doc = request.POST.get('document')
         sub_categories = 64
-        print("Doc------>",doc)
         bc_obj = BlogCreation.objects.get(id = pk)
         bc_obj.document_id = doc
         bc_obj.save()
         query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
-        print("Qr--------->",query_set)
+    
         serializer=BlogArticleSerializer(query_set,data = {'blog_creation':pk,'document':doc,'sub_categories':sub_categories},partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -765,7 +721,6 @@ class BookCreationViewset(viewsets.ViewSet):
 
     def create(self,request):
         categories = 11
-        #sub_categories = 61
         user = request.user.team.owner if request.user.team else request.user
         serializer = BookCreationSerializer(data={**request.POST.dict(),'categories':categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
@@ -815,8 +770,6 @@ class BookBodyViewset(viewsets.ViewSet):
         serializer = BookBodySerializer(data={**request.POST.dict(),'body_matter':body_matter,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
-            # qr = BookBody.objects.filter(book_title_id=book_title,body_matter_id=body_matter).order_by('custom_order')
-            # ser = BookBodySerializer(qr,many=True)
             return Response(serializer.data)
         return Response(serializer.errors)
     
@@ -915,26 +868,22 @@ class BookBMViewset(viewsets.ViewSet):
 
 
 from django.http import StreamingHttpResponse,JsonResponse
-import openai,tiktoken,time,os  #blog_cre_id list
+import openai,tiktoken,time,os 
 from ai_staff.models import PromptSubCategories
 from rest_framework import serializers
 from ai_openai.serializers import lang_detector
  
-os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
 
 from ai_openai.models import MyDocuments
 from ai_openai.utils import get_prompt_gpt_turbo_1106
-# from ai_openai.models import NewsPrompt
-
-
-
 import json
 from ai_nlp.utils import keyword_extract ,extract_entities
 @api_view(['GET'])
 def ner_generate(request):
     sentence =  request.query_params.get('sentence')
-    extracted_keywords = keyword_extract(sentence) #list:
+    extracted_keywords = keyword_extract(sentence) 
     extracted_ner = extract_entities(sentence)
     result = {'keywords':extracted_keywords,'ner':extracted_ner}
     return Response({'sentence':sentence , 'result':result})
@@ -988,7 +937,7 @@ def transcribe_to_news_report_generate(request):
     openai_response = get_prompt_gpt_turbo_1106(messages=message)
     token_usage = openai_token_usage(openai_response)
     token_usage_to_reduce = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
-    print("Tokens for openai------------>",token_usage_to_reduce)
+   
     content = openai_response["choices"][0]["message"]["content"]
     news_transcribe_res_inst.transcribed_news_report = content
 
@@ -1003,7 +952,6 @@ def transcribe_to_news_report_generate(request):
 
 
 def num_tokens_from_string(string) -> int:
-    print("openai____",string)
     num_tokens = len(encoding.encode(string))
     token_usage=get_consumable_credits_for_openai_text_generator(num_tokens)
     return token_usage
@@ -1073,8 +1021,6 @@ def generate_article(request):
         if detected_lang!='en':
             keyword = instance.blog_creation.keywords_mt
 
-
-        print("OutlineSelection---------------->",outline_section_list)
         if outline_section_list:
             detected_lang = lang_detector(outline_section_list[0].blog_outline)
         else: raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
@@ -1090,13 +1036,8 @@ def generate_article(request):
 
         selected_outline_section_list = f"'{joined_list}'"
 
-        print("Selected------------>",selected_outline_section_list)
-        print("title----->>",title)
         prompt = blog_article_start_phrase.format(title,selected_outline_section_list,keyword,instance.blog_creation.tone.tone)
 
-        print("prompt____article--->>>>",prompt)
-        
-        #title='# '+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
@@ -1112,13 +1053,8 @@ def generate_article(request):
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con+" "+prompt)
-                        print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                        print("token_usage---------->>",token_usage)
-                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
-                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
-                        # instance.document = tt
-                        # instance.save()
+
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
@@ -1132,28 +1068,22 @@ def generate_article(request):
                         if 'content' in delta.keys():
                             content=delta['content']
                             word=content
-                            str_cont+=content########
-                            print(str_cont)
+                            str_cont+=content
                             if "." in word or "\n" in word:
                                 if "\n" in word:
                                     new_line_split=word.split("\n")
                                     arr.append(new_line_split[0]+'\n')
-                                    str_cont+='\n' #####
+                                    str_cont+='\n'
                                     text=" ".join(arr)
                                     consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                     consumable = max(round(consumable_credits_for_article_gen/3),1) 
-                                    print("Consumable--------->",consumable)
-                                    print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                     token_usage=num_tokens_from_string(str_cont)
                                     AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                                    #print("StrContent------------->",str_cont) 
                                     if initial_credit >= consumable:
-                                        print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id,cc=consumable)
-                                        #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
-                                    str_cont='' #####
+                                    str_cont=''
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
                                     sente=" ".join(arr)
@@ -1161,33 +1091,20 @@ def generate_article(request):
                                         sente=sente+'.'
                                         consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,instance.blog_creation.user_language_code,'en')
                                         consumable = max(round(consumable_credits_for_article_gen/3),1) 
-                                        print("Consumable--------->",consumable)
-                                        print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                         token_usage=num_tokens_from_string(str_cont)
                                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                                        #print("StrContent------------->",str_cont) 
                                         if initial_credit >= consumable:
-                                            #print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",blog_creation.user_language_code,user_id=blog_creation.user.id,cc=consumable)
-                                            #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
-                                    # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
-                                    str_cont='' ######
+                                    str_cont='' 
                             else:
                                 arr.append(word)
                     else:
                         token_usage=num_tokens_from_string(prompt)
-                        print("prompt",prompt)
-                        print("tot_us",token_usage)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
-                        print("finished")
-                        # article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
-                        # tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
-                        # instance.document = tt
-                        # instance.save()
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
@@ -1208,7 +1125,6 @@ def generate_chapter(request):
             credits_required = 200
         if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-        # book_phrase = PromptStartPhrases.objects.get(sub_category=book_body_instance.sub_categories)
         book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
         book_level = book_body_instance.book_creation.level.level
@@ -1218,7 +1134,6 @@ def generate_chapter(request):
                 filter(custom_order__lt = book_body_instance.custom_order ).\
                 filter(html_data__isnull=False).order_by('custom_order')
         gen_content = query.last().html_data if query else None
-        print("GenContent------------------->",gen_content)
         if gen_content:
             lang = book_body_instance.book_creation.book_language_code
             if lang!='en':
@@ -1227,18 +1142,9 @@ def generate_chapter(request):
                 if initial_credit < consumable:
                     return JsonResponse({'error':'Insufficient credits.'},status=400)
         context = get_summarize(gen_content,book_body_instance,lang) if gen_content else None
-        print("Ctxt----------------->",context)
-        #chapter_summary = gen_content.split('Summary:') if gen_content and 'Summary' in gen_content else None 
-        print("-------",book_title)
-        print(generated_content)
-        print(book_level)
-        print(book_description)
-        print(author_info)
-        print("SH------------>",book_body_instance.sub_headings)
         sub_cat = 71 #69
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
         prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
-        print(prompt)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
         
@@ -1261,9 +1167,7 @@ def generate_chapter(request):
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con+" "+prompt)
-                        print("Token Usage----------->",token_usage)
                         AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-                        print("token_usage---------->>",token_usage)
             return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
         else:
             if context:
@@ -1280,28 +1184,24 @@ def generate_chapter(request):
                         if 'content' in delta.keys():
                             content=delta['content']
                             word=content
-                            str_cont+=content########
-                            #print(str_cont)
+                            str_cont+=content
                             if "." in word or "\n" in word:
                                 if "\n" in word:
                                     new_line_split=word.split("\n")
                                     arr.append(new_line_split[0]+'\n')
-                                    str_cont+='\n' #####
+                                    str_cont+='\n' 
                                     text=" ".join(arr)
                                     consumable_credits_for_article_gen = get_consumable_credits_for_text(str_cont,language_code,'en')
                                     consumable = max(round(consumable_credits_for_article_gen/3),1) 
-                                    print("Consumable--------->",consumable)
-                                    print("consumable_credits_for_article_gen--------->",consumable_credits_for_article_gen)
                                     token_usage=num_tokens_from_string(str_cont)
                                     AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-                                    #print("StrContent------------->",str_cont) 
+                            
                                     if initial_credit >= consumable:
-                                        print("Str----------->",str_cont)
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                                        #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
+                        
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
-                                    str_cont='' #####
+                                    str_cont='' 
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
                                     sente=" ".join(arr)
@@ -1311,17 +1211,14 @@ def generate_chapter(request):
                                         consumable = max(round(consumable_credits_for_article_gen/3),1) 
                                         token_usage=num_tokens_from_string(str_cont)
                                         AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-                                        #print("StrContent------------->",str_cont) 
+                                         
                                         if initial_credit >= consumable:
-                                            #print("StrContent------------->",str_cont)
                                             blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                                            #AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
-                                    # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
-                                    str_cont='' ######
+                                    str_cont='' 
                             else:
                                 arr.append(word)
                     else:
@@ -1408,109 +1305,6 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
 #     return JsonResponse({'error':'Method not allowed.'},status=405)
  
 
-# from django.http.response import StreamingHttpResponse as strresp
-# from django.shortcuts import render
-# import time
-
-
-
-# def gen_message(msg):
-#     return f'data: {msg} '
-
-
-# def iterator():
-#     for i in range(100000):
-#         time.sleep(0.15)
-#         yield gen_message(f'iteration {i}')
-
-
-# def test_stream(request):
-#     stream = iterator()
-#     print("started streaming")
-#     response = strresp(stream, status=200, content_type='text/event-stream')
-#     response['Cache-Control'] = 'no-cache'
-#     return response
-
-
-
-
-
-
-
-# @api_view(["GET"])
-# def generate_article(request):
-#     if request.method=='GET':
-#         blog_available_langs=[17]
-#         sub_categories=64
-#         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
-#         outline_list=request.query_params.get('outline_section_list')
-#         blog_creation=request.query_params.get('blog_creation')
-#         blog_creation=BlogCreation.objects.get(id=blog_creation)
-#         outline_section_list=list(map(int,outline_list.split(',')))
-#         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
-#         if blog_creation.user_language_id not in blog_available_langs:
-#             title=blog_creation.user_title_mt
-#             keyword=blog_creation.keywords_mt
-#             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
-#         else:
-#             title=blog_creation.user_title
-#             keyword=blog_creation.keywords
-#             outlines=list(outline_section_list.values_list('blog_outline',flat=True))
-#         joined_list = "', '".join(outlines)
-#         tone=blog_creation.tone.tone
-#         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-#         print("pmpt---->",prompt)
-#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
-#                                                 messages=[{"role":"user","content":prompt}],
-#                                                 stream=True)
-#         def stream_article_response():
-#             for chunk in completion:
-#                 ins=chunk['choices'][0]
-#                 if ins["finish_reason"]!='stop':
-#                     delta=ins['delta']
-#                     if 'content' in delta.keys():
-#                         content=delta['content']
-#                         t=content+' '
-#                         yield '\ndata: {}\n\n'.format(t.encode('utf-8'))
-#         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
-#     return JsonResponse({'error':'Method not allowed.'},status=405)
-
-# from django.http import StreamingHttpResponse
-# import time,json
-# from django.http import JsonResponse
-# text="Please generate a 700-word blog post titled '{}' with sections: {} Use keywords such as {} and a {} tone. Keep the language simple and concise. Pre-written content for the section headlines is allowed. Please format everything in Markdown and blog post sections should be in ## tag. Please generate the content as quickly as possible.".format('Cost-Saving Strategies',
-#                                                                                                                                                                                                                                                                                                                                                           'Introduction and overview of vanishing gradient and backpropagation ,The problem of vanishing gradients and how it affects neural network training,Explaining backpropagation and its role in solving the vanishing gradient problem,Analyzing the mathematical concepts behind backpropagation and gradient descent',
-#                                                                                                                                                                                                                                                                                                                                                           'machine learning,cost machine gpu',
-#                                                                                                                                                                                                                                                                                                                                                           'professional')
-
-
-# @api_view(["GET"])
-# def generate(request):
-#     if request.method=='GET':
-#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":text}],stream=True)
-#         def stream_article_response_en():
-#             for chunk in completion:
-#                 ins=chunk['choices'][0]
-#                 if ins["finish_reason"]!='stop':
-#                     delta=ins['delta']
-#                     if 'content' in delta.keys():
-#                         content=delta['content']
-#                         yield '\ndata: {}\n\n'.format({"t":content})
-#         return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')  #text/event-stream
-#     return JsonResponse({'error':'Method not allowed.'},status=405)
-
-
-
-
-    # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
-    # response['Cache-Control'] = 'no-cache'
-    # return response
-    # response.status_code = 200
-    # return response(stream())
-    #return StreamingHttpResponse(stream(), content_type='text/event-stream')
-    #return JsonResponse({'error': 'Error'}, status=405)
-
-
 from google.cloud import translate_v2 as translate
 from html import unescape
 from lxml import html
@@ -1546,15 +1340,11 @@ def docx_merger(request):
     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
-    print("Files------------>",files)
-    #composed = name + ".docx"
     composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
-    #files = ["big_file_test.docx", "Data.docx", "nupedia_small.docx"]
     result = Document()
     composer = Composer(result)
 
     for i in range(0, len(files)):
-        print("File---------------->",files[i])
         doc = Document(files[i])
 
         if i != 0:
@@ -1569,7 +1359,6 @@ def docx_merger(request):
 
 
 def customize_refer(customize,search_term,lang):
-    print("Cus--------->",customize)
     if not lang:
         lang = lang_detector(search_term)
     if customize.customize == "Wikipedia":

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+{%load static%}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ailaysa</title>
+  </head>
+  <body>
+    Hi admin,
+    <p>{{name}} wants to contact sales, below are the details:</p>
+    {% if name %}
+      <p><b>Name:</b> {{name}}</p>
+    {% else %}
+      <p><b>Name:</b> - </p>
+    {% endif %}
+
+    {% if email %}
+      <p><b>Email: {{email}}</b></p>
+    {% else %}
+      <p><b>Email:</b> - </p>
+    {% endif %}
+        
+    {% if whatsapp_number %}
+      <p><b>Whatsapp No.:</b> {{whatsapp_number}}</p>
+    {% else %}
+      <p><b>Whatsapp No.:</b> - </p>
+    {% endif %}
+    
+    {% if phone_number %}
+      <p><b>Other No.:</b> {{phone_number}}</p>
+    {% else %}
+      <p><b>Other No.:</b> - </p>
+    {% endif %}
+    
+    {% if company_name %}
+    <p><b>Company/ org name:</b> {{company_name}}</p>
+    {% else %}
+    <p><b>Company/ org name:</b> - </p>
+    {% endif %}
+    
+
+    {% if address %}
+    <p><b>Address:</b> {{address}}</p>
+    {% else %}
+    <p><b>Address:</b> - </p>
+    {% endif %}
+    
+    {% if service_type %}
+    <p><b>Service type:</b> {{service_type}}</p>
+    {% else %}
+    <p><b>Service type:</b> - </p>
+    {% endif %}
+    
+    {% if source_language %}
+    <p><b>Source language:</b> {{source_language}}</p>
+    {% else %}
+    <p><b>Source language:</b> - </p>
+    {% endif %}
+    
+    {% if target_language %}
+    <p><b>Target language:</b> {{target_language}}</p>
+    {% else %}
+    <p><b>Target language:</b> - </p>
+    {% endif %}
+    
+    {% if service_description %}
+    <p><b>Service description:</b> {{service_description}}</p>
+    {% else %}
+    <p><b>Service description:</b> - </p>
+    {% endif %}
+    
+  </body>
+</html>
+
+
+ 
+
+
+
+
+
+

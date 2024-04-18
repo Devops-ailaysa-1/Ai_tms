@@ -4,13 +4,18 @@ from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
-#from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
-import random,re
+import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
+
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+
 # from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA 
 from ai_nlp.models import PdffileUpload ,PdfQustion
@@ -24,6 +29,16 @@ from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
 import os
+import spacy
+import yake
+import requests
+from string import punctuation
+from langdetect import detect
+from docx import Document
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from ai_openai.utils import mistral_chat_api
+nlp = spacy.load('en_core_web_sm')
+from ai_openai.utils import get_prompt_chatgpt_turbo
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
@@ -67,46 +82,39 @@ def epub_processing(file_path,text_word_count_check=False):
 @task(queue='default')
 def loader(file_id) -> None:
     instance = PdffileUpload.objects.get(id=file_id)
-    website = instance.website
-    if website:
-        loader = BSHTMLLoader(instance.website)
-    else:
-        path_split=instance.file.path.split(".")
+    path_split=instance.file.path.split(".")
+    try:
         persistent_dir=path_split[0]+"/"
         os.makedirs(persistent_dir,mode=0o777)
-        print(persistent_dir)
-        if instance.file.name.endswith(".docx"):
-            loader = Docx2txtLoader(instance.file.path)
-        elif instance.file.name.endswith(".txt"):
-            loader = TextLoader(instance.file.path)
-        elif instance.file.name.endswith(".epub"):
-            text = epub_processing(instance.file.path,text_word_count_check=False)
-            instance.text_file = text
-            instance.save()
-            loader = TextLoader(instance.text_file.path)
-        else:
-            # loader = PyPDFLoader(instance.file.path,extract_images=True)
-            loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
-        data = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
-        texts = text_splitter.split_documents(data)
-        embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
-        print("emb----------------->>>>>>>>>>")
-        # embeddings = CohereEmbeddings(model="multilingual-22-12") #paraphrase-multilingual-mpnet-base-v2 multilingual-22-12
-        print("--------->>>>> multilingual-22-12")
-        save_prest(texts, embeddings, persistent_dir,instance)
-        instance.vector_embedding_path = persistent_dir
-        instance.status = "SUCCESS"
+    except:
+        num = str(uuid.uuid4())
+        persistent_dir=path_split[0]+"_"+str(num)+"/"
+        os.makedirs(persistent_dir,mode=0o777)
+    print(persistent_dir)
+    if instance.file.name.endswith(".docx"):
+        loader = Docx2txtLoader(instance.file.path)
+    elif instance.file.name.endswith(".txt"):
+        loader = TextLoader(instance.file.path)
+    elif instance.file.name.endswith(".epub"):
+        text = epub_processing(instance.file.path,text_word_count_check=False)
+        instance.text_file = text
         instance.save()
-        # except:
-        #     instance.status ="ERROR"  #####need to add if error 
-        #     instance.save()
-
-def ends_with_question_mark(input_string):
-    if "would you" in input_string.lower() or "would you like" in input_string.lower() or input_string.endswith('?'):
-        return True
+        loader = TextLoader(instance.text_file.path)
     else:
-        return False
+        loader = PyPDFLoader(instance.file.path,extract_images=False)
+        # loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
+    data = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
+    texts = text_splitter.split_documents(data)
+    embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
+
+    save_prest(texts, embeddings, persistent_dir,instance)
+    instance.vector_embedding_path = persistent_dir
+    instance.status = "SUCCESS"
+    instance.save()
+ 
+
+ 
 
 
 def save_prest(texts,embeddings,persistent_dir,instance):
@@ -130,51 +138,49 @@ def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query
 
 
 
-def load_embedding_vector(instance,query)->RetrievalQA:
-    # last_chat = instance.pdf_file_chat.last()
-    # if last_chat:
-    #     last_ans = last_chat.answer
-    #     if ends_with_question_mark(last_ans):
-    #         query = last_ans+"   \n   "+ query
 
+
+def load_chat_history(instance):
+    # if not instance.pdf_file_chat.all():
+    memory = ConversationBufferMemory(memory_key='chat_history', output_key="answer",input_key='question',return_messages=True)
+    # else:
+        # memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    for i in instance.pdf_file_chat.all():
+        if i.question and i.answer:
+            memory.save_context({"question": i.question}, {"answer": i.answer})
+    print("memory-->",memory)
+    return memory
+
+
+
+
+
+def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
- 
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0) #,max_tokens=300
-    embed = OpenAIEmbeddings() #model="text-embedding-3-large"
-        
-    # else: 
-    #     print(model_name,"cohere")
- 
-    #     llm = Cohere(model="command-nightly", temperature=0) #command-nightly
-    #     embed = CohereEmbeddings(model="multilingual-22-12")   #multilingual-22-12 embed-multilingual-v3.0
- 
-        
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)  
+    embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
-    # v = vector_db.similarity_search(query=query,k=4)
-
-    # result = querying_llm(llm=llm,chain_type="stuff",
-                        #   chain_type_kwargs=prompt_template_chatbook(),
-                        #   similarity_document=v,query=query) ##chatgpt
-
     compressor = CohereRerank(user_agent="langchain")
-    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
-    # compressed_docs = compression_retriever.get_relevant_documents(query)
-    qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
-    result = qa.run(query=query)
-    return result
+    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
+    compressed_docs = compression_retriever.get_relevant_documents(query=query)
+    
+    
+    memory = load_chat_history(instance)
+    # qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,retriever=compression_retriever, return_source_documents=True)
+    
+    page_numbers = []
+    for i in compressed_docs:
+        if 'page' in i.metadata:
+            page_numbers.append(i.metadata['page']+1)
+    page_numbers = list(set(page_numbers))
+    # result = qa.run(query=query)
+    result = qa(query) 
+    print(result)
+    return result['answer'] ,page_numbers
 
 
-# import cohere
-
-# def cohere_endpoint(prompt_template):
-#     co = cohere.Client("3m756aexJwhQztVHTgbsGSg3CagAbUCkzWj9j1aV")
-#     response = co.generate(prompt=prompt_template, model="command-nightly" , num_generations=1,stream=False,max_tokens=256)
-#     return response[0].text
-
-
-
-from ai_openai.utils import get_prompt_chatgpt_turbo
 def prompt_temp_context_question(context,question):
     prompt_template = """Text: {context}
 
@@ -199,7 +205,6 @@ def gen_text_context_question(vectors_list,question):
 
 def generate_question(document):
     collections = document._collection
-    print("collected_doc")
     document_list = collections.get()["documents"]
     doc_len = len(document_list)
     n = 2 if doc_len>2 else 1
@@ -243,11 +248,6 @@ def remove_number_from_sentence(sentence):
     cleaned_sentence = re.sub(pattern, '', sentence)
     return cleaned_sentence
 
-
-
-import spacy
-import yake
-nlp = spacy.load('en_core_web_sm')
  
 def keyword_extract(text):
     language = "en"
@@ -300,45 +300,136 @@ def extract_entities(sentence):
     return ner_dict
 
 
+ 
+
+def lang_det_word_choice(text):
+    if len(text) > 500:
+        text = text[:450]
+    lang_code = detect(text)
+    return lang_code
 
 
+def check_file_language(list_of_file_path):
+    file_paths = []
+    extracted_text_list = []
+    for file_path in list_of_file_path:
+        print("file_path-->",file_path)
+        if file_path.endswith('.txt'):
+            with open(file_path,'r',encoding='utf-8') as fp:
+                text = fp.read()
+                
+                lang_code = lang_det_word_choice(text)
+                print("lang_code--->",lang_code)
+                if lang_code == "en":
+                    file_paths.append(file_path)
+                    extracted_text_list.append(text)
+
+        if file_path.endswith('.docx'):
+            document = Document(file_path)
+            extracted_text = ""
+            for p in document.paragraphs:
+                extracted_text = extracted_text+" "+p.text
+            
+            lang_code = lang_det_word_choice(extracted_text)
+            if lang_code == "en":
+                file_paths.append(file_path)
+                extracted_text_list.append(extracted_text)
+    print("extracted_text_list",extracted_text_list)
+    return file_paths ,extracted_text_list
 
 
-# def thumbnail_create(path) -> core :
-#     img_io = io.BytesIO()
-#     images = pdf2image.convert_from_path(path,fmt='png',grayscale=False,size=(300,300))[0]
-#     images.save(img_io, format='PNG')
-#     img_byte_arr = img_io.getvalue()
-#     return core.files.File(core.files.base.ContentFile(img_byte_arr),"thumbnail.png")
-
-
-
-    # vector_db=Chroma.from_documents(documents=doc,embedding=embeddings )
-    # chain = RetrievalQA.from_chain_type(llm=llm,retriever =vector_db.as_retriever(search_type="similarity", search_kwargs={"k":4}),chain_type="stuff")
-  
-    # qa_chain = RetrievalQA.from_chain_type(llm=OpenAI(),
-    #                               chain_type="stuff",
-    #                               retriever=retriever,
-    #                               return_source_documents=True)
-    # print("-------------------")
-    # print(qa_chain(query) ) #chain.run(query).strip()
-
-
-import requests
-import os
-def ner_terminology_finder(file_path):
-    file_name = os.path.basename(file_path)
-
-    url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
-
-    payload = {}
-    files=[
-    ('file',(file_name,open(file_path,'rb'),'text/plain'))]
-    headers = {}
-    response = requests.request("POST", url, headers=headers, data=payload, files=files)
-    if response.status_code == 200:
-        ner = response.json()['ner'].split(",")
-        terminology = response.json()['terminology'].split(",")
-        return {'ner':ner,'terminology':terminology}
+def prompt_to_extract_ner_terms(terms):
+    
+    prompt = """context_list : {} 
+    
+    
+    Extract only list of named entity and terminology from the above list of context result should be in comma separated""".format(",".join(terms))
+    result = get_prompt_chatgpt_turbo(prompt=prompt,n=1) # Note: Remove stop words ,pronoun,verbs,adverb
+    generated_text =result['choices'][0]['message']['content']
+    if generated_text:
+        generated_text = generated_text.split(",")
+        print("generated_text",generated_text)
+        return generated_text
     else:
         return None
+
+# def ner_terminology_finder(file_paths):
+#     file_paths = check_file_language(file_paths)
+#     if not file_paths:
+#         raise  'please upload English language files' 
+#     url = "https://transbuilderstaging.ailaysa.com/dataset/ner-upload/"
+
+#     payload = {}
+#     headers = {}
+#     files = []
+#     for file_path in file_paths:
+#         file_name = os.path.basename(file_path)
+#         files.append(('file',(file_name,open(file_path,'rb'),'text/plain')))
+    
+#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+#  #   project_instance --> list of job --> get_lang_code --> translation --> {"s_term":"", "t_term":"","lang_code":,"job":""}
+    
+
+#     if response.status_code in [200,201]:
+#         terminology = []
+#         pos = []
+#         tem_list = []
+#         duplicate_list = []
+ 
+#         for i in response.json():
+#             terminology.extend(i['ner'].split(","))
+#             terminology.extend(i['terminology'].split(","))
+#             pos.extend(i['pos_user'])
+
+#         terminology = list(set([i.translate(str.maketrans("","", punctuation+"”“•")).strip().capitalize() for i in terminology if len(i)>1]))
+#         terminology = prompt_to_extract_ner_terms(terminology)
+        
+#         for i in terminology:
+#             if i.lower() not in duplicate_list:
+#                 duplicate_list.append(i.lower())
+#                 tem_list.append({'term':i,'pos':'Noun'})
+#         duplicate_list = []
+#         for i in pos:
+#             if i['term'].lower() not in duplicate_list:
+#                 duplicate_list.append(i['term'].lower())
+#                 tem_list.append(i) #{'term':i,'pos':'Noun'}
+
+#         return {'terminology':tem_list} 
+#     else:
+#         return None
+
+
+
+ 
+prompt = """Context: {} 
+
+
+Extract key phrases and Named Entity Recognition (NER) from the given context give only Person, Nationalities or Religious or Political Groups (NORP), Facilities, Organizations, Geopolitical Entities (GPE), Locations, Products, Works of Art, and Laws for NER and 
+give only the word and don't include NER names in results and the output should be in the format of {"key": key pharas list , "ner": list of ners } and eliminate the repeated words 
+"""
+
+import json
+
+def ner_terminology_finder(file_paths):
+    file_paths ,extracted_text_list = check_file_language(file_paths)
+    if not file_paths:
+        raise  'please upload English language files' 
+    terms = []
+    for extracted_text in extracted_text_list:
+        prompt = prompt.format(extracted_text)
+        result = mistral_chat_api(prompt)
+        try:
+            result ="" #json.loads(chat_response.choices[0].message.content)
+        except Exception as e:
+            print("ERROR in JSON DECODE-------->",e)
+    print("terms",terms)
+    if terms:
+         return {'terminology':terms} 
+    else:
+        return None
+
+
+
+        
+    

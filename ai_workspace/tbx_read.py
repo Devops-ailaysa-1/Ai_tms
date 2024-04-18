@@ -42,34 +42,25 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                                 if word.strip().casefold()==item.text.strip().casefold():
                                     match=1
                                     source=item.text
-                                    # for j in term.iter(ls):
-                                    #     lang = j.get('{http://www.w3.org/XML/1998/namespace}lang')
-                                    #     if lang.split('-')[0]==code:
-                                    #         for t in j.iter('term'):
-                                    #             target.append(t.text)
                                     for j in term.iter('term'):
                                         if j.text != source:
                                             target.append(j.text)
                                     out=[{'source':source,'target':target}]
                                     res1.extend(out)
-            #print(match)
             if match==1:
                 break
     return({"res":res1})
 
-# def getLanguageName(id):
-#         job_id=Document.objects.get(id=id).job_id
-#         src_id=Job.objects.get(id=job_id).source_language_id
-#         src_name=Languages.objects.get(id=src_id).language
-#         tar_id=Job.objects.get(id=job_id).target_language_id
-#         tar_name=Languages.objects.get(id=tar_id).language
-#         src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
-#         tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
-#         return ({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
-
 
 @api_view(['POST',])
 def TermSearch(request):
+
+    '''search term from tbx file for segment
+    
+        args: user_input: Segment text (str)
+              doc_id : Document id 
+              task_id : Task id'''
+
     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
     out1 = []
     data = request.POST.dict()
@@ -80,7 +71,6 @@ def TermSearch(request):
         doc = Document.objects.get(id = doc_id)
         if doc != None:
             authorize(request, resource=doc, actor=request.user, action="read")
-        # LangName = getLanguageName(doc_id)
         codesrc = doc.source_language_code
         code = doc.target_language_code
 
@@ -90,7 +80,6 @@ def TermSearch(request):
         task = Task.objects.get(id = task_id)
         if task != None:
             authorize(request, resource=task, actor=request.user, action="read")
-        # LangName = getLanguageName(doc_id)
         codesrc = task.job.source_language_code
         code = task.job.target_language_code
 
@@ -188,7 +177,6 @@ def user_tbx_write(job_id,project_id):
         sl_code = sl_lang[0].get('source_language__locale__locale_code')
         tl_code = ta_lang[0].get('target_language__locale__locale_code')
         objs = TemplateTermsModel.objects.filter(job_id = job_id)
-        # objs = UserTerms.objects.filter(user_id=id)
         root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
                                 nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
         tbxHeader = ET.Element("tbxHeader")
@@ -219,7 +207,6 @@ def user_tbx_write(job_id,project_id):
             Term1.text = obj.tl_term.strip()
         out_fileName = TemplateTermsModel.objects.filter(job_id=job_id).last().file.filename[:-5] + ".tbx"
         ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
-        print("out_fileName type--->", type(out_fileName))
         return out_fileName
 
     except Exception as e:

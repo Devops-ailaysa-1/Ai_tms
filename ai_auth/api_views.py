@@ -21,7 +21,8 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,CareerSupportAISerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,
+                                CareerSupportAISerializer,AilaysaCallCenterSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -34,7 +35,7 @@ from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionali
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates,GeneralSupport,SubscriptionOrder,
-                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI)
+                            PurchasedUnits,PurchasedUnitsCount,MarketingBootcamp,CareerSupportAI,AilaysaCallCenter)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -71,8 +72,6 @@ from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorOnboardingInfo
 from django.db import transaction
 from django.contrib.sites.shortcuts import get_current_site
 #for soc
-from django.test.client import RequestFactory
-from django.test import Client
 from allauth.socialaccount.providers.google.views import ( GoogleOAuth2Adapter,)
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -80,12 +79,9 @@ from allauth.socialaccount.providers.oauth2.views import (
     OAuth2LoginView,
 )
 from ai_auth.providers.proz.views import ProzAdapter
-from django.contrib.sessions.models import Session
-from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
-from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
@@ -93,7 +89,7 @@ from ai_auth.signals import send_campaign_email
 from django_oso.auth import authorize, authorize_model
 import os
 from ai_auth.reports import AilaysaReport
-
+from django.db.models.query import QuerySet
 logger = logging.getLogger('django')
 
 try:
@@ -154,81 +150,6 @@ class UserAttributeView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-# class PersonalInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = PersonalInformation.objects.get(user_id=request.user.id)
-#         except PersonalInformation.DoesNotExist:
-#             return Response(status=204)
-
-#         serializer = PersonalInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-#     def post(self, request):
-#         data = request.data
-#         print("Data==>",data)
-#         serializer = PersonalInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         print(request.data)
-#         personal_info = PersonalInformation.objects.get(user_id=request.user.id)
-#         serializer = PersonalInformationSerializer(personal_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class OfficialInformationView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request,format=None):
-#         try:
-#             queryset = OfficialInformation.objects.get(user_id=request.user.id)
-#         except OfficialInformation.DoesNotExist:
-#             return Response(status=204)
-#         serializer = OfficialInformationSerializer(queryset)
-#         return Response(serializer.data)
-
-
-#     def post(self, request):
-#         data = request.data
-#         serializer = OfficialInformationSerializer(data=data, context={'request':request})
-
-#         if serializer.is_valid():
-#             try:
-#                 serializer.save()
-#             except IntegrityError:
-#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
-#     def patch(self, request, format=None):
-#         officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
-#         serializer = OfficialInformationSerializer(officaial_info,
-#                                            data=request.data,
-#                                            partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -395,14 +316,19 @@ class ContactPricingCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email(subject,template,context,email=None):
+def send_email(subject,template,context,email=None,cc=None):
     email = email if email else 'support@ailaysa.com'
     content = render_to_string(template, context)
-    file_ =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])#to emailaddress need to change ['support@ailaysa.com',]
+    file_ = context.get('file')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,], cc=[cc,])#to emailaddress need to change ['support@ailaysa.com',]
     if file_:
-        name = os.path.basename(file_.path)
-        msg.attach(name, file_.file.read())
+        if isinstance(file_,QuerySet):
+            for i in file_:
+                name = os.path.basename(i.file.path)
+                msg.attach(name, i.file.file.read())
+        else:
+            name = os.path.basename(file_.path)
+            msg.attach(name, file_.file.read())
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -421,7 +347,6 @@ def send_email_with_multiple_files(subject,template,context):
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
     permission_classes = [AllowAny]
-
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
@@ -2511,11 +2436,12 @@ def get_lang_code(lang_code):
 
 
 
-from googletrans import Translator
+
 @api_view(['GET'])
 #@permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def lang_detect(request):
+    from googletrans import Translator
     from ai_staff.models import Languages
     text = request.GET.get('text')
     detector = Translator()
@@ -2837,10 +2763,6 @@ class AilaysaPurchasedUnits:
                 raise ValueError ('deducting more than available credits')
             
 
- 
-
-
-
 
 class MarketingBootcampViewset(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -2861,20 +2783,6 @@ class MarketingBootcampViewset(viewsets.ViewSet):
             instance = self.get_object(serializer.data.get('id',None))
             send_bootcamp_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
-            # if instance.file:
-            #     file_path = instance.file.path
-            # else:
-            #     file_path = None
-            # sent = auth_forms.bootcamp_marketing_ack_mail(user_name = instance.name,
-            #                                        user_email=instance.email,
-            #                                        file_path=file_path)
-            # auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
-            #                                             user_email=instance.email)
-            # if sent:
-
-            #     return Response({'msg':'Mail sent Successfully'})
-            # else:
-            #     return Response({'msg':'Mail Not sent'})
         return Response(serializer.errors)
     
 @api_view(['GET'])
@@ -2891,18 +2799,6 @@ def internal_editors_list(request):
         return JsonResponse({'msg':'you are having no team'},status=400)
 
 
-
-# def send_email(subject,template,context):
-#     content = render_to_string(template, context)
-#     email =  os.getenv("BOOTCAMP_MARKETING_DEFAULT_MAIL")
-#     file_ =context.get('file')
-#     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email])#to emailaddress need to change ['support@ailaysa.com',]
-#     if file_:
-#         name = os.path.basename(file_.path)
-#         msg.attach(name, file_.file.read())
-#     msg.content_subtype = 'html'
-#     msg.send()
-#     print("Msg sent")
 
 
 def career_support_thank_mail(user_name,user_email):
@@ -2934,3 +2830,57 @@ class CareerSupportAICreateView(viewsets.ViewSet):
             send_career_mail.apply_async((instance.id,),queue='low-priority')
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
+    
+import os
+from ai_auth.models import AilaysaCallCenterFile
+class AilaysaCallCenterView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self,request):
+        from .tasks import send_ailaysa_call_center
+        file = request.FILES.getlist('file')
+        serializer = AilaysaCallCenterSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            instance = AilaysaCallCenter.objects.get(id=serializer.data.get('id'))
+            for i in file:
+                AilaysaCallCenterFile.objects.create(file=i,ailaysa_call_center=instance)
+            send_ailaysa_call_center.apply_async((instance.id,),queue='low-priority')
+            return JsonResponse({'msg':'message sent successfully'},status=200)
+        return Response(serializer.errors, status=400)
+
+
+
+
+
+class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+     
+
+    def create(self,request):
+        name = request.POST.get('name',None)
+        email = request.POST.get('email',None)
+        company_name = request.POST.get('company_name',None)
+        message = request.POST.get('message',None)
+
+        subject_get_in_touch = "Contact ({})".format(name)
+
+        template_get_in_touch = 'ailaysa_call_center_get_in_touch.html'
+        email = 'sales@langsmart.com'
+        cc = 'senthil.nathan@ailaysa.com'
+
+        context = {'name':name,'email':email,'company_name':company_name, 'service_description':message,}
+
+        send_email(subject_get_in_touch,template_get_in_touch,context,email,cc)
+        return JsonResponse({'msg':'message sent successfully'},status=200)
+
+
+
+
+
+
+
+
+#     name = models.CharField(max_length=100,blank=True,null=True)
+#     email = models.EmailField(unique=True,blank=True,null=True)
+#     company_name = models.CharField(max_length=50,blank=True,null=True)
+#     message = models.CharField(max_length=600,blank=True,null=True)

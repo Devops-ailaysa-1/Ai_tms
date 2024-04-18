@@ -151,6 +151,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
+    #"drf_yasg",
     #"silk",
 ]
 
@@ -321,7 +322,6 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
-# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 
 # OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 
@@ -342,6 +342,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+        #'rest_framework.permissions.AllowAny',
     ],
     # 'DEFAULT_THROTTLE_CLASSES': [
     # 'rest_framework.throttling.AnonRateThrottle',
@@ -582,4 +583,6 @@ INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
 
 EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
+ 
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
  
