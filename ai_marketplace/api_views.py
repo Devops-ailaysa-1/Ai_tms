@@ -79,6 +79,9 @@ from django_oso.auth import authorize
 @api_view(['GET','POST',])
 @permission_classes([IsAuthenticated])
 def get_vendor_detail(request):
+    '''
+    This funtion is to get the details of vendor with unique vendor_id.
+    '''
     uid=request.POST.get('vendor_id')
     user=AiUser.objects.get(uid=uid)
     serializer = GetVendorDetailSerializer(user,context={'request':request})
@@ -88,6 +91,10 @@ def get_vendor_detail(request):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_project_primary_details(request):
+    '''
+    This function will return the primary details of projects to be posted. 
+    It returns the details of subject_fields,content_type, name, jobs, project_type, task_count and steps
+    '''
     project_id=request.POST.get('project_id')
     project = get_object_or_404(Project.objects.all(), id=project_id)
     jobs = project.project_jobs_set.all()
@@ -115,6 +122,9 @@ def post_project_primary_details(request):
 
 
 class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
+    '''
+    This view is to list, retrive, create, update and delete the projectposts.
+    '''
     serializer_class = ProjectPostSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ['proj_name','projectpost_jobs__src_lang__language','projectpost_jobs__tar_lang__language']
@@ -203,6 +213,9 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def user_projectpost_list(request):
+    '''
+    This function is to list user's projectpost list with bid detail count and post status.
+    '''
     customer_id = request.user.id
     present = timezone.now()
     new=[]
@@ -228,6 +241,9 @@ def user_projectpost_list(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def project_post_template_options(request):
+    '''
+    This function is to list the names of saved project post templates if any.
+    '''
     query = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
     out = []
     for i in query:
@@ -239,6 +255,9 @@ def project_post_template_options(request):
 @api_view(['DELETE',])
 @permission_classes([IsAuthenticated])
 def project_post_template_delete(request,id):
+    '''
+    This function is to delete the projectpost template.
+    '''
     obj = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user)\
          | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(Q(id = id))
     if obj:
@@ -248,6 +267,9 @@ def project_post_template_delete(request,id):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def project_post_template_get(request):
+    '''
+    This is to retrive the details of template with template_id.
+    '''
     template = request.GET.get('template')
     query = ProjectboardTemplateDetails.objects.filter(Q(id=template))
     if query:
@@ -259,6 +281,9 @@ def project_post_template_get(request):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def addingthread(request):
+    '''
+    This function is to create message thread between two users.
+    '''
     user1=request.user.id
     bid_id=request.POST.get("bid_id")
     uid=request.POST.get("vendor_id")
@@ -275,6 +300,11 @@ def addingthread(request):
 class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 20
+
+    '''
+    This view is to get, create, update and delete the bid proposals by the vendor
+    for the projectcpost.
+    '''
 
     def get(self, request):
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
@@ -338,6 +368,10 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):############need to include currency conversion###############
+    '''
+    This function is to get the primary details of bid received for the given projectcpost.
+    it returns the details of post_jobs, post_deadline, projectpost_steps, bid_applied, service_info.
+    '''
     pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else [] 
     user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
     if user.is_vendor == True:
@@ -357,6 +391,9 @@ def unit_price_float_format(price):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def bid_proposal_status(request):
+    '''
+    This function is to update the status of bidproposal (inprogress,shortlisted,hired,rejected,reapplied)
+    '''
     bid_detail_id= request.POST.get('id')
     obj = BidPropasalDetails.objects.get(id = bid_detail_id)
     shortlist = request.POST.get('shortlist',None)
@@ -402,6 +439,10 @@ def notification_read(thread_id,user):
     list.mark_all_as_read()
 
 class ChatMessageListView(viewsets.ModelViewSet):
+    '''
+    This view is to list chat messages of the given thread. create, 
+    update and delete chat messages.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = ChatMessageSerializer
     filter_backends = [DjangoFilterBackend,SF,OF]
@@ -456,6 +497,9 @@ class IncompleteProjectListFilter(django_filters.FilterSet):
 
 
 class IncompleteProjectListView(viewsets.ModelViewSet):
+    '''
+    This function is to return the projects which have mtpe tasks from ailaysa projects.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = SimpleProjectSerializer
     filterset_class = IncompleteProjectListFilter
@@ -498,6 +542,10 @@ class NoPagination(PageNumberPagination):
 
 
 class AvailableJobsListView(generics.ListAPIView):
+    '''
+    This view is to return the available jobs 
+    to the vendor by matching post jobs with registered language pair.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = AvailablePostJobSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
@@ -526,7 +574,10 @@ class AvailableJobsListView(generics.ListAPIView):
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
-def vendor_applied_jobs_list(request):
+def vendor_applied_jobs_list(request): ##### Not using now
+    '''
+    This function is to return the applied jobs list 
+    '''
     try:
         print(request.user.id)
         queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
@@ -538,7 +589,7 @@ def vendor_applied_jobs_list(request):
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
-def get_my_jobs(request):
+def get_my_jobs(request): ##### Not using now
     tasks = Task.objects.filter(assign_to_id=request.user.id)
     print(tasks)
     # tasks = Task.objects.filter(assign_to_id=request.user.id)
@@ -548,6 +599,9 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
+    '''
+    This function returns contact's list and receiver's list of user.
+    '''
 
     threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
     receivers_list =[]
@@ -585,6 +639,9 @@ def get_available_threads(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
+    '''
+    This function is to return the unread notification count and notification details for the request user.
+    '''
     user = AiUser.objects.get(pk=request.user.id)
     notification_details=[]
     notification=[]
@@ -636,6 +693,9 @@ class VendorFilterNew(django_filters.FilterSet):
 
 
 class GetVendorListViewNew(generics.ListAPIView):
+    '''
+    This view is to list vendors in marketplace with search creteria.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = GetVendorListSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
@@ -686,6 +746,9 @@ class GetVendorListViewNew(generics.ListAPIView):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_last_messages(request):
+    '''
+    This function is to get recent messages of user and last message and unread count to show on chat notification.
+    '''
     threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
     data=[]
     for i in threads:
@@ -699,6 +762,9 @@ def get_last_messages(request):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_previous_accepted_rate(request):
+    '''
+    This function will return previous accepted rate of the vendor with the given language pair.
+    '''
     user = request.user
     vendor_id = request.POST.get('vendor_id')
     jobs = request.POST.getlist('job_id')
@@ -750,10 +816,10 @@ def customer_mp_dashboard_count(request):
 
 
 
-
-
-
 class GetVendorListBasedonProjects(viewsets.ViewSet):
+    '''
+    This viewset is to list the vendors based on projects language pair.
+    '''
     permission_classes = [IsAuthenticated]
 
     @staticmethod
@@ -799,6 +865,9 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_talents(request):
+    '''
+    This function will return saved vendors for that user.
+    '''
     user = request.user.team.owner if request.user.team else request.user
     ser = GetTalentSerializer(user,context={'request':request})
     return Response(ser.data)
@@ -808,6 +877,9 @@ def get_talents(request):
 @api_view(['GET',])
 #@permission_classes([IsAuthenticated])
 def sample_file_download(request,bid_propasal_id):
+    '''
+    This function is to download the sample file uploaded during bid propasal.
+    '''
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         return download_file(sample_file.path)
@@ -818,6 +890,9 @@ def sample_file_download(request,bid_propasal_id):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def sample_file_delete(request,bid_propasal_id):
+    '''
+    This function is to delete the sample file uploaded during bid propasal.
+    '''
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file.delete()
@@ -833,6 +908,7 @@ def get_proz_lang_pair(source,target):
     return source_lang + '_' + target_lang
 
 def get_native_langs(langs):
+    '''language mapping from proz'''
     native_langs=[]
     for i in langs:
         obj = ProzLanguagesCode.objects.filter(language_code = i)
@@ -841,6 +917,7 @@ def get_native_langs(langs):
     return native_langs
 
 def get_proz_expertize(sub_id_list):
+    '''subjectfield mapping from proz'''
     queryset = ProzExpertize.objects.filter(subject_field__id__in = sub_id_list)
     expertize_ids_list = [obj.expertize_ids for obj in queryset if obj.expertize_ids]
     if expertize_ids_list:
@@ -849,6 +926,7 @@ def get_proz_expertize(sub_id_list):
     else: return None
     
 def get_sub_data(expertise_data):
+    '''expertize mapping from proz'''
     subject_data = []
     seen_ids = set()
     for expertise in expertise_data:
@@ -867,6 +945,10 @@ from ai_staff.models import Countries
 from allauth.socialaccount.models import SocialAccount
 
 class ProzVendorListView(generics.ListAPIView):
+    '''
+    This view is to list Proz users in Marketplace.
+    By calling Proz API 'freelancer_search' with language,limit,service as the param and return the result from that API.
+    '''
     serializer_class = CommonSPSerializer
     pagination.PageNumberPagination.page_size = 20
     permission_classes = [IsAuthenticated]
@@ -971,6 +1053,10 @@ class ProzVendorListView(generics.ListAPIView):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def proz_send_message(request):
+    '''
+    This function is called whenever the customer wants to connect to proz user in marketplace.
+    It will send the message to proz and save its message_vetting_id for future referrence.
+    '''
     user = request.user.team.owner if request.user.team else request.user
     message = request.POST.get('message')
     uuid = request.POST.get('uuid')
