@@ -46,6 +46,11 @@ from django.shortcuts import get_object_or_404
 ######### Glossary FILE UPLOAD  #####################################
 
 class GlossaryFileView(viewsets.ViewSet):
+    '''
+    This viewset is to add, delete template files. 
+    when the file is added, signal is connected with GlossaryFiles model to save terms from template to TermsModel.
+    when the file is deleted, signal is connected with GlossaryFiles model to delete all the terms from TermsModel related to that file.
+    '''
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
@@ -97,6 +102,9 @@ class GlossaryFileView(viewsets.ViewSet):
 
 
 class TermUploadView(viewsets.ModelViewSet):
+    '''
+    This view is to add, list, update and delete the terms in glossary.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = TermsSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
@@ -108,6 +116,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
 
     def edit_allowed(self,obj):
+        #Not using now
         request_obj = self.request
         from ai_workspace_okapi.api_views import DocumentViewByDocumentId
         doc_view_instance = DocumentViewByDocumentId(request_obj)
@@ -116,6 +125,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
 
     def edit_allowed_check(self,job):
+        #Not using now. not working correctly.
         from ai_workspace.models import Task,TaskAssignInfo
         user = self.request.user
         task_obj = Task.objects.get(job_id = job.id)
@@ -205,6 +215,9 @@ class TermUploadView(viewsets.ModelViewSet):
 @api_view(['GET',])
 #@permission_classes([IsAuthenticated])
 def glossary_template_lite(request):
+    '''
+    This function is to download glossary simple template
+    '''
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
     xlsx_data = WriteToExcel_lite()
@@ -216,6 +229,9 @@ def glossary_template_lite(request):
 @api_view(['GET',])
 #@permission_classes([IsAuthenticated])
 def word_choice_template(request):
+    '''
+    This function is to download Word choices template
+    '''
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=word_choice_template.xlsx'
     xlsx_data = WriteToExcel_wordchoice()
@@ -228,6 +244,9 @@ def word_choice_template(request):
 @api_view(['GET',])
 #@permission_classes([IsAuthenticated])
 def glossary_template(request):
+    '''
+    This function is to download glossary full template
+    '''
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
     xlsx_data = WriteToExcel()
@@ -239,6 +258,10 @@ def glossary_template(request):
 
 @api_view(['GET',])
 def tbx_write(request,task_id):
+    '''
+    This function is to write tbx file for the given task_id with the help of ET(Element Tree) library
+    and downloads tbx file.
+    '''
     try:
         job = Task.objects.get(id = task_id).job
         sl_code = job.source_language_code
@@ -300,6 +323,10 @@ def tbx_write(request,task_id):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def glossaries_list(request,project_id):
+    '''
+    This function is to list the glossaries(exclude the empty one) which matches the given project's source and target
+    languages and returns GlossaryListSerializer data.
+    '''
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
     user = request.user.team.owner if request.user.team else request.user
@@ -333,7 +360,10 @@ def glossaries_list(request,project_id):
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-
+    '''
+    This view is to add and list glossaries selected for the particular project by the users.
+    delete is to unselect the glossary for that project.
+    '''
 
     def list(self,request):
         project = request.GET.get('project')
@@ -367,6 +397,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
+    '''
+    This function is to search user_input(segment source) against MYGlossary and TermsModel 
+    and returns the match if any.
+    '''
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
@@ -404,6 +438,10 @@ def glossary_search(request):
 
 class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
+    '''
+    This view is to get_mt for source term inside glossary workspace for MT Button. 
+    This is similar to get_term_mt, try to merge it.
+    '''
 
     @staticmethod
     def word_count(string):
@@ -443,10 +481,14 @@ class GetTranslation(APIView):#############Mt update need to work###############
         else:
             return Response({"res": "Insufficient credits"}, status=424)
 
-
+################ Not using now ###########################################
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def adding_term_to_glossary_from_workspace(request):
+    '''
+    This function is to add terms from workspace to glossary if glossary id is given, else it will save it in default glossary.
+    Now it is changed to MyGlossaryView Post method.
+    '''
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     doc_id = request.POST.get("doc_id")
@@ -496,7 +538,7 @@ def adding_term_to_glossary_from_workspace(request):
 #         return Response(serializer.data)
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
 
-
+######################################## Not using now ########################################################
 from ai_glex.models import Terminologyextract
 from ai_nlp.utils import ner_terminology_finder
 from ai_staff.models import Languages
@@ -504,6 +546,9 @@ from ai_staff.models import Languages
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_ner_terminology_extract(request):
+    '''
+    This function is to extract keywords and ner from uploaded file. it is now for only english language.
+    '''
     proj_id = request.POST.get('proj_id',None)
     files = request.FILES.getlist('file',None)
     language_ids = request.POST.getlist('language_id',None)
@@ -556,7 +601,7 @@ def get_ner_terminology_extract(request):
     return Response({'msg':"updated"})
     
             
-
+#################### Not using now ##########################################################################################
 from ai_workspace.api_views import  get_consumable_credits_for_text
 from ai_workspace_okapi.utils import get_translation
 def get_terms_mt(task_id,terms):
@@ -582,10 +627,13 @@ def get_terms_mt(task_id,terms):
 
     print("Completed")
 
-
+###########################################################################################################################
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def clone_source_terms_from_multiple_to_single_task(request):
+    '''
+    This function is to clone the source terms from multiple tasks to single task.
+    '''
     current_task = request.GET.get('task_id')
     existing_task = request.GET.getlist('copy_from_task_id')
     current_job = Task.objects.get(id=current_task).job
@@ -607,6 +655,9 @@ def clone_source_terms_from_multiple_to_single_task(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def clone_source_terms_from_single_to_multiple_task(request):
+    '''
+    This function is to clone all the source terms from single task to multiple tasks.
+    '''
     existing_task = request.GET.get('copy_from_task_id')
     to_task = request.GET.getlist('copy_to_ids')
     existing_job = Task.objects.get(id=existing_task).job_id
@@ -637,7 +688,7 @@ def clone_source_terms_from_single_to_multiple_task(request):
 class NoPagination(PageNumberPagination):
       page_size = None
 
-
+########## Not using now ###############################################################
 class WholeGlossaryTermSearchView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = WholeGlossaryTermSerializer
@@ -660,6 +711,10 @@ class WholeGlossaryTermSearchView(generics.ListAPIView):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def whole_glossary_term_search(request):
+    '''
+    Not using now
+    This function is to search term across all glossaries of user. 
+    '''
     search_term = request.GET.get('term')
     glossary_id = request.GET.get('glossary_id',None)
     if not search_term:
@@ -683,6 +738,9 @@ def whole_glossary_term_search(request):
 
 class GlossaryListView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    '''
+    This view is for to list glossaries based on user.
+    '''
 
     def list(self,request):
         task = request.GET.get('task_id')
@@ -703,6 +761,9 @@ import pandas as pd
 from ai_glex.models import TermsModel
 @api_view(['GET',])
 def glossary_task_simple_download(request):
+    '''
+    This function is to download the simple excel file of glossary terms (sl_term, tl_term)
+    '''
     gloss_id = request.GET.get('gloss_id')
     task_id  = request.GET.get('task')
     task_obj = Task.objects.get(id=task_id)
@@ -731,6 +792,9 @@ def glossary_task_simple_download(request):
 
 
 class MyGlossaryView(viewsets.ModelViewSet):
+    '''
+    This view is to list, add, update and delete the terms in default glossary for each user. currently it is used for dinamalar flow.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = MyGlossarySerializer
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
@@ -805,6 +869,11 @@ class MyGlossaryView(viewsets.ModelViewSet):
 
 @api_view(['POST',])
 def get_word_mt(request):
+    '''
+    This function is to check for the mt of given word in that language. 
+    if it exists, it will return the target_term else it will MT the source term and store 
+    and then return GlossaryMtSerializer data
+    '''
     user = request.user.team.owner if request.user.team else request.user
     task_id = request.POST.get("task_id",None)
     source = request.POST.get("source", "")
@@ -844,6 +913,9 @@ def get_word_mt(request):
 
 
 class WordChoiceListView(viewsets.ViewSet):
+    '''
+    This view is to list the wordchoices 
+    '''
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
