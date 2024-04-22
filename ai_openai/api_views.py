@@ -1374,6 +1374,14 @@ def customize_refer(customize,search_term,lang):
     return res
 
 
+#file_translate = models.BooleanField(default=False)
+
+@api_view(["POST"])
+def file_writer_translate(request):
+    src_lang = request.POST.get('src_lang')
+    trg_lang = request.POST.getlist('trg_lang')
+    print(src_lang,trg_lang)
+    return Response({"src":src_lang,"tar":trg_lang})
 
 
-    
+
