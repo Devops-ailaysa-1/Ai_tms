@@ -748,7 +748,7 @@ class BlogArticleViewset(viewsets.ViewSet): # Not using now
 
 class BookTitleViewset(viewsets.ViewSet):
     '''
-    This viewset is to create, list, edit and delete booktitles
+    This viewset is to create, list, edit and delete book titles
     '''
 
     def list(self, request):
@@ -788,7 +788,9 @@ class BookTitleViewset(viewsets.ViewSet):
         return Response(status=204)
 
 class BookCreationViewset(viewsets.ViewSet):
-
+    '''
+    This viewset is to create, list, edit and delete book creation object.
+    '''
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user 
         query_set=BookCreation.objects.filter(user=user).order_by('-id')
@@ -826,6 +828,11 @@ class BookCreationViewset(viewsets.ViewSet):
 
 
 class BookBodyViewset(viewsets.ViewSet):
+    '''
+    This viewset is to list,create,update and delete the bookbodymatters in bookcreation(AI writer).
+    Bookbodymatters mainly now focussed on chapters. But it is written in generic way. 
+    we can create user customized bodymatter too other than chapters.
+    '''
 
     def list(self, request):
         group = request.GET.get('group',0)
