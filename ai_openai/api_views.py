@@ -39,6 +39,11 @@ from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_sear
 
 
 class AiPromptViewset(viewsets.ViewSet):
+    '''
+    This viewset is to call the openAI API with the given details category, sub_category, lannguages,
+    description, keywords, number of copies and store the result.
+    Create the AIPrompt object with the given details.
+    '''
     model = AiPrompt
 
     def get(self, request):
@@ -53,9 +58,7 @@ class AiPromptViewset(viewsets.ViewSet):
         if description:
             description=description.rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
-        user = request.user.team.owner if request.user.team else request.user
-
-        
+        user = request.user.team.owner if request.user.team else request.user  
 
         serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,
                                               'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit}) #'news_files':news_files,
@@ -96,6 +99,9 @@ class NoPagination(PageNumberPagination):
       page_size = None
 
 class AiPromptResultViewset(generics.ListAPIView):
+    '''
+    This viewset is to return the prompt results with prompt_id.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = AiPromptGetSerializer
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
@@ -105,7 +111,7 @@ class AiPromptResultViewset(generics.ListAPIView):
     search_fields = ['description','catagories__category','sub_catagories__sub_category',]
     pagination_class = NoPagination
      
-
+    
     def get_queryset(self):
         prmp_id = self.request.query_params.get('prompt_id')
 
@@ -121,7 +127,9 @@ class AiPromptResultViewset(generics.ListAPIView):
  
 
 def instant_customize_response(customize ,user_text,used_tokens):
-    
+    '''
+    This function is called in instant_translate for simplify,rewrite and shorten option
+    '''
     if customize.customize == 'Simplify':
         import re
         NEWLINES_RE = re.compile(r"\n{1,}")
@@ -147,6 +155,11 @@ def instant_customize_response(customize ,user_text,used_tokens):
 
 
 def customize_response(customize ,user_text,tone,used_tokens):
+    '''
+    This function is internally called in customize_text_openai. 
+    In this function it will format prompt according to the customize option and called 
+    openAI API return the response, total_tokens and prompt.
+    '''
     user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
@@ -170,6 +183,11 @@ def customize_response(customize ,user_text,tone,used_tokens):
     return response,total_tokens,prompt
 
 def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engine):
+    '''
+    This function is for customization translation. called internally in customize_text_openai.
+    checks for user credits and called get_translation and store the translation in 
+    TranslateCustomizeDetail model and return TranslateCustomizeDetailSerializer data.
+    '''
     res = []
     source_lang_code = Languages.objects.get(id=source_lang).locale.first().locale_code
     for i in target_langs:
@@ -199,6 +217,9 @@ from ai_auth.api_views import get_lang_code
 @permission_classes([IsAuthenticated])
 
 def customize_text_openai(request):
+    '''
+    This function is for customize option in ai_writer. 
+    '''
     from ai_exportpdf.models import Ai_PdfUpload
     document = request.POST.get('document_id')
     task = request.POST.get('task',None)
@@ -233,7 +254,7 @@ def customize_text_openai(request):
             lang = lang[0]
         lang = get_lang_code(lang)
 
-    
+    # if the customization ids are related to refer group
     if customize.id in [25,26,27,28]:
         result = customize_refer(customize,user_text,lang)
         return Response(result)
@@ -243,6 +264,9 @@ def customize_text_openai(request):
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
+    
+    # if customization is translate, then it will first store customization details in 
+    # AiPromptcustomize and then call translate_text() function and return the results.
     if customize.customize == "Translate":
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
@@ -258,13 +282,19 @@ def customize_text_openai(request):
         res = translate_text(created_obj_id,user,user_text,language,target_langs,mt_engine)
         return Response(res)
 
-    
+    # Other than customize options Translate and refer, it will follow the below flow
     total_tokens = 0
     user_text_mt_en,txt_generated = None,None
     try:user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     except:user_text_lang = 17
 
+
     if lang != 'en':
+        '''
+        checks for the user_text language. if the language is not english, then check for user_credits
+        and translate the given text to english and then call the openAI API and store the prompt response
+        and again translate the prompt response into user_given language and return the results. 
+        '''
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
@@ -282,10 +312,17 @@ def customize_text_openai(request):
             return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:   
+        '''
+        if language is english, then call the customize_response (which forms the prompt with given details and
+        calls openAI API and returns the response)
+        '''
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
         result_txt = response["choices"][0]["message"]["content"]
+    
+    # Deduct the credits for openAI API calling
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
-   
+    
+    # store the response and necessary details in AiPromptCustomize model and return AiPromptCustomizeSerializer data
     data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
@@ -300,6 +337,10 @@ def customize_text_openai(request):
 @api_view(['DELETE',])
 @permission_classes([IsAuthenticated])
 def history_delete(request):
+    '''
+    This function is to delete the prompt_result of the prompt with the given prompt_id.
+    or to delete customize history too by deleting AiPromptCustomize object.
+    '''
     prmp = request.GET.get('prompt_id',None)
     obj = request.GET.get('obj_id',None)
     customize_obj = request.GET.get('customize_obj_id',None)
@@ -331,6 +372,10 @@ def image_gen(request):
 
 
 class AiCustomizeSettingViewset(viewsets.ViewSet):
+    '''
+    This viewset is to get,create,update and delete the customization settings of the user in 
+    AIWriter.
+    '''
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user.team.owner if request.user.team else request.user
@@ -383,6 +428,11 @@ class AiCustomizeSettingViewset(viewsets.ViewSet):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def user_preffered_langs(request):
+    '''
+    This function is to give the details for selecting default source and target language
+    in translate customize option. 
+    it will check for previous translate customize of user and return source and target language
+    '''
     queryset = TranslateCustomizeDetails.objects.filter(customization__user = request.user)
     if queryset:
         target = queryset.last().target_language_id
@@ -396,6 +446,10 @@ def user_preffered_langs(request):
 
 
 class AiPromptCustomizeViewset(generics.ListAPIView):
+    '''
+    This viewset is to list the customization history 
+    with search_fields user_text and customization option.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = AiPromptCustomizeSerializer
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
@@ -413,6 +467,9 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
 
 
 class AiImageHistoryViewset(generics.ListAPIView):
+    '''
+    This viewset is to list image generation history of user with the search field of prompt.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class = ImageGeneratorPromptSerializer
     filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
@@ -431,6 +488,9 @@ class AiImageHistoryViewset(generics.ListAPIView):
 
 
 class ImageGeneratorPromptDelete(generics.DestroyAPIView):
+    '''
+    To delete the generated image
+    '''
     queryset = ImageGeneratorPrompt.objects.all()
     serializer_class = ImageGeneratorPromptSerializer
     lookup_field = 'pk'
@@ -439,16 +499,22 @@ class ImageGeneratorPromptDelete(generics.DestroyAPIView):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_ai_image_generated_file(request,id):
+    '''
+    This function is to download AI_Image generated 
+    from the model ImageGenerationPromptResponse and download the file.
+    '''
     try:
         file = ImageGenerationPromptResponse.objects.get(id=id).generated_image 
         return download_file(file.path)
     except:
         return Response({'msg':'Requested file not exists'},status=401)
 
-
+################################# Blog related viewsets ###################################################
 
 class BlogCreationViewset(viewsets.ViewSet):
-
+    '''
+    This viewset is to create, update and delete the blog object.
+    '''
     def retrieve(self, request,pk=None):
         query_set = BlogCreation.objects.get(id=pk)
         serializer = BlogCreationSerializer(query_set )
@@ -486,7 +552,9 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(status=204)
 
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
- 
+    '''
+    This viewset is to create, list, retrieve, update and delete the blog keywords.
+    '''
     def retrieve(self, request,pk=None):
         query_set = BlogKeywordGenerate.objects.get(id=pk)
         serializer = BlogKeywordGenerateSerializer(query_set )
@@ -519,6 +587,10 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
 
 class BlogtitleViewset(viewsets.ViewSet):
+    '''
+    This viewset is to create, list, retrieve, update and delete the blog titles.
+    '''
+
     def create(self,request):
         blog_inst = request.POST.get('blog_creation_gen',None)
         sub_categories = 62
@@ -558,7 +630,9 @@ class BlogtitleViewset(viewsets.ViewSet):
         return Response(status=204)
 
 class BlogOutlineViewset(viewsets.ViewSet):
-
+    '''
+    This viewset is to create, list, retrieve, update and delete the blog outlines.
+    '''
     def create(self,request):
         sub_categories = 63
         serializer = BlogOutlineSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
@@ -589,7 +663,9 @@ class BlogOutlineViewset(viewsets.ViewSet):
 
 
 class BlogOutlineSessionViewset(viewsets.ViewSet):
-
+    '''
+    This viewset is to create, list, retrieve, update and delete the blog outline sessions.
+    '''
     def list(self, request):
         group = request.GET.get('group',None)
         title = request.GET.get('blog_title',None)
@@ -641,7 +717,7 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
             queryset = BlogOutlineSession.objects.filter(blog_title = title).filter(group=group).delete()
         return Response(status=204)
         
-class BlogArticleViewset(viewsets.ViewSet):
+class BlogArticleViewset(viewsets.ViewSet): # Not using now
 
     def list(self,request):
         blog_creation = request.GET.get('blog_creation')
@@ -666,9 +742,14 @@ class BlogArticleViewset(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
+#####################################################################################################################################################
 
+#################### Book related Viewsets ##########################################################################################################
 
 class BookTitleViewset(viewsets.ViewSet):
+    '''
+    This viewset is to create, list, edit and delete book titles
+    '''
 
     def list(self, request):
         query_set=BookTitle.objects.all()
@@ -707,7 +788,9 @@ class BookTitleViewset(viewsets.ViewSet):
         return Response(status=204)
 
 class BookCreationViewset(viewsets.ViewSet):
-
+    '''
+    This viewset is to create, list, edit and delete book creation object.
+    '''
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user 
         query_set=BookCreation.objects.filter(user=user).order_by('-id')
@@ -745,6 +828,11 @@ class BookCreationViewset(viewsets.ViewSet):
 
 
 class BookBodyViewset(viewsets.ViewSet):
+    '''
+    This viewset is to list,create,update and delete the bookbodymatters in bookcreation(AI writer).
+    Bookbodymatters mainly now focussed on chapters. But it is written in generic way. 
+    we can create user customized bodymatter too other than chapters.
+    '''
 
     def list(self, request):
         group = request.GET.get('group',0)
@@ -790,6 +878,9 @@ class BookBodyViewset(viewsets.ViewSet):
 
 
 class BookFMViewset(viewsets.ViewSet):
+    '''
+    This viewset is to list,create,update and delete the bookfrontmatters in bookcreation(AI writer)
+    '''
 
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user
@@ -829,6 +920,9 @@ class BookFMViewset(viewsets.ViewSet):
 
 
 class BookBMViewset(viewsets.ViewSet):
+    '''
+    This viewset is to list,create,update and delete the bookbackmatters in bookcreation(AI writer)
+    '''
 
     def list(self, request):
         query_set=BookBackMatter.objects.all()
@@ -972,6 +1066,9 @@ def blog_crt(request):
 
 @api_view(["GET"])
 def credit_check_blog(request):
+    '''
+    This is to check the user credits before calling the streaming blog article API.
+    '''
     if request.method=='GET':
         user = request.user.team.owner if request.user.team else request.user
         blog_id=request.query_params.get('blog_id')
@@ -990,6 +1087,12 @@ def credit_check_blog(request):
 
 @api_view(["GET"])
 def generate_article(request):
+    '''
+    This function is to stream the blog article. if output language is in english language,
+    it will call the openAI API with stream=True and stream the response.
+    if output language is not in english, then it will call openAI API with stream=True
+    and translate sentence by sentence and return the result.
+    '''
     if request.method=='GET':
         blog_available_langs=[17]
         sub_categories=64
@@ -1115,6 +1218,12 @@ from ai_staff.models import PromptStartPhrases
 from .utils import get_summarize
 @api_view(["GET"])
 def generate_chapter(request):
+    '''
+    This function is to stream the chapter content. if output language is in english language,
+    it will call the openAI API with stream=True and stream the response.
+    if output language is not in english, then it will call openAI API with stream=True
+    and translate sentence by sentence and return the result.
+    '''
     if request.method=='GET':
         bookbody_id=request.query_params.get('bookbody_id')
         book_body_instance = BookBody.objects.get(id=bookbody_id)
@@ -1231,8 +1340,12 @@ def generate_chapter(request):
 
 
 class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
+    '''
+    This viewset is to list, create, update and delete the book chapter titles.
+    '''
     permission_classes = [IsAuthenticated,]
     page_size=20
+    
 
     def get_object(self, pk):
         try:
@@ -1280,7 +1393,7 @@ class BookBodyDetailsViewset(viewsets.ViewSet,PageNumberPagination):
             return Response({'msg':'deletion unsuccessfull'},status=400)
 
 
-
+##################################################################################################################################################################
 
 
 # #####for testing streaming #############
@@ -1312,6 +1425,7 @@ from lxml import html
 
 @api_view(["GET"])
 def translate_html_file(request, input_file, target_language):
+
     # Initialize the translation client
     client = translate.Client()
 
@@ -1337,6 +1451,9 @@ from docx import Document
 from docxcompose.composer import Composer
 @api_view(["POST"])
 def docx_merger(request):
+    '''
+    This function is to combine multiple docx file to single docx file and then download the file. 
+    '''
     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
@@ -1359,6 +1476,9 @@ def docx_merger(request):
 
 
 def customize_refer(customize,search_term,lang):
+    '''
+    This function is for refer function in customize section. 
+    '''
     if not lang:
         lang = lang_detector(search_term)
     if customize.customize == "Wikipedia":
@@ -1374,6 +1494,15 @@ def customize_refer(customize,search_term,lang):
     return res
 
 
+#file_translate = models.BooleanField(default=False)
+
+# @api_view(["POST"])
+# def file_writer_translate(request):
+#     src_lang = request.POST.get('src_lang')
+#     trg_lang = request.POST.getlist('trg_lang')
+#     print(src_lang,trg_lang)
+
+#     return Response({"src":src_lang,"tar":trg_lang})
 
 
-    
+

@@ -156,8 +156,6 @@ def replace_hex_colors_with_rgb(html):
     return html
 
 
-
-
 def get_summarize(text,bb_instance,lang):
     from .serializers import AiPromptSerializer
     from ai_openai.serializers import openai_token_usage

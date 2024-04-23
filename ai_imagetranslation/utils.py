@@ -512,6 +512,7 @@ class SDXL:
         # self.url = None
         # self.url="https://api.segmind.com/v1/sdxl-txt2img"
         # self.url = "https://api.segmind.com/v1/sd1.5-cyberrealistic"
+        # self.url="https://api.segmind.com/v1/sdxl1.0-realism-lightning"
         self.api_key=api_key
         
         self.headers  = {"x-api-key": f"{self.api_key}"}
