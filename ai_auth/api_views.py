@@ -2982,7 +2982,7 @@ class AilaysaCallCenterGetInTouchView(viewsets.ViewSet):
         email = 'sales@langsmart.com'
         cc = 'senthil.nathan@ailaysa.com'
 
-        context = {'name':name,'email':email,'company_name':company_name, 'service_description':message,}
+        context = {'name':name,'email':email,'company_name':company_name, 'message':message}
 
         send_email(subject_get_in_touch,template_get_in_touch,context,email,cc)
         return JsonResponse({'msg':'message sent successfully'},status=200)
