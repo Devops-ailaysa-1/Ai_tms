@@ -140,6 +140,7 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	return  json_file_copy
 
 
+# For voice projects and tasks
 def split_file_by_size(input_file, output_directory, lang_code, max_size):
     from .api_views import cust_split
     with open(input_file, 'r', encoding='utf-8') as file:
@@ -181,7 +182,7 @@ def split_file_by_size(input_file, output_directory, lang_code, max_size):
 
 
 
-
+################################## For Federal Flow #####################################
 def split_dict(single_data):
     trans_keys = ["keywords","description","image_caption","heading","newsId","authorName","location","story"]
     trans_key_get_list = {"media":"caption"}#, "news_tags":"name"}
@@ -215,7 +216,7 @@ def merge_dict(translated_json,raw_json):
 	raw_json_trans.update(translated_json_copy)
 	return raw_json_trans
 
-	 
+########################################################################################## 
 
 
 import json
@@ -243,6 +244,7 @@ def add_additional_content_to_docx(docx_filename, additional_content):
     doc.save(docx_filename)
 
 
+############################# Project Filter #################################################
 
 from django.db.models import Q, Prefetch, Count, F
 import time
@@ -269,9 +271,11 @@ def progress_filter(queryset,value,users):
 			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3),\
 			project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False,\
 			project_jobs_set__job_tasks_set__task_info__assign_to__in = users).distinct()
+			# Need to change this with annotate
 			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3,task_info__assign_to__in=users).count() == i.get_tasks.filter(task_info__client_response=1,task_info__assign_to__in=users).count()]
 		else:
 			qs = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__status = 3)).distinct()
+			# Need to change this with annotate
 			filtered_qs = [i.id for i in qs if i.get_tasks.filter(task_info__status=3).count() == i.get_tasks.filter(task_info__client_response=1).count()]
 		pr_ids = qs.exclude(id__in=filtered_qs).values_list('id',flat=True)
 		
