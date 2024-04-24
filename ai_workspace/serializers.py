@@ -617,7 +617,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9,8]: 
+				if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -719,7 +719,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							contents_data, subjects_data, steps_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
-		if project_type in [1,2,5,9,8]:
+		if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
 		if project_type in [3,10]:

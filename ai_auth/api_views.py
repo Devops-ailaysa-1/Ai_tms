@@ -258,6 +258,12 @@ class UserProfileCreateView(viewsets.ViewSet):
 
 
 class CustomerSupportCreateView(viewsets.ViewSet):
+    '''
+    This viewset is to post customer support form and trigger the mail to ailaysa
+    that customer submitted customer support form with basic details.
+    It stores the form details in CustomerSupport model and return CustomerSupportSerializer
+    data.
+    '''
     permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
@@ -317,6 +323,9 @@ class ContactPricingCreateView(viewsets.ViewSet):
 
 
 def send_email(subject,template,context,email=None,cc=None):
+    '''
+    This function is to send the email with single file
+    '''
     email = email if email else 'support@ailaysa.com'
     content = render_to_string(template, context)
     file_ = context.get('file')
@@ -334,6 +343,9 @@ def send_email(subject,template,context,email=None,cc=None):
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 
 def send_email_with_multiple_files(subject,template,context):
+    '''
+    This function is to send the email with multiple files as attachment.
+    '''
     content = render_to_string(template, context)
     files_ =context.get('files')
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change ['support@ailaysa.com',]
@@ -1321,6 +1333,14 @@ class AiUserProfileView(viewsets.ViewSet):
 
 from .models import AiTroubleshootData, CarrierSupport
 class CarrierSupportCreateView(viewsets.ViewSet):
+
+    '''
+    This viewset is to post career support form and trigger the mail to ailaysa HR,
+    that customer submitted career support form with basic details.
+    It stores the form details in CarrierSupport model and return CarrierSupportSerializer
+    data.
+    '''
+
     permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
@@ -1352,6 +1372,12 @@ class CarrierSupportCreateView(viewsets.ViewSet):
 
 
 class GeneralSupportCreateView(viewsets.ViewSet):
+    '''
+    This viewset is to post general support form and trigger the mail to ailaysa support,
+    that customer submitted career support form with basic details.
+    It stores the form details in GeneralSupport model and return GeneralSupportSerializer
+    data.
+    '''
     permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
@@ -1438,6 +1464,10 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_deactivation(request):
+    '''
+    This function is to deactivate user account by setting user's model boolean field 'deactivate' to true
+    and set deactivation date to 6 months from today's date
+    '''
     user_id = request.user.id
     user = AiUser.objects.get(id = user_id )
     present = datetime.now()
@@ -1450,6 +1480,10 @@ def account_deactivation(request):
 
 @api_view(['POST'])
 def account_activation(request):
+    '''
+    This function is to activate the deactivated account by setting user's model boolean field 'deactivate' to false
+    and set deactivation date to None.
+    '''
     email = request.POST.get('email')
     try:
         user = AiUser.objects.get(email = email)
@@ -1466,6 +1500,10 @@ def account_activation(request):
 
 
 def user_delete(user):
+    '''
+    This function is to delete user. it cancels the user subscription and delete the user 
+    and removes user allocated directory.
+    '''
     cancel_subscription(user)
     dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
     user.delete()
@@ -1475,6 +1513,12 @@ def user_delete(user):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_delete(request):
+    '''
+    This function is to delete the user account.
+    if the account is not social account, it will check for user's password and make
+    the user's model is_active field to False and update the user's deactivation date to 3 months.
+    if the account is social account, then it will delete the user by calling user_delete() function.
+    '''
     from allauth.socialaccount.models import SocialAccount
     password_entered = request.POST.get('password')
     user = AiUser.objects.get(id =request.user.id)
@@ -1492,12 +1536,16 @@ def account_delete(request):
             return Response({"msg":"password didn't match"},status = 400)
     else:
         if query.filter(provider='proz'):
+            # if the social account is proz, then ProzMessage objects also deleted
             ProzMessage.objects.filter(proz_uuid = query.last().uid).delete()
         user_delete(user)
     return JsonResponse({"msg":"user account deleted"},safe = False)
 
 
 class TeamCreateView(viewsets.ViewSet):
+    '''
+    This view is to get, create, update the team of the user.
+    '''
     permission_classes = [IsAuthenticated]
     def list(self, request):
         try:
@@ -1546,6 +1594,9 @@ class TokenGenerator(PasswordResetTokenGenerator):
 invite_accept_token = TokenGenerator()
 
 class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
+    '''
+    This view is to create, list, update and delete the internal members of the team.
+    '''
     permission_classes = [IsAuthenticated]
     page_size = 10
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
@@ -1582,6 +1633,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.data)
 
     def check_user(self,email,team_name):
+        '''
+        This function is to check the user is already ailaysa account holder or other team members.
+        '''
         try:
             user = AiUser.objects.get(email = email)
             if user.is_internal_member == True:
@@ -1595,6 +1649,11 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             return None
 
     def create_internal_user(self,name,email):
+        '''
+        This function is to create internal member by creating random password 
+        and create AiUser object and UserAttribute object and then creating EmailAddress object
+        and returns user and created random password.  
+        '''
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
         hashed = make_password(password)
@@ -1604,6 +1663,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return user,password
 
     def create_thread(self,user,team):
+        '''
+        This function is to create the thread between all the team members.
+        '''
         print("data--->",user,team)
         team_obj = Team.objects.get(id=team)
         from ai_marketplace.serializers import ThreadSerializer
@@ -1629,15 +1691,20 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
         print("plan_name----------->",get_plan_name(owner))
+
+        # checks for team member count (which varies according to their subscription plan)
         if InternalMember.objects.filter(team = team).count() >= team.team_member_count:
             return Response({'msg':'internal member count execeeded'},status=400)
-            
+
+        # create the internal user with given details and store the details in InternalMember model
+        # and return InternalMemberSerializer data.
         user,password = self.create_internal_user(data.get('name'),email)
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
         serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
                                               'added_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
+            # to trigger the mail function which sends mail to team member with mail id and created random password.
             auth_forms.internal_user_credential_mail(context)
             self.create_thread(request.user,data.get('team'))
             return Response(serializer.data)
@@ -1655,6 +1722,10 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
+        '''
+        In this we are not deleting the Internal member, instead we are updating email with
+        _deleted and make the user model's field 'is_active' to false.
+        '''
         queryset = InternalMember.objects.all()
         internal_member = get_object_or_404(queryset, pk=pk)
         user = AiUser.objects.get(id = internal_member.internal_member_id)
@@ -1666,6 +1737,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def msg_send(user,vendor):
+    '''
+    This function is to send the message to the internal member in ailaysa chat.
+    '''
     from ai_marketplace.serializers import ThreadSerializer
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
@@ -1680,6 +1754,9 @@ def msg_send(user,vendor):
 
 from ai_workspace.models import Project,TaskAssign,TaskAssignInfo
 class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
+    '''
+    This viewset is to list, create, update, delete the external editors.
+    '''
     permission_classes = [IsAuthenticated]
     page_size = 10
     # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
@@ -1710,6 +1787,10 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     @integrity_error
     def create(self,request):
+        '''
+        This is to create hired editor object and sent invite_accept_token to the editor in the email and update
+        the status as invite_sent.
+        '''
         if request.user.team: user = request.user.team.owner
         else: user = request.user
         uid=request.POST.get('vendor_id')
@@ -1755,6 +1836,10 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
+        '''
+        This is to delete the hired editor object. if the hired editor has any task assigns,
+        then change that to self-assign again and then delete the hired_editor.
+        '''
         queryset = HiredEditors.objects.all()
         hr = get_object_or_404(queryset, pk=pk)
         pr = Project.objects.filter(ai_user = hr.user).filter(project_jobs_set__job_tasks_set__task_info__assign_to = hr.hired_editor)
@@ -1770,6 +1855,10 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 def invite_accept_notify_send(user,vendor):
+    '''
+    This is to send message from external editor to user when he accepts invite from user. 
+    This function is called internally in invite_accept().
+    '''
     from ai_marketplace.serializers import ThreadSerializer
     receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
@@ -1791,6 +1880,9 @@ def invite_accept_notify_send(user,vendor):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def invite_accept(request):#,uid,token):
+    '''
+    This function is to accept the invite and change the status to invite_accepted.
+    '''
     uid = request.POST.get('uid')
     token = request.POST.get('token')
     vendor_id = urlsafe_base64_decode(uid)
@@ -1879,6 +1971,9 @@ def referral_users(request):
     return Response({"msg":"Successfully Added"},status = 201)
 
 class GetTeamMemberView(generics.ListAPIView):
+    '''
+    This viewset is to list both internal members and external members.
+    '''
     permission_classes = [IsAuthenticated]
     serializer_class_External = HiredEditorSerializer
     serializer_class_Internal = InternalMemberSerializer
@@ -2038,6 +2133,10 @@ client = quickemailverification.Client(API_KEY)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_user(request):
+    '''
+    This function is to check the email is valid or not while signup.
+    we are using quickemailverification (third party API) free 100 email checks per day.
+    '''
     email = request.POST.get('email')
     email_str = email.split('@')[0]
     print("RR------------->",email_str)
@@ -2441,6 +2540,9 @@ def get_lang_code(lang_code):
 #@permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def lang_detect(request):
+    '''
+    This function is to detect the language and return the language object and language.
+    '''
     from googletrans import Translator
     from ai_staff.models import Languages
     text = request.GET.get('text')
@@ -2555,6 +2657,12 @@ class CampaignRegistrationView(viewsets.ViewSet):
             return Response({"msg":str(e)},status=409)
     
 class CoCreateView(viewsets.ViewSet):
+    '''
+    This viewset is to post CoCreate form and trigger the mail to ailaysa support,
+    that customer submitted CoCreate form with basic details.
+    It stores the form details in CoCreateForm model and return CoCreateFormSerializer
+    data.
+    '''
     permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
@@ -2816,6 +2924,12 @@ def career_support_thank_mail(user_name,user_email):
 
 
 class CareerSupportAICreateView(viewsets.ViewSet):
+    '''
+    This viewset is to post CareerSupportAI form and trigger the mail to ailaysa HR,
+    that customer submitted CareerSupportAI form with basic details.
+    It stores the form details in CareerSupportAI model and return CareerSupportAISerializer
+    data.
+    '''
     permission_classes = [AllowAny]
     def create(self,request):
         from .tasks import send_career_mail
