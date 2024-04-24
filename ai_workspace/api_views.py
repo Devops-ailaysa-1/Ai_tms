@@ -1364,6 +1364,7 @@ def create_project_from_temp_project_new(request):
     The function extracts user and project details from the request data.
     It retrieves files and jobs associated with the temporary project, prepares data for the new project, and creates a project using a serializer.
     If the serializer is valid, the new project is saved, and the serialized data is returned; otherwise, errors are returned.
+    need to pass all values in list to ProjectQuickSetupSerializer.
     '''
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
@@ -1423,7 +1424,7 @@ class ProjectAnalysisProperty(APIView):
     @staticmethod
     def get_data_from_docs(project):
         '''
-        some tasks do not have document(like voice source projects), for that we will store it counts in TaskDetail table
+        some tasks do not have document instance(like voice source projects), for that we will store its counts in TaskDetail table
         if tasks in project has document, then it will aggregate document word_count,char_count,segment_count detail
         '''
         proj_word_count = proj_char_count = proj_seg_count = 0
@@ -4781,7 +4782,7 @@ def glossary_report(user,owner,start_date,today):
     team_members.append(owner)
     res =[]
     if user in managers  or user == owner:
-        queryset = MyGlossary.objects.filter(user=owner).distinct()
+        queryset = MyGlossary.objects.filter(user=owner).filter(Q(created_at__date__range=(start_date,today))).distinct()
         editors = user.team.get_terminologist if user.team else []
         sorted_list = sorted(editors, key=lambda x: x.fullname.lower())
         for i in sorted_list:
@@ -4794,7 +4795,7 @@ def glossary_report(user,owner,start_date,today):
             additional_details['state'] = state
             res.append(additional_details)
     else:
-        queryset = MyGlossary.objects.filter(created_by=user).distinct()
+        queryset = MyGlossary.objects.filter(created_by=user).filter(Q(created_at__date__range=(start_date,today))).distinct()
     total_terms = queryset.count()
     data = {"Totalterms":total_terms,"Additional_info":res}
     return data,res
