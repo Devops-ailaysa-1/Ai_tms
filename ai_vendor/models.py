@@ -9,7 +9,7 @@ from ai_auth.models import AiUser,user_directory_path
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
 from django.db.models.signals import post_save, pre_save
-from ai_vendor.signals import user_update,user_update_1
+# from ai_vendor.signals import user_update,user_update_1
 
 
 def vendor_directory_path(instance, filename):
@@ -141,7 +141,7 @@ class VendorServiceInfo(ParanoidModel):
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-post_save.connect(user_update, sender=VendorServiceInfo)
+# post_save.connect(user_update, sender=VendorServiceInfo)
 
 class VendorServiceTypes(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)
@@ -153,7 +153,7 @@ class VendorServiceTypes(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-post_save.connect(user_update_1, sender=VendorServiceTypes)
+# post_save.connect(user_update_1, sender=VendorServiceTypes)
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(lang_pair.instance.user.uid, "vendor","TranslationSamples",filename)
