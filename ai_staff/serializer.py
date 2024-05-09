@@ -14,6 +14,7 @@ import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
 
+
 class ServiceTypesSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -451,7 +452,7 @@ class FontDataSerializer(serializers.ModelSerializer):
         fields = ('id','font_family')#,'font_data_family' )
         depth = 1
 
-from ai_tms.settings.base import STATIC_URL
+
 class SocialMediaSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model=SocialMediaSize
@@ -462,7 +463,7 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
         if 'src' in data.keys() and instance.src:
             print()
             if instance.src:
-                data['src']=STATIC_URL+"social_media/"+data['social_media_name']+".png"
+                data['src']=settings.STATIC_URL+"social_media/"+data['social_media_name']+".png"
                 # data['src'] = instance.src.url
         return data
 

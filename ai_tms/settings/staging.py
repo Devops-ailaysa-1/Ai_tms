@@ -13,157 +13,35 @@ from .base import *
 import os
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
-import newrelic.agent
-from newrelic.agent import NewRelicContextFormatter
-newrelic.agent.initialize('newrelic.ini')
-# from fluent import sender
-# from fluent import event
-# sender.setup('django', host='fluentd', port=24224)
-# event.Event('follow', {
-#   'from': 'userA',
-#   'to':   'userB'
-# })
-
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
-# TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
-# TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
-# TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
-# TEMPLATE_DIR_5 = os.path.join(BASE_DIR,'ai_tms','templates')
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
-
-# # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
-
-# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
-
-# ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link", "d96ada36139e0b.lhrtunnel.link","8efe68d97d25ee.lhrtunnel.link"]
-#                   "c3c0df83ac1b86.lhrtunnel.link", 'acb69157d8c89a.lhrtunnel.link',
-#                   "414004b4a51963.lhrtunnel.link", "2b80a8d1a40052.lhrtunnel.link",
-#                   "d5db75cdd4b431.lhrtunnel.link", "68a4a1352f7fdb.lhrtunnel.link"]
-
-# SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
-# CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
-# SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT")
-
-# CORS_ORIGIN_ALLOW_ALL= False
-
-# CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split()
-
-# CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST", "").split()
-
-# CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
+# import newrelic.agent
+# from newrelic.agent import NewRelicContextFormatter
+# newrelic.agent.initialize('newrelic.ini')
+from dotenv import load_dotenv
+load_dotenv(".env.staging")
 
 
-# JWT_AUTH_COOKIE_USE_CSRF= True
+SECRET_KEY = os.getenv("django_secret_key")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
-# CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ORIGIN_WHITELIST = [
-#     "http://localhost:3000" , "http://167.71.235.214:3000","http://157.245.99.128:3010","http://157.245.99.128:3020"
-# ]
-# CORS_ALLOWED_ORIGINS = ["http://localhost:3000" , "http://167.71.235.214","http://157.245.99.128:3010","http://157.245.99.128:3020" ]
 
-# CORS_ALLOW_METHODS = [
-#      'DELETE',
-#      'GET',
-#      'OPTIONS',
-#      'PATCH',
-#      'POST',
-#      'PUT',
-# ]
+### CORS 
 
-# CORS_ALLOW_HEADERS = [
-#      'accept',
-#      'accept-encoding',
-#      'authorization',
-#      'content-type',
-#      'dnt',
-#      'origin',
-#      'user-agent',
-#      'x-csrftoken',
-#      'x-requested-with',
-#      'Access-Control-Allow-Origin',
-#      'Access-Control-Allow-Credentials',
-#      'Access-Control-Allow-Headers',
-#      'cache',
-#      'cookie',
-#      'Access-Control-Expose-Headers',
-#      'responseType',
-#      'redirect',
-# ]
+CORS_ORIGIN_ALLOW_ALL= False
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split()
+CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST", "").split()
+CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
+
+
 
 CSRF_TRUSTED_ORIGINS = [
  "http://localhost:3000",  "http://localhost:4200"
 ]
 
-#SESSION_COOKIE_SAMESITE = None
-#CSRF_COOKIE_SAMESITE = None
-# Application definition
 
 INSTALLED_APPS += [
     'dbbackup',
-    #"integerations.github_",
-    #"integerations.gitlab_",
-    #"controller",
-    #"guardian",
-    # 'silk',
-    #"ai_tm_management",
-    # 'django_q',
-    # 'debug_toolbar',
-    # 'coreapi', # Coreapi for coreapi documentation
-    # 'drf_yasg', # drf_yasg fro Swagger documentation
+
 ]
-
-# MANAGEMENT = False
-
-# if MANAGEMENT:
-#     INSTALLED_APPS += ["ai_management", ]
-
-# SITE_ID = 1#os.getenv('SITE_ID')
-
-# WSGI_APPLICATION = 'ai_tms.wsgi.application'
-# ASGI_APPLICATION = 'ai_tms.asgi.application'
-
-
-# MIDDLEWARE = [
-#     # "debug_toolbar.middleware.DebugToolbarMiddleware",
-#     'corsheaders.middleware.CorsMiddleware',
-#     'django.middleware.security.SecurityMiddleware',
-#     'django.contrib.sessions.middleware.SessionMiddleware',
-#     'django.middleware.common.CommonMiddleware',
-#     'django.middleware.csrf.CsrfViewMiddleware',
-#     'corsheaders.middleware.CorsPostCsrfMiddleware',
-#     'django.contrib.auth.middleware.AuthenticationMiddleware',
-#     'django.contrib.messages.middleware.MessageMiddleware',
-#     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-#     # 'silk.middleware.SilkyMiddleware',
-#     # "middlewares.error_middleware.error_middleware",
-#     # "middlewares.error_middleware.StackOverflowMiddleware"
-# ]
-
-# ROOT_URLCONF = 'ai_tms.urls'
-# AUTH_USER_MODEL="ai_auth.AiUser"
-
-# TEMPLATES = [
-#     {
-#         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-#         'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4, TEMPLATE_DIR_5],
-#         'APP_DIRS': True,
-#         'OPTIONS': {
-#             'context_processors': [
-#                 'django.template.context_processors.debug',
-#                 'django.template.context_processors.request',
-#                 'django.contrib.auth.context_processors.auth',
-#                 'django.contrib.messages.context_processors.messages',
-#             ],
-#         },
-#     },
-# ]
 
 
 # Database
@@ -179,55 +57,15 @@ DATABASES={
         'PORT':os.getenv( "psql_port" ),
     },
     'bi':{
-    'ENGINE':'django.db.backends.postgresql_psycopg2',
-    'NAME':os.getenv( "psql_database_bi" ),
-    'USER':os.getenv( "psql_user_bi" ),
-    'PASSWORD':os.getenv( "psql_password_bi" ),
-    'HOST':os.getenv( "psql_host_bi" ),
-    'PORT':os.getenv( "psql_port_bi" ),
-    }
+        'ENGINE':'django.db.backends.postgresql_psycopg2',
+        'NAME':os.getenv( "psql_database_bi" ),
+        'USER':os.getenv( "psql_user_bi" ),
+        'PASSWORD':os.getenv( "psql_password_bi" ),
+        'HOST':os.getenv( "psql_host_bi" ),
+        'PORT':os.getenv( "psql_port_bi" ),
+        }
 }
-# Password validation
-# https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
-# AUTH_PASSWORD_VALIDATORS = [
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-#     },
-# ]
-
-# AUTHENTICATION_BACKENDS = [
-#     'ai_auth.authentication.MysqlBackend',
-#     'django.contrib.auth.backends.ModelBackend',
-#     'guardian.backends.ObjectPermissionBackend',
-#     'allauth.account.auth_backends.AuthenticationBackend',
-# ]
-
-# DJANGO_NOTIFICATIONS_CONFIG = {
-#       'USE_JSONFIELD': True,
-# }
-#REST_FRAMEWORK = {
-
-#    'DEFAULT_AUTHENTICATION_CLASSES': (
-
-#         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
-#     )
-
-# }
-
-# REST_USE_JWT = True
-
-# if os.environ.get("email_creds_avail", False):
-# EMAIL_BACKEND = 'ai_auth.email_backend.AiEmailBackend'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv( "EMAIL_HOST" )
@@ -235,56 +73,10 @@ EMAIL_PORT = int(os.getenv( "EMAIL_PORT" )) if os.getenv("EMAIL_PORT") else None
 EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
 EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
 EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
-
-
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# ACCOUNT_AUTHENTICATION_METHOD = os.getenv("ACCOUNT_AUTHENTICATION_METHOD")
-# ACCOUNT_USERNAME_REQUIRED = (True if os.getenv( "ACCOUNT_USERNAME_REQUIRED" ) == 'True' else False)
-# ACCOUNT_EMAIL_REQUIRED = (True if os.getenv( "ACCOUNT_EMAIL_REQUIRED" ) == 'True' else False)
-# ACCOUNT_UNIQUE_EMAIL = (True if os.getenv( "ACCOUNT_UNIQUE_EMAIL" ) == 'True' else False)
-# ACCOUNT_USER_MODEL_USERNAME_FIELD = os.getenv("ACCOUNT_USER_MODEL_USERNAME_FIELD" )
 
-# ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION")
 
-# JWT_AUTH_COOKIE = 'ailaysa-auth'
-# JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
-
-# #JWT_AUTH_SAMESITE = None
-
-# REST_AUTH_REGISTER_SERIALIZERS = {
-#     'REGISTER_SERIALIZER': 'ai_auth.serializers.UserRegistrationSerializer',
-# }
-
-# REST_AUTH_SERIALIZERS = {
-#     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
-#     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
-#     'PASSWORD_CHANGE_SERIALIZER': 'ai_auth.serializers.AiPasswordChangeSerializer',
-#     # 'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
-# }
-
-# PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
-
-# CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
-
-# SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
-
-# TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
-
-# EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
-
-# VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
-
-# APPLICATION_URL = os.getenv("APPLICATION_URL")
-
-# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
-
-# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
-
-#ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
-
-# ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
-
-# USERPORTAL_URL = os.getenv("USERPORTAL_URL")
+### DRF settings
 
 REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
                 'rest_framework.throttling.AnonRateThrottle',
@@ -295,160 +87,97 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
                         'anon': '500/minute',
                         'user': '1500/minute'}
 
-# REST_FRAMEWORK = {
-#     'DEFAULT_AUTHENTICATION_CLASSES': [
-#           'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
-#         #'rest_framework_simplejwt.authentication.JWTAuthentication',
-#     ],
-#     'DEFAULT_PAGINATION_CLASS':
-#         'rest_framework.pagination.PageNumberPagination',
-#     'PAGE_SIZE': 12,
-#     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-#     'DEFAULT_PERMISSION_CLASSES': [
-#         'rest_framework.permissions.IsAuthenticated',
-#     ],
-#     # 'DEFAULT_THROTTLE_CLASSES': [
-#     # 'rest_framework.throttling.AnonRateThrottle',
-#     # 'rest_framework.throttling.UserRateThrottle'
-#     # ],
-#     # 'DEFAULT_THROTTLE_RATES': {
-#     #     'anon': '50/minute',
-#     #     'user': '100/minute'
-#     # }
-# }
 
 
-# SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
-
-# SOCIALACCOUNT_PROVIDERS = {
-#     'github': {
-#         'SCOPE': [
-#             'user',
-#             'repo',
-#             'read:org',
-#         ],
-#     },
-#     'google': {
-#         'SCOPE': [
-#             'profile',
-#             'email',
-#         ],
-#         'AUTH_PARAMS': {
-#             'access_type': 'offline',
-#         }
-# }
-# }
+### Allauth Account settings
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
+CEO_EMAIL = os.getenv("CEO_EMAIL")
+END_POINT = os.getenv('END_POINT')
+ACCOUNT_AUTHENTICATION_METHOD = os.getenv("ACCOUNT_AUTHENTICATION_METHOD")
+ACCOUNT_USERNAME_REQUIRED = (True if os.getenv( "ACCOUNT_USERNAME_REQUIRED" ) == 'True' else False)
+ACCOUNT_EMAIL_REQUIRED = (True if os.getenv( "ACCOUNT_EMAIL_REQUIRED" ) == 'True' else False)
+ACCOUNT_UNIQUE_EMAIL = (True if os.getenv( "ACCOUNT_UNIQUE_EMAIL" ) == 'True' else False)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = os.getenv("ACCOUNT_USER_MODEL_USERNAME_FIELD" )
+ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION")
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
 
-# SIMPLE_JWT = {
-#     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-#     'REFRESH_TOKEN_LIFETIME': timedelta(days=15),
-#     'ROTATE_REFRESH_TOKENS': True,
-#     'BLACKLIST_AFTER_ROTATION': True,
-# }
+### SOCIAL ACCOUNT
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+PROZ_CALLBACK_URL = os.getenv('PROZ_CALLBACK_URL')
 
 
 
 
+### Django Channel
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
 
-# USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
+        },
+    },
+}
 
-# if USE_SPACES:
-#     # settings
-#     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-#     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-#     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-#     AWS_DEFAULT_ACL = 'public-read'
-#     AWS_S3_ENDPOINT_URL = 'https://ams3.digitaloceanspaces.com'
-#     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-#     # static settings
-#     AWS_LOCATION = 'static'
-#     STATIC_URL = f'https://{AWS_S3_ENDPOINT_URL}/{AWS_LOCATION}/'
-#     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-#     # public media settings
-#     PUBLIC_MEDIA_LOCATION = 'media'
-#     MEDIA_URL = f'https://{AWS_S3_ENDPOINT_URL}/{PUBLIC_MEDIA_LOCATION}/'
-#     DEFAULT_FILE_STORAGE = 'ai_auth.storage_backends.PrivateMediaStorage'
-# else:
-#     STATIC_URL = '/static/'
-#     STATIC_ROOT =  os.path.join(BASE_DIR, 'staticfiles')
-#     STATICFILES_DIRS = [
-#         os.path.join(BASE_DIR, 'static')
-#     ]
+### CACHEOPS Setting
 
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
-#     MEDIA_ROOT =  os.path.join(BASE_DIR, 'mediafiles')
-#     MEDIA_URL = '/media/'
+CACHEOPS_ENABLED = True
 
-# # ------------------------------------------------
-# DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+CACHEOPS_DEGRADE_ON_FAILURE = True 
 
-# # ------------------------------------------------
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
-# OLD_PASSWORD_FIELD_ENABLED = True
+CACHEOPS_DEFAULTS = {
+    'timeout': 60 * 60,  # Default cache timeout (1 hour)
+}
+
+CACHEOPS = {
+
+    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+
+}
 
 
-# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0"
-
-# export CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# export CELERY_BACKEND_URL = 'redis://redis:6379/0'
-
-
-# LOGIN_REDIRECT_URL = '/'
-# LOGOUT_REDIRECT_URL = '/'
-
-# ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
-
-# CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
-
-# CACHEOPS_DEFAULTS = {
-#     'timeout': 60*60
-# }
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": os.getenv("CACHEOPS_REDIS_HOST"),
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-#     }
-
-# CACHEOPS = {
-
-#     # Cache all queries to Permission
-#     # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
-#     'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
+    }
+}
 
 
-#     # # And since ops is empty by default you can rewrite last line as:
-#     # '*.*': {'timeout': 60*60},
 
-#     # # NOTE: binding signals has its overhead, like preventing fast mass deletes,
-#     # #       you might want to only register whatever you cache and dependencies.
-
-#     # # Finally you can explicitely forbid even manual caching with:
-#     # 'some_app.*': None,
-# }
-
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
-
-#         },
-#     },
-# }
+### CELERY
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
+CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
+CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_IGNORE_RESULT = False
 
 
-# DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+
+
+### Django Backup
+
 DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
-
 DBBACKUP_STORAGE_OPTIONS = {
     'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
     'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
@@ -459,11 +188,56 @@ DBBACKUP_STORAGE_OPTIONS = {
 
 }
 
+############
+### URLS
+############
 
-# with open('./logging.yaml', 'r') as stream:
-#     config = yaml.load(stream, Loader=yaml.FullLoader)
+PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
+CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
+SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
+TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
+EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
+VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
+APPLICATION_URL = os.getenv("APPLICATION_URL")
+USERPORTAL_URL = os.getenv("USERPORTAL_URL")
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 
-# logging.config.dictConfig(config)
+
+
+
+#### Storage
+
+USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
+
+if USE_SPACES:
+    # settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_ENDPOINT_URL = 'https://ams3.digitaloceanspaces.com'
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    # static settings
+    AWS_LOCATION = 'static'
+    STATIC_URL = f'https://{AWS_S3_ENDPOINT_URL}/{AWS_LOCATION}/'
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # public media settings
+    PUBLIC_MEDIA_LOCATION = 'media'
+    MEDIA_URL = f'https://{AWS_S3_ENDPOINT_URL}/{PUBLIC_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'ai_auth.storage_backends.PrivateMediaStorage'
+else:
+    STATIC_URL = '/static/'
+    STATIC_ROOT =  os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+        # os.path.join(BASE_DIR, 'ai_canvas/static'),
+
+    ]
+    MEDIA_ROOT =  os.path.join(BASE_DIR, 'mediafiles')
+    MEDIA_URL = '/media/'
+
+
 
 LOGGING = {
     'version' : 1,
@@ -539,44 +313,28 @@ sentry_sdk.init(
 )
 
 
-# OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
-# MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
-# NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
-
-# DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
-# DOCX_URL = '/output_docx/'
-# GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
-# CONVERTIO_API = os.getenv("convertio_api")
-# STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
-# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
-# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
-# CAMPAIGN = os.getenv("CAMPAIGN")
-
-# SILKY_PYTHON_PROFILER = True
-
-# SILKY_DYNAMIC_PROFILING = [{
-#     'module': 'ai_staff.api_views',
-#     'function': 'CurrenciesView.get'
-# }]
-
-
-# RUST_BACKTRACE=1
-
-
-# SILKY_AUTHENTICATION = True  # User must login
-# SILKY_AUTHORISATION = True  # User must have permissions
-
-# INTERNAL_IPS = [
-#     # ...
-#     "127.0.0.1",
-#     # ...
-# ]
-
-# def show_toolbar(request):
-#     return True
-# DEBUG_TOOLBAR_CONFIG = {
-#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-# }
-
 
 DBBACKUP_CLEANUP_KEEP_MEDIA = int(os.getenv("DBBACKUP_CLEANUP_KEEP_MEDIA"))
+
+
+#### ML Related
+
+GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
+CONVERTIO_API = os.getenv("convertio_api")
+OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
+
+
+#### STRIPE
+
+STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
+STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
+STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
+DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
+DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIELD" ) == 'True' else False)  # We recommend setting to True for new installations
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
+STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
+
+CAMPAIGN = os.getenv("CAMPAIGN")
+TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
