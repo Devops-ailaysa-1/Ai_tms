@@ -11,7 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 # from newrelic.agent import NewRelicContextFormatter
 # newrelic.agent.initialize('newrelic.ini')
 from dotenv import load_dotenv
-load_dotenv(".env.staging")
+load_dotenv(".env.local")
 
 
 SECRET_KEY = os.getenv("django_secret_key")
@@ -332,19 +332,6 @@ LOGGING = {
 
 
 
-# OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
-# MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
-# NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
-
-# DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
-# DOCX_URL = '/output_docx/'
-# GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
-# CONVERTIO_API = os.getenv("convertio_api")
-# STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
-# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
-# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
-# CAMPAIGN = os.getenv("CAMPAIGN")
-
 # SILKY_PYTHON_PROFILER = True
 
 # SILKY_DYNAMIC_PROFILING = [{
@@ -356,8 +343,8 @@ LOGGING = {
 RUST_BACKTRACE=1
 
 
-SILKY_AUTHENTICATION = True  # User must login
-SILKY_AUTHORISATION = True  # User must have permissions
+# SILKY_AUTHENTICATION = True  # User must login
+# SILKY_AUTHORISATION = True  # User must have permissions
 
 # INTERNAL_IPS = [
 #     # ...
@@ -372,3 +359,26 @@ SILKY_AUTHORISATION = True  # User must have permissions
 # }
 
 #STRIPE_API_HOST = "http://localhost:12111"  
+
+
+#### ML Related
+
+GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
+CONVERTIO_API = os.getenv("convertio_api")
+OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
+
+
+#### STRIPE
+
+STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
+STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
+STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
+DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
+DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIELD" ) == 'True' else False)  # We recommend setting to True for new installations
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
+STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
+
+CAMPAIGN = os.getenv("CAMPAIGN")
+TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
