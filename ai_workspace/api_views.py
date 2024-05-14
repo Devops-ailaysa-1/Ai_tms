@@ -4849,37 +4849,66 @@ def get_task_count_report(request):
     else:
         return JsonResponse({'msg':'you are not allowed to access this details'},status=400)
     
- 
+import io
+import pandas as pd
+from ai_workspace_okapi.api_views import DocumentToFile
 
 # Use pandas to write the data from db to excel
-def download_editors_report(res,from_date,to_date):
+def download_editors_report(res, from_date, to_date):
     '''
-    This function is to download editors report. 
+    This function is to download editors report.
     It uses pandas to write the data from db to excel.
     Called internally in get_task_count_report()
+
+    :param res: Data from the database
+    :param from_date: Start date for the report
+    :param to_date: End date for the report
+    :return: Response object for downloading the report file
     '''
-    from ai_workspace_okapi.api_views import  DocumentToFile
-    import pandas as pd
     output = io.BytesIO()
+
+    # Creating DataFrame for date details
+    date_details = pd.DataFrame([{'From': from_date, 'To': to_date}])
+
+    # Creating DataFrame from the database result
     data = pd.DataFrame(res)
+    # Renaming columns for better readability
+    data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',
+                                'YetToStart': 'Yet to start', 'Inprogress': 'In progress',
+                                'Completed': 'Completed', 'total_completed_words': 'Total words completed',
+                                'total_approved_words': 'Total words approved'})
 
-    data = data.rename(columns={'user': 'Name', 'TotalAssigned': 'No.of stories assigned',\
-                                'YetToStart':'Yet to start','Inprogress':'In progress',\
-                                'Completed':'Completed','total_completed_words':'Total words completed','total_approved_words':'Total words approved'})
-
+    # Filling NaN values with 0
     data.fillna(0, inplace=True)
-    date_details = pd.DataFrame([{'From':from_date,'To':to_date}])
-    with pd.ExcelWriter(output, engine='xlsxwriter',date_format='YYYY-MM-DD') as writer:
-        # Write the first DataFrame to the Excel file at cell A1
+
+    with pd.ExcelWriter(output, engine='xlsxwriter', date_format='YYYY-MM-DD') as writer:
+        # Write the date details DataFrame to the Excel file at cell A1
         date_details.to_excel(writer, sheet_name='Report', startrow=0, index=False)
 
-        # Write the second DataFrame to the same Excel file below the first DataFrame
-        data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False ) #
-        
+        # Filter data based on state and concatenate active and deleted entries
+        data_active = data[data['state'] == "active"]
+        data_deleted = data[data['state'] == "deleted"]
+
+        df_active_sorted = data_active.sort_values(by='Name', key=lambda x: x.str.lower())
+        df_deleted_sorted = data_deleted.sort_values(by='Name', key=lambda x: x.str.lower())
+
+        df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series()  # Adding empty row
+        data = pd.concat([df_active_sorted, df_deleted_sorted])
+        # Write the data DataFrame to the same Excel file below the date details
+        data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False)
+
+    # Closing the writer
     writer.close()
+
+    # Seeking to the beginning of the output buffer
     output.seek(0)
-    filename = "editors_report({},{})".format(from_date,to_date)+ ".xlsx"
-    response = DocumentToFile().get_file_response(output,pandas_dataframe=True,filename=filename)
+
+    # Generating filename for the report
+    filename = f"editors_report({from_date},{to_date}).xlsx"
+
+    # Getting response object for downloading the report file
+    response = DocumentToFile().get_file_response(output, pandas_dataframe=True, filename=filename)
+
     return response
 
 
