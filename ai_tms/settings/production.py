@@ -12,6 +12,7 @@ load_dotenv(".env.production")
 
 
 SECRET_KEY = os.getenv("django_secret_key")
+DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
 
