@@ -4892,7 +4892,7 @@ def download_editors_report(res, from_date, to_date):
         df_active_sorted = data_active.sort_values(by='Name', key=lambda x: x.str.lower())
         df_deleted_sorted = data_deleted.sort_values(by='Name', key=lambda x: x.str.lower())
 
-        df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series()  # Adding empty row
+        df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series(dtype='float64')  # Adding empty row
         data = pd.concat([df_active_sorted, df_deleted_sorted])
         # Write the data DataFrame to the same Excel file below the date details
         data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False)
