@@ -1237,6 +1237,8 @@ def generate_chapter(request):
         book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
         book_level = book_body_instance.book_creation.level.level
+        book_level_content = book_body_instance.book_creation.level.level_content
+        
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
         author_info =book_body_instance.book_creation.author_info_mt if book_body_instance.book_creation.author_info_mt else book_body_instance.book_creation.author_info
         query = BookBody.objects.filter(book_creation = book_body_instance.book_creation,book_title = book_body_instance.book_title, group=0).\
@@ -1253,7 +1255,7 @@ def generate_chapter(request):
         context = get_summarize(gen_content,book_body_instance,lang) if gen_content else None
         sub_cat = 71 #69
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
-        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
+        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings,book_level_content)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
         
