@@ -1131,11 +1131,9 @@ class BookBodySerializer(serializers.ModelSerializer):
                 book_obj.save()
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-
-
             if body_matter.id == 1:
-                prompt = book_body_start_phrase.start_phrase.format(book_obj.level.no_of_chapter_headings,title,
-                                                                    description,book_obj.level.level,book_obj.genre.genre)
+                prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre,
+                                                                    book_obj.level.no_of_chapter_headings)
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
                 prompt_response = prompt_response_gpt.choices
                 total_token = prompt_response_gpt['usage']['total_tokens']
