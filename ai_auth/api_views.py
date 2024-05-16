@@ -28,7 +28,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
-from ai_auth.vendor_onboard_list import users_list
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
@@ -67,7 +66,7 @@ import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name,company_members_list
-from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+# from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorOnboardingInfo
 from django.db import transaction
 from django.contrib.sites.shortcuts import get_current_site
@@ -2081,29 +2080,29 @@ def vendor_renewal_invite_accept(request):
     else:
         return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
 
-@api_view(['GET', ])
-def change_old_password(request):
-    for vendor_email in VENDORS_TO_ONBOARD:
-        try:
-            user = AiUser.objects.get(email=vendor_email)
-            old_password = OldVendorPasswords.objects.get(email=vendor_email).password
-            user.password = old_password
-            user.from_mysql = True
-            user.save()
-        except Exception as e:
-            print(e)
-            continue
-    return JsonResponse({"msg" : "Passwords successfully changed"})
+# @api_view(['GET', ])
+# def change_old_password(request):
+#     for vendor_email in VENDORS_TO_ONBOARD:
+#         try:
+#             user = AiUser.objects.get(email=vendor_email)
+#             old_password = OldVendorPasswords.objects.get(email=vendor_email).password
+#             user.password = old_password
+#             user.from_mysql = True
+#             user.save()
+#         except Exception as e:
+#             print(e)
+#             continue
+#     return JsonResponse({"msg" : "Passwords successfully changed"})
 
 
-@api_view(['GET'])
-def vendor_renewal_change(request):
-    data = request.GET.get('data')
-    for vendor_email in VENDORS_TO_ONBOARD:
-        user = AiUser.objects.get(email = vendor_email)
-        user.is_vendor = data
-        user.save()
-    return JsonResponse({"msg": "changed successfully"})
+# @api_view(['GET'])
+# def vendor_renewal_change(request):
+#     data = request.GET.get('data')
+#     for vendor_email in VENDORS_TO_ONBOARD:
+#         user = AiUser.objects.get(email = vendor_email)
+#         user.is_vendor = data
+#         user.save()
+#     return JsonResponse({"msg": "changed successfully"})
 
 
 import re

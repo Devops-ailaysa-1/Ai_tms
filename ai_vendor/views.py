@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import IntegrityError
-from ai_auth.vendor_onboard_list import users_list
+# from ai_auth.vendor_onboard_list import users_list
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from ai_workspace_okapi.models import Document
 from django_oso.auth import authorize
@@ -107,9 +107,9 @@ class VendorsInfoCreateView(APIView):
             serializer.save(user_id = user_id)
             if cv_file:
                 obj = VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
-                if request.user.email in users_list:
-                    request.user.is_vendor = True
-                    request.user.save()
+                # if request.user.email in users_list:
+                #     request.user.is_vendor = True
+                #     request.user.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
