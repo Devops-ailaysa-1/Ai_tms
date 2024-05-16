@@ -14,6 +14,9 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import stripe
+
+stripe.max_network_retries = 2
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
