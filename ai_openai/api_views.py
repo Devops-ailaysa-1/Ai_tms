@@ -1508,13 +1508,3 @@ def customize_refer(customize,search_term,lang):
 
 
 
-from django.http import StreamingHttpResponse
-import time
-
-def example(request):
-    def stream():
-        for i in range(10):
-            print(f"This is line {i+1}\n")
-            yield f"This is line {i+1}\n"
-            time.sleep(1)  # Simulate delay
-    return StreamingHttpResponse(stream(), content_type="text/plain")

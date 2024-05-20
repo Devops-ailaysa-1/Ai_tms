@@ -1133,7 +1133,7 @@ class BookBodySerializer(serializers.ModelSerializer):
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
             if body_matter.id == 1:
                 prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre,
-                                                                    book_obj.level.no_of_chapter_headings,)
+                                                                    book_obj.level.no_of_chapter_headings)
                                                                   
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
                 prompt_response = prompt_response_gpt.choices
@@ -1150,7 +1150,6 @@ class BookBodySerializer(serializers.ModelSerializer):
                 for group,chapter_res in enumerate(prompt_response,start=start):
                     data = chapter_res.message['content']
                     chapters = get_chapters(data)
-                    print(chapters)
                     for order,chapter in enumerate(chapters,start=start_+1):
                         if chapter:
                             sub_headings = get_sub_headings(chapter,data)
@@ -1199,7 +1198,6 @@ class BookBodySerializer(serializers.ModelSerializer):
             return instance
          
         else:
-            print("generated_content--->",generated_content)
             blog_available_langs =[17]
             qr = BookBody.objects.filter(book_creation=book_creation,body_matter=body_matter).order_by('custom_order')
             if qr: count = qr.last().custom_order
