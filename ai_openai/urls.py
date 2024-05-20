@@ -39,6 +39,7 @@ urlpatterns += [
     path('docx_merger/',api_views.docx_merger),
     path('ner_generate',api_views.ner_generate),
     path('transcribe_to_news',api_views.transcribe_to_news_report_generate),
+    path("example",api_views.example),
 
 ]
 

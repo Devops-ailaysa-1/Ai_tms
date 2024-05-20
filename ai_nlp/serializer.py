@@ -51,7 +51,6 @@ def check_txt(path):
     return tot_tokens
 
 
-
 def chat_page_chk(instance):
     from ai_workspace_okapi.utils import page_count_in_docx ,count_pdf_pages
     page_count=0
