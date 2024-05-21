@@ -4301,24 +4301,25 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
+
 def get_news_federal_key_and_url(lang):
     ''' 
     This function is to get the federal CMS KEY and URL based on language. 
     '''
     if lang == "Kannada":
-        key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
+        key = settings.KARNATAKA_FEDARAL_KEY
+        integration_api_url = settings.KARNATAKA_FEDERAL_URL+"news"
     elif lang == "Telugu":
-        key = os.getenv("TELUGANA-FEDARAL-KEY")
-        integration_api_url = os.getenv('TELUGANA_FEDERAL_URL')+"news"
+        key = settings.TELUGANA_FEDARAL_KEY
+        integration_api_url = settings.TELUGANA_FEDERAL_URL+"news"
     
     elif lang == "Hindi":
-        key = os.getenv("HINDI-FEDERAL-KEY")
-        integration_api_url = os.getenv('HINDI_FEDERAL_URL')+"news"
+        key = settings.HINDI_FEDERAL_KEY
+        integration_api_url = settings.HINDI_FEDERAL_URL+"news"
 
     else:
-        key = os.getenv("FEDERAL-KEY")
-        integration_api_url = os.getenv('FEDERAL_URL')+"news"
+        key = settings.FEDERAL_KEY
+        integration_api_url = settings.FEDERAL_URL+"news"
     return key,integration_api_url
 
 class GetNewsFederalView(generics.ListAPIView):
@@ -4514,7 +4515,7 @@ def get_federal_categories(request):
     count = request.query_params.get('count', 20)
 
     headers = {
-        's-id': os.getenv("FEDERAL-KEY"),
+        's-id': settings.FEDERAL_KEY,
         }
     
     startIndex = (int(page) - 1) * int(count)
@@ -4524,9 +4525,9 @@ def get_federal_categories(request):
         'count':count,
         }
 
-    CMS_url = os.getenv('FEDERAL_URL')+"category"
+    CMS_url = settings.FEDERAL_URL+"category"
     payload={
-        'sessionId':os.getenv("CMS-SESSION-ID"),
+        'sessionId':settings.CMS_SESSION_ID,
     }
     response = requests.request("GET", CMS_url, headers=headers, params=params)
     if response.status_code == 200:
@@ -4552,22 +4553,22 @@ def push_translated_story(request):
     target_lang = task.job.target_language.language
 
     if target_lang == "Telugu":
-        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
-        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+        federal_key = settings.TELUGANA_FEDARAL_KEY
+        base_url = settings.TELUGANA_FEDERAL_URL
     elif target_lang == "Kannada":
-        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        base_url = os.getenv('KARNATAKA_FEDERAL_URL')
+        federal_key = settings.KARNATAKA_FEDARAL_KEY
+        base_url = settings.KARNATAKA_FEDERAL_URL
     elif target_lang == "Hindi":
-        federal_key = os.getenv("HINDI-FEDERAL-KEY")
-        base_url = os.getenv('HINDI_FEDERAL_URL')
+        federal_key = settings.HINDI_FEDERAL_KEY
+        base_url = settings.HINDI_FEDERAL_URL
     else:
-        federal_key = os.getenv("FEDERAL-KEY")
-        base_url = os.getenv('FEDERAL_URL')
+        federal_key = settings.FEDERAL_KEY
+        base_url = settings.FEDERAL_URL
 
     src_json, tar_json = {}, {}
     headers = {'s-id': federal_key, 'Content-Type': 'application/json'}
     feed_url = base_url + 'createFeedV2'
-    payload = {'sessionId': os.getenv("CMS-SESSION-ID")}
+    payload = {'sessionId': settings.CMS_SESSION_ID}
 
     tar_json = task.news_task.first().target_json
 
