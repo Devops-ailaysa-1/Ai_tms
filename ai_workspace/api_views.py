@@ -4307,10 +4307,10 @@ def get_news_federal_key_and_url(lang):
     This function is to get the federal CMS KEY and URL based on language. 
     '''
     if lang == "Kannada":
-        key = settings.KARNATAKA_FEDARAL_KEY
+        key = settings.KARNATAKA_FEDERAL_KEY
         integration_api_url = settings.KARNATAKA_FEDERAL_URL+"news"
     elif lang == "Telugu":
-        key = settings.TELUGANA_FEDARAL_KEY
+        key = settings.TELANGANA_FEDERAL_KEY
         integration_api_url = settings.TELUGANA_FEDERAL_URL+"news"
     
     elif lang == "Hindi":
@@ -4553,10 +4553,10 @@ def push_translated_story(request):
     target_lang = task.job.target_language.language
 
     if target_lang == "Telugu":
-        federal_key = settings.TELUGANA_FEDARAL_KEY
+        federal_key = settings.TELANGANA_FEDERAL_KEY
         base_url = settings.TELUGANA_FEDERAL_URL
     elif target_lang == "Kannada":
-        federal_key = settings.KARNATAKA_FEDARAL_KEY
+        federal_key = settings.KARNATAKA_FEDERAL_KEY
         base_url = settings.KARNATAKA_FEDERAL_URL
     elif target_lang == "Hindi":
         federal_key = settings.HINDI_FEDERAL_KEY

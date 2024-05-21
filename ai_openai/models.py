@@ -271,7 +271,7 @@ class BookFrontMatter(models.Model):
 class BookBody(models.Model):
     book_creation = models.ForeignKey(BookCreation,on_delete=models.CASCADE,related_name='book_bdy_create',null=True,blank=True)
     book_title = models.ForeignKey(BookTitle,on_delete=models.CASCADE,related_name='book_title_bdy',null=True,blank=True)
-    body_matter = models.ForeignKey(BodyMatter, on_delete=models.CASCADE,related_name='book_body_matter')
+    body_matter = models.ForeignKey(BodyMatter,on_delete=models.CASCADE,related_name='book_body_matter')
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='book_bdy_sub_categories')
     generated_content = models.TextField(null=True,blank=True) 
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='bookbdy_tokens',null=True, blank=True)
