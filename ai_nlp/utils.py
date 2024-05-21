@@ -38,7 +38,6 @@ from docx import Document
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
-from ai_openai.utils import get_prompt_chatgpt_turbo
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
@@ -157,8 +156,8 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
     compressed_docs = compression_retriever.get_relevant_documents(query=query)
     memory = load_chat_history(instance)
-    # qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
-    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,retriever=compression_retriever, return_source_documents=True)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,
+                                               retriever=compression_retriever, return_source_documents=True)
     
     page_numbers = []
     for i in compressed_docs:
