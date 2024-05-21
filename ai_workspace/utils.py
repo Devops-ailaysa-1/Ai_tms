@@ -108,7 +108,7 @@ def task_assing_role_ls(task_assign_info_ls):
 import copy,json
 from django.conf import settings
 TRANSLATABLE_KEYS_FEDERAL = settings.TRANSLATABLE_KEYS_FEDERAL.split(" ")
-HTML_MIME_FEDARAL = os.getenv("HTML_MIME_FEDARAL").split(" ")
+HTML_MIME_FEDARAL = settings.HTML_MIME_FEDARAL.split(" ")
 
 
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
