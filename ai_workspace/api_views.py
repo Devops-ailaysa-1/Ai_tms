@@ -4345,7 +4345,7 @@ class GetNewsFederalView(generics.ListAPIView):
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
         lang = self.request.query_params.get('lang', None)
-        category_ids = self.request.query_params.getlist('categoryId')
+        categoryIds = self.request.query_params.getlist('categoryId')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
         key, integration_api_url = get_news_federal_key_and_url(lang)
 
@@ -4353,18 +4353,18 @@ class GetNewsFederalView(generics.ListAPIView):
             's-id': key,
         }
 
-        start_index = (int(page) - 1) * int(count)
+        startIndex  = (int(page) - 1) * int(count)
 
         params = {
-            'startIndex': start_index,
+            'startIndex': startIndex,
             'count': count,
         }
         if news_id:
             params.update({'newsId': news_id})
         if search:
             params.update({'search': search})
-        if category_ids:
-            params.update({'categoryIds': category_ids})
+        if categoryIds:
+            params.update({'categoryIds': categoryIds})
 
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
