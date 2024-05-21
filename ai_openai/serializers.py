@@ -1134,6 +1134,7 @@ class BookBodySerializer(serializers.ModelSerializer):
             if body_matter.id == 1:
                 prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre,
                                                                     book_obj.level.no_of_chapter_headings)
+                                                                  
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
                 prompt_response = prompt_response_gpt.choices
                 total_token = prompt_response_gpt['usage']['total_tokens']
@@ -1163,7 +1164,6 @@ class BookBodySerializer(serializers.ModelSerializer):
                                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_obj,
                                                             generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage,sub_headings=sub_headings)
                                     AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_section)
-                                    
                             else:
                                 rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, 
                                 generated_content=chapter,group=group,temp_order=order,custom_order=order,
@@ -1196,7 +1196,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                             temp_order=count+1,token_usage=token_usage) 
             instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
             return instance
-        
+         
         else:
             blog_available_langs =[17]
             qr = BookBody.objects.filter(book_creation=book_creation,body_matter=body_matter).order_by('custom_order')
