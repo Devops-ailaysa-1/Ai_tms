@@ -4301,19 +4301,25 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
+
 def get_news_federal_key_and_url(lang):
     ''' 
     This function is to get the federal CMS KEY and URL based on language. 
     '''
     if lang == "Kannada":
-        key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
+        key = settings.KARNATAKA_FEDERAL_KEY
+        integration_api_url = settings.KARNATAKA_FEDERAL_URL+"news"
     elif lang == "Telugu":
-        key = os.getenv("TELUGANA-FEDARAL-KEY")
-        integration_api_url = os.getenv('TELUGANA_FEDERAL_URL')+"news"
+        key = settings.TELANGANA_FEDERAL_KEY
+        integration_api_url = settings.TELUGANA_FEDERAL_URL+"news"
+    
+    elif lang == "Hindi":
+        key = settings.HINDI_FEDERAL_KEY
+        integration_api_url = settings.HINDI_FEDERAL_URL+"news"
+
     else:
-        key = os.getenv("FEDERAL-KEY")
-        integration_api_url = os.getenv('FEDERAL_URL')+"news"
+        key = settings.FEDERAL_KEY
+        integration_api_url = settings.FEDERAL_URL+"news"
     return key,integration_api_url
 
 class GetNewsFederalView(generics.ListAPIView):
@@ -4339,27 +4345,27 @@ class GetNewsFederalView(generics.ListAPIView):
         count = self.request.query_params.get('count', 20)
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
-        lang = self.request.query_params.get('lang',None)
+        lang = self.request.query_params.get('lang', None)
         categoryIds = self.request.query_params.getlist('categoryId')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
-        key,integration_api_url = get_news_federal_key_and_url(lang)
+        key, integration_api_url = get_news_federal_key_and_url(lang)
 
         headers = {
             's-id': key,
-            }
-        
-        startIndex = (int(page) - 1) * int(count)
-       
-        params={ 
-            'startIndex':startIndex,
-            'count':count,
-            }
+        }
+
+        startIndex  = (int(page) - 1) * int(count)
+
+        params = {
+            'startIndex': startIndex,
+            'count': count,
+        }
         if news_id:
-            params.update({'newsId':news_id})
+            params.update({'newsId': news_id})
         if search:
-            params.update({'search':search})
+            params.update({'search': search})
         if categoryIds:
-            params.update({'categoryIds':categoryIds})
+            params.update({'categoryIds': categoryIds})
 
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
@@ -4370,9 +4376,10 @@ class GetNewsFederalView(generics.ListAPIView):
                     tar_code = []
                     news_json['claimed'] = True
                     news_json['src_code'] = tasks[0].task.job.source_language_id
-                    news_json['tar_code'] = list(set([task.task.job.target_language_id  for task in tasks]))
+                    news_json['tar_code'] = list(set([task.task.job.target_language_id for task in tasks]))
             response._content = json.dumps(news_jsons).encode('utf-8')
         return response
+
 
     def list(self, request, *args, **kwargs):
         #### Need to check request from federal team ####
@@ -4508,7 +4515,7 @@ def get_federal_categories(request):
     count = request.query_params.get('count', 20)
 
     headers = {
-        's-id': os.getenv("FEDERAL-KEY"),
+        's-id': settings.FEDERAL_KEY,
         }
     
     startIndex = (int(page) - 1) * int(count)
@@ -4518,9 +4525,9 @@ def get_federal_categories(request):
         'count':count,
         }
 
-    CMS_url = os.getenv('FEDERAL_URL')+"category"
+    CMS_url = settings.FEDERAL_URL+"category"
     payload={
-        'sessionId':os.getenv("CMS-SESSION-ID"),
+        'sessionId':settings.CMS_SESSION_ID,
     }
     response = requests.request("GET", CMS_url, headers=headers, params=params)
     if response.status_code == 200:
@@ -4544,69 +4551,71 @@ def push_translated_story(request):
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
     target_lang = task.job.target_language.language
+
     if target_lang == "Telugu":
-        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
-        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+        federal_key = settings.TELANGANA_FEDERAL_KEY
+        base_url = settings.TELUGANA_FEDERAL_URL
     elif target_lang == "Kannada":
-        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        base_url = os.getenv('KARNATAKA_FEDERAL_URL')
+        federal_key = settings.KARNATAKA_FEDERAL_KEY
+        base_url = settings.KARNATAKA_FEDERAL_URL
+    elif target_lang == "Hindi":
+        federal_key = settings.HINDI_FEDERAL_KEY
+        base_url = settings.HINDI_FEDERAL_URL
     else:
-        federal_key = os.getenv("FEDERAL-KEY")
-        base_url = os.getenv('FEDERAL_URL')
-    src_json,tar_json = {},{}
-    headers = { 's-id': federal_key,'Content-Type': 'application/json'}
-    feed_url = base_url+'createFeedV2'
-    payload={ 
-            'sessionId':os.getenv("CMS-SESSION-ID"),
-            }
+        federal_key = settings.FEDERAL_KEY
+        base_url = settings.FEDERAL_URL
+
+    src_json, tar_json = {}, {}
+    headers = {'s-id': federal_key, 'Content-Type': 'application/json'}
+    feed_url = base_url + 'createFeedV2'
+    payload = {'sessionId': settings.CMS_SESSION_ID}
 
     tar_json = task.news_task.first().target_json
-   
+
     if not tar_json:
         doc = task.document
         if doc:
             src_json = task.news_task.first().source_json.get('news')[0]
             doc_to_file = DocumentToFile()
-            res = doc_to_file.document_data_to_file(request,doc.id)
+            res = doc_to_file.document_data_to_file(request, doc.id)
             if res.status_code in [200, 201]:
-                with open(res.text,"r") as fp:
+                with open(res.text, "r") as fp:
                     trans_json = json.load(fp)
-                tar_json = merge_dict(trans_json,src_json)
+                tar_json = merge_dict(trans_json, src_json)
                 tt = task.news_task.first()
                 tt.target_json = tar_json
                 tt.save()
- 
+
     payload.update({
-        'heading' : tar_json.get('heading'),
-        'description' : tar_json.get('description'),
-        'story':tar_json.get('story'),
+        'heading': tar_json.get('heading'),
+        'description': tar_json.get('description'),
+        'story': tar_json.get('story'),
         'location': tar_json.get('location'),
-        'locationId' : tar_json.get('locationId'),
+        'locationId': tar_json.get('locationId'),
         'categoryId': tar_json.get('maincategory'),
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
         'author': tar_json.get('authorName'),
-        'custom_params':[{
-            'name':'image_caption',
-            'value':tar_json.get('image_caption')
-        },{
-            'name':'story_summary',
-            'value':tar_json.get('story_summary') 
-        }
+        'custom_params': [
+            {'name': 'image_caption', 'value': tar_json.get('image_caption')},
+            {'name': 'story_summary', 'value': tar_json.get('story_summary')}
         ]
-        
     })
+
     if feed_id:
         payload.update({'feedId': feed_id})
 
     response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
+    
     if response.status_code == 200:
         feed = response.json().get('feedId')
         if feed:
-            task.news_task.update(feed_id=feed,pushed=True)
-            return Response({'msg':'pushed successfully'},status=200)
-    return Response({'msg':"something went wrong with CMS"},status=400)
+            task.news_task.update(feed_id=feed, pushed=True)
+            return Response({'msg': 'pushed successfully'}, status=200)
+    
+    return Response({'msg': "something went wrong with CMS"}, status=400)
+
 
 
 class AddStoriesView(viewsets.ModelViewSet):
@@ -4892,7 +4901,12 @@ def download_editors_report(res, from_date, to_date):
         df_active_sorted = data_active.sort_values(by='Name', key=lambda x: x.str.lower())
         df_deleted_sorted = data_deleted.sort_values(by='Name', key=lambda x: x.str.lower())
 
-        df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series()  # Adding empty row
+        empty_row = pd.DataFrame([[None] * len(df_active_sorted.columns)], columns=df_active_sorted.columns)
+        df_active_sorted = pd.concat([df_active_sorted, empty_row])
+        
+        # df_active_sorted.loc[len(df_active_sorted)] = [None] * len(df_active_sorted.columns)
+        # df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series()  # Adding empty row
+
         data = pd.concat([df_active_sorted, df_deleted_sorted])
         # Write the data DataFrame to the same Excel file below the date details
         data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False)

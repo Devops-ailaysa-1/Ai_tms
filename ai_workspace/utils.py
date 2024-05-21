@@ -106,9 +106,9 @@ def task_assing_role_ls(task_assign_info_ls):
 
 
 import copy,json
-
-TRANSLATABLE_KEYS_FEDARAL=os.getenv("TRANSLATABLE_KEYS_FEDARAL").split(" ")
-HTML_MIME_FEDARAL=os.getenv("HTML_MIME_FEDARAL").split(" ")
+from django.conf import settings
+TRANSLATABLE_KEYS_FEDERAL = settings.TRANSLATABLE_KEYS_FEDERAL.split(" ")
+HTML_MIME_FEDARAL = settings.HTML_MIME_FEDARAL.split(" ")
 
 
 MIME_TYPE_FEDARAL = {'html': 'html', 'text': 'text'}
@@ -123,7 +123,7 @@ def federal_json_translate(json_file,tar_code,src_code,user,translate=True):
 	except: json_data = json_file
 	json_file_copy = copy.deepcopy(json_data)
 	for key,value in json_file_copy.items():
-		if key in TRANSLATABLE_KEYS_FEDARAL:
+		if key in TRANSLATABLE_KEYS_FEDERAL:
 			format_ = MIME_TYPE_FEDARAL['html'] if key in HTML_MIME_FEDARAL else MIME_TYPE_FEDARAL['text']
 			if type(value) == list:
 				if key in  LIST_KEYS_FEDARAL.keys(): #news_tags media
