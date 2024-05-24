@@ -27,7 +27,7 @@ RUN pip install "poetry==$POETRY_VERSION" && poetry --version
 
 RUN poetry config installer.max-workers 10
 # Install dependencies:
-RUN poetry install
+RUN poetry install -vv
 RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords')"
 # RUN pip install pip-system-certs
 # RUN python -m spacy download en_core_web_sm
