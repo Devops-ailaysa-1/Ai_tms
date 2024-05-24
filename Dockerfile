@@ -21,8 +21,7 @@ RUN apt-get clean \
     libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
 
 WORKDIR /ai_home
-COPY pyproject.toml . 
-#poetry.lock
+COPY pyproject.toml poetry.lock /ai_home/
 
 RUN pip install "poetry==$POETRY_VERSION" && poetry --version
 
