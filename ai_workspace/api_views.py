@@ -3929,6 +3929,31 @@ def docx_convertor(request):
     os.remove(target_filename)
     return res
 
+##########test doc to docx convert
+
+
+import subprocess
+from django.core.files.storage import default_storage
+ 
+@api_view(["GET"])
+def doc2docx(request):
+    file = request.FILES.get('file',None)
+    if not file:
+        return Response({'msg':'Need file to upload'})
+    temp_doc_path = default_storage.save('temp/' + file.name, file)
+    temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
+    print("temp_docx_path_full--->",temp_docx_path_full)
+
+    try:
+        subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
+        print(f"Conversion of {temp_docx_path_full} to .docx successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+    res = download_file(temp_docx_path_full)
+    os.remove(temp_docx_path_full)
+    return res
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_word_char_count(request):
