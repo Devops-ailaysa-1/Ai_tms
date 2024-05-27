@@ -3935,7 +3935,7 @@ def docx_convertor(request):
 import subprocess
 from django.core.files.storage import default_storage
  
-@api_view(["GET"])
+@api_view(["POST"])
 def doc2docx(request):
     file = request.FILES.get('file',None)
     if not file:
