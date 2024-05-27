@@ -844,6 +844,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         pk='0', many="true", ids=file_delete_ids)
 
         if job_delete_ids:
+            job_ids = job_delete_ids.split(",")
+            for i in job_ids:
+                job_instance = Job.objects.get(id=i)
+                for j in job_instance.job_tasks_set.all():
+                    for k in j.task_info.all():
+                        try:
+                            return Response({'msg':'task is assigned'},status=status.HTTP_400_BAD_REQUEST)
+                        except:
+                            print("task is not assigned")
             job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
@@ -3647,7 +3656,8 @@ def default_proj_detail(request):
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
             if res not in out:
                 out.append(res)
         mt_engine =last_pr.mt_engine_id
