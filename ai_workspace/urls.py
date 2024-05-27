@@ -103,6 +103,7 @@ urlpatterns += [
     path('translate_segment/',api_views.federal_segment_translate),
 	path('task_report/',api_views.get_task_count_report),
 	path('ner/',api_views.get_ner),
+    path('doc2docx',api_views.doc2docx)
 ]
 # views urls adding for local testing
 urlpatterns += [

@@ -979,7 +979,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 								heading = file.readline().strip()
 						else:heading = name
 				if len(heading.split(" ")) > 15:
-					heading = " ".join(heading.split(" ")[:14])
+					heading= " ".join(heading.split(" ")[:14])
+
 				tar_json = True if obj.news_task.first().target_json else False
 				data = {'source_file_path':obj.file.file.url,\
 				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
