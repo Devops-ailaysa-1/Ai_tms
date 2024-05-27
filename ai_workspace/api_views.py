@@ -3942,8 +3942,6 @@ def doc2docx(request):
         return Response({'msg':'Need file to upload'})
     temp_doc_path = default_storage.save('temp/' + file.name, file)
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
-    print("temp_docx_path_full--->",temp_docx_path_full)
-
     try:
         subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
         print(f"Conversion of {temp_docx_path_full} to .docx successful.")
