@@ -4675,7 +4675,6 @@ class AddStoriesView(viewsets.ModelViewSet):
         din = AddStoriesView.check_user_dinamalar(request.user)
         if din:
             text_data = request.POST.get('news_data')
-            print("text_data---->",text_data)
             files = request.FILES.getlist('files')
             today_date = date.today()
             project_name = today_date.strftime("%b %d, %Y")
