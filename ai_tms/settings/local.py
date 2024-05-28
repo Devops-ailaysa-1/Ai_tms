@@ -347,17 +347,17 @@ RUST_BACKTRACE=1
 # SILKY_AUTHENTICATION = True  # User must login
 # SILKY_AUTHORISATION = True  # User must have permissions
 
-INTERNAL_IPS = [
-    # ...
-   ALLOWED_HOSTS
-    # ...
-]
+# INTERNAL_IPS = [
+#     # ...
+#    ALLOWED_HOSTS
+#     # ...
+# ]
 
-def show_toolbar(request):
-    return True
-DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-}
+# def show_toolbar(request):
+#     return True
+# DEBUG_TOOLBAR_CONFIG = {
+#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+# }
 
 #STRIPE_API_HOST = "http://localhost:12111"  
 
@@ -399,3 +399,10 @@ STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")
 TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
+
+
+
+ 
+
+
+ 
