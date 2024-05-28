@@ -45,6 +45,19 @@ INSTALLED_APPS += [
 ]
 
 
+INTERNAL_IPS = [
+    # ...
+   ALLOWED_HOSTS
+    # ...
+]
+
+def show_toolbar(request):
+    return True
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+}
+
+
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 DATABASES={
