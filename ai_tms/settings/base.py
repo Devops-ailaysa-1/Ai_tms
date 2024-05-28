@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'ai_auth',
     'dj_rest_auth',
     'django.contrib.sites',
+    "debug_toolbar",
     'allauth',
     'ai_staff',
     'allauth.account',
@@ -110,6 +111,7 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
+
     #"drf_yasg",
     #"silk",
 ]
@@ -122,6 +124,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -135,7 +138,9 @@ MIDDLEWARE = [
     #'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    #'silk.middleware.SilkyMiddleware',
+    
+    #'silk.middleware.SilkyMiddleware'
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     
 ]
 
@@ -335,4 +340,3 @@ EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
  
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
- 
