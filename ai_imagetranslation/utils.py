@@ -65,7 +65,7 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
 def create_thumbnail_img_load(base_dimension,image):
     wpercent = (base_dimension/float(image.size[0]))
     hsize = int((float(image.size[1])*float(wpercent)))
-    img = image.resize((base_dimension,hsize), Image.ANTIALIAS)
+    img = image.resize((base_dimension,hsize), Image.LANCZOS)
     img_io = io.BytesIO()
     img.save(img_io, format='PNG')
     img_byte_arr = img_io.getvalue()
