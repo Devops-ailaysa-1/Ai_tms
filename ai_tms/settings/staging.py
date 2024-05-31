@@ -39,23 +39,23 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-INSTALLED_APPS += [
-    'dbbackup',
+# INSTALLED_APPS += [
+#     'dbbackup',
 
-]
+# ]
 
 
-INTERNAL_IPS = [
-    # ...
-   ALLOWED_HOSTS
-    # ...
-]
+# INTERNAL_IPS = [
+#     # ...
+#    ALLOWED_HOSTS
+#     # ...
+# ]
 
-def show_toolbar(request):
-    return True
-DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-}
+# def show_toolbar(request):
+#     return True
+# DEBUG_TOOLBAR_CONFIG = {
+#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+# }
 
 
 # Database
