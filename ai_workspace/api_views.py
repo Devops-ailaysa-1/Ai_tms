@@ -844,6 +844,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         pk='0', many="true", ids=file_delete_ids)
 
         if job_delete_ids:
+            # job_ids = job_delete_ids.split(",")
+            # for i in job_ids:
+            #     job_instance = Job.objects.get(id=i)
+            #     for j in job_instance.job_tasks_set.all():
+            #         for k in j.task_info.all():
+            #             try:
+            #                 return Response({'msg':'task is assigned'},status=status.HTTP_400_BAD_REQUEST)
+            #             except:
+            #                 print("task is not assigned")
             job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
@@ -3647,7 +3656,8 @@ def default_proj_detail(request):
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
             if res not in out:
                 out.append(res)
         mt_engine =last_pr.mt_engine_id
@@ -3918,6 +3928,30 @@ def docx_convertor(request):
     res = download_file(target_filename)
     os.remove(target_filename)
     return res
+
+##########test doc to docx convert
+
+
+import subprocess
+from django.core.files.storage import default_storage
+ 
+@api_view(["POST"])
+def doc2docx(request):
+    file = request.FILES.get('file',None)
+    if not file:
+        return Response({'msg':'Need file to upload'})
+    temp_doc_path = default_storage.save('temp/' + file.name, file)
+    temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
+    print("temp_docx_path_full",temp_docx_path_full)
+    try:
+        subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
+
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+    res = download_file(temp_docx_path_full)
+    os.remove(temp_docx_path_full)
+    return res
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

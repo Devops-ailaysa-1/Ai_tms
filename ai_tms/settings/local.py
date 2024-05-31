@@ -349,7 +349,7 @@ RUST_BACKTRACE=1
 
 # INTERNAL_IPS = [
 #     # ...
-#     "127.0.0.1",
+#    ALLOWED_HOSTS
 #     # ...
 # ]
 
@@ -399,3 +399,10 @@ STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")
 TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
+
+
+
+ 
+
+
+ 
