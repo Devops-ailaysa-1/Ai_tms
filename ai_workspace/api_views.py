@@ -3658,8 +3658,12 @@ def default_proj_detail(request):
             res={'src':i.project_jobs_set.first().source_language.id}
             # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
             res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
+            
             if res not in out:
-                out.append(res)
+                if res['tar']:
+                    out.append(res)
+
+
         mt_engine =last_pr.mt_engine_id
         out_1 = [a[0] for a in itertools.groupby(out)][:5]
         return JsonResponse({'recent_pairs':out_1,'mt_engine_id':mt_engine})
