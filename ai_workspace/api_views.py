@@ -3657,8 +3657,7 @@ def default_proj_detail(request):
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
-            
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id]
             if res not in out:
                 if res['tar']:
                     out.append(res)
