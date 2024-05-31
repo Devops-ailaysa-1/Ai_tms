@@ -3944,7 +3944,7 @@ def doc2docx(request):
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
     try:
         subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
-         
+
     except subprocess.CalledProcessError as e:
         print(f"An error occurred: {e}")
     res = download_file(temp_docx_path_full)
