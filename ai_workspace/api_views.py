@@ -3934,41 +3934,7 @@ def docx_convertor(request):
 
 import subprocess
 from django.core.files.storage import default_storage
-
-import os
-import mimetypes
-import urllib
-from django.http import FileResponse, Http404
-
-def download_file_doc2docx(file_path):
-    # Ensure the file exists
-    if not os.path.exists(file_path):
-        raise Http404("File does not exist")
-
-    # Open the file
-    fl = open(file_path, 'rb')
-
-    # Determine the MIME type
-    mime_type, _ = mimetypes.guess_type(file_path)
-    
-    # Create the response using FileResponse for efficient streaming
-    response = FileResponse(fl, content_type=mime_type)
-
-    # Encode the filename to ensure it's properly handled in headers
-    encoded_filename = urllib.parse.quote(os.path.basename(file_path), encoding='utf-8')
-
-    # Set headers for the response
-    response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
-    response['X-Suggested-Filename'] = encoded_filename
-    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
-
-    return response 
-
-
-
-
-
-
+ 
 @api_view(["POST"])
 def doc2docx(request):
     file = request.FILES.get('file',None)
@@ -3978,10 +3944,10 @@ def doc2docx(request):
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
     try:
         subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
-         
+
     except subprocess.CalledProcessError as e:
         print(f"An error occurred: {e}")
-    res = download_file_doc2docx(temp_docx_path_full)
+    res = download_file(temp_docx_path_full)
     os.remove(temp_docx_path_full)
     return res
 
