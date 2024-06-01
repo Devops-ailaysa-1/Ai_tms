@@ -106,6 +106,9 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
+from ai_workspace.utils import time_decorator
+
+
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -649,7 +652,7 @@ class ProjectFilter(django_filters.FilterSet):
         print("QRF-->",queryset)
 
         return queryset
-    
+
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     '''
@@ -683,6 +686,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     #@cached(timeout=60 * 15)
+    @time_decorator
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
@@ -691,11 +695,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         #checking for team access and indivual user access
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(ai_user = self.request.user)
+                    # |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
-
+    @time_decorator
     def get_user(self):
         # returns main account holder 
         user = self.request.user
@@ -724,7 +728,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     return Response(serializer.data)
 
 
-    
+    @time_decorator
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
@@ -734,14 +738,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         din = AddStoriesView.check_user_dinamalar(user_1)
 
-        if din: 
-            # to increase performence time
-            self.paginator.page_size = 10
-        
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
 
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
+            self.paginator.page_size = 10  ### pagination changed to 10 for Din
             serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
         else:
@@ -752,7 +753,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         
         return  response
 
-    
+    @time_decorator
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
@@ -3657,7 +3658,8 @@ def default_proj_detail(request):
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id]
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
+            
             if res not in out:
                 if res['tar']:
                     out.append(res)
@@ -4245,6 +4247,13 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         response = self.get_paginated_response(ser.data)
         return response
 
+from django.db.models import F, Value, Case, When
+from django.db.models.functions import Coalesce
+
+# Annotate the queryset to get the task_word_count for each task, defaulting to 0 if task_details is None
+
+
+# Convert the queryset to a dictionary
 
 
 def analysed_true(pr,tasks):
@@ -4262,8 +4271,19 @@ def analysed_true(pr,tasks):
                             "task_words" : task_words }
     else:
         out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        task_words = []
-        [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+        # task_words = {i.id: i.task_details.first().task_word_count if i.task_details.first() else 0 for i in tasks}
+        # print("task_words",task_words)
+
+        tasks_with_word_count = tasks.annotate(task_word_count=Coalesce(F('task_details__task_word_count'), Value(0))
+                                                    ).values('id', 'task_word_count')
+        for task in tasks_with_word_count:
+            task_words.append({task['id']: task['task_word_count']})
+
+        # for i in tasks:
+            # task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0})
+
+        
+        # [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
             "proj_seg_count":out.get('task_seg_count__sum'),
