@@ -653,6 +653,7 @@ class ProjectFilter(django_filters.FilterSet):
 
         return queryset
 
+from silk.profiling.profiler import silk_profile
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     '''
@@ -687,6 +688,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     #@cached(timeout=60 * 15)
     @time_decorator
+    @silk_profile(name='get_queryset')
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
@@ -695,11 +697,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         #checking for team access and indivual user access
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    # |Q(ai_user = self.request.user)
+                    |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
     @time_decorator
+    @silk_profile(name='get_user')
     def get_user(self):
         # returns main account holder 
         user = self.request.user
@@ -726,9 +729,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-
+    @silk_profile(name='page_test')
+    def page_test(self,queryset,request):
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
+        return pagin_tc
 
     @time_decorator
+    @silk_profile(name='list')
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
@@ -737,9 +744,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = self.get_user()
 
         din = AddStoriesView.check_user_dinamalar(user_1)
-
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-
+         
+        # pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
+        pagin_tc = self.page_test(queryset, request)
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
             self.paginator.page_size = 10  ### pagination changed to 10 for Din
@@ -4310,18 +4317,21 @@ def analysed_true(pr,tasks):
                             "task_words" : task_words }
     else:
         out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        
+        ##### old 
         # task_words = {i.id: i.task_details.first().task_word_count if i.task_details.first() else 0 for i in tasks}
         # print("task_words",task_words)
 
         tasks_with_word_count = tasks.annotate(task_word_count=Coalesce(F('task_details__task_word_count'), Value(0))
-                                                    ).values('id', 'task_word_count')
+                                                ).values('id', 'task_word_count')
         for task in tasks_with_word_count:
             task_words.append({task['id']: task['task_word_count']})
 
+        ###### old 
         # for i in tasks:
             # task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0})
 
-        
+        ########## old
         # [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
