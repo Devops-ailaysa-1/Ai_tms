@@ -3936,6 +3936,39 @@ def docx_convertor(request):
 
 ##########test doc to docx convert
 
+import os
+import mimetypes
+import urllib.parse
+from django.http import HttpResponse
+
+def download_file_doc(file_path):
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    
+    # Guess MIME type
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        # Default to DOCX MIME type if guessing fails
+        mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    
+    response = HttpResponse(fl, content_type=mime_type)
+    
+    # Encode filename
+    encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+    
+    # Set Content-Disposition header
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(encoded_filename)
+    
+    # Set custom header
+    response['X-Suggested-Filename'] = encoded_filename
+    
+    # Expose Content-Disposition header
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    
+    return response
+
+
+
 
 import subprocess
 from django.core.files.storage import default_storage
@@ -3949,11 +3982,17 @@ def doc2docx(request):
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
     print("temp_docx_path_full",temp_docx_path_full)
     try:
-        subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
+        subprocess.run(['libreoffice', 
+                        '--headless',
+                        '--convert-to', 'docx',
+                        temp_docx_path_full], check=True)
+
+        # subprocess.run(['soffice', '--headless', '--convert-to', 'docx' , temp_docx_path_full],
+        #                check=True)
 
     except subprocess.CalledProcessError as e:
         print(f"An error occurred: {e}")
-    res = download_file(temp_docx_path_full)
+    res = download_file_doc(temp_docx_path_full)
     os.remove(temp_docx_path_full)
     return res
 

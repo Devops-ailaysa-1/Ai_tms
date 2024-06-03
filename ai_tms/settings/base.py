@@ -77,7 +77,7 @@ INSTALLED_APPS = [
     'ai_auth',
     'dj_rest_auth',
     'django.contrib.sites',
-    #  "silk",
+     "silk",
     'allauth',
     'ai_staff',
     'allauth.account',
@@ -124,7 +124,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
-    
+    'ai_nlp.middleware.BypassStreamingMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -135,7 +135,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
+    'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     # 'django.middleware.gzip.GZipMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',

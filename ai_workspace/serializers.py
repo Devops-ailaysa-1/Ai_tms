@@ -515,23 +515,30 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# 	else:
 	# 		return None
 
-	def get_project_analysis(self, instance):
-		if not isinstance(instance, Project):
-			return None
-		
-		user_1 = self.context.get('user_1')
-		request = self.context.get("request")
-		user = request.user if request else self.context.get("ai_user")
-		
-		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
-			return None
-		
-		if instance.ai_user == user or (instance.team and (instance.team.owner == user or user in instance.team.get_project_manager)):
-			tasks = instance.get_analysis_tasks
+	def get_project_analysis(self,instance):
+		if type(instance) is Project:
+			user_1 = self.context.get('user_1')
+			if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+				return None		
+			
+			user = self.context.get("request").user if self.context.get("request")!=None else self\
+				.context.get("ai_user", None)
+
+			if instance.ai_user == user:
+				tasks = instance.get_analysis_tasks
+
+			elif instance.team:
+				if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+					tasks = instance.get_analysis_tasks
+				else:
+					tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+
+			else:
+				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+			res = instance.project_analysis(tasks)
+			return res
 		else:
-			tasks = tasks.filter(task_info__assign_to_id=user_1)
-		res = instance.project_analysis(tasks)
-		return res
+			return None
 
 	
 	def get_progress(self,instance):
