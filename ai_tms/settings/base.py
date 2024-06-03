@@ -340,3 +340,4 @@ EXPORT_IMAGE_URL = '/temp_download/'
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
+SILKY_PYTHON_PROFILER = True
