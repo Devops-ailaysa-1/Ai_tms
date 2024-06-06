@@ -653,7 +653,7 @@ class ProjectFilter(django_filters.FilterSet):
 
         return queryset
 
-from silk.profiling.profiler import silk_profile
+
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     '''
@@ -687,8 +687,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     #@cached(timeout=60 * 15)
-    @time_decorator
-    @silk_profile(name='get_queryset')
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
@@ -701,8 +699,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
-    @time_decorator
-    @silk_profile(name='get_user')
+
     def get_user(self):
         # returns main account holder 
         user = self.request.user
@@ -729,13 +726,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-    @silk_profile(name='page_test')
+ 
     def page_test(self,queryset,request):
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
         return pagin_tc
 
-    @time_decorator
-    @silk_profile(name='list')
+ 
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
@@ -3979,7 +3975,10 @@ def download_file_doc(file_path):
 
 import subprocess
 from django.core.files.storage import default_storage
+
  
+
+
 @api_view(["POST"])
 def doc2docx(request):
     file = request.FILES.get('file',None)
@@ -3987,20 +3986,16 @@ def doc2docx(request):
         return Response({'msg':'Need file to upload'})
     temp_doc_path = default_storage.save('temp/' + file.name, file)
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
-    print("temp_docx_path_full",temp_docx_path_full)
-    try:
-        subprocess.run(['libreoffice', 
+    path_data = subprocess.run(['libreoffice', 
                         '--headless',
                         '--convert-to', 'docx',
-                        temp_docx_path_full], check=True)
+                        "output.docx"], check=True)
 
-        # subprocess.run(['soffice', '--headless', '--convert-to', 'docx' , temp_docx_path_full],
-        #                check=True)
-
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-    res = download_file_doc(temp_docx_path_full)
-    os.remove(temp_docx_path_full)
+    print("path_data", path_data)
+      
+ 
+    res = download_file_doc(temp_docx_path_full) #download_file_doc
+    # os.remove(temp_docx_path_full)
     return res
 
 
