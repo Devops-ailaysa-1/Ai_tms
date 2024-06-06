@@ -490,6 +490,31 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
 
+	# def get_project_analysis(self,instance):
+	# 	if type(instance) is Project:
+	# 		user_1 = self.context.get('user_1')
+	# 		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+	# 			return None		
+			
+	# 		user = self.context.get("request").user if self.context.get("request")!=None else self\
+	# 			.context.get("ai_user", None)
+
+	# 		if instance.ai_user == user:
+	# 			tasks = instance.get_analysis_tasks
+
+	# 		elif instance.team:
+	# 			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+	# 				tasks = instance.get_analysis_tasks
+	# 			else:
+	# 				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+
+	# 		else:
+	# 			tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+	# 		res = instance.project_analysis(tasks)
+	# 		return res
+	# 	else:
+	# 		return None
+
 	def get_project_analysis(self,instance):
 		if type(instance) is Project:
 			user_1 = self.context.get('user_1')
@@ -978,6 +1003,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 							with open(file_path, 'r', encoding='utf-8', errors = 'replace') as file:
 								heading = file.readline().strip()
 						else:heading = name
+				if len(heading.split(" ")) > 15:
+					heading= " ".join(heading.split(" ")[:14])
+
 				tar_json = True if obj.news_task.first().target_json else False
 				data = {'source_file_path':obj.file.file.url,\
 				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
@@ -1729,7 +1757,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 			ser.update_task_assign(instance.task,self.context.get('request').user,None)
 		return instance
 	
-
+from silk.profiling.profiler import silk_profile
 
 class ProjectSimpleSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
@@ -1739,14 +1767,14 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned","assign_enable","project_analysis", \
-				"created_at",'get_project_type')
-
+		fields = ("id", "project_name","assigned", "assign_enable" , "project_analysis" , "get_project_type",
+				"created_at") #assign_enable project_analysis "get_project_type", 
+	@silk_profile(name='get_assign_enable')
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
-
+	@silk_profile(name='get_project_analysis')
 	def get_project_analysis(self,obj):
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer

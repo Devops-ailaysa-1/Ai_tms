@@ -347,17 +347,17 @@ RUST_BACKTRACE=1
 # SILKY_AUTHENTICATION = True  # User must login
 # SILKY_AUTHORISATION = True  # User must have permissions
 
-# INTERNAL_IPS = [
-#     # ...
-#     "127.0.0.1",
-#     # ...
-# ]
+INTERNAL_IPS = [
+    # ...
+   ALLOWED_HOSTS
+    # ...
+]
 
-# def show_toolbar(request):
-#     return True
-# DEBUG_TOOLBAR_CONFIG = {
-#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-# }
+def show_toolbar(request):
+    return True
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+}
 
 #STRIPE_API_HOST = "http://localhost:12111"  
 
@@ -369,6 +369,22 @@ CONVERTIO_API = os.getenv("convertio_api")
 OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
+
+#### FEDERAL 
+
+HTML_MIME_FEDARAL = os.getenv("HTML_MIME_FEDARAL")
+CMS_SESSION_ID = os.getenv("CMS-SESSION-ID")
+FEDERAL_KEY = os.getenv("FEDERAL-KEY")
+TRANSLATABLE_KEYS_FEDERAL = os.getenv("TRANSLATABLE_KEYS_FEDARAL")
+STAGING_FEDERAL_KEY = os.getenv("STAGING-FEDERAL-KEY")
+FEDERAL_URL = os.getenv("FEDERAL_URL")
+KARNATAKA_FEDERAL_URL = os.getenv("KARNATAKA_FEDERAL_URL")
+TELUGANA_FEDERAL_URL = os.getenv("TELUGANA_FEDERAL_URL")
+HINDI_FEDERAL_URL = os.getenv("HINDI_FEDERAL_URL")
+STAGINGFEDERAL_URL = os.getenv("STAGINGFEDERAL_URL")
+TELANGANA_FEDERAL_KEY = os.getenv("TELUGANA-FEDARAL-KEY")
+KARNATAKA_FEDERAL_KEY = os.getenv("KARNATAKA-FEDARAL-KEY")
+HINDI_FEDERAL_KEY = os.getenv("HINDI-FEDERAL-KEY")
 
 
 #### STRIPE
@@ -383,3 +399,10 @@ STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")
 TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
+
+
+
+ 
+
+
+ 

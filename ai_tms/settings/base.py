@@ -14,6 +14,9 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import stripe
+
+stripe.max_network_retries = 2
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -74,6 +77,7 @@ INSTALLED_APPS = [
     'ai_auth',
     'dj_rest_auth',
     'django.contrib.sites',
+     "silk",
     'allauth',
     'ai_staff',
     'allauth.account',
@@ -107,8 +111,9 @@ INSTALLED_APPS = [
     'ai_canvas',
     'ai_imagetranslation',
     "ai_bi",
+    # "debug_toolbar",
     #"drf_yasg",
-    #"silk",
+   
 ]
 
 
@@ -119,6 +124,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -129,10 +135,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'silk.middleware.SilkyMiddleware',
+    'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
-    #'silk.middleware.SilkyMiddleware',
+    # 'django.middleware.gzip.GZipMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     
 ]
 
@@ -332,4 +338,6 @@ EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
  
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
- 
+
+
+SILKY_PYTHON_PROFILER = True

@@ -144,6 +144,8 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         return response
 
     def retrieve(self,request,pk):
+        if not pk:
+            return Response({'msg':'Need pk value'},status=status.HTTP_400_BAD_REQUEST)
         user,pr_managers = self.get_user()
         obj =self.get_object(pk)
         user,pr_managers = self.get_user()
