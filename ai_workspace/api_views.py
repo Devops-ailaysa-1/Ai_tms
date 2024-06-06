@@ -106,6 +106,9 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
+# from ai_workspace.utils import time_decorator
+
+
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -649,7 +652,8 @@ class ProjectFilter(django_filters.FilterSet):
         print("QRF-->",queryset)
 
         return queryset
-    
+
+
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     '''
@@ -722,9 +726,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
+ 
+    def page_test(self,queryset,request):
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
+        return pagin_tc
 
-
-    
+ 
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
@@ -733,15 +740,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = self.get_user()
 
         din = AddStoriesView.check_user_dinamalar(user_1)
-
-        if din: 
-            # to increase performence time
-            self.paginator.page_size = 10
-        
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-
+         
+        # pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
+        pagin_tc = self.page_test(queryset, request)
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
+            self.paginator.page_size = 10  ### pagination changed to 10 for Din
             serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
         else:
@@ -752,7 +756,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         
         return  response
 
-    
+
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
@@ -3657,7 +3661,8 @@ def default_proj_detail(request):
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id]
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
+            
             if res not in out:
                 if res['tar']:
                     out.append(res)
@@ -3934,10 +3939,46 @@ def docx_convertor(request):
 
 ##########test doc to docx convert
 
+import os
+import mimetypes
+import urllib.parse
+from django.http import HttpResponse
+
+def download_file_doc(file_path):
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    
+    # Guess MIME type
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        # Default to DOCX MIME type if guessing fails
+        mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    
+    response = HttpResponse(fl, content_type=mime_type)
+    
+    # Encode filename
+    encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+    
+    # Set Content-Disposition header
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(encoded_filename)
+    
+    # Set custom header
+    response['X-Suggested-Filename'] = encoded_filename
+    
+    # Expose Content-Disposition header
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    
+    return response
+
+
+
 
 import subprocess
 from django.core.files.storage import default_storage
+
  
+
+
 @api_view(["POST"])
 def doc2docx(request):
     file = request.FILES.get('file',None)
@@ -3945,14 +3986,16 @@ def doc2docx(request):
         return Response({'msg':'Need file to upload'})
     temp_doc_path = default_storage.save('temp/' + file.name, file)
     temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
-    print("temp_docx_path_full",temp_docx_path_full)
-    try:
-        subprocess.run(['lowriter', '--convert-to', 'docx', temp_docx_path_full], check=True)
+    path_data = subprocess.run(['libreoffice', 
+                        '--headless',
+                        '--convert-to', 'docx',
+                        "output.docx"], check=True)
 
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-    res = download_file(temp_docx_path_full)
-    os.remove(temp_docx_path_full)
+    print("path_data", path_data)
+      
+ 
+    res = download_file_doc(temp_docx_path_full) #download_file_doc
+    # os.remove(temp_docx_path_full)
     return res
 
 
@@ -4245,6 +4288,13 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         response = self.get_paginated_response(ser.data)
         return response
 
+from django.db.models import F, Value, Case, When
+from django.db.models.functions import Coalesce
+
+# Annotate the queryset to get the task_word_count for each task, defaulting to 0 if task_details is None
+
+
+# Convert the queryset to a dictionary
 
 
 def analysed_true(pr,tasks):
@@ -4262,8 +4312,22 @@ def analysed_true(pr,tasks):
                             "task_words" : task_words }
     else:
         out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        task_words = []
-        [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+        
+        ##### old 
+        # task_words = {i.id: i.task_details.first().task_word_count if i.task_details.first() else 0 for i in tasks}
+        # print("task_words",task_words)
+
+        tasks_with_word_count = tasks.annotate(task_word_count=Coalesce(F('task_details__task_word_count'), Value(0))
+                                                ).values('id', 'task_word_count')
+        for task in tasks_with_word_count:
+            task_words.append({task['id']: task['task_word_count']})
+
+        ###### old 
+        # for i in tasks:
+            # task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0})
+
+        ########## old
+        # [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
             "proj_seg_count":out.get('task_seg_count__sum'),

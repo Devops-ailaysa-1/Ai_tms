@@ -137,7 +137,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    # 'django.middleware.gzip.GZipMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     
 ]
@@ -338,5 +338,3 @@ EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
  
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-
-
