@@ -106,7 +106,7 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
-from ai_workspace.utils import time_decorator
+# from ai_workspace.utils import time_decorator
 
 
 nlp = spacy.load("en_core_web_sm")
@@ -756,7 +756,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         
         return  response
 
-    @time_decorator
+
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
