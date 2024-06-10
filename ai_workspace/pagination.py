@@ -4,10 +4,10 @@ from django.core.paginator import Paginator
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from django.core.paginator import InvalidPage
-from ai_workspace.utils import time_decorator
+
 
 class DinPaginator(Paginator):
-    
+
     def page(self, number):
         """Return a Page object for the given 1-based page number."""
         # number = self.validate_number(number)
@@ -21,7 +21,7 @@ class DinPaginator(Paginator):
 
 
 class OptimizePageNumberPagination(PageNumberPagination):
-    @time_decorator
+
     def paginate_queryset(self, queryset, request, view=None):
         """
         Paginate a queryset if required, either returning a
@@ -50,11 +50,9 @@ class OptimizePageNumberPagination(PageNumberPagination):
         return self.page
     
 
-    
-    @time_decorator
     def get_paginated_response(self, data):
         return Response({
-            'count': 7,
+            'count': self.page.paginator.count,
             'next': self.get_next_link(),
             'previous': self.get_previous_link(),
             'results': data,
