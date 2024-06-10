@@ -195,7 +195,7 @@ class MyDocuments(models.Model):
 
 ##########################Need to add project type################################
 class Project(models.Model):
-    project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1 )
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     project_name = models.CharField(max_length=1000, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,

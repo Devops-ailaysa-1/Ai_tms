@@ -207,7 +207,7 @@ def pdf_chat(request):
 @permission_classes([IsAuthenticated])
 def pdf_chat_remaining_units(request):
     if request.user.is_internal_member == True:
-        user = getattr(request.user.team, 'owner', None) if user.team is not None else None
+        user = getattr(request.user.team, 'owner', None) if request.user.team is not None else None
     else:
         user = request.user
     chat_unit_obj = AilaysaPurchasedUnits(user=user)
