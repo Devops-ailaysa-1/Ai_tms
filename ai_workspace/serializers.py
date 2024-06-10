@@ -1757,7 +1757,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 			ser.update_task_assign(instance.task,self.context.get('request').user,None)
 		return instance
 	
-# from ai_workspace.utils import time_decorator
+
 
 class ProjectSimpleSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
