@@ -749,7 +749,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         din = AddStoriesView.check_user_dinamalar(user_1)
 
         if din:
-            queryset = Project.objects.filter(project_type_id=8) ##### 8 id is for news
+            queryset = Project.objects.filter(project_type_id=8).select_related('project_type')  ##### 8 id is for news
             queryset = self.get_queryset_news(queryset)
 
         else:
