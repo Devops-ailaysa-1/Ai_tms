@@ -362,6 +362,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         task.document = document
                         task.save()
                 else:
+                    
                     logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                     raise ValueError("Sorry! Something went wrong with file processing.")
 
