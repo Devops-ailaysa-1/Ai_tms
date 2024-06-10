@@ -593,6 +593,8 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
         return queryset
 
 
+from ai_workspace.pagination import OptimizePageNumberPagination
+from ai_workspace.utils import time_decorator
 from ai_exportpdf.models import Ai_PdfUpload
 
 class ProjectFilter(django_filters.FilterSet):
@@ -607,6 +609,7 @@ class ProjectFilter(django_filters.FilterSet):
     class Meta:
         model = Project
         fields = ('project', 'team','type','assign_status')#,'assign_to')
+
 
     def filter_team(self, queryset, name, value):
         #it checks for the user is having team or not
@@ -647,7 +650,7 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            queryset = queryset.filter(project_type_id=8) ###### taking too much time
+            queryset = queryset.filter(project_type_id=8)#.select_related('project_type') #
         print("QRF-->",queryset)
 
         return queryset
@@ -659,7 +662,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     This view is to list, create, update and delete the projects
     '''
     permission_classes = [IsAuthenticated]
-    paginator = PageNumberPagination()
+    paginator = OptimizePageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['project_name','team__name','id']
@@ -687,6 +690,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     #@cached(timeout=60 * 15)
+
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
@@ -699,20 +703,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
-
-    def get_queryset_news(self,queryset):
-        from ai_auth.models import InternalMember
-        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
-
-        #checking for team access and indivual user access
-        queryset = queryset.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
-                    |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-                    |Q(ai_user = self.request.user)
-                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        
-        return queryset
-
+ 
 
     def get_user(self):
         # returns main account holder 
@@ -741,6 +732,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
  
+
+
+
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
@@ -748,18 +742,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = self.get_user()
         din = AddStoriesView.check_user_dinamalar(user_1)
 
-        if din:
-            queryset = Project.objects.filter(project_type_id=8).select_related('project_type')  ##### 8 id is for news
-            queryset = self.get_queryset_news(queryset)
-
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.filter_queryset(self.get_queryset())
 
         pagin_tc = self.paginator.paginate_queryset(queryset, request, view=self) ###--> 
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
             self.paginator.page_size = 10  ### pagination changed to 10 for Din
-            serializer = ProjectSimpleSerializer(queryset, many=True,\
+            serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
         else:
             serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
