@@ -333,7 +333,7 @@ LOGGING = {
 
 
 
-# SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER = True
 
 # SILKY_DYNAMIC_PROFILING = [{
 #     'module': 'ai_staff.api_views',
