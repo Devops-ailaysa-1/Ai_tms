@@ -593,6 +593,7 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
         return queryset
 
 
+from ai_exportpdf.models import Ai_PdfUpload
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -601,7 +602,7 @@ class ProjectFilter(django_filters.FilterSet):
     assign_status = django_filters.CharFilter(method='filter_status')
     #assign_to = django_filters.CharFilter(method='filter_assign_to')
 
-    # queryset = None
+
     class Meta:
         model = Project
         fields = ('project', 'team','type','assign_status')#,'assign_to')
