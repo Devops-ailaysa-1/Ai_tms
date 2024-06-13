@@ -352,25 +352,4 @@ def mistral_chat_api(prompt):
     # chat_response = client.chat(model=model,messages=messages)
     # return chat_response.choices[0].message.content
 
-from docx.shared import Pt ,RGBColor
-from docx.oxml.ns import qn
 
-def set_font_to_times_new_roman(doc):
-    for paragraph in doc.paragraphs:
-        if paragraph.style:
-            style = paragraph.style.name
-        else:
-            style = None
-        
-        for run in paragraph.runs:
-            run.font.name = 'Times New Roman'
-            r = run._element
-            r.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
-            if style == 'Heading 1':
-                run.font.size = Pt(24)
-                run.font.color.rgb = RGBColor(0, 0, 0)
-            elif style == 'Heading 2':
-                run.font.size = Pt(18)
-                run.font.color.rgb = RGBColor(0, 0, 0)
-            else:
-                run.font.size = Pt(11)

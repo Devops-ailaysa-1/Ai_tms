@@ -20,15 +20,13 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
+from .utils import get_consumable_credits_for_openai_text_generator
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 from googletrans import Translator
-from .utils import (get_prompt ,get_prompt_edit,get_prompt_image_generations, 
-                    get_prompt_chatgpt_turbo ,get_consumable_credits_for_openai_text_generator,
-                    search_wikipedia,search_wiktionary,bing_search,bing_news_search,
-                    set_font_to_times_new_roman)
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import OPENAI_MODEL
 openai_model = OPENAI_MODEL
@@ -36,9 +34,8 @@ logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
 from ai_openai.models import BookBody
-from docx import Document
-from docxcompose.composer import Composer
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
+from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -1452,9 +1449,8 @@ def translate_html_file(request, input_file, target_language):
     return Response({"translated_html":translated_html})
 
 
-
-
-
+from docx import Document
+from docxcompose.composer import Composer
 @api_view(["POST"])
 def docx_merger(request):
     '''
@@ -1469,7 +1465,6 @@ def docx_merger(request):
 
     for i in range(0, len(files)):
         doc = Document(files[i])
-        set_font_to_times_new_roman(doc)
 
         if i != 0:
             doc.add_page_break()
