@@ -935,27 +935,27 @@ class WordChoiceListView(viewsets.ViewSet):
 @api_view(['GET',])
 def download_gloss_dinamalar(request):
     from ai_workspace.api_views import AddStoriesView
-    user = request.user
-    din = AddStoriesView.check_user_dinamalar(user)
-    if din:
-        gloss_list = list(MyGlossary.objects.filter(user=user).values_list('sl_term','tl_term'))
-        if gloss_list:
-            gloss_data_frame = pd.DataFrame(gloss_list).dropna()
-            gloss_data_frame.columns=['Source term','Target term']
-            output = io.BytesIO()
-            writer = pd.ExcelWriter(output, engine='xlsxwriter')
-            gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
-            writer.save()
-            response = HttpResponse(content_type='application/vnd.ms-excel')
-            encoded_filename = 'glossary_terms.xlsx'
-            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
-            .format(encoded_filename)
-            response['X-Suggested-Filename'] = encoded_filename
-            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
-            output.seek(0)
-            response.write(output.read())
-            return response
-        else:
-            return Response({'msg':'no gloss term'},status=400)
+    user = request.user.team.owner if request.user.team else request.user 
+    # din = AddStoriesView.check_user_dinamalar(user)
+ 
+    gloss_list = list(MyGlossary.objects.filter(user=user).values_list('sl_term','tl_term'))
+    if gloss_list:
+        gloss_data_frame = pd.DataFrame(gloss_list).dropna()
+        gloss_data_frame.columns=['Source term','Target term']
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
+        writer.save()
+        response = HttpResponse(content_type='application/vnd.ms-excel')
+        encoded_filename = 'glossary_terms.xlsx'
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
+        response['X-Suggested-Filename'] = encoded_filename
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        output.seek(0)
+        response.write(output.read())
+        return response
     else:
-        return Response({'msg':'dont have permission to access'},status=401)
+        return Response({'msg':'no gloss term'},status=400)
+    # else:
+    #     return Response({'msg':'dont have permission to access'},status=401)
