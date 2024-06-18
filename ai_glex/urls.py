@@ -29,4 +29,6 @@ urlpatterns += [
     path('get_terminology',api_views.get_ner_terminology_extract),
     path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
     path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" ),
+    path('default_glossary_download/',api_views.download_gloss_dinamalar, name="dinamalar-gloss-simple-xlsx-download" ),
 ]
+
