@@ -942,6 +942,7 @@ def download_gloss_dinamalar(request):
     if gloss_list:
         gloss_data_frame = pd.DataFrame(gloss_list).dropna()
         gloss_data_frame.columns=['Source term','Target term']
+        gloss_data_frame = gloss_data_frame.sort_values(by='Source term', key=lambda x: x.str.lower())
         output = io.BytesIO()
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
         gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
