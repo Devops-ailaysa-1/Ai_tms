@@ -333,7 +333,7 @@ LOGGING = {
 
 
 
-SILKY_PYTHON_PROFILER = True
+# SILKY_PYTHON_PROFILER = True
 
 # SILKY_DYNAMIC_PROFILING = [{
 #     'module': 'ai_staff.api_views',
@@ -347,17 +347,17 @@ RUST_BACKTRACE=1
 # SILKY_AUTHENTICATION = True  # User must login
 # SILKY_AUTHORISATION = True  # User must have permissions
 
-INTERNAL_IPS = [
-    # ...
-   ALLOWED_HOSTS
-    # ...
-]
+# INTERNAL_IPS = [
+#     # ...
+#    ALLOWED_HOSTS
+#     # ...
+# ]
 
-def show_toolbar(request):
-    return True
-DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
-}
+# def show_toolbar(request):
+#     return True
+# DEBUG_TOOLBAR_CONFIG = {
+#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+# }
 
 #STRIPE_API_HOST = "http://localhost:12111"  
 
