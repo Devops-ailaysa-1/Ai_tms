@@ -941,7 +941,7 @@ def download_gloss_dinamalar(request):
         gloss_list = list(MyGlossary.objects.filter(user=user).values_list('sl_term','tl_term'))
         if gloss_list:
             gloss_data_frame = pd.DataFrame(gloss_list).dropna()
-            gloss_data_frame.columns=['source_term','target_term']
+            gloss_data_frame.columns=['Source term','Target term']
             output = io.BytesIO()
             writer = pd.ExcelWriter(output, engine='xlsxwriter')
             gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
