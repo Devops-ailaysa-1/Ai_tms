@@ -739,12 +739,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user_1 = self.get_user()
         din = AddStoriesView.check_user_dinamalar(user_1)
 
-        
-        if din:
-            queryset = queryset.filter(project_type_id=8)
-        else:
-            queryset = self.filter_queryset(queryset)
-
+        queryset = self.filter_queryset(queryset)
 
         pagin_tc = self.paginator.paginate_queryset(queryset, request, view=self) ###--> 
         # check for dinamalar user. if so, it will return simple serializer with only required fields
