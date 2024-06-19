@@ -1757,7 +1757,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 			ser.update_task_assign(instance.task,self.context.get('request').user,None)
 		return instance
 	
-from silk.profiling.profiler import silk_profile
+
 
 class ProjectSimpleSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
@@ -1769,12 +1769,12 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assigned", "assign_enable" , "project_analysis" , "get_project_type",
 				"created_at") #assign_enable project_analysis "get_project_type", 
-	@silk_profile(name='get_assign_enable')
+
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
-	@silk_profile(name='get_project_analysis')
+
 	def get_project_analysis(self,obj):
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer

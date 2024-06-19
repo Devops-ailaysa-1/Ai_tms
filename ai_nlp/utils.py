@@ -106,10 +106,12 @@ def loader(file_id) -> None:
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
     texts = text_splitter.split_documents(data)
     embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
-
-    save_prest(texts, embeddings, persistent_dir,instance)
-    instance.vector_embedding_path = persistent_dir
-    instance.status = "SUCCESS"
+    try:
+        save_prest(texts, embeddings, persistent_dir,instance)
+        instance.vector_embedding_path = persistent_dir
+        instance.status = "SUCCESS" 
+    except:
+        instance.status = "ERROR"
     instance.save()
  
 
