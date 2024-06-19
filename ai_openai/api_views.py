@@ -1275,7 +1275,6 @@ def generate_chapter(request):
                             content=delta['content']
                             # word=content+' '
                             str_con+=content
-                            print(content)
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
                         token_usage=num_tokens_from_string(str_con+" "+prompt)
