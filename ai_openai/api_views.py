@@ -26,7 +26,7 @@ from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credit
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo,set_font_to_times_new_roman
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import OPENAI_MODEL
 openai_model = OPENAI_MODEL
@@ -1273,7 +1273,7 @@ def generate_chapter(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            word=content+' '
+                            # word=content+' '
                             str_con+=content
                             yield '\ndata: {}\n\n'.format({"t":content})
                     else:
@@ -1465,6 +1465,7 @@ def docx_merger(request):
 
     for i in range(0, len(files)):
         doc = Document(files[i])
+        set_font_to_times_new_roman(doc)
 
         if i != 0:
             doc.add_page_break()

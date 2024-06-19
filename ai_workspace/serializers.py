@@ -1769,12 +1769,12 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assigned", "assign_enable" , "project_analysis" , "get_project_type",
 				"created_at") #assign_enable project_analysis "get_project_type", 
- 
+
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.check_role(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
- 
+
 	def get_project_analysis(self,obj):
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer

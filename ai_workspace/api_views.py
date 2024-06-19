@@ -106,7 +106,7 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
-# from ai_workspace.utils import time_decorator
+
 
 
 nlp = spacy.load("en_core_web_sm")
@@ -593,9 +593,7 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
         return queryset
 
 
-
 from ai_exportpdf.models import Ai_PdfUpload
-
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -630,6 +628,7 @@ class ProjectFilter(django_filters.FilterSet):
         else: assign_to_list = []
         queryset = progress_filter(queryset,value,assign_to_list)
         return queryset
+    
 
     def filter_not_empty(self,queryset, name, value):
         #project type filter
@@ -648,9 +647,9 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            queryset = queryset.filter(project_type_id=8)
+            print("queryset--->",queryset)
+            queryset = queryset.filter(project_type_id=8)#.select_related('project_type') #
         print("QRF-->",queryset)
-
         return queryset
 
 
@@ -685,6 +684,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         except:
             raise Http404
         return obj
+    
+
+    def query_filter_project_news(self,queryset):
+        
+        return self.filter_queryset(self.queryset)
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
@@ -693,19 +697,20 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
         #checking for team access and indivual user access
+        
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
-                    | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
-
+ 
     def get_user(self):
         # returns main account holder 
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
-
+    
 
     # Tried project list with limit and offset instead of pagination to minimize time taken
 
@@ -726,23 +731,17 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
- 
-    def page_test(self,queryset,request):
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
-        return pagin_tc
-
- 
+        
     def list(self, request, *args, **kwargs):
 
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
-        queryset = self.filter_queryset(self.get_queryset())
-
+        queryset = self.get_queryset()
         user_1 = self.get_user()
-
         din = AddStoriesView.check_user_dinamalar(user_1)
-         
-        # pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self) ###--> 
-        pagin_tc = self.page_test(queryset, request)
+
+        queryset = self.filter_queryset(queryset)
+
+        pagin_tc = self.paginator.paginate_queryset(queryset, request, view=self) ###--> 
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
             self.paginator.page_size = 10  ### pagination changed to 10 for Din
@@ -751,9 +750,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         else:
             serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
-        
         response = self.get_paginated_response(serializer.data)
-        
         return  response
 
 
@@ -821,6 +818,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
+        target_languages = request.POST.get('target_languages',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -836,7 +834,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             "subject_delete_ids", [])
         step_delete_ids = self.request.query_params.get(\
             "step_delete_ids", [])
-
+        
+        if file_delete_ids and target_languages:
+            return Response({'msg':"dont delete file"},status=400)
         #Deletion of steps,files,jobs,content_type,subject_fields
         if step_delete_ids:
             for task_obj in instance.get_tasks:
@@ -4319,8 +4319,12 @@ def analysed_true(pr,tasks):
 
         tasks_with_word_count = tasks.annotate(task_word_count=Coalesce(F('task_details__task_word_count'), Value(0))
                                                 ).values('id', 'task_word_count')
+        
         for task in tasks_with_word_count:
             task_words.append({task['id']: task['task_word_count']})
+
+        # task_words = [] #{task['id']: task['task_word_count'] for task in tasks_with_word_count}
+            
 
         ###### old 
         # for i in tasks:

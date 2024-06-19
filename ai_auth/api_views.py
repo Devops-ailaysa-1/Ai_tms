@@ -90,7 +90,7 @@ import os
 from ai_auth.reports import AilaysaReport
 from django.db.models.query import QuerySet
 logger = logging.getLogger('django')
-
+AILAYSA_EMAILS = settings.AILAYSA_EMAILS.split(",")
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
@@ -1689,10 +1689,11 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
-        print("plan_name----------->",get_plan_name(owner))
+        
 
         # checks for team member count (which varies according to their subscription plan)
-        if InternalMember.objects.filter(team = team).count() >= team.team_member_count:
+        
+        if InternalMember.objects.filter(team = team).count() >= team.team_member_count and not request.user.email in AILAYSA_EMAILS:
             return Response({'msg':'internal member count execeeded'},status=400)
 
         # create the internal user with given details and store the details in InternalMember model
