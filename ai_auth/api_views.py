@@ -1689,7 +1689,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
-        print("plan_name----------->",get_plan_name(owner))
+        
 
         # checks for team member count (which varies according to their subscription plan)
         
