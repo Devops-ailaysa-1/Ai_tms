@@ -1488,7 +1488,7 @@ def notify_task_status(task_assign,status,reason):
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     receivers = [*set(receivers)]
-    Receiver_emails = [i.email for i in receivers]
+    Receiver_emails = [i.email for i in receivers if i.is_active == True]
 
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
