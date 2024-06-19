@@ -36,6 +36,9 @@ from django.db.models import Q
 from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
 from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
+from ai_openai.models import BookBody
+from ai_staff.models import PromptStartPhrases
+from .utils import get_summarize
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -1213,9 +1216,23 @@ def generate_article(request):
 
 
 
-from ai_openai.models import BookBody
-from ai_staff.models import PromptStartPhrases
-from .utils import get_summarize
+def stream_article_response_en(title,completion,prompt,book_body_instance):
+    str_con=""
+    for chunk in completion:
+        ins=chunk['choices'][0]
+        if ins["finish_reason"]!='stop':
+            delta=ins['delta']
+            if 'content' in delta.keys():
+                content=delta['content']
+                word=content+' '
+                str_con+=content
+                print(content)
+                yield '\ndata: {}\n\n'.format({"t":content})
+        else:
+            token_usage=num_tokens_from_string(str_con+" "+prompt)
+            AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+
+
 @api_view(["GET"])
 def generate_chapter(request):
     '''
@@ -1265,21 +1282,8 @@ def generate_chapter(request):
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
             else:
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-            def stream_article_response_en(title):
-                str_con=""
-                for chunk in completion:
-                    ins=chunk['choices'][0]
-                    if ins["finish_reason"]!='stop':
-                        delta=ins['delta']
-                        if 'content' in delta.keys():
-                            content=delta['content']
-                            # word=content+' '
-                            str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":content})
-                    else:
-                        token_usage=num_tokens_from_string(str_con+" "+prompt)
-                        AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-            return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
+
+            return StreamingHttpResponse(stream_article_response_en(book_title,completion,prompt,book_body_instance),content_type='text/event-stream')
         else:
             if context:
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
@@ -1309,7 +1313,7 @@ def generate_chapter(request):
                             
                                     if initial_credit >= consumable:
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                        
+                                    print(blog_article_trans)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' 
@@ -1325,8 +1329,10 @@ def generate_chapter(request):
                                          
                                         if initial_credit >= consumable:
                                             blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
+                                        print(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
+                                        print(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                                     str_cont='' 
