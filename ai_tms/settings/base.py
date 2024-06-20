@@ -137,7 +137,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'silk.middleware.SilkyMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
+    # 'django.middleware.gzip.GZipMiddleware',
+    'ai_auth.custom_middleware.CustomGZipMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     
 ]
