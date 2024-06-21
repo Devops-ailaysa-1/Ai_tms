@@ -496,6 +496,9 @@ def adding_term_to_glossary_from_workspace(request):
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
+    print("sl_term-->",sl_term)
+    print("tl_term-->",tl_term)
+    print("doc_id-->",doc_id)
     user = request.user.team.owner if request.user.team else request.user
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
@@ -509,6 +512,7 @@ def adding_term_to_glossary_from_workspace(request):
         data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
                 "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
                  "created_by":request.user.id}
+        print("data--->",data)
         serializer = MyGlossarySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
