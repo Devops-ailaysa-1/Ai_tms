@@ -647,8 +647,11 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            print("queryset--->",queryset)
-            queryset = queryset.filter(project_type_id=8)#.select_related('project_type') #
+            print("news----->")
+            queryset = queryset.filter(project_type_id=8) 
+        elif value == "word_choices":
+            print("word_choices----->")
+            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
         return queryset
 
@@ -735,7 +738,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     return Response(serializer.data)
         
     def list(self, request, *args, **kwargs):
-
+        print("inside list")
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
         user_1 = self.get_user()
@@ -4371,7 +4374,7 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset1 = queryset.filter(glossary_project__isnull=False).exclude(project_type_id=10)
         queryset2 = ChoiceLists.objects.none()  
 
         user = self.request.user
