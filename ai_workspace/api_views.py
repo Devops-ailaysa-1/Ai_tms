@@ -672,9 +672,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
-        #if project_type == 3 or project_type == 10:
-        if project_type == 3:
+        if project_type == 3 or project_type == 10:
+        # if project_type == 3:
+            print("Gloss project")
             return GlossarySetupSerializer
+        print("project")
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -804,6 +806,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            print("serlzr--->",serlzr.data)
             pr = Project.objects.get(id=serlzr.data.get('id'))
             #checks for pre-translation option and initiates the celery task
             if pr.pre_translate == True:

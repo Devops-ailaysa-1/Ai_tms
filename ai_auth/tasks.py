@@ -703,8 +703,9 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
         print(f'Error in task: {e}')
         retries += 1
         if retries > max_retries:
-            raise MaxRetriesExceededError("Maximum retries reached.") from e
             logger.info("retries exceeded")
+            raise MaxRetriesExceededError("Maximum retries reached.") from e
+            
 
 ##################################### Tasks Related to ai_tm ##################################
 

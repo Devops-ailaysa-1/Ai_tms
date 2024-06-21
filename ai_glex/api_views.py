@@ -153,10 +153,12 @@ class TermUploadView(viewsets.ModelViewSet):
             print("Exception1-->", e)
 
     def list(self, request):
-        task = request.GET.get('task')
+        task = request.GET.get('task',None)
+        if not task:
+            return Response({'msg':'Need Task id'})
         job = Task.objects.get(id=task).job
-        # word_choice = True if job.project.project_type_id == 10 else False
-        # print("WordChoice----------->",word_choice)
+        word_choice = True if job.project.project_type_id == 10 else False
+        print("WordChoice----------->",word_choice)
         project_name = job.project.project_name
         queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
         source_language = str(job.source_language)
@@ -166,8 +168,8 @@ class TermUploadView(viewsets.ModelViewSet):
         additional_info = [{'project_name':project_name,'source_language':source_language,
                             'target_language':target_language,'edit_allowed':edit_allow}]
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        # if word_choice:
-        #     get_terms_mt(task,pagin_tc)
+        if word_choice:
+            get_terms_mt(task,pagin_tc)
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
         response.data['additional_info'] = additional_info
@@ -177,9 +179,9 @@ class TermUploadView(viewsets.ModelViewSet):
     def create(self, request):
         user = self.request.user
         task = request.POST.get('task')
-        job = Task.objects.get(id=task).job
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
+        job = Task.objects.get(id=task).job
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
         if edit_allow == False:
