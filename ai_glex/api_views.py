@@ -322,43 +322,43 @@ def tbx_write(request,task_id):
 
 
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def glossaries_list(request,project_id):
-    '''
-    This function is to list the glossaries(exclude the empty one) which matches the given project's source and target
-    languages and returns GlossaryListSerializer data.
-    '''
-    project = Project.objects.get(id=project_id)
-    target_languages = project.get_target_languages
-    user = request.user.team.owner if request.user.team else request.user
-    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
-                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
-                .filter(project_jobs_set__target_language__language__in = target_languages)\
-                .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct().order_by('-id')
-    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
-    return Response(serializer.data)
-
-
 # @api_view(['GET',])
 # @permission_classes([IsAuthenticated])
 # def glossaries_list(request,project_id):
+#     '''
+#     This function is to list the glossaries(exclude the empty one) which matches the given project's source and target
+#     languages and returns GlossaryListSerializer data.
+#     '''
 #     project = Project.objects.get(id=project_id)
-#     option = request.GET.get('option')
-#     user = request.user.team.owner if request.user.team else request.user
-#     if option == 'glossary':
-#         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
-#     else:
-#         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
 #     target_languages = project.get_target_languages
-#     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+#     user = request.user.team.owner if request.user.team else request.user
+#     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
 #                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
 #                 .filter(project_jobs_set__target_language__language__in = target_languages)\
 #                 .filter(glossary_project__term__isnull=False)\
 #                 .exclude(id=project.id).distinct().order_by('-id')
 #     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
 #     return Response(serializer.data)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def glossaries_list(request,project_id):   ###### this function is for wordchoise option list select
+    project = Project.objects.get(id=project_id)
+    option = request.GET.get('option')
+    user = request.user.team.owner if request.user.team else request.user
+    if option == 'glossary':
+        queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
+    else:
+        queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
+    target_languages = project.get_target_languages
+    queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
+                .filter(project_jobs_set__target_language__language__in = target_languages)\
+                .filter(glossary_project__term__isnull=False)\
+                .exclude(id=project.id).distinct().order_by('-id')
+    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
