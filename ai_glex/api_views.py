@@ -520,9 +520,10 @@ def adding_term_to_glossary_from_workspace(request):
         serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
         if serializer.is_valid():
             serializer.save()
-            gloss_selected_check = GlossarySelected.objects.filter(project__id=,project_idglossary=glossary)
+            gloss_selected_check = GlossarySelected.objects.filter(project__id=project_id,glossary=glossary)
+
             if not gloss_selected_check:
-                GlossarySelected.objects.create(project_id=project_id.project,glossary=glossary)
+                GlossarySelected.objects.create(project_id=project_id,glossary=glossary)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
