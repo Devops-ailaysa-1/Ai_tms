@@ -406,10 +406,12 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
+
     '''
     This function is to search user_input(segment source) against MYGlossary and TermsModel 
     and returns the match if any.
     '''
+
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
@@ -497,15 +499,20 @@ def adding_term_to_glossary_from_workspace(request):
     '''
     This function is to add terms from workspace to glossary if glossary id is given, else it will save it in default glossary.
     Now it is changed to MyGlossaryView Post method.
+
+
+    Note for word choice:
+    
+    need to check project_id and gloss id id while adding terms in termmodel 
+    for wordchoise if not created for this case please create , ignore if already selected 
+    
     '''
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
-    print("sl_term-->",sl_term)
-    print("tl_term-->",tl_term)
-    print("doc_id-->",doc_id)
+    project_id = doc.project
     user = request.user.team.owner if request.user.team else request.user
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
@@ -513,13 +520,16 @@ def adding_term_to_glossary_from_workspace(request):
         serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
         if serializer.is_valid():
             serializer.save()
+            gloss_selected_check = GlossarySelected.objects.filter(project__id=,project_idglossary=glossary)
+            if not gloss_selected_check:
+                GlossarySelected.objects.create(project_id=project_id.project,glossary=glossary)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
         data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
+                "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
                  "created_by":request.user.id}
-        print("data--->",data)
+        
         serializer = MyGlossarySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
