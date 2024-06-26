@@ -527,7 +527,9 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
-
+        
+        task = Task.objects.get(job=doc.job)
+        
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
