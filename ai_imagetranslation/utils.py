@@ -550,7 +550,7 @@ class SDXL:
 
 
 
-
+from ai_openai.serializers import lang_detector
 
  
 
@@ -562,6 +562,7 @@ def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_pr
     sd_instance=StableDiffusionAPI.objects.get(id=ins_id)
     sdxl = SDXL(api_key=SEGMIND)
     prompt = sd_instance.prompt
+    
     width = sd_instance.width
     height = sd_instance.height
     try:
