@@ -550,11 +550,6 @@ class SDXL:
 
 
 
-from ai_openai.serializers import lang_detector
-
- 
-
-
 @task(queue='default')
 def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_prompt
     # import segmind

@@ -21,8 +21,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from .utils import get_consumable_credits_for_openai_text_generator
-from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 from googletrans import Translator
