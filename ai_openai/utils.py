@@ -160,7 +160,7 @@ def get_summarize(text,bb_instance,lang):
     from .serializers import AiPromptSerializer
     from ai_openai.serializers import openai_token_usage
     from ai_workspace_okapi.utils import get_translation
-    from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+    from ai_workspace.api_views import get_consumable_credits_for_text
 
     if lang != 'en':
         consumable_credits_for_article_gen = get_consumable_credits_for_text(text,'en',lang)
