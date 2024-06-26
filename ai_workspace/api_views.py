@@ -750,10 +750,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
             self.paginator.page_size = 10  ### pagination changed to 10 for Din
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
-                         context={'request': request,'user_1':user_1})
-        else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
+            # serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
+                        #  context={'request': request,'user_1':user_1})     
+        # else:
+        ## the above code is commanded for standard project for din
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         return  response
