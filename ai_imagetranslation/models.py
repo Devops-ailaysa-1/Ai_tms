@@ -162,6 +162,10 @@ class StableDiffusionAPI(models.Model):
     model_name=models.CharField(max_length=200,blank=True,null=True)
     prompt=models.CharField(max_length=3000,blank=True,null=True)
     negative_prompt=models.CharField(max_length=3000,blank=True,null=True)
+
+    prompt_mt = models.CharField(max_length=3000,blank=True,null=True)
+    negative_prompt_mt = models.CharField(max_length=3000,blank=True,null=True)
+
     style=models.CharField(max_length=100,blank=True,null=True)
     height=models.IntegerField(blank=True,null=True)
     width=models.IntegerField(blank=True,null=True)
@@ -241,8 +245,9 @@ class ImageStyleSD(models.Model):
     image=models.FileField(upload_to="custom_image_gen",blank=True,null=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
-    default_prompt=models.CharField(max_length=700,blank=True,null=True)
-    negative_prompt=models.CharField(max_length=700,blank=True,null=True)
+    default_prompt = models.CharField(max_length=700,blank=True,null=True)
+    negative_prompt = models.CharField(max_length=700,blank=True,null=True)
+
 
 
 class Color(models.Model):

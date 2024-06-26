@@ -107,6 +107,8 @@ from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt_sent
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 from .utils import get_general_prompt
+from ai_auth.tasks import replace_with_gloss
+
 
 logger = logging.getLogger('django')
 
@@ -950,6 +952,7 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+        task = Task.objects.get(job=doc.job)
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
@@ -960,10 +963,10 @@ class MT_RawAndTM_View(views.APIView):
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############
-                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                #translation = replace_with_gloss(seg.source,translation_original,task)
+                translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -993,7 +996,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        # task = Task.objects.get(document=doc)
+        task = Task.objects.get(document=doc)
 
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
@@ -1028,9 +1031,9 @@ class MT_RawAndTM_View(views.APIView):
 
             # Updating raw translation of split segments
             if mt_raw_split:
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #translation = replace_with_gloss(split_seg.source,translation_original,task)
+                translation = replace_with_gloss(split_seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1038,9 +1041,9 @@ class MT_RawAndTM_View(views.APIView):
             # Creating new MT raw for split segment
             else:
                 print("Creating new MT raw for split segment")
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #translation = replace_with_gloss(split_seg.source,translation_original,task)
+                translation = replace_with_gloss(split_seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -1194,7 +1197,6 @@ class MT_RawAndTM_View(views.APIView):
 
             # For split segment
             else:
-
                 tm_data = self.get_tm_data(request, segment_id)
 
                 if tm_data and (mt_uc == False):

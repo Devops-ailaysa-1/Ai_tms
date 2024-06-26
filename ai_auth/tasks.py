@@ -36,7 +36,6 @@ import calendar
 from ai_workspace.models import ExpressTaskHistory
 from celery.exceptions import MaxRetriesExceededError
 from ai_auth.signals import purchase_unit_renewal
-
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -819,6 +818,7 @@ def weighted_count_update(receiver,sender,assignment_id):
 
 OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
+import openai
 def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
@@ -901,9 +901,9 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                        # mt = replace_with_gloss(seg.source,raw_mt,task)
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        mt = replace_with_gloss(seg.source,raw_mt,task)
+                        # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                         tags = get_tags(seg)
                         if tags:
                             seg.target = mt + tags
@@ -932,9 +932,9 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    # mt = replace_with_gloss(seg.source,raw_mt,task)
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    mt = replace_with_gloss(seg.source,raw_mt,task)
+                    # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
