@@ -37,7 +37,7 @@ from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_sear
 from ai_openai.models import BookBody
 from ai_staff.models import PromptStartPhrases
 from .utils import get_summarize
-
+from ai_workspace.api_views import get_consumable_credits_for_text
 
 class AiPromptViewset(viewsets.ViewSet):
     '''

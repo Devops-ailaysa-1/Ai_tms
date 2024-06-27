@@ -816,7 +816,7 @@ def weighted_count_update(receiver,sender,assignment_id):
 
 ############################ For wordchoice ############################################
 
-OPEN_AI_GPT_MODEL = "gpt-4" #"gpt-3.5-turbo-0125"
+OPEN_AI_GPT_MODEL = "gpt-4o" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
 import openai
 def replace_mt_with_gloss(src,raw_mt,gloss):
@@ -825,6 +825,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss):
         pr = prompt_phrase.format(src,raw_mt,gloss)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
+        print("Replaced---->>",res)
     except:
         res = raw_mt
     return res  
