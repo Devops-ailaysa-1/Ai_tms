@@ -940,10 +940,6 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
-                
-                # replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
-                # mt_raw.mt_raw = replaced
-                # mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
@@ -965,7 +961,7 @@ class MT_RawAndTM_View(views.APIView):
                 #############   Update   ############
                 translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
@@ -980,7 +976,7 @@ class MT_RawAndTM_View(views.APIView):
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
                     mt_raw_serlzr.save()
-                    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
