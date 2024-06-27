@@ -539,9 +539,9 @@ def adding_term_to_glossary_from_workspace(request):
             data = serializer.data
             project_id = data.get('id')
             glossary_id = data.get('glossary_id')
+            TermsModel.objects.create(sl_term=sl_term,tl_term=tl_term,job=doc.job,glossary_id=glossary_id)
             GlossarySelected.objects.create(project_id=project_id,glossary_id=glossary_id)
- 
-        
+
         data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
                 "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
                  "created_by":request.user.id}
