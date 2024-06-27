@@ -515,7 +515,6 @@ def adding_term_to_glossary_from_workspace(request):
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
     project_id = doc.project
-    user = request.user.team.owner if request.user.team else request.user
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
         job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
@@ -525,14 +524,28 @@ def adding_term_to_glossary_from_workspace(request):
             gloss_selected_check = GlossarySelected.objects.filter(project__id=project_id,glossary=glossary)
 
             if not gloss_selected_check:
-                GlossarySelected.objects.create(project_id=project_id.project,glossary=glossary)
+                GlossarySelected.objects.create(project_id=project_id,glossary=glossary)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        from ai_glex.serializers import GlossarySetupSerializer
+        user = request.user
+        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+        project_ins_create = {'source_language':[doc.job.source_language.id],'target_languages':[doc.job.target_language.id]}
+        serializer = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},context={"request": request,'user_1':user_1})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            data = serializer.data
+            project_id = data.get('id')
+            glossary_id = data.get('glossary_id')
+            GlossarySelected.objects.create(project_id=project_id,glossary_id=glossary_id)
+ 
+        
         data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
                 "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
                  "created_by":request.user.id}
-        
+ 
         serializer = MyGlossarySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
