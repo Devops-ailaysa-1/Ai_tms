@@ -809,6 +809,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             print("normal")
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
+        
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()

@@ -820,8 +820,13 @@ OPEN_AI_GPT_MODEL = "gpt-4o" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
 import openai
 def replace_mt_with_gloss(src,raw_mt,gloss):
+    print("src---->",src)
+    print("raw_mt---->",raw_mt)
+    print("gloss-->",gloss)
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
+        print("---->prompt_phrase",prompt_phrase)
+        
         pr = prompt_phrase.format(src,raw_mt,gloss)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
