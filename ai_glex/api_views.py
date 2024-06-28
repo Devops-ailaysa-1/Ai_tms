@@ -528,29 +528,38 @@ def adding_term_to_glossary_from_workspace(request):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
-        from ai_workspace.serializers import ProjectQuickSetupSerializer
         from ai_glex.serializers import GlossarySetupSerializer
+        from ai_workspace.api_views import AddStoriesView
         user = request.user
-        user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-        project_ins_create = {'source_language':[doc.job.source_language.id],'target_languages':[doc.job.target_language.id]}
-        serializer = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},context={"request": request,'user_1':user_1})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            data = serializer.data
-            project_id = data.get('id')
-            glossary_id = data.get('glossary_id')
-            TermsModel.objects.create(sl_term=sl_term,tl_term=tl_term,job=doc.job,glossary_id=glossary_id)
-            GlossarySelected.objects.create(project_id=project_id,glossary_id=glossary_id)
+        din = AddStoriesView.check_user_dinamalar(user)
 
-        data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
-                 "created_by":request.user.id}
- 
-        serializer = MyGlossarySerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not din:
+            print("not a din user")
+            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            project_ins_create = {'source_language':[doc.job.source_language.id],'target_languages':[doc.job.target_language.id]}
+            serializer = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},context={"request": request,'user_1':user_1})
+            
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                data = serializer.data
+                project_id = data.get('id')
+                glossary_id = data.get('glossary_id')
+                term_instance = TermsModel.objects.create(sl_term=sl_term,tl_term=tl_term,glossary_id=glossary_id,job=doc.job)
+                GlossarySelected.objects.create(project_id=project_id,glossary_id=glossary_id)
+                serializer = TermsSerializer(term_instance)
+                return Response(serializer.data)
+
+        else:
+            print("din user")
+            data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+                    "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
+                    "created_by":user.id}
+    
+            serializer = MyGlossarySerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -950,7 +959,7 @@ def get_word_mt(request):
         return Response(GlossaryMtSerializer(tt).data,status=201)
 
     else:
-        return Response({"res": "Insufficient credits"}, status=424)
+        return Response({"res": "Insufficient credits"}, status=400)
 
 
 class WordChoiceListView(viewsets.ViewSet):
