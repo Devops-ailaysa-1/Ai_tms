@@ -411,7 +411,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	file_translate = serializers.BooleanField(required=False,allow_null=True)
-	glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
+	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 
 	class Meta:
 		model = Project
@@ -420,7 +420,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','glossary_id')
+					'file_translate')#'glossary_id')
 
 	def run_validation(self, data):
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':

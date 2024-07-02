@@ -959,10 +959,10 @@ class MT_RawAndTM_View(views.APIView):
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############
-                translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                translation = replace_with_gloss(seg.source,translation_original,task)
+                # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                # translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -976,7 +976,7 @@ class MT_RawAndTM_View(views.APIView):
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
                     mt_raw_serlzr.save()
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
@@ -1027,9 +1027,9 @@ class MT_RawAndTM_View(views.APIView):
 
             # Updating raw translation of split segments
             if mt_raw_split:
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(split_seg.source,translation_original,task)
+                # translation = replace_with_gloss(split_seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1037,9 +1037,9 @@ class MT_RawAndTM_View(views.APIView):
             # Creating new MT raw for split segment
             else:
                 print("Creating new MT raw for split segment")
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(split_seg.source,translation_original,task)
+                # translation = replace_with_gloss(split_seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -1550,7 +1550,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.prefetch_related('file','job__source_language','job__target_language').first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        
+        print("task_data---->>>",task_data)
         DocumentViewByTask.correct_fields(task_data)
         
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"

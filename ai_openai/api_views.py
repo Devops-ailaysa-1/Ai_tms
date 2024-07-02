@@ -1311,7 +1311,6 @@ def generate_chapter(request):
                             
                                     if initial_credit >= consumable:
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                                    print(blog_article_trans)
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' 
@@ -1327,10 +1326,8 @@ def generate_chapter(request):
                                          
                                         if initial_credit >= consumable:
                                             blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                                        print(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
-                                        print(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                                     str_cont='' 

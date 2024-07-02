@@ -647,10 +647,8 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            print("news----->")
             queryset = queryset.filter(project_type_id=8) 
         elif value == "word_choices":
-            print("word_choices----->")
             queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
         return queryset
@@ -677,7 +675,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         project_type = json.loads(self.request.POST.get('project_type','1'))
         if project_type == 3 or project_type == 10:
         # if project_type == 3:
-            print("Gloss project")
             return GlossarySetupSerializer
         print("project")
         return ProjectQuickSetupSerializer
@@ -738,7 +735,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     return Response(serializer.data)
         
     def list(self, request, *args, **kwargs):
-        print("inside list")
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
         user_1 = self.get_user()
@@ -798,7 +794,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         # project create from pdf 
         elif pdf_obj_id:
-            print("pdf_obj_id")
             files_ = request.FILES.getlist('files')
             file_obj = get_file_from_pdf(pdf_obj_id,None)
             files_.append(file_obj)
@@ -806,14 +801,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         
         # normal create
         else:
-            print("normal")
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
         
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            print("serlzr--->",serlzr.data)
             pr = Project.objects.get(id=serlzr.data.get('id'))
             #checks for pre-translation option and initiates the celery task
             if pr.pre_translate == True:
