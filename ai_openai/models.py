@@ -7,6 +7,7 @@ from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,Aila
                               BackMatter,FrontMatter,BodyMatter,Levels,Genre,)
 
 from django.contrib.postgres.fields import ArrayField
+from ai_staff.models import Levels
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -326,8 +327,8 @@ class NewsTranscribeResult(models.Model):
     news_transcribe = models.ForeignKey(NewsTranscribe,on_delete=models.CASCADE,related_name='news_transcribe')
     transcribe_result = models.TextField(null=True,blank=True)
     transcribed_news_report = models.TextField(null=True,blank=True)
-    
-    
+
+
 
 # class NewsPrompt(models.Model):
 #     name = models.CharField(max_length = 200, null=True, blank=True)

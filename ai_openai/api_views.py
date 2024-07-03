@@ -1508,5 +1508,3 @@ def customize_refer(customize,search_term,lang):
 
 #     return Response({"src":src_lang,"tar":trg_lang})
 
-
-
