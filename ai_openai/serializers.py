@@ -1544,4 +1544,3 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
         pass
 
 
- 

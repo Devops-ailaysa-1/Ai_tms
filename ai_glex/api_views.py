@@ -446,11 +446,13 @@ def glossary_search(request):
            res.extend(out)
     else:
         res=None
-    res_1 = [{"glossary": key, "data": [g  for g in group]} for key, group in groupby(res, lambda x: x['name'])] if res else None
-    return JsonResponse({'res':res_1},safe=False)
+    # res_1 = [{"glossary": key, "data": [g  for g in group]} for key, group in groupby(res, lambda x: x['name'])] if res else None
+    # return JsonResponse({'res':res_1},safe=False)    ### commad for word choice for mygloss list
+    return JsonResponse({'res':None},safe=False)
 
 class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
+    
     '''
     This view is to get_mt for source term inside glossary workspace for MT Button. 
     This is similar to get_term_mt, try to merge it.
