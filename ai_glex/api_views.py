@@ -157,8 +157,8 @@ class TermUploadView(viewsets.ModelViewSet):
         if not task:
             return Response({'msg':'Need Task id'})
         job = Task.objects.get(id=task).job
-        word_choice = True if job.project.project_type_id == 10 else False
-        print("WordChoice----------->",word_choice)
+        # word_choice = True if job.project.project_type_id == 10 else False
+        # print("WordChoice----------->",word_choice)
         project_name = job.project.project_name
         queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
         source_language = str(job.source_language)
@@ -168,8 +168,8 @@ class TermUploadView(viewsets.ModelViewSet):
         additional_info = [{'project_name':project_name,'source_language':source_language,
                             'target_language':target_language,'edit_allowed':edit_allow}]
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        if word_choice:
-            get_terms_mt(task,pagin_tc)
+        # if word_choice:
+        #     get_terms_mt(task,pagin_tc)
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
         response.data['additional_info'] = additional_info
@@ -522,11 +522,13 @@ def adding_term_to_glossary_from_workspace(request):
         if serializer.is_valid():
             serializer.save()
             gloss_selected_check = GlossarySelected.objects.filter(project__id=project_id,glossary=glossary)
-
             if not gloss_selected_check:
                 GlossarySelected.objects.create(project_id=project_id,glossary=glossary)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    
     else:
         from ai_glex.serializers import GlossarySetupSerializer
         from ai_workspace.api_views import AddStoriesView

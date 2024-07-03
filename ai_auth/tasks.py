@@ -820,17 +820,11 @@ OPEN_AI_GPT_MODEL = "gpt-4o" #"gpt-3.5-turbo-0125"
 from ai_staff.models import InternalFlowPrompts
 import openai
 def replace_mt_with_gloss(src,raw_mt,gloss):
-    print("src---->",src)
-    print("raw_mt---->",raw_mt)
-    print("gloss-->",gloss)
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
-        print("---->prompt_phrase",prompt_phrase)
-        
         pr = prompt_phrase.format(src,raw_mt,gloss)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
-        print("Replaced---->>",res)
     except:
         res = raw_mt
     return res  
@@ -843,9 +837,9 @@ def replace_with_gloss(src,raw_mt,task):
     final_mt = raw_mt
     proj = task.job.project
     word_choice = False
-    if GlossarySelected.objects.filter(project = proj,glossary__project__project_type_id=10).exists():
+    if GlossarySelected.objects.filter(project = proj, glossary__project__project_type_id=10).exists():
         word_choice = True
-    if word_choice:
+    # if word_choice:
         source_words,gloss = check_source_words(src,task)
         if source_words:
             # all_target_replaced,gloss = target_source_words(raw_mt,task)
@@ -907,9 +901,9 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                        mt = replace_with_gloss(seg.source,raw_mt,task)
-                        # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        # mt = replace_with_gloss(seg.source,raw_mt,task)
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                         tags = get_tags(seg)
                         if tags:
                             seg.target = mt + tags
@@ -938,9 +932,9 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    mt = replace_with_gloss(seg.source,raw_mt,task)
-                    # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    # mt = replace_with_gloss(seg.source,raw_mt,task)
+                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
