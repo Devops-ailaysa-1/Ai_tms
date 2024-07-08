@@ -1508,3 +1508,17 @@ def customize_refer(customize,search_term,lang):
 
 #     return Response({"src":src_lang,"tar":trg_lang})
 
+from ai_openai.models import LangscapeOcrPR
+from ai_openai.serializers import LangscapeOcrPRSerializer
+
+class LangscapeOcrPRViewset(viewsets.ViewSet):
+    def create(self, request):
+        main_document = request.FILES.get('main_document')
+        prof_reading_doc = request.FILES.get('prof_reading_doc')
+        print("request.data--->",request.data)
+        serializer = LangscapeOcrPRSerializer(data={**request.data,'user':request.user.id,'main_document':main_document,
+                                                    'prof_reading_doc':prof_reading_doc},context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  

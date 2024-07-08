@@ -18,6 +18,7 @@ router.register(r'bookbackmatter',api_views.BookBMViewset ,basename='ai_book_bm'
 router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename='ai_writer_settings')
 router.register(r'bookbodydetail',api_views.BookBodyDetailsViewset ,basename='ai_bookbody_det') 
 router.register(r'news_transcribe',api_views.NewsTranscribeViewset ,basename='news_transcribe')
+router.register(r'ocr-proof-reading',api_views.LangscapeOcrPRViewset ,basename='langscape-ocr-func')
 urlpatterns = router.urls
 
  

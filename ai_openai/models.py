@@ -353,3 +353,16 @@ class NewsTranscribeResult(models.Model):
  
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
+
+
+def user_directory_langscape_ocr_document(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
+
+def user_directory_langscape_ocr_PR_document(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
+
+class LangscapeOcrPR(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    main_document = models.FileField(upload_to=user_directory_langscape_ocr_document,null=True,blank=True)
+    prof_reading_doc = models.FileField(upload_to=user_directory_langscape_ocr_PR_document,null=True,blank=True)
+    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='doc_for_ocr')
