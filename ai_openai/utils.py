@@ -375,7 +375,6 @@ def set_font_to_times_new_roman(doc):
 ######  Tamil spell chk from labs ###########
  
 def tamil_spelling_check(text):
-    print("--->",settings_env.TAMIL_SPELLCHECKER_URL)
     payload = {'text': text,'lang_code': 'ta'}
     response = requests.request("POST", settings_env.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
     return response.json()

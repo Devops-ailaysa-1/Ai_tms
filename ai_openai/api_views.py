@@ -1533,7 +1533,12 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
 
 
     def list(self, request):
+        paginate = request.GET.get('pagination',True)
         queryset = LangscapeOcrPR.objects.all().order_by('-id')
+        if paginate=='False':
+            serializer = LangscapeOcrPRSerializer(queryset,many=True)
+            return Response(serializer.data)
+
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = LangscapeOcrPRSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
