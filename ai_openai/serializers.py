@@ -1585,6 +1585,7 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
                                         html_data=extracted_text,ai_user=instance.user)
                 instance.document = document
                 instance.save()
+                print("insta-->",instance)
 
         instance.save()    
         return instance
