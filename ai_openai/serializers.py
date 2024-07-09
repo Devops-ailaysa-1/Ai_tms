@@ -1544,3 +1544,22 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
         pass
 
 
+from ai_openai.models import LangscapeOcrPR
+
+class LangscapeOcrPRSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = LangscapeOcrPR
+        fields = "__all__"
+
+
+    def create(self, validated_data):
+        if not validated_data.get("main_document",None) and not validated_data.get("prof_reading_doc",None):
+            raise serializers.ValidationError({'msg':'Need main_document and prof reading doc'})
+        
+        user = self.context.get('request').user
+        validated_data['user'] = user
+ 
+        instance = LangscapeOcrPR.objects.create(**validated_data)
+
+        return instance
