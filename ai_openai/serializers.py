@@ -1545,7 +1545,8 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
 
 
 from ai_openai.models import LangscapeOcrPR
-
+import os,docx2txt
+from ai_workspace.models import WriterProject,MyDocuments,DocumentType
 class LangscapeOcrPRSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -1554,19 +1555,37 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
+
         if not validated_data.get("main_document",None):
             raise serializers.ValidationError({'msg':'Need main_document'})
         
         user = self.context.get('request').user
         validated_data['user'] = user
         instance = LangscapeOcrPR.objects.create(**validated_data)
+        instance.file_name = os.path.basename(instance.main_document.path)
+        instance.save()
         return instance
     
 
     def update(self, instance, validated_data):
         if validated_data.get('prof_reading_doc',None):
             instance.prof_reading_doc = validated_data.get('prof_reading_doc')
-        if validated_data.get('document',None):
-            instance.document = validated_data.get('document')
+            instance.save()
+            prof_reading_doc_path = instance.prof_reading_doc.path
+ 
+            if prof_reading_doc_path.endswith(('.doc', '.docx')):
+                extracted_text = docx2txt.process(prof_reading_doc_path)
+                if instance.document:
+                    instance.document.delete()
+                    print("exis document delete")
+
+                writer_obj = WriterProject.objects.create(ai_user_id = instance.user.id)
+                document_type = DocumentType.objects.get(id = 3) ### for spell check writer
+                document = MyDocuments.objects.create(project = writer_obj,document_type=document_type,
+                                        html_data=extracted_text,ai_user=instance.user)
+                instance.document = document
+                instance.save()
+                print("insta-->",instance)
+
         instance.save()    
         return instance

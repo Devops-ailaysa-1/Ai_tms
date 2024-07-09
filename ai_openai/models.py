@@ -363,6 +363,7 @@ def user_directory_langscape_ocr_PR_document(instance, filename):
 
 class LangscapeOcrPR(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    file_name = models.CharField(max_length = 150, null=True, blank=True)
     main_document = models.FileField(upload_to=user_directory_langscape_ocr_document,null=True,blank=True)
     prof_reading_doc = models.FileField(upload_to=user_directory_langscape_ocr_PR_document,null=True,blank=True)
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='doc_for_ocr')
