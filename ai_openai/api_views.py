@@ -1508,10 +1508,19 @@ def customize_refer(customize,search_term,lang):
 
 #     return Response({"src":src_lang,"tar":trg_lang})
 
+from ai_openai.utils import tamil_spelling_check
 from ai_openai.models import LangscapeOcrPR
 from ai_openai.serializers import LangscapeOcrPRSerializer
 
-class LangscapeOcrPRViewset(viewsets.ViewSet):
+class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
+    page_size=20
+
+    def get_object(self, pk):
+        try:
+            return LangscapeOcrPR.objects.get(id=pk)
+        except BookBodyDetails.DoesNotExist:
+            raise Http404
+        
     def create(self, request):
         main_document = request.FILES.get('main_document')
         prof_reading_doc = request.FILES.get('prof_reading_doc')
@@ -1521,4 +1530,37 @@ class LangscapeOcrPRViewset(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-      
+
+
+    def list(self, request):
+        queryset = LangscapeOcrPR.objects.all().order_by('-id')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = LangscapeOcrPRSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = LangscapeOcrPRSerializer(obj)
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        main_document = request.FILES.get('main_document',None)
+        prof_reading_doc = request.FILES.get('prof_reading_doc',None)
+        obj =self.get_object(pk)
+        serializer = LangscapeOcrPRSerializer(obj,data={**request.data,'user':request.user.id,'main_document':main_document,
+                                                    'prof_reading_doc':prof_reading_doc},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+
+
+
+@api_view(["POST"])
+def tamil_spell_chk(request):
+    text = request.POST.get('text')
+    if not text:
+        return Response({'msg':'need text'},status=status.HTTP_400_BAD_REQUEST)
+    result = tamil_spelling_check(text)
+    return Response(result,status=status.HTTP_200_OK)

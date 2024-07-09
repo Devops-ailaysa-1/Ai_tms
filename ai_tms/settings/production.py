@@ -398,3 +398,8 @@ TEAM_PLANS = os.getenv("TEAM_PLANS", "").split(',')
 #### Ailaysa
 
 AILAYSA_EMAILS = os.environ.get("AILAYSA_EMAILS")
+
+
+########TAMIL_SPELLCHECKER_URL
+
+TAMIL_SPELLCHECKER_URL = os.getenv('TAMIL_SPELLCHECKER_URL')
