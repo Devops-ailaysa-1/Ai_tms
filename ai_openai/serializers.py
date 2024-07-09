@@ -1554,12 +1554,19 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        if not validated_data.get("main_document",None) and not validated_data.get("prof_reading_doc",None):
-            raise serializers.ValidationError({'msg':'Need main_document and prof reading doc'})
+        if not validated_data.get("main_document",None):
+            raise serializers.ValidationError({'msg':'Need main_document'})
         
         user = self.context.get('request').user
         validated_data['user'] = user
- 
         instance = LangscapeOcrPR.objects.create(**validated_data)
+        return instance
+    
 
+    def update(self, instance, validated_data):
+        if validated_data.get('prof_reading_doc',None):
+            instance.prof_reading_doc = validated_data.get('prof_reading_doc')
+        if validated_data.get('document',None):
+            instance.document = validated_data.get('document')
+        instance.save()    
         return instance

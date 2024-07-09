@@ -1,13 +1,10 @@
 import json,logging,mimetypes,os,openai,asyncio, math
-import re,requests,time,urllib.request
-from django.contrib.auth import settings
-from django.http import HttpResponse
-from ai_auth.models import UserCredits
-from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
+import re,requests
 from ai_staff.models import Languages,LanguagesLocale
-from django.db.models import Q
+
 from io import BytesIO
 from PIL import Image
+from django.conf import settings as settings_env
 from wiktionaryparser import WiktionaryParser
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
@@ -373,3 +370,12 @@ def set_font_to_times_new_roman(doc):
                 run.font.color.rgb = RGBColor(0, 0, 0)
             else:
                 run.font.size = Pt(11)
+
+
+######  Tamil spell chk from labs ###########
+ 
+def tamil_spelling_check(text):
+    print("--->",settings_env.TAMIL_SPELLCHECKER_URL)
+    payload = {'text': text,'lang_code': 'ta'}
+    response = requests.request("POST", settings_env.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
+    return response.json()
