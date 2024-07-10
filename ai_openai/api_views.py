@@ -1582,18 +1582,18 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
         return Response(serializer.errors,status=400)
 
     def destroy(self,request,pk):
-        try:
+        try:    
             obj = MyDocuments.objects.get(id=pk)
             langsc_ocr = obj.doc_for_ocr.last()
 
             if langsc_ocr.main_document:
-                os.remove(langsc_ocr.main_document)
+                os.remove(langsc_ocr.main_document.path)
             if langsc_ocr.ocr_result:
-                os.remove(langsc_ocr.ocr_result)
+                os.remove(langsc_ocr.ocr_result.path)
             langsc_ocr.delete()
             obj.delete()
             return Response({'msg':'deleted successfully'},status=200)
-        
+    
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
 
