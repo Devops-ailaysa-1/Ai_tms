@@ -1555,37 +1555,77 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-
-        if not validated_data.get("main_document",None):
-            raise serializers.ValidationError({'msg':'Need main_document'})
-        
+ 
         user = self.context.get('request').user
         validated_data['user'] = user
         instance = LangscapeOcrPR.objects.create(**validated_data)
-        instance.file_name = os.path.basename(instance.main_document.path)
+        if validated_data.get('ocr_result',None):
+
+            instance.file_name = os.path.basename(instance.ocr_result.path)
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+
         instance.save()
         return instance
     
+    def ocr_result_extract_to_docx(self,instance):
+        ocr_result_path = instance.ocr_result.path
 
-    def update(self, instance, validated_data):
-        if validated_data.get('prof_reading_doc',None):
-            instance.prof_reading_doc = validated_data.get('prof_reading_doc')
-            instance.save()
-            prof_reading_doc_path = instance.prof_reading_doc.path
- 
-            if prof_reading_doc_path.endswith(('.doc', '.docx')):
-                extracted_text = docx2txt.process(prof_reading_doc_path)
-                if instance.document:
-                    instance.document.delete()
-                    print("exis document delete")
-
+        if ocr_result_path.endswith(('.doc', '.docx')):
+            extracted_text = docx2txt.process(ocr_result_path)
+            print("extracted_text",extracted_text)
+            if instance.document:
+                instance.document.html_data = extracted_text
+                instance.document.save()
+            else:
                 writer_obj = WriterProject.objects.create(ai_user_id = instance.user.id)
                 document_type = DocumentType.objects.get(id = 3) ### for spell check writer
                 document = MyDocuments.objects.create(project = writer_obj,document_type=document_type,
                                         html_data=extracted_text,ai_user=instance.user)
                 instance.document = document
-                instance.save()
-                print("insta-->",instance)
+                document.doc_name = instance.file_name
+                document.save()
+            instance.save()
+        return instance
+
+    
+    def update(self, instance, validated_data):
+ 
+        if validated_data.get('ocr_result',None):
+            instance.ocr_result = validated_data.get('ocr_result')
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+            instance.save()
+
+        if validated_data.get('main_document',None):
+            instance.main_document = validated_data.get('main_document')
+            instance.save()
+
+        if validated_data.get('file_name',None):
+            instance.file_name = validated_data.get('file_name')
 
         instance.save()    
+        return instance
+    
+
+class MyDocumentOCRSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyDocuments
+        fields = "__all__"
+
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        ocr_instance = instance.doc_for_ocr.last()
+        if ocr_instance and ocr_instance.main_document:
+            data["main_document"] = ocr_instance.main_document.url
+        return data
+    
+
+    def update(self, instance, validated_data):
+        if validated_data.get('html_data',None):
+            instance.html_data = validated_data.get('html_data')
+            instance.save()
+        print("instance",instance)
         return instance
