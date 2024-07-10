@@ -1562,10 +1562,8 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
         main_document = request.FILES.get('main_document',None)
         ocr_result = request.FILES.get('ocr_result',None)
         html_data = request.POST.get('html_data')
-        print("html_data",html_data)
-        
+
         document_instance = MyDocuments.objects.get(id=pk)
-        print(request.data)
         if html_data:
             ser = MyDocumentOCRSerializer(document_instance,data={**request.data,'html_data':html_data},partial=True)
             if ser.is_valid():
@@ -1583,7 +1581,21 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
 
+    def destroy(self,request,pk):
+        try:
+            obj = MyDocuments.objects.get(id=pk)
+            langsc_ocr = obj.doc_for_ocr.last()
 
+            if langsc_ocr.main_document:
+                os.remove(langsc_ocr.main_document)
+            if langsc_ocr.ocr_result:
+                os.remove(langsc_ocr.ocr_result)
+            langsc_ocr.delete()
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
 
 @api_view(["POST"])
 def tamil_spell_chk(request):
