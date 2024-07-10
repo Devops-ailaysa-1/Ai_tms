@@ -1510,24 +1510,29 @@ def customize_refer(customize,search_term,lang):
 
 from ai_openai.utils import tamil_spelling_check
 from ai_openai.models import LangscapeOcrPR
-from ai_openai.serializers import LangscapeOcrPRSerializer
-
+from ai_openai.serializers import LangscapeOcrPRSerializer,MyDocumentOCRSerializer
+from ai_workspace.serializers import MyDocumentSerializer
 class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
     page_size=20
 
     def get_object(self, pk):
         try:
             return LangscapeOcrPR.objects.get(id=pk)
-        except BookBodyDetails.DoesNotExist:
+        except LangscapeOcrPR.DoesNotExist:
             raise Http404
         
     def create(self, request):
         main_document = request.FILES.get('main_document')
-        prof_reading_doc = request.FILES.get('prof_reading_doc')
+        ocr_result = request.FILES.get('ocr_result')
         serializer = LangscapeOcrPRSerializer(data={**request.data,'user':request.user.id,'main_document':main_document,
-                                                    'prof_reading_doc':prof_reading_doc},context={'request':request})
+                                                    'ocr_result':ocr_result},context={'request':request})
         if serializer.is_valid():
             serializer.save()
+            slrz_id = serializer.data.get('document')
+            if slrz_id:
+                doc_instance = MyDocuments.objects.get(id = slrz_id)
+                serializer = MyDocumentOCRSerializer(doc_instance)
+ 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1547,16 +1552,34 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
         serializer = LangscapeOcrPRSerializer(obj)
+        slrz_id = serializer.data.get('document')
+        if slrz_id:
+            doc_instance = MyDocuments.objects.get(id = slrz_id)
+            serializer = MyDocumentOCRSerializer(doc_instance)
         return Response(serializer.data)
     
     def update(self,request,pk):
         main_document = request.FILES.get('main_document',None)
-        prof_reading_doc = request.FILES.get('prof_reading_doc',None)
-        obj =self.get_object(pk)
+        ocr_result = request.FILES.get('ocr_result',None)
+        html_data = request.POST.get('html_data')
+        print("html_data",html_data)
+        
+        document_instance = MyDocuments.objects.get(id=pk)
+        print(request.data)
+        if html_data:
+            ser = MyDocumentOCRSerializer(document_instance,data={**request.data,'html_data':html_data},partial=True)
+            if ser.is_valid():
+                ser.save()
+ 
+        obj = LangscapeOcrPR.objects.get(document = document_instance)
+
         serializer = LangscapeOcrPRSerializer(obj,data={**request.data,'user':request.user.id,'main_document':main_document,
-                                                    'prof_reading_doc':prof_reading_doc},partial=True)
+                                                    'ocr_result':ocr_result},partial=True)
+        
         if serializer.is_valid():
             serializer.save()
+            serializer = MyDocumentOCRSerializer(document_instance)
+                 
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
 
