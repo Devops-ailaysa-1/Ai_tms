@@ -1550,12 +1550,12 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
     def retrieve(self,request,pk):
-        obj =self.get_object(pk)
-        serializer = LangscapeOcrPRSerializer(obj)
-        slrz_id = serializer.data.get('document')
-        if slrz_id:
-            doc_instance = MyDocuments.objects.get(id = slrz_id)
-            serializer = MyDocumentOCRSerializer(doc_instance)
+        # obj =self.get_object(pk)
+        # serializer = LangscapeOcrPRSerializer(obj)
+        # slrz_id = serializer.data.get('document')
+        # if slrz_id:
+        doc_instance = MyDocuments.objects.get(id = pk)
+        serializer = MyDocumentOCRSerializer(doc_instance)
         return Response(serializer.data)
     
     def update(self,request,pk):
