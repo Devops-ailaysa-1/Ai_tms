@@ -1517,7 +1517,7 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
 
     def get_object(self, pk):
         try:
-            return LangscapeOcrPR.objects.get(id=pk)
+            return LangscapeOcrPR.objects.get(user=self.request.user,id=pk)
         except LangscapeOcrPR.DoesNotExist:
             raise Http404
         
@@ -1539,7 +1539,7 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
 
     def list(self, request):
         paginate = request.GET.get('pagination',True)
-        queryset = LangscapeOcrPR.objects.all().order_by('-id')
+        queryset = LangscapeOcrPR.objects.filter(user=request.user).order_by('-id')
         if paginate=='False':
             serializer = LangscapeOcrPRSerializer(queryset,many=True)
             return Response(serializer.data)
@@ -1569,7 +1569,7 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
             if ser.is_valid():
                 ser.save()
  
-        obj = LangscapeOcrPR.objects.get(document = document_instance)
+        obj = LangscapeOcrPR.objects.get(user=request.user,document = document_instance)
 
         serializer = LangscapeOcrPRSerializer(obj,data={**request.data,'user':request.user.id,'main_document':main_document,
                                                     'ocr_result':ocr_result},partial=True)
@@ -1583,7 +1583,7 @@ class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
 
     def destroy(self,request,pk):
         try:
-            obj = LangscapeOcrPR.objects.get(id = pk)
+            obj = LangscapeOcrPR.objects.get(user=request.user,id = pk)
 
             if obj.main_document:
                 os.remove(obj.main_document.path)
