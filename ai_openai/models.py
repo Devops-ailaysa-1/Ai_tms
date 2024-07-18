@@ -5,7 +5,9 @@ from ai_workspace.models import MyDocuments,Task,Project
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution,
                               BackMatter,FrontMatter,BodyMatter,Levels,Genre,)
+
 from django.contrib.postgres.fields import ArrayField
+from ai_staff.models import Levels
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -325,8 +327,8 @@ class NewsTranscribeResult(models.Model):
     news_transcribe = models.ForeignKey(NewsTranscribe,on_delete=models.CASCADE,related_name='news_transcribe')
     transcribe_result = models.TextField(null=True,blank=True)
     transcribed_news_report = models.TextField(null=True,blank=True)
-    
-    
+
+
 
 # class NewsPrompt(models.Model):
 #     name = models.CharField(max_length = 200, null=True, blank=True)
@@ -351,3 +353,18 @@ class NewsTranscribeResult(models.Model):
  
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
+
+
+def user_directory_langscape_ocr_document(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
+
+def user_directory_langscape_ocr_PR_document(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "audio_report_file",filename)
+
+class LangscapeOcrPR(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    file_name = models.CharField(max_length = 150, null=True, blank=True)
+    main_document = models.FileField(upload_to=user_directory_langscape_ocr_document,null=True,blank=True)
+    ocr_result = models.FileField(upload_to=user_directory_langscape_ocr_PR_document,null=True,blank=True)
+    document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='doc_for_ocr')
+    

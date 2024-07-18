@@ -38,7 +38,6 @@ from docx import Document
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
-from ai_openai.utils import get_prompt_chatgpt_turbo
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
@@ -107,10 +106,12 @@ def loader(file_id) -> None:
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
     texts = text_splitter.split_documents(data)
     embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
-
-    save_prest(texts, embeddings, persistent_dir,instance)
-    instance.vector_embedding_path = persistent_dir
-    instance.status = "SUCCESS"
+    try:
+        save_prest(texts, embeddings, persistent_dir,instance)
+        instance.vector_embedding_path = persistent_dir
+        instance.status = "SUCCESS" 
+    except:
+        instance.status = "ERROR"
     instance.save()
  
 
@@ -129,15 +130,10 @@ def save_prest(texts,embeddings,persistent_dir,instance):
     vector_db = None
 
 
-
-
 def querying_llm(llm , chain_type , chain_type_kwargs,similarity_document ,query):
     chain = load_qa_chain(llm, chain_type=chain_type ,prompt=chain_type_kwargs) #,chain_type_kwargs=chain_type_kwargs
     res = chain({"input_documents":similarity_document, "question": query})
     return  res['output_text'] #res["output_text"] 
-
-
-
 
 
 def load_chat_history(instance):
@@ -152,9 +148,6 @@ def load_chat_history(instance):
     return memory
 
 
-
-
-
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)  
@@ -164,11 +157,9 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     compressor = CohereRerank(user_agent="langchain")
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
     compressed_docs = compression_retriever.get_relevant_documents(query=query)
-    
-    
     memory = load_chat_history(instance)
-    # qa = RetrievalQA.from_chain_type(llm=llm,chain_type="stuff",retriever=compression_retriever)
-    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,retriever=compression_retriever, return_source_documents=True)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,
+                                               retriever=compression_retriever, return_source_documents=True)
     
     page_numbers = []
     for i in compressed_docs:
@@ -199,7 +190,6 @@ def gen_text_context_question(vectors_list,question):
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
     generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
     # generated_text = cohere_endpoint(prompt_template)
-    
     return generated_text
 
 
@@ -242,7 +232,6 @@ def prompt_gen_question_chatbook(context,question):
     return prompt_template
 
 
-
 def remove_number_from_sentence(sentence):
     pattern = r'^\d+.'
     cleaned_sentence = re.sub(pattern, '', sentence)
@@ -256,7 +245,8 @@ def keyword_extract(text):
     deduplication_algo = 'seqm'
     windowSize = 1
     numOfKeywords = 20
-    custom_kw_extractor = yake.KeywordExtractor(lan=language, n=max_ngram_size, dedupLim=deduplication_thresold, 
+    custom_kw_extractor = yake.KeywordExtractor(lan=language, n=max_ngram_size,
+                                                dedupLim=deduplication_thresold, 
                                                 dedupFunc=deduplication_algo, windowsSize=windowSize, top=numOfKeywords, features=None)
     keywords = custom_kw_extractor.extract_keywords(text)
     return [kw[0] for kw in keywords]
@@ -300,8 +290,6 @@ def extract_entities(sentence):
     return ner_dict
 
 
- 
-
 def lang_det_word_choice(text):
     if len(text) > 500:
         text = text[:450]
@@ -313,13 +301,10 @@ def check_file_language(list_of_file_path):
     file_paths = []
     extracted_text_list = []
     for file_path in list_of_file_path:
-        print("file_path-->",file_path)
         if file_path.endswith('.txt'):
             with open(file_path,'r',encoding='utf-8') as fp:
                 text = fp.read()
-                
                 lang_code = lang_det_word_choice(text)
-                print("lang_code--->",lang_code)
                 if lang_code == "en":
                     file_paths.append(file_path)
                     extracted_text_list.append(text)

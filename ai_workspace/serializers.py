@@ -411,7 +411,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	file_translate = serializers.BooleanField(required=False,allow_null=True)
-	#glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
+	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 
 	class Meta:
 		model = Project
@@ -420,7 +420,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate',)#'glossary_id',)
+					'file_translate')#'glossary_id')
 
 	def run_validation(self, data):
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
@@ -489,6 +489,31 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
+
+	# def get_project_analysis(self,instance):
+	# 	if type(instance) is Project:
+	# 		user_1 = self.context.get('user_1')
+	# 		if instance.project_type_id == 8 and instance.ai_user.user_enterprise.subscription_name == 'Enterprise - TFN':
+	# 			return None		
+			
+	# 		user = self.context.get("request").user if self.context.get("request")!=None else self\
+	# 			.context.get("ai_user", None)
+
+	# 		if instance.ai_user == user:
+	# 			tasks = instance.get_analysis_tasks
+
+	# 		elif instance.team:
+	# 			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+	# 				tasks = instance.get_analysis_tasks
+	# 			else:
+	# 				tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+
+	# 		else:
+	# 			tasks = instance.get_analysis_tasks.filter(task_info__assign_to_id=user_1)
+	# 		res = instance.project_analysis(tasks)
+	# 		return res
+	# 	else:
+	# 		return None
 
 	def get_project_analysis(self,instance):
 		if type(instance) is Project:
@@ -617,7 +642,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
+				if project_type in [1,2,5,9,8,10]: #Add project_type here to create normal tasks 
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -978,6 +1003,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 							with open(file_path, 'r', encoding='utf-8', errors = 'replace') as file:
 								heading = file.readline().strip()
 						else:heading = name
+				if len(heading.split(" ")) > 15:
+					heading= " ".join(heading.split(" ")[:14])
+
 				tar_json = True if obj.news_task.first().target_json else False
 				data = {'source_file_path':obj.file.file.url,\
 				'thumbUrl':json_data.get('thumbUrl'),'heading':heading,\
@@ -1460,7 +1488,7 @@ def notify_task_status(task_assign,status,reason):
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     receivers = [*set(receivers)]
-    Receiver_emails = [i.email for i in receivers]
+    Receiver_emails = [i.email for i in receivers if i.is_active == True]
 
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
@@ -1739,8 +1767,8 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned","assign_enable","project_analysis", \
-				"created_at",'get_project_type')
+		fields = ("id", "project_name","assigned", "assign_enable" , "project_analysis" , "get_project_type",
+				"created_at") #assign_enable project_analysis "get_project_type", 
 
 	def get_assign_enable(self,obj):  
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer

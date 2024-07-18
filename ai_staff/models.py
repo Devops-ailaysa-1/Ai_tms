@@ -733,7 +733,8 @@ class BackMatter(models.Model):
 
 class Levels(models.Model):
     level = models.CharField(max_length = 250,blank=True,null=True)
-    level_content = models.CharField(max_length = 500,blank=True,null=True)
+    level_content = models.CharField(max_length = 900,blank=True,null=True)
+    no_of_chapter_headings = models.CharField(max_length = 100,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
 

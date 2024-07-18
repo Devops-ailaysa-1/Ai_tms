@@ -1131,10 +1131,10 @@ class BookBodySerializer(serializers.ModelSerializer):
                 book_obj.save()
             title = book_obj.title_mt if book_obj.title_mt else book_obj.title
             description = book_obj.description_mt if book_obj.description_mt else book_obj.description
-
-
             if body_matter.id == 1:
-                prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre)
+                prompt = book_body_start_phrase.start_phrase.format(title,description,book_obj.level.level,book_obj.genre.genre,
+                                                                    book_obj.level.no_of_chapter_headings)
+                                                                  
                 prompt_response_gpt = outline_gen(prompt=prompt,n=1)
                 prompt_response = prompt_response_gpt.choices
                 total_token = prompt_response_gpt['usage']['total_tokens']
@@ -1164,7 +1164,6 @@ class BookBodySerializer(serializers.ModelSerializer):
                                     BookBody.objects.create(body_matter=body_matter,sub_categories=sub_categories,generated_content=book_chapter,custom_order=order,temp_order=order,book_creation=book_obj,
                                                             generated_content_mt=chapter,group=group,book_title =book_title_inst,name=body_matter.name,token_usage=token_usage,sub_headings=sub_headings)
                                     AiPromptSerializer().customize_token_deduction(book_obj,consumable_credits_to_translate_section)
-                                    
                             else:
                                 rr = BookBody.objects.create(body_matter =body_matter,sub_categories=sub_categories, 
                                 generated_content=chapter,group=group,temp_order=order,custom_order=order,
@@ -1197,7 +1196,7 @@ class BookBodySerializer(serializers.ModelSerializer):
                                             temp_order=count+1,token_usage=token_usage) 
             instance = BookBody.objects.filter(book_creation=book_obj,body_matter=body_matter).first()
             return instance
-        
+         
         else:
             blog_available_langs =[17]
             qr = BookBody.objects.filter(book_creation=book_creation,body_matter=body_matter).order_by('custom_order')
@@ -1545,4 +1544,88 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
         pass
 
 
+from ai_openai.models import LangscapeOcrPR
+import os,docx2txt
+from ai_workspace.models import WriterProject,MyDocuments,DocumentType
+class LangscapeOcrPRSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = LangscapeOcrPR
+        fields = "__all__"
+
+
+    def create(self, validated_data):
  
+        user = self.context.get('request').user
+        validated_data['user'] = user
+        instance = LangscapeOcrPR.objects.create(**validated_data)
+        if validated_data.get('ocr_result',None):
+
+            instance.file_name = os.path.basename(instance.ocr_result.path)
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+
+        instance.save()
+        return instance
+    
+    def ocr_result_extract_to_docx(self,instance):
+        ocr_result_path = instance.ocr_result.path
+
+        if ocr_result_path.endswith(('.doc', '.docx')):
+            extracted_text = docx2txt.process(ocr_result_path)
+            print("extracted_text",extracted_text)
+            if instance.document:
+                instance.document.html_data = extracted_text
+                instance.document.save()
+            else:
+                writer_obj = WriterProject.objects.create(ai_user_id = instance.user.id)
+                document_type = DocumentType.objects.get(id = 3) ### for spell check writer
+                document = MyDocuments.objects.create(project = writer_obj,document_type=document_type,
+                                        html_data=extracted_text,ai_user=instance.user)
+                instance.document = document
+                document.doc_name = instance.file_name
+                document.save()
+            instance.save()
+        return instance
+
+    
+    def update(self, instance, validated_data):
+ 
+        if validated_data.get('ocr_result',None):
+            instance.ocr_result = validated_data.get('ocr_result')
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+            instance.save()
+
+        if validated_data.get('main_document',None):
+            instance.main_document = validated_data.get('main_document')
+            instance.save()
+
+        if validated_data.get('file_name',None):
+            instance.file_name = validated_data.get('file_name')
+
+        instance.save()    
+        return instance
+    
+
+class MyDocumentOCRSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyDocuments
+        fields = "__all__"
+
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        ocr_instance = instance.doc_for_ocr.last()
+        if ocr_instance and ocr_instance.main_document:
+            data["main_document"] = ocr_instance.main_document.url
+        return data
+    
+
+    def update(self, instance, validated_data):
+        if validated_data.get('html_data',None):
+            instance.html_data = validated_data.get('html_data')
+            instance.save()
+        print("instance",instance)
+        return instance

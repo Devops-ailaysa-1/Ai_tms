@@ -153,7 +153,9 @@ class TermUploadView(viewsets.ModelViewSet):
             print("Exception1-->", e)
 
     def list(self, request):
-        task = request.GET.get('task')
+        task = request.GET.get('task',None)
+        if not task:
+            return Response({'msg':'Need Task id'})
         job = Task.objects.get(id=task).job
         # word_choice = True if job.project.project_type_id == 10 else False
         # print("WordChoice----------->",word_choice)
@@ -177,9 +179,9 @@ class TermUploadView(viewsets.ModelViewSet):
     def create(self, request):
         user = self.request.user
         task = request.POST.get('task')
-        job = Task.objects.get(id=task).job
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
+        job = Task.objects.get(id=task).job
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
         if edit_allow == False:
@@ -320,43 +322,43 @@ def tbx_write(request,task_id):
 
 
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def glossaries_list(request,project_id):
-    '''
-    This function is to list the glossaries(exclude the empty one) which matches the given project's source and target
-    languages and returns GlossaryListSerializer data.
-    '''
-    project = Project.objects.get(id=project_id)
-    target_languages = project.get_target_languages
-    user = request.user.team.owner if request.user.team else request.user
-    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
-                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
-                .filter(project_jobs_set__target_language__language__in = target_languages)\
-                .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct().order_by('-id')
-    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
-    return Response(serializer.data)
-
-
 # @api_view(['GET',])
 # @permission_classes([IsAuthenticated])
 # def glossaries_list(request,project_id):
+#     '''
+#     This function is to list the glossaries(exclude the empty one) which matches the given project's source and target
+#     languages and returns GlossaryListSerializer data.
+#     '''
 #     project = Project.objects.get(id=project_id)
-#     option = request.GET.get('option')
-#     user = request.user.team.owner if request.user.team else request.user
-#     if option == 'glossary':
-#         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
-#     else:
-#         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
 #     target_languages = project.get_target_languages
-#     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+#     user = request.user.team.owner if request.user.team else request.user
+#     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
 #                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
 #                 .filter(project_jobs_set__target_language__language__in = target_languages)\
 #                 .filter(glossary_project__term__isnull=False)\
 #                 .exclude(id=project.id).distinct().order_by('-id')
 #     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
 #     return Response(serializer.data)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def glossaries_list(request,project_id):   ###### this function is for wordchoise option list select
+    project = Project.objects.get(id=project_id)
+    option = request.GET.get('option')
+    user = request.user.team.owner if request.user.team else request.user
+    if option == 'glossary':
+        queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
+    else:
+        queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
+    target_languages = project.get_target_languages
+    queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
+                .filter(project_jobs_set__target_language__language__in = target_languages)\
+                .filter(glossary_project__term__isnull=False)\
+                .exclude(id=project.id).distinct().order_by('-id')
+    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -367,15 +369,22 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 
     def list(self,request):
         project = request.GET.get('project')
+        option = request.GET.get('option',None)
         if not project:
             return Response({"msg":"project_id required"})
-        glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
+        
+        if option == 'glossary':
+            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=3).filter(project_id=project).all()
+        else:
+            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=10).filter(project_id=project).all()
+
+        # glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
         serializer = GlossarySelectedSerializer(glossary_selected, many=True)
         return Response(serializer.data)
 
     def create(self, request):
         glossaries = request.POST.getlist('glossary')
-        project = request.POST.get('project')
+        project = request.POST.get('project') 
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):
@@ -444,6 +453,7 @@ def glossary_search(request):
 
 class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
+    
     '''
     This view is to get_mt for source term inside glossary workspace for MT Button. 
     This is similar to get_term_mt, try to merge it.
@@ -494,30 +504,67 @@ def adding_term_to_glossary_from_workspace(request):
     '''
     This function is to add terms from workspace to glossary if glossary id is given, else it will save it in default glossary.
     Now it is changed to MyGlossaryView Post method.
+
+
+    Note for word choice:
+    
+    need to check project_id and gloss id id while adding terms in termmodel 
+    for wordchoise if not created for this case please create , ignore if already selected 
+    
     '''
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
     glossary_id = request.POST.get('glossary',None)
-    user = request.user.team.owner if request.user.team else request.user
+    project_id = doc.project
     if glossary_id:
         glossary = Glossary.objects.get(id = glossary_id)
         job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
         serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
         if serializer.is_valid():
             serializer.save()
+            gloss_selected_check = GlossarySelected.objects.filter(project__id=project_id,glossary=glossary)
+            if not gloss_selected_check:
+                GlossarySelected.objects.create(project_id=project_id,glossary=glossary)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    
     else:
-        data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
-                "tl_language":doc.job.target_language.id,"project":doc.project,"user":user.id,\
-                 "created_by":request.user.id}
-        serializer = MyGlossarySerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        from ai_glex.serializers import GlossarySetupSerializer
+        from ai_workspace.api_views import AddStoriesView
+        user = request.user
+        din = AddStoriesView.check_user_dinamalar(user)
+
+        if not din:
+            print("not a din user")
+            user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
+            project_ins_create = {'source_language':[doc.job.source_language.id],'target_languages':[doc.job.target_language.id]}
+            serializer = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},context={"request": request,'user_1':user_1})
+            
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                data = serializer.data
+                project_id = data.get('id')
+                glossary_id = data.get('glossary_id')
+                term_instance = TermsModel.objects.create(sl_term=sl_term,tl_term=tl_term,glossary_id=glossary_id,job=doc.job)
+                GlossarySelected.objects.create(project_id=project_id,glossary_id=glossary_id)
+                serializer = TermsSerializer(term_instance)
+                return Response(serializer.data)
+
+        else:
+            print("din user")
+            data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+                    "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
+                    "created_by":user.id}
+    
+            serializer = MyGlossarySerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -825,7 +872,7 @@ class MyGlossaryView(viewsets.ModelViewSet):
 
 
     def create(self, request):
-        sl_term = request.POST.get('sl_term')
+        sl_term = request.POST.get('sl_term',None)
         tl_term = request.POST.get('tl_term',"")
         doc_id = request.POST.get("doc_id")
         glossary_id = request.POST.get('glossary',None)
@@ -848,6 +895,8 @@ class MyGlossaryView(viewsets.ModelViewSet):
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
+            if not sl_term:
+                return Response({'msg':'need source term and target term'})
             data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":source_lang,\
                     "tl_language":target_lang,"project":doc.project if doc else None,\
                     "user":user.id,"created_by":request.user.id}
@@ -915,7 +964,7 @@ def get_word_mt(request):
         return Response(GlossaryMtSerializer(tt).data,status=201)
 
     else:
-        return Response({"res": "Insufficient credits"}, status=424)
+        return Response({"res": "Insufficient credits"}, status=400)
 
 
 class WordChoiceListView(viewsets.ViewSet):
@@ -933,3 +982,34 @@ class WordChoiceListView(viewsets.ViewSet):
             queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language)).order_by('-id')
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
+    
+
+
+@api_view(['GET',])
+def download_gloss_dinamalar(request):
+    from ai_workspace.api_views import AddStoriesView
+    user = request.user.team.owner if request.user.team else request.user 
+    # din = AddStoriesView.check_user_dinamalar(user)
+ 
+    gloss_list = list(MyGlossary.objects.filter(user=user).values_list('sl_term','tl_term'))
+    if gloss_list:
+        gloss_data_frame = pd.DataFrame(gloss_list).dropna()
+        gloss_data_frame.columns=['Source term','Target term']
+        gloss_data_frame = gloss_data_frame.sort_values(by='Source term', key=lambda x: x.str.lower())
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
+        writer.save()
+        response = HttpResponse(content_type='application/vnd.ms-excel')
+        encoded_filename = 'glossary_terms.xlsx'
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
+        response['X-Suggested-Filename'] = encoded_filename
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        output.seek(0)
+        response.write(output.read())
+        return response
+    else:
+        return Response({'msg':'no gloss term'},status=400)
+    # else:
+    #     return Response({'msg':'dont have permission to access'},status=401)

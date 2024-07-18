@@ -21,12 +21,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from .utils import get_consumable_credits_for_openai_text_generator
-from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo,set_font_to_times_new_roman
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import OPENAI_MODEL
 openai_model = OPENAI_MODEL
@@ -36,7 +34,10 @@ from django.db.models import Q
 from ai_openai.models import BookBody
 from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
 from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
-
+from ai_openai.models import BookBody
+from ai_staff.models import PromptStartPhrases
+from .utils import get_summarize
+from ai_workspace.api_views import get_consumable_credits_for_text
 
 class AiPromptViewset(viewsets.ViewSet):
     '''
@@ -1213,9 +1214,23 @@ def generate_article(request):
 
 
 
-from ai_openai.models import BookBody
-from ai_staff.models import PromptStartPhrases
-from .utils import get_summarize
+def stream_article_response_en(title,completion,prompt,book_body_instance):
+    str_con=""
+    for chunk in completion:
+        ins=chunk['choices'][0]
+        if ins["finish_reason"]!='stop':
+            delta=ins['delta']
+            if 'content' in delta.keys():
+                content=delta['content']
+                word=content+' '
+                str_con+=content
+                print(content)
+                yield '\ndata: {}\n\n'.format({"t":content})
+        else:
+            token_usage=num_tokens_from_string(str_con+" "+prompt)
+            AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
+
+
 @api_view(["GET"])
 def generate_chapter(request):
     '''
@@ -1237,6 +1252,8 @@ def generate_chapter(request):
         book_title =book_body_instance.book_creation.title_mt if book_body_instance.book_creation.title_mt else book_body_instance.book_creation.title
         generated_content =book_body_instance.generated_content_mt if book_body_instance.generated_content_mt else book_body_instance.generated_content
         book_level = book_body_instance.book_creation.level.level
+        book_level_content = book_body_instance.book_creation.level.level_content
+        
         book_description = book_body_instance.book_creation.description_mt if book_body_instance.book_creation.description_mt else book_body_instance.book_creation.description
         author_info =book_body_instance.book_creation.author_info_mt if book_body_instance.book_creation.author_info_mt else book_body_instance.book_creation.author_info
         query = BookBody.objects.filter(book_creation = book_body_instance.book_creation,book_title = book_body_instance.book_title, group=0).\
@@ -1253,7 +1270,7 @@ def generate_chapter(request):
         context = get_summarize(gen_content,book_body_instance,lang) if gen_content else None
         sub_cat = 71 #69
         prompt =  PromptStartPhrases.objects.get(id=sub_cat).start_phrase
-        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings)
+        prompt = prompt.format(generated_content,book_title,book_description,book_level,author_info,book_body_instance.sub_headings,book_level_content)
 
         initial_credit = book_body_instance.book_creation.user.credit_balance.get("total_left")
         
@@ -1263,21 +1280,8 @@ def generate_chapter(request):
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
             else:
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-            def stream_article_response_en(title):
-                str_con=""
-                for chunk in completion:
-                    ins=chunk['choices'][0]
-                    if ins["finish_reason"]!='stop':
-                        delta=ins['delta']
-                        if 'content' in delta.keys():
-                            content=delta['content']
-                            word=content+' '
-                            str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":content})
-                    else:
-                        token_usage=num_tokens_from_string(str_con+" "+prompt)
-                        AiPromptSerializer().customize_token_deduction(book_body_instance.book_creation,token_usage)
-            return StreamingHttpResponse(stream_article_response_en(book_title),content_type='text/event-stream')
+
+            return StreamingHttpResponse(stream_article_response_en(book_title,completion,prompt,book_body_instance),content_type='text/event-stream')
         else:
             if context:
                 completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
@@ -1307,7 +1311,6 @@ def generate_chapter(request):
                             
                                     if initial_credit >= consumable:
                                         blog_article_trans=get_translation(1,str_cont,"en",language_code,user_id=book_body_instance.book_creation.user.id,cc=consumable)
-                        
                                     yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                                    
                                     arr=[]
                                     str_cont='' 
@@ -1463,6 +1466,7 @@ def docx_merger(request):
 
     for i in range(0, len(files)):
         doc = Document(files[i])
+        set_font_to_times_new_roman(doc)
 
         if i != 0:
             doc.add_page_break()
@@ -1504,5 +1508,100 @@ def customize_refer(customize,search_term,lang):
 
 #     return Response({"src":src_lang,"tar":trg_lang})
 
+from ai_openai.utils import tamil_spelling_check
+from ai_openai.models import LangscapeOcrPR
+from ai_openai.serializers import LangscapeOcrPRSerializer,MyDocumentOCRSerializer
+from ai_workspace.serializers import MyDocumentSerializer
+class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
+    page_size=20
+
+    def get_object(self, pk):
+        try:
+            return LangscapeOcrPR.objects.get(user=self.request.user,id=pk)
+        except LangscapeOcrPR.DoesNotExist:
+            raise Http404
+        
+    def create(self, request):
+        main_document = request.FILES.get('main_document')
+        ocr_result = request.FILES.get('ocr_result')
+        serializer = LangscapeOcrPRSerializer(data={**request.data,'user':request.user.id,'main_document':main_document,
+                                                    'ocr_result':ocr_result},context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            slrz_id = serializer.data.get('document')
+            if slrz_id:
+                doc_instance = MyDocuments.objects.get(id = slrz_id)
+                serializer = MyDocumentOCRSerializer(doc_instance)
+ 
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+    def list(self, request):
+        paginate = request.GET.get('pagination',True)
+        queryset = LangscapeOcrPR.objects.filter(user=request.user).order_by('-id')
+        if paginate=='False':
+            serializer = LangscapeOcrPRSerializer(queryset,many=True)
+            return Response(serializer.data)
+
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = LangscapeOcrPRSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def retrieve(self,request,pk):
+        # obj =self.get_object(pk)
+        # serializer = LangscapeOcrPRSerializer(obj)
+        # slrz_id = serializer.data.get('document')
+        # if slrz_id:
+        doc_instance = MyDocuments.objects.get(id = pk)
+        serializer = MyDocumentOCRSerializer(doc_instance)
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        main_document = request.FILES.get('main_document',None)
+        ocr_result = request.FILES.get('ocr_result',None)
+        html_data = request.POST.get('html_data')
+
+        document_instance = MyDocuments.objects.get(id=pk)
+        if html_data:
+            ser = MyDocumentOCRSerializer(document_instance,data={**request.data,'html_data':html_data},partial=True)
+            if ser.is_valid():
+                ser.save()
+ 
+        obj = LangscapeOcrPR.objects.get(user=request.user,document = document_instance)
+
+        serializer = LangscapeOcrPRSerializer(obj,data={**request.data,'user':request.user.id,'main_document':main_document,
+                                                    'ocr_result':ocr_result},partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            serializer = MyDocumentOCRSerializer(document_instance)
+                 
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+
+    def destroy(self,request,pk):
+        try:
+            obj = LangscapeOcrPR.objects.get(user=request.user,id = pk)
+
+            if obj.main_document:
+                os.remove(obj.main_document.path)
+            if obj.ocr_result:
+                os.remove(obj.ocr_result.path)
+            if obj.document:
+                obj.document.delete()
+            obj.delete()
+
+            return Response({'msg':'deleted successfully'},status=200)
+    
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
+
+@api_view(["POST"])
+def tamil_spell_chk(request):
+    text = request.POST.get('text')
+    if not text:
+        return Response({'msg':'need text'},status=status.HTTP_400_BAD_REQUEST)
+    result = tamil_spelling_check(text)
+    return Response(result,status=status.HTTP_200_OK)

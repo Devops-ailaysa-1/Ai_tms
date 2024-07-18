@@ -1,13 +1,10 @@
 import json,logging,mimetypes,os,openai,asyncio, math
-import re,requests,time,urllib.request
-from django.contrib.auth import settings
-from django.http import HttpResponse
-from ai_auth.models import UserCredits
-from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
+import re,requests
 from ai_staff.models import Languages,LanguagesLocale
-from django.db.models import Q
+
 from io import BytesIO
 from PIL import Image
+from django.conf import settings as settings_env
 from wiktionaryparser import WiktionaryParser
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
@@ -160,7 +157,7 @@ def get_summarize(text,bb_instance,lang):
     from .serializers import AiPromptSerializer
     from ai_openai.serializers import openai_token_usage
     from ai_workspace_okapi.utils import get_translation
-    from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+    from ai_workspace.api_views import get_consumable_credits_for_text
 
     if lang != 'en':
         consumable_credits_for_article_gen = get_consumable_credits_for_text(text,'en',lang)
@@ -352,4 +349,32 @@ def mistral_chat_api(prompt):
     # chat_response = client.chat(model=model,messages=messages)
     # return chat_response.choices[0].message.content
 
+from docx.shared import Pt ,RGBColor
+from docx.oxml.ns import qn
+def set_font_to_times_new_roman(doc):
+    for paragraph in doc.paragraphs:
+        if paragraph.style:
+            style = paragraph.style.name
+        else:
+            style = None
+        
+        for run in paragraph.runs:
+            run.font.name = 'Times New Roman'
+            r = run._element
+            r.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+            if style == 'Heading 1':
+                run.font.size = Pt(24)
+                run.font.color.rgb = RGBColor(0, 0, 0)
+            elif style == 'Heading 2':
+                run.font.size = Pt(18)
+                run.font.color.rgb = RGBColor(0, 0, 0)
+            else:
+                run.font.size = Pt(11)
 
+
+######  Tamil spell chk from labs ###########
+ 
+def tamil_spelling_check(text):
+    payload = {'text': text,'lang_code': 'ta'}
+    response = requests.request("POST", settings_env.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
+    return response.json()

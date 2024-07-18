@@ -106,6 +106,9 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
+
+
+
 nlp = spacy.load("en_core_web_sm")
 
 class IsCustomer(permissions.BasePermission):
@@ -590,9 +593,7 @@ class CaseInsensitiveOrderingFilter(OrderingFilter):
         return queryset
 
 
-
 from ai_exportpdf.models import Ai_PdfUpload
-
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -627,6 +628,7 @@ class ProjectFilter(django_filters.FilterSet):
         else: assign_to_list = []
         queryset = progress_filter(queryset,value,assign_to_list)
         return queryset
+    
 
     def filter_not_empty(self,queryset, name, value):
         #project type filter
@@ -645,11 +647,13 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            queryset = queryset.filter(project_type_id=8)
+            queryset = queryset.filter(project_type_id=8) 
+        elif value == "word_choices":
+            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
-
         return queryset
-    
+
+
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     '''
@@ -669,9 +673,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
-        #if project_type == 3 or project_type == 10:
-        if project_type == 3:
+        if project_type == 3 or project_type == 10:
+        # if project_type == 3:
             return GlossarySetupSerializer
+        print("project")
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -681,6 +686,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         except:
             raise Http404
         return obj
+    
+
+    def query_filter_project_news(self,queryset):
+        
+        return self.filter_queryset(self.queryset)
 
     #@cached(timeout=60 * 15)
     def get_queryset(self):
@@ -689,19 +699,20 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
 
         #checking for team access and indivual user access
+        
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
-                    | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(ai_user = self.request.user)
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
-
+ 
     def get_user(self):
         # returns main account holder 
         user = self.request.user
         user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
         return user_1
-
+    
 
     # Tried project list with limit and offset instead of pagination to minimize time taken
 
@@ -722,37 +733,29 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-
-
-    
+        
     def list(self, request, *args, **kwargs):
-
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
-        queryset = self.filter_queryset(self.get_queryset())
-
+        queryset = self.get_queryset()
         user_1 = self.get_user()
-
         din = AddStoriesView.check_user_dinamalar(user_1)
 
-        if din: 
-            # to increase performence time
-            self.paginator.page_size = 10
-        
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        queryset = self.filter_queryset(queryset)
 
+        pagin_tc = self.paginator.paginate_queryset(queryset, request, view=self) ###--> 
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
+            self.paginator.page_size = 10  ### pagination changed to 10 for Din
+            # serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
+                        #  context={'request': request,'user_1':user_1})     
+        # else:
+        ## the above code is commanded for standard project for din
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
-        else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
-                         context={'request': request,'user_1':user_1})
-        
         response = self.get_paginated_response(serializer.data)
-        
         return  response
 
-    
+
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
@@ -800,6 +803,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         else:
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
+        
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
@@ -817,6 +821,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
+        target_languages = request.POST.get('target_languages',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -832,7 +837,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             "subject_delete_ids", [])
         step_delete_ids = self.request.query_params.get(\
             "step_delete_ids", [])
-
+        
+        if file_delete_ids and target_languages:
+            return Response({'msg':"dont delete file"},status=400)
         #Deletion of steps,files,jobs,content_type,subject_fields
         if step_delete_ids:
             for task_obj in instance.get_tasks:
@@ -844,6 +851,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         pk='0', many="true", ids=file_delete_ids)
 
         if job_delete_ids:
+            # job_ids = job_delete_ids.split(",")
+            # for i in job_ids:
+            #     job_instance = Job.objects.get(id=i)
+            #     for j in job_instance.job_tasks_set.all():
+            #         for k in j.task_info.all():
+            #             try:
+            #                 return Response({'msg':'task is assigned'},status=status.HTTP_400_BAD_REQUEST)
+            #             except:
+            #                 print("task is not assigned")
             job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
@@ -3647,9 +3663,14 @@ def default_proj_detail(request):
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
-            res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            # res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
+            res['tar']=[j.target_language.id for j in i.project_jobs_set.all() if j.target_language.id != i.project_jobs_set.first().source_language.id ]
+            
             if res not in out:
-                out.append(res)
+                if res['tar']:
+                    out.append(res)
+
+
         mt_engine =last_pr.mt_engine_id
         out_1 = [a[0] for a in itertools.groupby(out)][:5]
         return JsonResponse({'recent_pairs':out_1,'mt_engine_id':mt_engine})
@@ -3919,6 +3940,68 @@ def docx_convertor(request):
     os.remove(target_filename)
     return res
 
+##########test doc to docx convert
+
+import os
+import mimetypes
+import urllib.parse
+from django.http import HttpResponse
+
+def download_file_doc(file_path):
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    
+    # Guess MIME type
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        # Default to DOCX MIME type if guessing fails
+        mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    
+    response = HttpResponse(fl, content_type=mime_type)
+    
+    # Encode filename
+    encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+    
+    # Set Content-Disposition header
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'.format(encoded_filename)
+    
+    # Set custom header
+    response['X-Suggested-Filename'] = encoded_filename
+    
+    # Expose Content-Disposition header
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    
+    return response
+
+
+
+
+import subprocess
+from django.core.files.storage import default_storage
+
+ 
+
+
+@api_view(["POST"])
+def doc2docx(request):
+    file = request.FILES.get('file',None)
+    if not file:
+        return Response({'msg':'Need file to upload'})
+    temp_doc_path = default_storage.save('temp/' + file.name, file)
+    temp_docx_path_full = os.path.join(settings.MEDIA_ROOT, temp_doc_path)
+    path_data = subprocess.run(['libreoffice', 
+                        '--headless',
+                        '--convert-to', 'docx',
+                        "output.docx"], check=True)
+
+    print("path_data", path_data)
+      
+ 
+    res = download_file_doc(temp_docx_path_full) #download_file_doc
+    # os.remove(temp_docx_path_full)
+    return res
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_word_char_count(request):
@@ -4168,7 +4251,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_1.request = request
         view_instance_1.request.GET = request.GET
 
-        queryset1 = view_instance_1.get_queryset().exclude(project_type_id=8)
+        queryset1 = view_instance_1.get_queryset().exclude(project_type_id__in=[8,10])
 
 
         view_instance_2 = MyDocumentsView()
@@ -4208,6 +4291,13 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         response = self.get_paginated_response(ser.data)
         return response
 
+from django.db.models import F, Value, Case, When
+from django.db.models.functions import Coalesce
+
+# Annotate the queryset to get the task_word_count for each task, defaulting to 0 if task_details is None
+
+
+# Convert the queryset to a dictionary
 
 
 def analysed_true(pr,tasks):
@@ -4225,8 +4315,26 @@ def analysed_true(pr,tasks):
                             "task_words" : task_words }
     else:
         out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        task_words = []
-        [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+        
+        ##### old 
+        # task_words = {i.id: i.task_details.first().task_word_count if i.task_details.first() else 0 for i in tasks}
+        # print("task_words",task_words)
+
+        tasks_with_word_count = tasks.annotate(task_word_count=Coalesce(F('task_details__task_word_count'), Value(0))
+                                                ).values('id', 'task_word_count')
+        
+        for task in tasks_with_word_count:
+            task_words.append({task['id']: task['task_word_count']})
+
+        # task_words = [] #{task['id']: task['task_word_count'] for task in tasks_with_word_count}
+            
+
+        ###### old 
+        # for i in tasks:
+            # task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0})
+
+        ########## old
+        # [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
             "proj_seg_count":out.get('task_seg_count__sum'),
@@ -4263,7 +4371,7 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset1 = queryset.filter(glossary_project__isnull=False).exclude(project_type_id=10)
         queryset2 = ChoiceLists.objects.none()  
 
         user = self.request.user
@@ -4301,19 +4409,25 @@ class AssertList(viewsets.ModelViewSet):
         return response
 
 
+
 def get_news_federal_key_and_url(lang):
     ''' 
     This function is to get the federal CMS KEY and URL based on language. 
     '''
     if lang == "Kannada":
-        key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        integration_api_url = os.getenv('KARNATAKA_FEDERAL_URL')+"news"
+        key = settings.KARNATAKA_FEDERAL_KEY
+        integration_api_url = settings.KARNATAKA_FEDERAL_URL+"news"
     elif lang == "Telugu":
-        key = os.getenv("TELUGANA-FEDARAL-KEY")
-        integration_api_url = os.getenv('TELUGANA_FEDERAL_URL')+"news"
+        key = settings.TELANGANA_FEDERAL_KEY
+        integration_api_url = settings.TELUGANA_FEDERAL_URL+"news"
+    
+    elif lang == "Hindi":
+        key = settings.HINDI_FEDERAL_KEY
+        integration_api_url = settings.HINDI_FEDERAL_URL+"news"
+
     else:
-        key = os.getenv("FEDERAL-KEY")
-        integration_api_url = os.getenv('FEDERAL_URL')+"news"
+        key = settings.FEDERAL_KEY
+        integration_api_url = settings.FEDERAL_URL+"news"
     return key,integration_api_url
 
 class GetNewsFederalView(generics.ListAPIView):
@@ -4339,27 +4453,27 @@ class GetNewsFederalView(generics.ListAPIView):
         count = self.request.query_params.get('count', 20)
         news_id = self.request.query_params.get('news_id', None)
         search = self.request.query_params.get('search', None)
-        lang = self.request.query_params.get('lang',None)
+        lang = self.request.query_params.get('lang', None)
         categoryIds = self.request.query_params.getlist('categoryId')
         user = self.request.user.team.owner if self.request.user.team else self.request.user
-        key,integration_api_url = get_news_federal_key_and_url(lang)
+        key, integration_api_url = get_news_federal_key_and_url(lang)
 
         headers = {
             's-id': key,
-            }
-        
-        startIndex = (int(page) - 1) * int(count)
-       
-        params={ 
-            'startIndex':startIndex,
-            'count':count,
-            }
+        }
+
+        startIndex  = (int(page) - 1) * int(count)
+
+        params = {
+            'startIndex': startIndex,
+            'count': count,
+        }
         if news_id:
-            params.update({'newsId':news_id})
+            params.update({'newsId': news_id})
         if search:
-            params.update({'search':search})
+            params.update({'search': search})
         if categoryIds:
-            params.update({'categoryIds':categoryIds})
+            params.update({'categoryIds': categoryIds})
 
         response = requests.request("GET", integration_api_url, headers=headers, params=params)
         if response.status_code == 200:
@@ -4370,9 +4484,10 @@ class GetNewsFederalView(generics.ListAPIView):
                     tar_code = []
                     news_json['claimed'] = True
                     news_json['src_code'] = tasks[0].task.job.source_language_id
-                    news_json['tar_code'] = list(set([task.task.job.target_language_id  for task in tasks]))
+                    news_json['tar_code'] = list(set([task.task.job.target_language_id for task in tasks]))
             response._content = json.dumps(news_jsons).encode('utf-8')
         return response
+
 
     def list(self, request, *args, **kwargs):
         #### Need to check request from federal team ####
@@ -4508,7 +4623,7 @@ def get_federal_categories(request):
     count = request.query_params.get('count', 20)
 
     headers = {
-        's-id': os.getenv("FEDERAL-KEY"),
+        's-id': settings.FEDERAL_KEY,
         }
     
     startIndex = (int(page) - 1) * int(count)
@@ -4518,9 +4633,9 @@ def get_federal_categories(request):
         'count':count,
         }
 
-    CMS_url = os.getenv('FEDERAL_URL')+"category"
+    CMS_url = settings.FEDERAL_URL+"category"
     payload={
-        'sessionId':os.getenv("CMS-SESSION-ID"),
+        'sessionId':settings.CMS_SESSION_ID,
     }
     response = requests.request("GET", CMS_url, headers=headers, params=params)
     if response.status_code == 200:
@@ -4544,69 +4659,71 @@ def push_translated_story(request):
     feed_id = request.GET.get('feed_id')
     task = Task.objects.get(id=task_id)
     target_lang = task.job.target_language.language
+
     if target_lang == "Telugu":
-        federal_key = os.getenv("TELUGANA-FEDARAL-KEY")
-        base_url = os.getenv('TELUGANA_FEDERAL_URL')
+        federal_key = settings.TELANGANA_FEDERAL_KEY
+        base_url = settings.TELUGANA_FEDERAL_URL
     elif target_lang == "Kannada":
-        federal_key = os.getenv("KARNATAKA-FEDARAL-KEY")
-        base_url = os.getenv('KARNATAKA_FEDERAL_URL')
+        federal_key = settings.KARNATAKA_FEDERAL_KEY
+        base_url = settings.KARNATAKA_FEDERAL_URL
+    elif target_lang == "Hindi":
+        federal_key = settings.HINDI_FEDERAL_KEY
+        base_url = settings.HINDI_FEDERAL_URL
     else:
-        federal_key = os.getenv("FEDERAL-KEY")
-        base_url = os.getenv('FEDERAL_URL')
-    src_json,tar_json = {},{}
-    headers = { 's-id': federal_key,'Content-Type': 'application/json'}
-    feed_url = base_url+'createFeedV2'
-    payload={ 
-            'sessionId':os.getenv("CMS-SESSION-ID"),
-            }
+        federal_key = settings.FEDERAL_KEY
+        base_url = settings.FEDERAL_URL
+
+    src_json, tar_json = {}, {}
+    headers = {'s-id': federal_key, 'Content-Type': 'application/json'}
+    feed_url = base_url + 'createFeedV2'
+    payload = {'sessionId': settings.CMS_SESSION_ID}
 
     tar_json = task.news_task.first().target_json
-   
+
     if not tar_json:
         doc = task.document
         if doc:
             src_json = task.news_task.first().source_json.get('news')[0]
             doc_to_file = DocumentToFile()
-            res = doc_to_file.document_data_to_file(request,doc.id)
+            res = doc_to_file.document_data_to_file(request, doc.id)
             if res.status_code in [200, 201]:
-                with open(res.text,"r") as fp:
+                with open(res.text, "r") as fp:
                     trans_json = json.load(fp)
-                tar_json = merge_dict(trans_json,src_json)
+                tar_json = merge_dict(trans_json, src_json)
                 tt = task.news_task.first()
                 tt.target_json = tar_json
                 tt.save()
- 
+
     payload.update({
-        'heading' : tar_json.get('heading'),
-        'description' : tar_json.get('description'),
-        'story':tar_json.get('story'),
+        'heading': tar_json.get('heading'),
+        'description': tar_json.get('description'),
+        'story': tar_json.get('story'),
         'location': tar_json.get('location'),
-        'locationId' : tar_json.get('locationId'),
+        'locationId': tar_json.get('locationId'),
         'categoryId': tar_json.get('maincategory'),
         'mediaIds': tar_json.get('mediaId'),
         'tags': tar_json.get('tags'),
         'keywords': tar_json.get('keywords'),
         'author': tar_json.get('authorName'),
-        'custom_params':[{
-            'name':'image_caption',
-            'value':tar_json.get('image_caption')
-        },{
-            'name':'story_summary',
-            'value':tar_json.get('story_summary') 
-        }
+        'custom_params': [
+            {'name': 'image_caption', 'value': tar_json.get('image_caption')},
+            {'name': 'story_summary', 'value': tar_json.get('story_summary')}
         ]
-        
     })
+
     if feed_id:
         payload.update({'feedId': feed_id})
 
     response = requests.request("POST", feed_url, headers=headers, data=json.dumps(payload))
+    
     if response.status_code == 200:
         feed = response.json().get('feedId')
         if feed:
-            task.news_task.update(feed_id=feed,pushed=True)
-            return Response({'msg':'pushed successfully'},status=200)
-    return Response({'msg':"something went wrong with CMS"},status=400)
+            task.news_task.update(feed_id=feed, pushed=True)
+            return Response({'msg': 'pushed successfully'}, status=200)
+    
+    return Response({'msg': "something went wrong with CMS"}, status=400)
+
 
 
 class AddStoriesView(viewsets.ModelViewSet):
@@ -4892,7 +5009,12 @@ def download_editors_report(res, from_date, to_date):
         df_active_sorted = data_active.sort_values(by='Name', key=lambda x: x.str.lower())
         df_deleted_sorted = data_deleted.sort_values(by='Name', key=lambda x: x.str.lower())
 
-        df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series(dtype='float64')  # Adding empty row
+        empty_row = pd.DataFrame([[None] * len(df_active_sorted.columns)], columns=df_active_sorted.columns)
+        df_active_sorted = pd.concat([df_active_sorted, empty_row])
+        
+        # df_active_sorted.loc[len(df_active_sorted)] = [None] * len(df_active_sorted.columns)
+        # df_active_sorted.loc[len(df_active_sorted) + 2] = pd.Series()  # Adding empty row
+
         data = pd.concat([df_active_sorted, df_deleted_sorted])
         # Write the data DataFrame to the same Excel file below the date details
         data.to_excel(writer, sheet_name='Report', startrow=date_details.shape[0] + 2, index=False)
