@@ -430,17 +430,17 @@ def glossary_search(request):
     user = request.user.team.owner if request.user.team else request.user
     glossary_selected = GlossarySelected.objects.filter(project = pr,glossary__project__project_type__id=3).values('glossary_id') ### only for gloss list
     
-    # queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
-    #             .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-    #                   params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
     
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term','glossary__project__project_name')
     
-    # queryset_final = queryset1.union(queryset)
-    queryset_final = queryset
+    queryset_final = queryset1.union(queryset)
+    #queryset_final = queryset
     if queryset_final:
         res=[]
         for data in queryset_final:
