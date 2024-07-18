@@ -397,10 +397,12 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
+
     '''
     This function is to search user_input(segment source) against MYGlossary and TermsModel 
     and returns the match if any.
     '''
+
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
@@ -417,15 +419,19 @@ def glossary_search(request):
         pr = task.job.project
         authorize(request, resource=task, actor=request.user, action="read")
     user = request.user.team.owner if request.user.team else request.user
-    glossary_selected = GlossarySelected.objects.filter(project = pr).values('glossary_id')
-    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
-                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+    glossary_selected = GlossarySelected.objects.filter(project = pr,glossary__project__project_type__id=3).values('glossary_id') ### only for gloss list
+    
+    # queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
+    #             .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+    #                   params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+    
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term','glossary__project__project_name')
-    queryset_final = queryset1.union(queryset)
+    
+    # queryset_final = queryset1.union(queryset)
+    queryset_final = queryset
     if queryset_final:
         res=[]
         for data in queryset_final:
@@ -434,7 +440,7 @@ def glossary_search(request):
     else:
         res=None
     res_1 = [{"glossary": key, "data": [g  for g in group]} for key, group in groupby(res, lambda x: x['name'])] if res else None
-    return JsonResponse({'res':res_1},safe=False)
+    return JsonResponse({'res':res_1},safe=False)    ### commad for word choice for mygloss list
 
 class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
