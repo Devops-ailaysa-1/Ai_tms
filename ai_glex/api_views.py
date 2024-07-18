@@ -512,6 +512,7 @@ def adding_term_to_glossary_from_workspace(request):
     for wordchoise if not created for this case please create , ignore if already selected 
     
     '''
+
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     doc_id = request.POST.get("doc_id")
@@ -539,7 +540,6 @@ def adding_term_to_glossary_from_workspace(request):
         din = AddStoriesView.check_user_dinamalar(user)
 
         if not din:
-            print("not a din user")
             user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
             project_ins_create = {'source_language':[doc.job.source_language.id],'target_languages':[doc.job.target_language.id]}
             serializer = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},context={"request": request,'user_1':user_1})
