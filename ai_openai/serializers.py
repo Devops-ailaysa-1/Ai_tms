@@ -9,7 +9,7 @@ import re
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations,\
+                     get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
                     get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
 from ai_workspace_okapi.utils import get_translation
@@ -23,7 +23,7 @@ from ai_workspace_okapi.utils import special_character_check
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
-from ai_openai.utils import blog_generator,get_prompt_gpt_turbo_1106
+from ai_openai.utils import get_prompt_gpt_turbo_1106
 from django.db.models import Case, IntegerField, When, Value
 from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
@@ -145,7 +145,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.catagories.category == "News":
             openai_response=get_prompt_gpt_turbo_1106( prompt)
         else:
-            prompt+= ' Ensure all relevant aspects are covered within the token limit. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
+            prompt+= " Ensure all relevant aspects are covered within the token limit. Keep the total token count under {} to ensure concise and effective communication.\n\nNote: don't give the result in markdown should be in plain text".format(token)
             openai_response=get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
         
         generated_text =openai_response.get('choices',None) 
