@@ -4,8 +4,16 @@ from ai_staff.models import Languages,LanguagesLocale
 
 from io import BytesIO
 from PIL import Image
-from django.conf import settings as settings_env
+ 
 from wiktionaryparser import WiktionaryParser
+from django.conf import settings
+from docx import Document
+from ai_openai.html2docx_custom import HtmlToDocx
+import re
+
+model_edit = settings.OPENAI_EDIT_MODEL
+OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL   
+
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
 
@@ -41,31 +49,29 @@ def openai_text_trim(text):
     return text
 
 import backoff
-@backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
-def get_prompt(prompt ,model_name , max_token ,n ):
-    temperature=0.7
-    frequency_penalty = 1
-    presence_penalty = 1
-    top_p = 1
-    response = openai.Completion.create(model=model_name, prompt=prompt.strip(),temperature=temperature,
-                                        max_tokens=int(max_token),top_p=top_p,frequency_penalty=frequency_penalty,
-                                        presence_penalty=presence_penalty,n=n)    # stop = ['#'],#logit_bias = {"50256": -100}        
-    choic=[]
-    for i in response["choices"]:
-        choic.append({'text':i['message']['content']})
-    response["choices"]=choic
-    return response
+# @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
+# def get_prompt(prompt ,model_name , max_token ,n ):
+#     temperature=0.7
+#     frequency_penalty = 1
+#     presence_penalty = 1
+#     top_p = 1
+#     response = openai.Completion.create(model=model_name, prompt=prompt.strip(),temperature=temperature,
+#                                         max_tokens=int(max_token),top_p=top_p,frequency_penalty=frequency_penalty,
+#                                         presence_penalty=presence_penalty,n=n)    # stop = ['#'],#logit_bias = {"50256": -100}        
+#     choic=[]
+#     for i in response["choices"]:
+#         choic.append({'text':i['message']['content']})
+#     response["choices"]=choic
+#     return response
 
-@backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
-def get_prompt_freestyle(prompt):
-    response = openai.Completion.create(model="text-curie-001",prompt=prompt.strip(),temperature=0.7,max_tokens=300,
-                                        top_p=1,frequency_penalty=1,presence_penalty=1,n=1,)#logit_bias = {"50256": -100}
-    return response
+# @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
+# def get_prompt_freestyle(prompt):
+#     response = openai.Completion.create(model="text-curie-001",prompt=prompt.strip(),temperature=0.7,max_tokens=300,
+#                                         top_p=1,frequency_penalty=1,presence_penalty=1,n=1,)#logit_bias = {"50256": -100}
+#     return response
 
-from django.conf import settings
-model_edit = settings.OPENAI_EDIT_MODEL
-OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL   
-TEXT_DAVINCI = "text-davinci-003"
+
+ 
 
 def get_prompt_edit(input_text ,instruction ):
     response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,)
@@ -96,48 +102,47 @@ def get_prompt_gpt_turbo_1106(messages):
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
+    prompt = prompt + "\n\nNote: don't give the result in markdown should be in plain text"
     if max_token:
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n,max_tokens=int(max_token))
     else:
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
-async def generate_text(prompt):
-    response = await openai.Completion.acreate(engine=TEXT_DAVINCI,prompt=prompt,max_tokens=150,n=1,top_p=1,
-                                               frequency_penalty=1,presence_penalty=1,temperature=0.7,)
-    return response
+# async def generate_text(prompt):
+#     response = await openai.Completion.acreate(engine=TEXT_DAVINCI,prompt=prompt,max_tokens=150,n=1,top_p=1,
+#                                                frequency_penalty=1,presence_penalty=1,temperature=0.7,)
+#     return response
 
-async def generate_texts(outline_section_prompt_list , title ,tone ,keyword):
-    coroutines=[]
-    for prompt in outline_section_prompt_list:
-        prompt='Create a paragraph for {} for a title {} with keywords {} in {} tone'.format(prompt,title,keyword,tone)
-        coroutines.append(generate_text(prompt))
-    return await asyncio.gather(*coroutines)
+# async def generate_texts(outline_section_prompt_list , title ,tone ,keyword):
+#     coroutines=[]
+#     for prompt in outline_section_prompt_list:
+#         prompt='Create a paragraph for {} for a title {} with keywords {} in {} tone'.format(prompt,title,keyword,tone)
+#         coroutines.append(generate_text(prompt))
+#     return await asyncio.gather(*coroutines)
 
-def blog_generator(outline_section_prompt_list ,title,tone,keyword):
-    results = asyncio.run(generate_texts(outline_section_prompt_list ,title ,tone ,keyword))
-    return  results
+# def blog_generator(outline_section_prompt_list ,title,tone,keyword):
+#     results = asyncio.run(generate_texts(outline_section_prompt_list ,title ,tone ,keyword))
+#     return  results
 
 ############
-async def generate_outline_response(prompt,n):
-    response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
-                                                   n=n,max_tokens=1200)
-    return response 
+# async def generate_outline_response(prompt,n):
+#     response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
+#                                                    n=n,max_tokens=1200)
+#     return response 
  
-async def outline_co(prompt,n):
-    coroutines=[]
-    prompt = [prompt]
-    coroutines.append(generate_outline_response(prompt,n))
-    return await asyncio.gather(*coroutines)
+# async def outline_co(prompt,n):
+#     coroutines=[]
+#     prompt = [prompt]
+#     coroutines.append(generate_outline_response(prompt,n))
+#     return await asyncio.gather(*coroutines)
 
-def outline_gen(prompt,n):
-    results = asyncio.run(outline_co(prompt,n))
-    return results[0]
+# def outline_gen(prompt,n):
+#     results = asyncio.run(outline_co(prompt,n))
+#     return results[0]
 ######################
 
-from docx import Document
-from ai_openai.html2docx_custom import HtmlToDocx
-import re
+
 document = Document()
 new_parser = HtmlToDocx()
 new_parser.table_style = 'TableGrid'
@@ -378,5 +383,5 @@ def set_font_to_times_new_roman(doc):
  
 def tamil_spelling_check(text):
     payload = {'text': text,'lang_code': 'ta'}
-    response = requests.request("POST", settings_env.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
+    response = requests.request("POST", settings.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
     return response.json()

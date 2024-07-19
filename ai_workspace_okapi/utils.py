@@ -511,13 +511,13 @@ def get_general_prompt(opt,sent):
 
     return prompt
 
-def get_prompt(sent,subs,cont):
-    if subs == []:subs_str = 'English language'
-    else: subs_str =  ', '.join(subs)
-    if cont == []:cont_str = 'easy-to-understand content'
-    else: cont_str = ', '.join(cont)
-    if len(sent)<=20:
-        prompt = '''Rewrite the given text. Text: {} '''.format(sent)
+# def get_prompt(sent,subs,cont):
+#     if subs == []:subs_str = 'English language'
+#     else: subs_str =  ', '.join(subs)
+#     if cont == []:cont_str = 'easy-to-understand content'
+#     else: cont_str = ', '.join(cont)
+#     if len(sent)<=20:
+#         prompt = '''Rewrite the given text. Text: {} '''.format(sent)
 
 def get_prompt_sent(opt,sent):
 
