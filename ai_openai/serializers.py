@@ -8,7 +8,7 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
-from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
+from .utils import get_consumable_credits_for_openai_text_generator,\
                      get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
                     get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
