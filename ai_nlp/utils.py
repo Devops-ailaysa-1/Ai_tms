@@ -100,7 +100,7 @@ def loader(file_id) -> None:
         instance.save()
         loader = TextLoader(instance.text_file.path)
     else:
-        loader = PyPDFLoader(instance.file.path,extract_images=False)
+        loader = PDFMinerLoader(instance.file.path,extract_images=False)
         # loader = PDFMinerLoader(instance.file.path)  #PyPDFLoader
     data = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
