@@ -1,4 +1,5 @@
 from django import core
+from django.conf import settings
 import openai ,os,pdf2image,io
 from langchain.llms import OpenAI
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
@@ -41,6 +42,7 @@ nlp = spacy.load('en_core_web_sm')
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
+OPEN_AI_GPT_MODEL_CHAT =  settings.OPEN_AI_GPT_MODEL_CHAT 
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
  
 
@@ -150,7 +152,7 @@ def load_chat_history(instance):
 
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)  
+    llm = ChatOpenAI(model_name=OPEN_AI_GPT_MODEL_CHAT, temperature=0)  
     embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
@@ -200,7 +202,7 @@ def generate_question(document):
     n = 2 if doc_len>2 else 1
     document = random.sample(document_list,n)
     document = " ".join(document)
-    query = "Generate four questions from the above content and split all four questions with new line and questions should be translate in English language"
+    query = "Generate four simple questions from the above content and split all four questions with new line and questions should be translate in English language"
     prompt = prompt_gen_question_chatbook(document,query)
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt,n=1)
     generated_text =prompt_res['choices'][0]['message']['content']

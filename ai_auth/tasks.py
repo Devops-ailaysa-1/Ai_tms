@@ -36,6 +36,8 @@ import calendar
 from ai_workspace.models import ExpressTaskHistory
 from celery.exceptions import MaxRetriesExceededError
 from ai_auth.signals import purchase_unit_renewal
+from django.conf import settings
+
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -816,14 +818,14 @@ def weighted_count_update(receiver,sender,assignment_id):
 
 ############################ For wordchoice ############################################
 
-OPEN_AI_GPT_MODEL = "gpt-4o" #"gpt-3.5-turbo-0125"
+OPEN_AI_GPT_MODEL_REPLACE = settings.OPEN_AI_GPT_MODEL_REPLACE  
 from ai_staff.models import InternalFlowPrompts
 import openai
 def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         pr = prompt_phrase.format(src,raw_mt,gloss)
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "user", "content": pr}])
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
     except:
         res = raw_mt
