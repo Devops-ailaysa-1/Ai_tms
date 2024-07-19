@@ -125,9 +125,10 @@ def save_prest(texts,embeddings,persistent_dir,instance):
     result = generate_question(vector_db)
     result = result.split("\n")
     for sentence in result:
-        cleaned_sentence = remove_number_from_sentence(sentence)
-        cleaned_sentence = cleaned_sentence.strip()
-        PdfQustion.objects.create(pdf_file_chat=instance , question=cleaned_sentence)
+        if sentence:
+            cleaned_sentence = remove_number_from_sentence(sentence)
+            cleaned_sentence = cleaned_sentence.strip()
+            PdfQustion.objects.create(pdf_file_chat=instance , question=cleaned_sentence)
     vector_db.persist()
     vector_db = None
 
