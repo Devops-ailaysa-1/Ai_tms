@@ -27,8 +27,7 @@ from ai_openai.utils import get_prompt_gpt_turbo_1106
 from django.db.models import Case, IntegerField, When, Value
 from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
-from django.db import IntegrityError
-from django.db import models, transaction
+from django import core
 from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
 
 def replace_punctuation(text):
@@ -117,6 +116,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
         if instance.catagories.category == 'Free Style':
             prompt+= instance.description + '.' if lang in ai_langs else instance.description_mt + '.'
+            prompt+= "\n\nNote: don't give the result in markdown should be in plain text"
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         
         else:
@@ -337,7 +337,7 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
         
 
 
-from django import core
+
 
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
     class Meta:
