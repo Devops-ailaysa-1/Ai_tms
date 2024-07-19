@@ -161,11 +161,11 @@ def customize_response(customize ,user_text,tone,used_tokens):
     In this function it will format prompt according to the customize option and called 
     openAI API return the response, total_tokens and prompt.
     '''
-    user_text = user_text.strip()
+    user_text = user_text.strip()+"\n\nNote: don't give the result in markdown should be in plain text"
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
-            prompt = customize.prompt+' {} tone : '.format(tone_)+user_text
+            prompt = customize.prompt+' {} tone : '.format(tone_)+user_text 
             response = get_prompt_chatgpt_turbo(prompt=prompt,max_token =150,n=1)
         else:
             if customize.grouping == "Explore":
