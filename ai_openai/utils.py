@@ -126,20 +126,20 @@ def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
 #     return  results
 
 ############
-# async def generate_outline_response(prompt,n):
-#     response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
-#                                                    n=n,max_tokens=1200)
-#     return response 
+async def generate_outline_response(prompt,n):
+    response = await openai.ChatCompletion.acreate(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt[0]}],
+                                                   n=n,max_tokens=1200)
+    return response 
  
-# async def outline_co(prompt,n):
-#     coroutines=[]
-#     prompt = [prompt]
-#     coroutines.append(generate_outline_response(prompt,n))
-#     return await asyncio.gather(*coroutines)
+async def outline_co(prompt,n):
+    coroutines=[]
+    prompt = [prompt]
+    coroutines.append(generate_outline_response(prompt,n))
+    return await asyncio.gather(*coroutines)
 
-# def outline_gen(prompt,n):
-#     results = asyncio.run(outline_co(prompt,n))
-#     return results[0]
+def outline_gen(prompt,n):
+    results = asyncio.run(outline_co(prompt,n))
+    return results[0]
 ######################
 
 
