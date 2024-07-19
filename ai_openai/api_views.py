@@ -24,7 +24,7 @@ from .utils import get_consumable_credits_for_openai_text_generator
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo,set_font_to_times_new_roman
+from .utils import get_prompt_edit,get_prompt_image_generations, get_prompt_chatgpt_turbo,set_font_to_times_new_roman
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import OPENAI_MODEL
 openai_model = OPENAI_MODEL
