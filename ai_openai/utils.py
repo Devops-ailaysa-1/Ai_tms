@@ -62,7 +62,10 @@ def get_prompt_freestyle(prompt):
                                         top_p=1,frequency_penalty=1,presence_penalty=1,n=1,)#logit_bias = {"50256": -100}
     return response
 
-model_edit = os.getenv('OPENAI_EDIT_MODEL')
+from django.conf import settings
+model_edit = settings.OPENAI_EDIT_MODEL
+OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL   
+TEXT_DAVINCI = "text-davinci-003"
 
 def get_prompt_edit(input_text ,instruction ):
     response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,)
@@ -85,12 +88,11 @@ def get_img_content_from_openai_url(image_url):
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_gpt_turbo_1106(messages):
-    completion = openai.ChatCompletion.create(model="gpt-3.5-turbo-1106",messages=messages)
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=messages)
     return completion
 
 
-OPEN_AI_GPT_MODEL = "gpt-3.5-turbo"   #"gpt-3.5-turbo" gpt-4 
-TEXT_DAVINCI = "text-davinci-003"
+
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n,max_token=None):

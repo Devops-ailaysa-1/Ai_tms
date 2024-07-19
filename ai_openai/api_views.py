@@ -967,9 +967,10 @@ import openai,tiktoken,time,os
 from ai_staff.models import PromptSubCategories
 from rest_framework import serializers
 from ai_openai.serializers import lang_detector
- 
+from django.conf import settings
 
 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+OPEN_AI_GPT_MODEL = settings.OPEN_AI_GPT_MODEL 
 
 from ai_openai.models import MyDocuments
 from ai_openai.utils import get_prompt_gpt_turbo_1106
@@ -1143,7 +1144,7 @@ def generate_article(request):
         prompt = blog_article_start_phrase.format(title,selected_outline_section_list,keyword,instance.blog_creation.tone.tone)
 
         if blog_creation.user_language_code== 'en':
-            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
                 str_con=""
                 for chunk in completion:
@@ -1161,7 +1162,7 @@ def generate_article(request):
 
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
-            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang(title):
                 arr=[]
                 str_cont=''
@@ -1277,16 +1278,16 @@ def generate_chapter(request):
         language_code = book_body_instance.book_creation.book_language_code
         if language_code == 'en':
             if context:
-                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
+                completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
             else:
-                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+                completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content":prompt}],stream=True)
 
             return StreamingHttpResponse(stream_article_response_en(book_title,completion,prompt,book_body_instance),content_type='text/event-stream')
         else:
             if context:
-                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
+                completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role": "system", "content": context},{"role":"user","content":prompt}],stream=True)
             else:
-                completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+                completion=openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang(title):
                 arr=[]
                 str_cont=''
