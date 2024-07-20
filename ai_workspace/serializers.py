@@ -411,7 +411,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 	file_translate = serializers.BooleanField(required=False,allow_null=True)
-	#glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
+	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 
 	class Meta:
 		model = Project
@@ -420,7 +420,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate',)#'glossary_id',)
+					'file_translate')#'glossary_id')
 
 	def run_validation(self, data):
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
@@ -642,7 +642,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				# 	proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 					
 
-				if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
+				if project_type in [1,2,5,9,8,10]: #Add project_type here to create normal tasks 
 					tasks = Task.objects.create_tasks_of_files_and_jobs(
 						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 					
@@ -1488,7 +1488,7 @@ def notify_task_status(task_assign,status,reason):
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     receivers = [*set(receivers)]
-    Receiver_emails = [i.email for i in receivers]
+    Receiver_emails = [i.email for i in receivers if i.is_active == True]
 
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})

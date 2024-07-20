@@ -107,6 +107,8 @@ from ai_openai.utils import get_prompt_chatgpt_turbo
 from .utils import get_prompt_sent
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 from .utils import get_general_prompt
+from ai_auth.tasks import replace_with_gloss
+
 
 logger = logging.getLogger('django')
 
@@ -938,10 +940,6 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
-                
-                # replaced = replace_with_gloss(seg.source,mt_raw.mt_raw,task)
-                # mt_raw.mt_raw = replaced
-                # mt_raw.save()
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
 
@@ -950,6 +948,7 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+        task = Task.objects.get(job=doc.job)
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
@@ -962,8 +961,8 @@ class MT_RawAndTM_View(views.APIView):
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                #translation = replace_with_gloss(seg.source,translation_original,task)
+                # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                # translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -977,7 +976,7 @@ class MT_RawAndTM_View(views.APIView):
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
                     mt_raw_serlzr.save()
-                    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
@@ -993,7 +992,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        # task = Task.objects.get(document=doc)
+        task = Task.objects.get(document=doc)
 
         # Getting the task MT engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
@@ -1030,7 +1029,7 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #translation = replace_with_gloss(split_seg.source,translation_original,task)
+                # translation = replace_with_gloss(split_seg.source,translation_original,task)
                 
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -1040,7 +1039,7 @@ class MT_RawAndTM_View(views.APIView):
                 print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                #translation = replace_with_gloss(split_seg.source,translation_original,task)
+                # translation = replace_with_gloss(split_seg.source,translation_original,task)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -1194,7 +1193,6 @@ class MT_RawAndTM_View(views.APIView):
 
             # For split segment
             else:
-
                 tm_data = self.get_tm_data(request, segment_id)
 
                 if tm_data and (mt_uc == False):
@@ -1552,7 +1550,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.prefetch_related('file','job__source_language','job__target_language').first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        
+        print("task_data---->>>",task_data)
         DocumentViewByTask.correct_fields(task_data)
         
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
@@ -2856,7 +2854,7 @@ def check_source_words(user_input,task):
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
                 .filter(job__target_language=target_language).filter(tl_term__isnull=False).exclude(tl_term='')\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_at').distinct('sl_term')
+                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term')
 
     gloss = [i for i in queryset]
     words = [i.get('sl_term') for i in queryset]

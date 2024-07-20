@@ -701,9 +701,8 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
         if initial_credit>=consumble_credits:
             instance=StableDiffusionAPI.objects.create(user=user,created_by = created_by,used_api="stable",prompt=prompt,model_name="SDXL",style=sdstylecategoty.style_name,
                                                     height=image_resolution.height,width=image_resolution.width,steps=41,negative_prompt=negative_prompt)
-            image=stable_diffusion_public_segmind.apply_async(args=(instance.id,),) #prompt,41,height,width,negative_prompt
-            # stable_diffusion_public_segmind
-            # stable_diffusion_public
+            image=stable_diffusion_public_segmind.apply_async(args=(instance.id,),) 
+ 
             instance.celery_id=image
             instance.status="PENDING"
             from ai_workspace.api_views import UpdateTaskCreditStatus

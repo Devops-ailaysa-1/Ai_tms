@@ -582,7 +582,7 @@ class Team(models.Model):
     @property
     def get_project_manager_only(self):
         hrs = [i.internal_member_id for i in self.internal_member_team_info.filter(role_id=4)]
-        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1).exclude(internal_member_id__in=hrs)]
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1).exclude(internal_member_id__in=hrs,internal_member__is_active=False)]
 
     @property
     def get_team_members(self):

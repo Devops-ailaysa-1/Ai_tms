@@ -8,8 +8,8 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
-from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
-                    get_prompt_freestyle ,get_prompt_image_generations,\
+from .utils import get_consumable_credits_for_openai_text_generator,\
+                     get_prompt_image_generations,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
                     get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
 from ai_workspace_okapi.utils import get_translation
@@ -23,12 +23,11 @@ from ai_workspace_okapi.utils import special_character_check
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
-from ai_openai.utils import blog_generator,get_prompt_gpt_turbo_1106
+from ai_openai.utils import get_prompt_gpt_turbo_1106
 from django.db.models import Case, IntegerField, When, Value
 from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
-from django.db import IntegrityError
-from django.db import models, transaction
+from django import core
 from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
 
 def replace_punctuation(text):
@@ -117,6 +116,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 700
         if instance.catagories.category == 'Free Style':
             prompt+= instance.description + '.' if lang in ai_langs else instance.description_mt + '.'
+            prompt+= "\n\nNote: don't give the result in markdown should be in plain text"
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         
         else:
@@ -145,7 +145,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.catagories.category == "News":
             openai_response=get_prompt_gpt_turbo_1106( prompt)
         else:
-            prompt+= ' Ensure all relevant aspects are covered within the token limit. Keep the total token count under {} to ensure concise and effective communication.'.format(token)
+            prompt+= " Ensure all relevant aspects are covered within the token limit. Keep the total token count under {} to ensure concise and effective communication.\n\nNote: don't give the result in markdown should be in plain text".format(token)
             openai_response=get_prompt_chatgpt_turbo(prompt,instance.response_copies,token)
         
         generated_text =openai_response.get('choices',None) 
@@ -337,7 +337,7 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
         
 
 
-from django import core
+
 
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1544,4 +1544,88 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
         pass
 
 
+from ai_openai.models import LangscapeOcrPR
+import os,docx2txt
+from ai_workspace.models import WriterProject,MyDocuments,DocumentType
+class LangscapeOcrPRSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = LangscapeOcrPR
+        fields = "__all__"
+
+
+    def create(self, validated_data):
  
+        user = self.context.get('request').user
+        validated_data['user'] = user
+        instance = LangscapeOcrPR.objects.create(**validated_data)
+        if validated_data.get('ocr_result',None):
+
+            instance.file_name = os.path.basename(instance.ocr_result.path)
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+
+        instance.save()
+        return instance
+    
+    def ocr_result_extract_to_docx(self,instance):
+        ocr_result_path = instance.ocr_result.path
+
+        if ocr_result_path.endswith(('.doc', '.docx')):
+            extracted_text = docx2txt.process(ocr_result_path)
+            print("extracted_text",extracted_text)
+            if instance.document:
+                instance.document.html_data = extracted_text
+                instance.document.save()
+            else:
+                writer_obj = WriterProject.objects.create(ai_user_id = instance.user.id)
+                document_type = DocumentType.objects.get(id = 3) ### for spell check writer
+                document = MyDocuments.objects.create(project = writer_obj,document_type=document_type,
+                                        html_data=extracted_text,ai_user=instance.user)
+                instance.document = document
+                document.doc_name = instance.file_name
+                document.save()
+            instance.save()
+        return instance
+
+    
+    def update(self, instance, validated_data):
+ 
+        if validated_data.get('ocr_result',None):
+            instance.ocr_result = validated_data.get('ocr_result')
+            instance.save()
+            instance = self.ocr_result_extract_to_docx(instance)
+            instance.save()
+
+        if validated_data.get('main_document',None):
+            instance.main_document = validated_data.get('main_document')
+            instance.save()
+
+        if validated_data.get('file_name',None):
+            instance.file_name = validated_data.get('file_name')
+
+        instance.save()    
+        return instance
+    
+
+class MyDocumentOCRSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyDocuments
+        fields = "__all__"
+
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        ocr_instance = instance.doc_for_ocr.last()
+        if ocr_instance and ocr_instance.main_document:
+            data["main_document"] = ocr_instance.main_document.url
+        return data
+    
+
+    def update(self, instance, validated_data):
+        if validated_data.get('html_data',None):
+            instance.html_data = validated_data.get('html_data')
+            instance.save()
+        print("instance",instance)
+        return instance

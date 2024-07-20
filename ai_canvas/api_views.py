@@ -323,7 +323,8 @@ class CanvasDesignViewset(viewsets.ViewSet):
         src_page_no = request.query_params.get('src_page_no',None)
         tar_page_no = request.query_params.get('tar_page_no',None)
         tar_lang = request.query_params.get('tar_lang',None)
-        obj = CanvasDesign.objects.get(user=request.user,id=pk)
+        # obj = CanvasDesign.objects.get(user=request.user,id=pk)
+        obj =self.get_object(pk)
         project = obj.project
         if src_page_no:
             can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)

@@ -647,8 +647,9 @@ class ProjectFilter(django_filters.FilterSet):
         elif value == "designer":
             queryset = queryset.filter(project_type_id=6)
         elif value == "news":
-            print("queryset--->",queryset)
-            queryset = queryset.filter(project_type_id=8)#.select_related('project_type') #
+            queryset = queryset.filter(project_type_id=8) 
+        elif value == "word_choices":
+            queryset = queryset.filter(project_type_id=10)
         print("QRF-->",queryset)
         return queryset
 
@@ -672,9 +673,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
         project_type = json.loads(self.request.POST.get('project_type','1'))
-        #if project_type == 3 or project_type == 10:
-        if project_type == 3:
+        if project_type == 3 or project_type == 10:
+        # if project_type == 3:
             return GlossarySetupSerializer
+        print("project")
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -733,7 +735,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     return Response(serializer.data)
         
     def list(self, request, *args, **kwargs):
-
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
         user_1 = self.get_user()
@@ -745,10 +746,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         # check for dinamalar user. if so, it will return simple serializer with only required fields
         if din:
             self.paginator.page_size = 10  ### pagination changed to 10 for Din
-            serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
-                         context={'request': request,'user_1':user_1})
-        else:
-            serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
+            # serializer = ProjectSimpleSerializer(pagin_tc, many=True,\
+                        #  context={'request': request,'user_1':user_1})     
+        # else:
+        ## the above code is commanded for standard project for din
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
                          context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         return  response
@@ -801,6 +803,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         else:
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
+        
             
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
@@ -4248,7 +4251,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         view_instance_1.request = request
         view_instance_1.request.GET = request.GET
 
-        queryset1 = view_instance_1.get_queryset().exclude(project_type_id=8)
+        queryset1 = view_instance_1.get_queryset().exclude(project_type_id__in=[8,10])
 
 
         view_instance_2 = MyDocumentsView()
@@ -4368,7 +4371,7 @@ class AssertList(viewsets.ModelViewSet):
 
         queryset = view_instance_1.get_queryset()
 
-        queryset1 = queryset.filter(glossary_project__isnull=False)
+        queryset1 = queryset.filter(glossary_project__isnull=False).exclude(project_type_id=10)
         queryset2 = ChoiceLists.objects.none()  
 
         user = self.request.user
