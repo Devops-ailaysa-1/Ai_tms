@@ -750,8 +750,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         #  context={'request': request,'user_1':user_1})     
         # else:
         ## the above code is commanded for standard project for din
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
-                         context={'request': request,'user_1':user_1})
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         return  response
 
@@ -759,8 +758,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
-        serializer = ProjectQuickSetupSerializer(query, many=False,\
-                     context={'request': request,'user_1':user_1})
+        serializer = ProjectQuickSetupSerializer(query, many=False,context={'request': request,'user_1':user_1})
         return Response(serializer.data)
 
     def create(self, request):
@@ -785,9 +783,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if urlparse(text_data).scheme:
                 return Response({"msg": "Url not Accepted"}, status=406)
 
-            name = text_data.split()[0].strip(punctuation) + ".txt" if len(text_data.split()[0]) <= 15 else text_data[
-                                                                                                            :5].strip(
-                punctuation) + ".txt"
+            name = text_data.split()[0].strip(punctuation) + ".txt" if len(text_data.split()[0]) <= 15 else text_data[:5].strip(punctuation) + ".txt"
             im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent=text_data.encode(), file_name=name)
             serlzr = ser(data={**request.data, "files": [im_file], "from_text": ['true']}, context={"request": request})
 
