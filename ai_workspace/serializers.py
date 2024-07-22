@@ -468,7 +468,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 										"project_type_sub_category":data.get("sub_category",[None])[0]}
 
 		if data.get('audio_file'):
-		 	data['files'] = [{"file": file, "usage_type": 1} for file in data.get('audio_file', [])]
+			data['files'] = [{"file": file, "usage_type": 1} for file in data.get('audio_file', [])]
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
@@ -622,7 +622,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				obj_is_allowed(project,"create",user)
 				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
 					pro_fil = ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
-				
+					
 				else:
 					pro_fil = ProjectFilesCreateType.objects.create(project=project)
 
@@ -1116,11 +1116,11 @@ class ReferenceFileSerializer(serializers.ModelSerializer):
 class TbxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
-	    model = TbxFile
-	    fields = ("id", "project", "tbx_file", "job", "filename")
+		model = TbxFile
+		fields = ("id", "project", "tbx_file", "job", "filename")
 
 	def save_update(self):
-	    return super().save()
+		return super().save()
 
 	@staticmethod
 	def prepare_data(data):
@@ -1158,27 +1158,30 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
-    project_name = serializers.ReadOnlyField(source ='task.job.project.project_name')
+    project_name = serializers.ReadOnlyField(source='task.job.project.project_name')
     source_lang = serializers.SerializerMethodField()
     punctuation_support = serializers.SerializerMethodField()
     transcription_source_file = serializers.SerializerMethodField()
+
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
-        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer",\
-							"audio_file_length","user","created_at","updated_at","punctuation_support","transcription_source_file",)
-      
-    def get_source_lang(self,obj):
+        write_only_fields = (
+            "project_name", 'source_lang', "source_audio_file", "translated_audio_file", "transcripted_file_writer",
+            "audio_file_length", "user", "created_at", "updated_at", "punctuation_support", "transcription_source_file",
+        )
+
+    def get_source_lang(self, obj):
         return obj.task.job.project.project_jobs_set.first().source_language.language
 
-    def get_transcription_source_file(self,obj):
-	    return obj.task.file.file.url
+    def get_transcription_source_file(self, obj):
+        return obj.task.file.file.url
 
-    def get_punctuation_support(self,obj):
-       lang = obj.task.job.project.project_jobs_set.first().source_language
-       locale = [i.id for i in lang.locale.all()]
-       sp = TranscribeSupportedPunctuation.objects.filter(language_locale__in = locale)
-       return True if sp else False
+    def get_punctuation_support(self, obj):
+        lang = obj.task.job.project.project_jobs_set.first().source_language
+        locale = [i.id for i in lang.locale.all()]
+        sp = TranscribeSupportedPunctuation.objects.filter(language_locale__in=locale)
+        return True if sp else False
 
 class ProjectListSerializer(serializers.ModelSerializer):
 	jobs = serializers.SerializerMethodField()
