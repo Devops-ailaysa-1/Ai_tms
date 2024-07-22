@@ -613,16 +613,26 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
+		print("validated_data---->",validated_data)
 		try:
 			with transaction.atomic():
 				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 					validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
-					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+					team=team,project_manager=project_manager,created_by=created_by) 
+				print("jobs",jobs)
+				#### creating dumy gloss for project 1 and 2
+				from ai_glex.models import Glossary ,TermsModel
+				gloss_instance = Glossary.objects.create(project=project)
+				for i in jobs:
+					TermsModel.objects.create(glossary=gloss_instance,job = i)
+					## creating a gloss
+					print(i.source_language,i.target_language)
 				obj_is_allowed(project,"create",user)
 				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
 					pro_fil = ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
 					
+					 
 				else:
 					pro_fil = ProjectFilesCreateType.objects.create(project=project)
 
