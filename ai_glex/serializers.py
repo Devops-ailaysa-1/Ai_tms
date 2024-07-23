@@ -65,13 +65,15 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        original_validated_data = validated_data.copy()
+        original_validated_data = validated_data.copy() ### for project create with project_type 3
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
         jobs = project.get_jobs
+        print("---glossary_data",glossary_data)
+        print("-------original_validated_data",original_validated_data)
+        print("jobs------->",jobs)
         glossary = Glossary.objects.create(**glossary_data,project=project)
-        tasks = Task.objects.create_glossary_tasks_of_jobs(
-                jobs=jobs,klass=Task)
+        tasks = Task.objects.create_glossary_tasks_of_jobs(jobs=jobs,klass=Task)
         task_assign = TaskAssign.objects.assign_task(project=project)
         return project
 

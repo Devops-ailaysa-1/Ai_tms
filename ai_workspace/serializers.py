@@ -614,6 +614,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
+		print("project_jobs_set--->",project_jobs_set)
 		#tar_lang = validated_data.get("target_languages",[])
 		try:
 			with transaction.atomic():
@@ -622,19 +623,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by) 
 				#### creating dumy gloss for project 1 and 2
+				
 				from ai_glex.serializers import GlossarySetupSerializer
 				from ai_glex.models import Glossary,TermsModel
-				for i in jobs:
-					project_ins_create = Project.objects.create(project_type_id=10,ai_user=ai_user)
-					gloss_ins = Glossary.objects.create(project=project_ins_create)
-					TermsModel.objects.create(glossary=gloss_ins,job=i)
-					# project_ins_create = {'source_language':[i.source_language.id],'target_languages':[i.target_language.id]}
-					# user_1 = user.team.owner if user.team and user.team.owner.is_agency and (user in user.team.get_project_manager) else user
-					# gloss_ser = GlossarySetupSerializer(data={**project_ins_create,"project_type":['10']},
-					# 							  context={"request": self.context.get("request"),'user_1':user_1})
-					# if gloss_ser.is_valid(raise_exception=True):
-					# 	gloss_ser.save()
-				
+				if project_type not in [3,10]:
+					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1)
+					for job in jobs:
+						Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
+					validated_data['project_type_id'] = 3
+					gloss_jobs = project_ins_gloss.get_jobs
+					glossary = Glossary.objects.create(project=project_ins_gloss)
+					tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
+					task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 				
 				obj_is_allowed(project,"create",user)
 
