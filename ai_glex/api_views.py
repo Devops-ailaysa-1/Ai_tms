@@ -43,6 +43,16 @@ from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
 
 
+def job_lang_pair_check(gloss_job_list, src, tar):
+    print("src",src)
+    print("tar",tar)
+    for gloss_pair in gloss_job_list:
+        if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
+            print(gloss_pair)
+            return gloss_pair
+    
+    return None
+
 ######### Glossary FILE UPLOAD  #####################################
 
 class GlossaryFileView(viewsets.ViewSet):
@@ -76,10 +86,15 @@ class GlossaryFileView(viewsets.ViewSet):
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
 
-        if task_id: ### from transeditor with translation project 
+        if task_id: ### from transeditor with translation project which is project's task id 
             task_inst = Task.objects.get(id=task_id)
-            job_inst = task_inst.job
-            data = [{"project": job_inst.project.individual_gloss_project.project.id , "file": file, "job":job_inst.id, "usage_type":8} for file in files]
+            job_inst = task_inst.job #### project's job
+            gloss_project = job_inst.project.individual_gloss_project
+            gloss_job_list = gloss_project.project.project_jobs_set.all()  
+            gloss_job = job_lang_pair_check(gloss_job_list,job_inst.source_language.id ,job_inst.target_language.id )
+            print("gloss_job---->",gloss_job)
+
+            data = [{"project": gloss_project.project.id , "file": file, "job":gloss_job.id, "usage_type":8} for file in files]
 
         else:
             proj = Project.objects.get(id=proj_id)
@@ -112,13 +127,6 @@ class GlossaryFileView(viewsets.ViewSet):
 
 from rest_framework.decorators import action
 
- 
-
-def job_lang_pair_check(gloss_job_list, src, tar):
-    for gloss_pair in gloss_job_list:
-        if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
-            return gloss_pair
-    return None
 
 class TermUploadView(viewsets.ModelViewSet):
     '''
@@ -178,10 +186,23 @@ class TermUploadView(viewsets.ModelViewSet):
 
         if trans_project_id and job_id:
 
- 
-        if task:
+            trans_project_ins = Project.objects.get(id=trans_project_id)
+            job_ins = Job.objects.get(id=job_id)
+
+            source_language = job_ins.source_language
+            target_language = job_ins.target_language
+
+            gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
+            gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+            if not gloss_job_ins:
+                return Response({"msg":"not gloss job"},status = 400)
+            
+            queryset = TermsModel.objects.filter(job=job_ins)
+            project_name = job_ins.project.project_name
+            edit_allow = self.edit_allowed(job_ins)
+        
+        elif task:
             job = Task.objects.get(id=task).job
-    
             project_name = job.project.project_name
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
@@ -189,9 +210,12 @@ class TermUploadView(viewsets.ModelViewSet):
                 target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
             except:
                 target_language = None
+        
             edit_allow = self.edit_allowed(job)
-            additional_info = [{'project_name':project_name,'source_language':source_language,
-                                'target_language':target_language,'edit_allowed':edit_allow}]
+        
+        
+        additional_info = [{'project_name':project_name,'source_language':str(source_language),
+                                'target_language':str(target_language),'edit_allowed':edit_allow}]
         
 
 

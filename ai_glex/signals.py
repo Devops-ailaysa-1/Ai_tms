@@ -46,7 +46,6 @@ def update_words_from_template(sender, instance, *args, **kwargs):
                 value.job_id = instance.job_id
                 value.save()
     else:
-        print("------>>")
         for data in imported_data:
             if data[2]:
                     value = glex_model.TermsModel(
