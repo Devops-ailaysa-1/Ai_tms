@@ -60,24 +60,34 @@ class GlossaryFileView(viewsets.ViewSet):
         return  Response(serializer.data)
 
     def create(self, request):
+
         proj_id = request.POST.get('project')
         job_id = request.POST.get('job',None)
         files = request.FILES.getlist("glossary_file")
+        glossary_id = request.POST.get('glossary_id',None)
+        task_id  = request.POST.get('task_id',None)
         for i in files:
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
     
-        if job_id:
+        if job_id: ## from gloss page with gloss project 
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
-            
+
+        if task_id: ### from transeditor with translation project 
+            task_inst = Task.objects.get(id=task_id)
+            job_inst = task_inst.job
+            data = [{"project": job_inst.project.individual_gloss_project.project.id , "file": file, "job":job_inst.id, "usage_type":8} for file in files]
+
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
             data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
-        serializer=GlossaryFileSerializer(data=data,many=True)
+        
+        serializer = GlossaryFileSerializer(data=data,many=True)
+        
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
@@ -100,6 +110,15 @@ class GlossaryFileView(viewsets.ViewSet):
 ###############################Terms CRUD########################################
 
 
+from rest_framework.decorators import action
+
+ 
+
+def job_lang_pair_check(gloss_job_list, src, tar):
+    for gloss_pair in gloss_job_list:
+        if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
+            return gloss_pair
+    return None
 
 class TermUploadView(viewsets.ModelViewSet):
     '''
@@ -154,22 +173,30 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def list(self, request):
         task = request.GET.get('task',None)
-        if not task:
-            return Response({'msg':'Need Task id'})
-        job = Task.objects.get(id=task).job
-        # word_choice = True if job.project.project_type_id == 10 else False
-        # print("WordChoice----------->",word_choice)
-        project_name = job.project.project_name
-        queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
-        source_language = str(job.source_language)
-        try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
-        except:target_language = None
-        edit_allow = self.edit_allowed(job)
-        additional_info = [{'project_name':project_name,'source_language':source_language,
-                            'target_language':target_language,'edit_allowed':edit_allow}]
+        trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
+        job_id = request.GET.get('job_id',None)
+
+        if trans_project_id and job_id:
+
+ 
+        if task:
+            job = Task.objects.get(id=task).job
+    
+            project_name = job.project.project_name
+            queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
+            source_language = str(job.source_language)
+            try:
+                target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
+            except:
+                target_language = None
+            edit_allow = self.edit_allowed(job)
+            additional_info = [{'project_name':project_name,'source_language':source_language,
+                                'target_language':target_language,'edit_allowed':edit_allow}]
+        
+
+
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        # if word_choice:
-        #     get_terms_mt(task,pagin_tc)
+ 
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
         response.data['additional_info'] = additional_info
@@ -205,7 +232,21 @@ class TermUploadView(viewsets.ModelViewSet):
             self.update_task_assign(queryset.job,user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
+    # @action(detail=False, methods=['POST'])
+    # def bulk_upload(self, request):
+    #     # Check if the file is provided
+    #     files = request.FILES.getlist("glossary_file")
+    #     task_id = request.POST.get('task',None)
+    #     job_id =  request.POST.get('job',None)
+        
+    #     # Read the Excel file into a DataFrame
+    #     for i in files:
+    #         df = pd.read_excel(i)
+    #         if 'Source language term' not in df.head():
+    #             return Response({'msg':'file(s) not contained supported data'},status=400)
+        
     def destroy(self, request, *args, **kwargs):
         term_delete_ids =request.GET.get('term_delete_ids')
         delete_list = term_delete_ids.split(',')
