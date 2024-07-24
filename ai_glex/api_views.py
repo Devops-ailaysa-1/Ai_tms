@@ -63,21 +63,31 @@ class GlossaryFileView(viewsets.ViewSet):
         proj_id = request.POST.get('project')
         job_id = request.POST.get('job',None)
         files = request.FILES.getlist("glossary_file")
+        glossary_id = request.POST.get('glossary_id',None)
+        task_id  = request.POST.get('task_id',None)
         for i in files:
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
     
-        if job_id:
+        if job_id: ## from gloss page with gloss project 
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
-            
+
+        if task_id: ### from transeditor with translation project 
+            task_inst = Task.objects.get(id=task_id)
+            job_inst = task_inst.job
+
+            data = [{"project": job_inst.project.individual_gloss_project.project.id , "file": file, "job":job_inst.id, "usage_type":8} for file in files]
+
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
             data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
-        serializer=GlossaryFileSerializer(data=data,many=True)
+        
+        serializer = GlossaryFileSerializer(data=data,many=True)
+        
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
@@ -100,7 +110,7 @@ class GlossaryFileView(viewsets.ViewSet):
 ###############################Terms CRUD########################################
 
 
-
+from rest_framework.decorators import action
 class TermUploadView(viewsets.ModelViewSet):
     '''
     This view is to add, list, update and delete the terms in glossary.
@@ -205,7 +215,21 @@ class TermUploadView(viewsets.ModelViewSet):
             self.update_task_assign(queryset.job,user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
+    # @action(detail=False, methods=['POST'])
+    # def bulk_upload(self, request):
+    #     # Check if the file is provided
+    #     files = request.FILES.getlist("glossary_file")
+    #     task_id = request.POST.get('task',None)
+    #     job_id =  request.POST.get('job',None)
+        
+    #     # Read the Excel file into a DataFrame
+    #     for i in files:
+    #         df = pd.read_excel(i)
+    #         if 'Source language term' not in df.head():
+    #             return Response({'msg':'file(s) not contained supported data'},status=400)
+        
     def destroy(self, request, *args, **kwargs):
         term_delete_ids =request.GET.get('term_delete_ids')
         delete_list = term_delete_ids.split(',')

@@ -14,6 +14,7 @@ from ai_glex.signals import update_words_from_template,delete_words_from_term_mo
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
+
 class Glossary(models.Model): ########Glossary projecct################
     class GlossaryObjects(models.Manager):
         def get_queryset(self):
@@ -31,8 +32,13 @@ class Glossary(models.Model): ########Glossary projecct################
     public_license          = models.CharField(max_length=30, verbose_name = "Public License", null=True, blank=True)
     created_date            = models.DateTimeField(auto_now_add=True)
     modified_date           = models.DateTimeField(auto_now=True)
+    
+    file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE,
+                                                   related_name="individual_gloss_project")
+    
     objects = models.Manager() # default built-in manager
     glossaryobjects = GlossaryObjects() # object manager for Glossary model
+    
     def __str__(self):
         return self.project.project_name
     
@@ -53,6 +59,7 @@ use_spaces = os.environ.get("USE_SPACES")
 
 
 ######### GLOSSARY & FILES MODEL ###############
+
 class GlossaryFiles(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="glossary_project_usage_type")
@@ -94,6 +101,7 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    
     #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 

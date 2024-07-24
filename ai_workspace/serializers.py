@@ -614,8 +614,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
-		print("project_jobs_set--->",project_jobs_set)
-		#tar_lang = validated_data.get("target_languages",[])
 		try:
 			with transaction.atomic():
 				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
@@ -626,13 +624,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				
 				from ai_glex.serializers import GlossarySetupSerializer
 				from ai_glex.models import Glossary,TermsModel
-				if project_type not in [3,10]:
+				
+				if project_type in [1,2]:
 					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1)
 					for job in jobs:
 						Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
-					validated_data['project_type_id'] = 3
+					
 					gloss_jobs = project_ins_gloss.get_jobs
-					glossary = Glossary.objects.create(project=project_ins_gloss)
+					glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project) # creating gloss with translation project instance
 					tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 					task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 				
