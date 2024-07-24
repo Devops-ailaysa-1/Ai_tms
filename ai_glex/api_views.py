@@ -60,6 +60,7 @@ class GlossaryFileView(viewsets.ViewSet):
         return  Response(serializer.data)
 
     def create(self, request):
+
         proj_id = request.POST.get('project')
         job_id = request.POST.get('job',None)
         files = request.FILES.getlist("glossary_file")
@@ -78,7 +79,6 @@ class GlossaryFileView(viewsets.ViewSet):
         if task_id: ### from transeditor with translation project 
             task_inst = Task.objects.get(id=task_id)
             job_inst = task_inst.job
-
             data = [{"project": job_inst.project.individual_gloss_project.project.id , "file": file, "job":job_inst.id, "usage_type":8} for file in files]
 
         else:
@@ -111,6 +111,15 @@ class GlossaryFileView(viewsets.ViewSet):
 
 
 from rest_framework.decorators import action
+
+ 
+
+def job_lang_pair_check(gloss_job_list, src, tar):
+    for gloss_pair in gloss_job_list:
+        if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
+            return gloss_pair
+    return None
+
 class TermUploadView(viewsets.ModelViewSet):
     '''
     This view is to add, list, update and delete the terms in glossary.
@@ -164,22 +173,30 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def list(self, request):
         task = request.GET.get('task',None)
-        if not task:
-            return Response({'msg':'Need Task id'})
-        job = Task.objects.get(id=task).job
-        # word_choice = True if job.project.project_type_id == 10 else False
-        # print("WordChoice----------->",word_choice)
-        project_name = job.project.project_name
-        queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
-        source_language = str(job.source_language)
-        try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
-        except:target_language = None
-        edit_allow = self.edit_allowed(job)
-        additional_info = [{'project_name':project_name,'source_language':source_language,
-                            'target_language':target_language,'edit_allowed':edit_allow}]
+        trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
+        job_id = request.GET.get('job_id',None)
+
+        if trans_project_id and job_id:
+
+ 
+        if task:
+            job = Task.objects.get(id=task).job
+    
+            project_name = job.project.project_name
+            queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
+            source_language = str(job.source_language)
+            try:
+                target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
+            except:
+                target_language = None
+            edit_allow = self.edit_allowed(job)
+            additional_info = [{'project_name':project_name,'source_language':source_language,
+                                'target_language':target_language,'edit_allowed':edit_allow}]
+        
+
+
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        # if word_choice:
-        #     get_terms_mt(task,pagin_tc)
+ 
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
         response.data['additional_info'] = additional_info
