@@ -236,8 +236,6 @@ class TermUploadView(viewsets.ModelViewSet):
         additional_info = [{'project_name':project_name,'source_language':str(source_language),
                                 'target_language':str(target_language),'edit_allowed':edit_allow}]
         
-
-
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
  
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
@@ -319,7 +317,7 @@ def word_choice_template(request):
     This function is to download Word choices template
     '''
     response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename=word_choice_template.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=glossary_template.xlsx'
     xlsx_data = WriteToExcel_wordchoice()
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
@@ -1032,7 +1030,8 @@ def get_word_mt(request):
     source = request.POST.get("source", "")
     target = request.POST.get("target", "")
     task_obj = get_object_or_404(Task.objects.all(),id=task_id)
-    mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
+    #mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
+    mt_engine_id = 1 ### by default the gloss to google_mt
     if source:
         sl_code = task_obj.job.source_language_code
         tl_code = task_obj.job.target_language_code
