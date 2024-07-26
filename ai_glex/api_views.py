@@ -125,7 +125,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
 from rest_framework.decorators import action
 
-
+@api_view(['GET',])
 def check_gloss_task_id_for_project_task_id(request):
     trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
     task = request.GET.get('task',None) 
