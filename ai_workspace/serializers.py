@@ -623,7 +623,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				#### creating dumy gloss for project 1 and 2
 				
 				from ai_glex.serializers import GlossarySetupSerializer
-				from ai_glex.models import Glossary,TermsModel
+				from ai_glex.models import Glossary,TermsModel,GlossarySelected
 				
 				if project_type in [1,2]:
 					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1)
@@ -634,6 +634,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project) # creating gloss with translation project instance
 					tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 					task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
+					GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
 				
 				obj_is_allowed(project,"create",user)
 
