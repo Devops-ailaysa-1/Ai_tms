@@ -30,5 +30,6 @@ urlpatterns += [
     path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
     path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" ),
     path('default_glossary_download/',api_views.download_gloss_dinamalar, name="dinamalar-gloss-simple-xlsx-download" ),
+    path('get_default_gloss',api_views.check_gloss_task_id_for_project_task_id,name = "default_gloss")
 ]
 

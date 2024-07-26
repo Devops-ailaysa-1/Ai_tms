@@ -125,6 +125,27 @@ class GlossaryFileView(viewsets.ViewSet):
 
 from rest_framework.decorators import action
 
+@api_view(['GET',])
+def check_gloss_task_id_for_project_task_id(request):
+    trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
+    task = request.GET.get('task',None) 
+    trans_project_ins = Project.objects.get(id=trans_project_id)
+    job_ins = Task.objects.get(id=task).job
+    source_language = job_ins.source_language
+    target_language = job_ins.target_language
+
+    gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
+    gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+    
+    if not gloss_job_ins:
+        
+        return Response({"msg":"not gloss job"},status = 400)
+    else:
+        gloss_task_id = gloss_job_ins.job_tasks_set.last().id
+        
+        return Response({'gloss_project_id':gloss_job_ins.project_id ,
+                         'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id})
+
 
 class TermUploadView(viewsets.ModelViewSet):
     '''
@@ -179,28 +200,27 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def list(self, request):
         task = request.GET.get('task',None)
-        trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
-        job_id = request.GET.get('job_id',None)
+        #trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
+        #job_id = request.GET.get('job_id',None)
 
-        if trans_project_id and task:
+        # if trans_project_id and task:
 
-            trans_project_ins = Project.objects.get(id=trans_project_id)
-            #job_ins = Job.objects.get(id=job_id)
-            job_ins = Task.objects.get(id=task).job
+        #     trans_project_ins = Project.objects.get(id=trans_project_id)
+        #     job_ins = Task.objects.get(id=task).job
 
-            source_language = job_ins.source_language
-            target_language = job_ins.target_language
+        #     source_language = job_ins.source_language
+        #     target_language = job_ins.target_language
 
-            gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
-            gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
-            if not gloss_job_ins:
-                return Response({"msg":"not gloss job"},status = 400)
+        #     gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
+        #     gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+        #     if not gloss_job_ins:
+        #         return Response({"msg":"not gloss job"},status = 400)
             
-            queryset = TermsModel.objects.filter(job=job_ins)
-            project_name = job_ins.project.project_name
-            edit_allow = self.edit_allowed(job_ins)
+        #     queryset = TermsModel.objects.filter(job=job_ins)
+        #     project_name = job_ins.project.project_name
+        #     edit_allow = self.edit_allowed(job_ins)
         
-        elif task:
+        if task:
             job = Task.objects.get(id=task).job
             project_name = job.project.project_name
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
