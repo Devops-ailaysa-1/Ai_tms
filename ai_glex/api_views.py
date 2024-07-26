@@ -15,7 +15,6 @@ from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected, MyGlos
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
                         GlossaryListSerializer,GlossarySelectedSerializer,\
                         MyGlossarySerializer,WholeGlossaryTermSerializer,GlossaryMtSerializer
-import json,mimetypes,os
 from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
@@ -92,7 +91,6 @@ class GlossaryFileView(viewsets.ViewSet):
             gloss_project = job_inst.project.individual_gloss_project
             gloss_job_list = gloss_project.project.project_jobs_set.all()  
             gloss_job = job_lang_pair_check(gloss_job_list,job_inst.source_language.id ,job_inst.target_language.id )
-            print("gloss_job---->",gloss_job)
 
             data = [{"project": gloss_project.project.id , "file": file, "job":gloss_job.id, "usage_type":8} for file in files]
 
@@ -184,10 +182,11 @@ class TermUploadView(viewsets.ModelViewSet):
         trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
         job_id = request.GET.get('job_id',None)
 
-        if trans_project_id and job_id:
+        if trans_project_id and task:
 
             trans_project_ins = Project.objects.get(id=trans_project_id)
-            job_ins = Job.objects.get(id=job_id)
+            #job_ins = Job.objects.get(id=job_id)
+            job_ins = Task.objects.get(id=task).job
 
             source_language = job_ins.source_language
             target_language = job_ins.target_language
@@ -404,26 +403,40 @@ def tbx_write(request,task_id):
 #                 .exclude(id=project.id).distinct().order_by('-id')
 #     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
 #     return Response(serializer.data)
-
+def has_glossary_project(project):
+    try:
+        return project.individual_gloss_project is not None
+    except:
+        return None
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def glossaries_list(request,project_id):   ###### this function is for wordchoise option list select
     project = Project.objects.get(id=project_id)
     option = request.GET.get('option')
+    print("option-->",option)
+    print("project--->",project)
     user = request.user.team.owner if request.user.team else request.user
+    print("user--->",user)
     if option == 'glossary':
         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
     else:
         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
+    print("queryset",queryset)
     target_languages = project.get_target_languages
     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct().order_by('-id')
-    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
-    return Response(serializer.data)
+                .exclude(id=project.id).distinct().order_by('-id')   #### project's task's job gloss list
+    print("queryset",queryset)
+    print("queryset",len(queryset))
+    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request })
+    data = serializer.data
+
+
+ 
+    return Response(data)
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
