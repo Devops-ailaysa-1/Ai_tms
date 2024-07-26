@@ -91,10 +91,11 @@ class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_id = serializers.CharField(source = 'glossary_project.id')
     source_lang = serializers.SerializerMethodField()
     target_lang = serializers.SerializerMethodField()
+    project_id = serializers.CharField(source = 'individual_gloss_project.id')
     
     class Meta:
         model = Glossary
-        fields = ("glossary_id", "glossary_name","source_lang", "target_lang",)
+        fields = ("glossary_id", "glossary_name","source_lang", "target_lang","project_id")
 
     def get_source_lang(self,obj):
         return obj.project_jobs_set.first().source_language.language
