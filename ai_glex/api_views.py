@@ -201,25 +201,6 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def list(self, request):
         task = request.GET.get('task',None)
-        #trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
-        #job_id = request.GET.get('job_id',None)
-
-        # if trans_project_id and task:
-
-        #     trans_project_ins = Project.objects.get(id=trans_project_id)
-        #     job_ins = Task.objects.get(id=task).job
-
-        #     source_language = job_ins.source_language
-        #     target_language = job_ins.target_language
-
-        #     gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
-        #     gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
-        #     if not gloss_job_ins:
-        #         return Response({"msg":"not gloss job"},status = 400)
-            
-        #     queryset = TermsModel.objects.filter(job=job_ins)
-        #     project_name = job_ins.project.project_name
-        #     edit_allow = self.edit_allowed(job_ins)
         
         if task:
             job = Task.objects.get(id=task).job
@@ -232,6 +213,8 @@ class TermUploadView(viewsets.ModelViewSet):
                 target_language = None
         
             edit_allow = self.edit_allowed(job)
+        else:
+            return Response({'msg':'No task'})
         
         
         additional_info = [{'project_name':project_name,'source_language':str(source_language),
