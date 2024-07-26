@@ -143,7 +143,8 @@ def check_gloss_task_id_for_project_task_id(request):
     else:
         gloss_task_id = gloss_job_ins.job_tasks_set.last().id
         
-        return Response({'gloss_project_id':gloss_job_ins.project_id ,
+        return Response({'gloss_project_id':gloss_job_ins.project_id , 
+                         'gloss_id': trans_project_ins.individual_gloss_project.id,
                          'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id})
 
 
@@ -1110,3 +1111,8 @@ def download_gloss_dinamalar(request):
         return Response({'msg':'no gloss term'},status=400)
     # else:
     #     return Response({'msg':'dont have permission to access'},status=401)
+
+
+
+
+#extract term 
