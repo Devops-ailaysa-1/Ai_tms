@@ -626,7 +626,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				from ai_glex.models import Glossary,TermsModel,GlossarySelected
 				
 				if project_type in [1,2]:
-					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1)
+					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
 					for job in jobs:
 						Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
 					
