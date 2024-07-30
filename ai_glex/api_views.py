@@ -1208,7 +1208,7 @@ def extraction_text(request):
     
 @api_view(['GET',])
 def term_extraction_celery_status(request):
-    project_id = request.POST.get('project_id',None)
+    project_id = request.GET.get('project_id',None)
     proj_ins = Project.objects.get(id= project_id)
     file_term_extract_celery_status = []
     for file_ins in proj_ins.files_and_jobs_set[1]:
