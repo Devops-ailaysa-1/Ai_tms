@@ -1147,9 +1147,9 @@ def get_ner_with_textunit_merge(file_id):
         for j in file_json['text'][i]:
             if j['source']:
                 text_unit.append(j['source'])
-        full_text_unit_merge = "".join(text_units)
+        full_text_unit_merge = "".join(text_unit)
         terms.extend(requesting_ner(full_text_unit_merge))
-        text_units = []
+        text_unit = []
 
     celery_instance_doc.status = "FINISHED"
     file_instance.file_document_set.done_extraction = True
