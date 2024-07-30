@@ -1,11 +1,10 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
-from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,\
-                        GlossaryTasks,GlossarySelected,MyGlossary,GlossaryMt\
-                    )
+from .models import ( Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryTasks,GlossarySelected,
+                     MyGlossary,GlossaryMt,CeleryStatusForTermExtraction)
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
-from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps
+from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps 
 import json
 
 
@@ -114,3 +113,10 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
+
+
+
+class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CeleryStatusForTermExtraction
+        fields = "__all__"

@@ -8,6 +8,7 @@ from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
 from django.core.cache import cache
 from django.contrib.auth import settings
+from ai_workspace.models import Document,File
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
 from ai_glex.signals import update_words_from_template,delete_words_from_term_model,update_proj_settings
@@ -48,9 +49,7 @@ class Glossary(models.Model): ########Glossary projecct################
 
 
 def get_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
-            instance.usage_type.type_path)
-    print("Upload file path ----> ", file_path)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path)
     instance.filename = filename
     return os.path.join(file_path, filename)
 
@@ -188,3 +187,16 @@ class Terminologyextract(models.Model):
     file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class CeleryStatusForTermExtraction(models.Model):
+    #term_model_document = models.OneToOneField(Document, null=True, blank=False,on_delete=models.CASCADE, related_name='document_default_glossary')
+    #term_model =  models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
+    gloss_model = models.ForeignKey(Glossary, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
+    status = models.CharField(max_length=200, null=True, blank=False)
+    gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
+    #num_of_segment_done = models.CharField(max_length=200, null=True, blank=False)
+    #num_of_segment = models.CharField(max_length=200, null=True, blank=False)
+    done_extraction = models.BooleanField(default=False)
+    term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')

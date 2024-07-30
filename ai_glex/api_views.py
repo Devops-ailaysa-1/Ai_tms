@@ -14,7 +14,7 @@ from django.conf import settings
 from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected, MyGlossary, GlossaryMt
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
                         GlossaryListSerializer,GlossarySelectedSerializer,\
-                        MyGlossarySerializer,WholeGlossaryTermSerializer,GlossaryMtSerializer
+                        MyGlossarySerializer,WholeGlossaryTermSerializer,GlossaryMtSerializer,CeleryStatusForTermExtractionSerializer
 from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
@@ -31,8 +31,8 @@ from django.db.models import Q
 from .serializers import TermsSerializer
 from rest_framework.decorators import api_view,permission_classes
 from nltk import word_tokenize
-from ai_workspace.models import Task,Project,TaskAssign
-from ai_workspace_okapi.models import Document
+from ai_workspace.models import Task,Project,TaskAssign,File
+from ai_workspace_okapi.models import Document 
 from ai_workspace_okapi.utils import get_translation
 import pandas as pd
 from ai_staff.models import LanguageMetaDetails
@@ -40,16 +40,16 @@ from django.db.models import Value, IntegerField, CharField
 from django_oso.auth import authorize
 from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
+from celery.decorators import task
+from ai_glex.models import CeleryStatusForTermExtraction
+import requests
 
 
 def job_lang_pair_check(gloss_job_list, src, tar):
-    print("src",src)
-    print("tar",tar)
     for gloss_pair in gloss_job_list:
         if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
             print(gloss_pair)
             return gloss_pair
-    
     return None
 
 ######### Glossary FILE UPLOAD  #####################################
@@ -416,23 +416,25 @@ def has_glossary_project(project):
 def glossaries_list(request,project_id):   ###### this function is for wordchoise option list select
     project = Project.objects.get(id=project_id)
     option = request.GET.get('option')
-    print("option-->",option)
-    print("project--->",project)
+    #print("option-->",option)
+    #print("project--->",project)
     user = request.user.team.owner if request.user.team else request.user
-    print("user--->",user)
+    #print("user--->",user)
     if option == 'glossary':
         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
     else:
         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
-    print("queryset",queryset)
+    #print("queryset",queryset)
     target_languages = project.get_target_languages
     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct().order_by('-id')   #### project's task's job gloss list
-    print("queryset",queryset)
-    print("queryset",len(queryset))
+    
+    #print("queryset",queryset)
+    #print("queryset",len(queryset))
+
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request })
     data = serializer.data
 
@@ -1098,4 +1100,121 @@ def download_gloss_dinamalar(request):
 
 
 
-#extract term 
+#extract term
+
+def term_extraction_ner_and_terms(text):
+    TERM_EXTRACTION_URL = settings.TERM_EXTRACTION
+    payload = {'text': text}
+    response = requests.request("POST", TERM_EXTRACTION_URL, headers={}, data=payload, files=[])
+    return response.json()
+
+
+def requesting_ner(joined_term_unit):
+    if joined_term_unit:
+        response_result = term_extraction_ner_and_terms(joined_term_unit)
+        terms_from_request = []
+        for i in response_result['named_entities']:
+            if i['text']:
+                terms_from_request.append(i['text'])   
+        if response_result['terms']:
+            terms_from_request.extend(response_result['terms'])
+
+        return terms_from_request
+    else:
+        return None
+
+
+@task(queue='default')
+def get_ner_with_textunit_merge(file_id):
+    
+    file_instance = File.objects.get(id=file_id)
+    celery_instance_doc =  CeleryStatusForTermExtraction.objects.get(term_model_file=file_instance)
+    file_path = file_instance.get_source_file_path()
+    print("file_path--->",file_path)
+    with open(file_path,'rb') as fp:
+        file_json = json.load(fp)
+    file_json = json.loads(file_json)
+    terms = []
+    print(file_json)
+    try:       
+        text_unit = []
+        for i in  file_json['text']:
+            for j in file_json['text'][i]:
+                if j['source']:
+                    text_unit.append(j['source'])
+            full_text_unit_merge = "".join(text_units)
+            terms.extend(requesting_ner(full_text_unit_merge))
+            text_units = []
+
+        celery_instance_doc.status = "FINISHED"
+        file_instance.file_document_set.done_extraction = True
+        celery_instance_doc.done_extraction = True
+        celery_instance_doc.save()
+        terms =  list(set(terms))
+        gloss_model_inst = celery_instance_doc.gloss_model
+        gloss_job_inst = celery_instance_doc.gloss_job
+        termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
+        TermsModel.objects.bulk_create(termsmodel_instances)
+        print("terms_created")
+        file_instance.save()
+
+    except:
+        file_instance.term_extraction_done = False
+        celery_instance_doc.status = "ERROR"
+        celery_instance_doc.done_extraction = False
+        file_instance.save()
+        print("terms_error")
+ 
+    
+@api_view(['GET',])
+def extraction_text(request):
+    file_ids = request.POST.getlist('file_id',None)
+    gloss_task_id = request.POST.get('gloss_task_id',None)
+
+    if not gloss_task_id:
+        return Response({'msg':'Need gloss_task_id'})
+    
+    gloss_task_inst = Task.objects.get(id = gloss_task_id)
+    gloss_job  = gloss_task_inst.job #### to save on job in gloss 
+    glossary_project = gloss_task_inst.proj_obj.glossary_project
+     
+    if file_ids:
+        celery_instance_id = []
+        for file_id in file_ids:
+            file_instance = File.objects.get(id=file_id)
+            if not CeleryStatusForTermExtraction.objects.filter(term_model_file=file_instance):
+                celery_instance_doc =  CeleryStatusForTermExtraction.objects.create(term_model_file=file_instance)
+                celery_instance_doc.gloss_model = glossary_project
+                celery_instance_doc.gloss_job = gloss_job
+                celery_instance_doc.save()  #### save term_model
+                celery_instance_id.append(celery_instance_doc.id)
+                celery_id = get_ner_with_textunit_merge.apply_async(args = (file_instance.id,),)
+                celery_instance_doc.celery_id =  celery_id
+                celery_instance_doc.status = "PENDING"
+                celery_instance_doc.save() #### save celery status
+        if celery_instance_id:
+            gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =celery_instance_id )
+            serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instance,many=True)
+            return Response(serializer.data, status=400)
+        else:
+            return Response({'msg':'No files to extract the terms or already extracted'},status=200)
+    else:
+        return Response({'msg':'Need file ids'})
+    
+@api_view(['GET',])
+def term_extraction_celery_status(request):
+    project_id = request.POST.get('project_id',None)
+    proj_ins = Project.objects.get(id= project_id)
+    file_term_extract_celery_status = []
+    for file_ins in proj_ins.files_and_jobs_set[1]:
+
+        if file_ins.termsmodel_file_default_glossary:
+            file_term_extract_celery_status.append(file_ins.termsmodel_file_default_glossary)
+    
+    if file_term_extract_celery_status:
+        gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =file_term_extract_celery_status )
+        serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instance,many=True)
+        return Response(serializer.data, status=200)
+
+    else:
+        return Response({'msg':'No files to extract the terms or already extracted'},status=200)

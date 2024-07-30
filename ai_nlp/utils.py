@@ -279,7 +279,7 @@ entity = {'CARDINAL':'cardinal',
 
 def extract_entities(sentence):
     doc = nlp(sentence)
-    # ner_dict = {ent.text: get_entity_description(ent.label_) for ent in doc.ents}
+ 
     ner_dict = {}
     for ent in doc.ents: 
         if ent.label_ in entity.keys():

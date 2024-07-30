@@ -89,7 +89,7 @@ class FileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = File
 		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",
-				  "get_file_name", "can_delete")
+				  "get_file_name", "can_delete","done_extraction")
 		read_only_fields=("id","filename",)
 
 class FileSerializerv2(FileSerializer): # TmX output set
