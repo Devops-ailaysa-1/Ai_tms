@@ -1123,19 +1123,22 @@ def requesting_ner(joined_term_unit):
     else:
         return None
 
-
+import re
 @task(queue='default')
 def get_ner_with_textunit_merge(file_id):
     
     file_instance = File.objects.get(id=file_id)
     celery_instance_doc =  CeleryStatusForTermExtraction.objects.get(term_model_file=file_instance)
-    file_path = file_instance.get_source_file_path()
-    print("file_path--->",file_path)
-    with open(file_path,'rb') as fp:
+    file_path = file_instance.get_source_file_path
+    path_list = re.split("source/", file_path)
+ 
+    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+    print("file_path--->",doc_json_path)
+    with open(doc_json_path,'rb') as fp:
         file_json = json.load(fp)
     file_json = json.loads(file_json)
     terms = []
-    print(file_json)
     try:       
         text_unit = []
         for i in  file_json['text']:
@@ -1218,3 +1221,7 @@ def term_extraction_celery_status(request):
 
     else:
         return Response({'msg':'No files to extract the terms or already extracted'},status=200)
+    
+@api_view(['GET',])
+def get_pos(request):
+    pass
