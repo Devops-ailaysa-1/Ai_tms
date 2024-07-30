@@ -896,6 +896,7 @@ class File(models.Model):
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
+    done_extraction = models.BooleanField(default=False)
 
 
     class Meta:
