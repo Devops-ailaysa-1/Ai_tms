@@ -1351,6 +1351,8 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
+        job  = task.job
+        project = task.job.project
         authorize(request,resource=task,action="delete",actor=self.request.user)
         # it will check for task is assigned to any editor or not. if so, it will return error message
         if task.task_info.filter(task_assign_info__isnull=False):
@@ -1365,6 +1367,9 @@ class TaskView(APIView):
                 if task.document:
                     task.document.delete()
                 task.delete()
+            if project.project_type_id == 3 and project.glossary_project.file_translate_glossary:
+                Task.objects.create_glossary_tasks_of_jobs(jobs=[job,],klass=Task)
+                print("Task created for individual gloss project --> default gloss")   
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -36,6 +36,7 @@ class Glossary(models.Model): ########Glossary projecct################
     
     file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.CASCADE,
                                                    related_name="individual_gloss_project")
+    #is_default_project_glossary = models.BooleanField(default=False)
     
     objects = models.Manager() # default built-in manager
     glossaryobjects = GlossaryObjects() # object manager for Glossary model
