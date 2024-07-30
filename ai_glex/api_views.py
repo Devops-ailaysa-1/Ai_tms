@@ -1217,8 +1217,8 @@ def term_extraction_celery_status(request):
             file_term_extract_celery_status.append(file_ins.termsmodel_file_default_glossary)
     
     if file_term_extract_celery_status:
-        gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =file_term_extract_celery_status )
-        serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instance,many=True)
+        #gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =file_term_extract_celery_status )
+        serializer = CeleryStatusForTermExtractionSerializer(file_term_extract_celery_status,many=True)
         return Response(serializer.data, status=200)
 
     else:
