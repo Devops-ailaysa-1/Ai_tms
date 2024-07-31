@@ -171,7 +171,7 @@ class Segment(BaseSegment):
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
     # mt_llm = 
-    # mt_llm_glossary =
+    # mt_llm_glossary = 
 
 
 
