@@ -591,6 +591,35 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			cache.set(cache_key,cached_value)
 		else:cached_value = None
 		return cached_value
+	
+	def create_default_gloss(self,project,jobs,ai_user):
+		"""
+		Args : project is the transltion project to create the glossary project
+		jobs : is in list to create a job and task for the given project
+		ai_user : user
+		"""
+		from ai_glex.models import Glossary,GlossarySelected
+		from .api_views import AddStoriesView
+		project_type = project.project_type_id
+		if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
+			
+			project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
+			project_ins_gloss.project_name = project.project_name+"_glossary"
+				
+				
+			project_ins_gloss.save()
+			for job in jobs:
+				Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
+			
+			gloss_jobs = project_ins_gloss.get_jobs
+			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,
+								is_default_project_glossary=True) # creating gloss with translation project instance
+			tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
+			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
+			GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
+			print("created default glossary---->")
+		else:
+			print("project_type is not a translation project")
 
 
 	def create(self, validated_data):
@@ -621,27 +650,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by) 
 				#### creating dumy gloss for project 1 and 2
-				
-				from ai_glex.serializers import GlossarySetupSerializer
-				from ai_glex.models import Glossary,TermsModel,GlossarySelected
-				from .api_views import AddStoriesView
-				
-				if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
-					
-					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
-					project_ins_gloss.project_name = project.project_name+"_glossary"
-					 
-						
-					project_ins_gloss.save()
-					for job in jobs:
-						Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
-					
-					gloss_jobs = project_ins_gloss.get_jobs
-					glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project) # creating gloss with translation project instance
-					tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
-					task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
-					GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
-				
+				self.create_default_gloss(project,jobs,ai_user) #### ----------->>>>>> creating default glossary
+
 				obj_is_allowed(project,"create",user)
 
 
@@ -781,18 +791,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		task_assign = TaskAssign.objects.assign_task(project=project)
 		return  project
 
-	# def to_representation(self, value):
-	# 	from ai_glex.serializers import GlossarySerializer
-	# 	from ai_glex.models import Glossary
-	# 	data = super().to_representation(value)
-	# 	try:
-	# 		ins = Glossary.objects.get(project_id = value.id)
-	# 		print(ins)
-	# 		glossary_serializer = GlossarySerializer(ins)
-	# 		data['glossary'] = glossary_serializer.data
-	# 	except:
-	# 		data['glossary'] = None
-	# 	return data
 
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
