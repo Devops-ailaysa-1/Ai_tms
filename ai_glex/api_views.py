@@ -1184,47 +1184,56 @@ def extraction_text(request):
     gloss_job  = gloss_task_inst.job #### to save on job in gloss 
     glossary_project = gloss_task_inst.proj_obj.glossary_project
      
-    if file_ids:
-        celery_instance_id = []
-        for file_id in file_ids:
-            file_instance = File.objects.get(id=file_id)
-            if not CeleryStatusForTermExtraction.objects.filter(term_model_file=file_instance):
-                celery_instance_doc =  CeleryStatusForTermExtraction.objects.create(term_model_file=file_instance)
-                celery_instance_doc.gloss_model = glossary_project
-                celery_instance_doc.gloss_job = gloss_job
-                celery_instance_doc.save()  #### save term_model
-                celery_instance_id.append(celery_instance_doc.id)
-                celery_id = get_ner_with_textunit_merge.apply_async(args = (file_id,),)
-                celery_instance_doc.celery_id =  celery_id
-                celery_instance_doc.status = "PENDING"
-                celery_instance_doc.save() #### save celery status
-        if celery_instance_id:
-            gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =celery_instance_id )
-            serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instance,many=True)
-            return Response(serializer.data, status=200)
-        else:
-            return Response({'msg':'No files to extract the terms or already extracted'},status=200)
-    else:
-        return Response({'msg':'Need file ids'})
-    
-@api_view(['GET',])
-def term_extraction_celery_status(request):
-    project_id = request.GET.get('project_id',None)
-    proj_ins = Project.objects.get(id= project_id)
-    file_term_extract_celery_status = []
-    for file_ins in proj_ins.files_and_jobs_set[1]:
-        termsmodel_file_glossary = file_ins.termsmodel_file_default_glossary
-        print("termsmodel_file_glossary-->",termsmodel_file_glossary)
-        if termsmodel_file_glossary:
-            file_term_extract_celery_status.append(termsmodel_file_glossary)
-    print("file_term_extract_celery_status--->",file_term_extract_celery_status)
-    if file_term_extract_celery_status:
-        #gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =file_term_extract_celery_status )
-        serializer = CeleryStatusForTermExtractionSerializer(file_term_extract_celery_status,many=True)
-        return Response(serializer.data, status=200)
+    if not file_ids:
+        return Response({'msg': 'Need file ids'})
 
+    celery_instance_ids = []
+    for file_id in file_ids:
+        file_instance = File.objects.get(id=file_id)
+        try:
+            celery_instance_doc = CeleryStatusForTermExtraction.objects.get(term_model_file=file_instance)
+        except CeleryStatusForTermExtraction.DoesNotExist:
+            celery_instance_doc = CeleryStatusForTermExtraction.objects.create(term_model_file=file_instance)
+        
+        celery_instance_doc.gloss_model = glossary_project
+        celery_instance_doc.gloss_job = gloss_job
+        celery_instance_doc.save()  # Save term_model
+        
+        celery_instance_ids.append(celery_instance_doc.id)
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,))
+        celery_instance_doc.celery_id = celery_id
+        celery_instance_doc.status = "PENDING"
+        celery_instance_doc.save()  # Save celery status
+
+    if celery_instance_ids:
+        gloss_term_extraction_instances = CeleryStatusForTermExtraction.objects.filter(id__in=celery_instance_ids)
+        serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instances, many=True)
+        return Response(serializer.data, status=200)
     else:
-        return Response({'msg':'No files to extract the terms or already extracted'},status=200)
+        return Response({'msg': 'No files to extract the terms or already extracted'}, status=200)
+    
+@api_view(['GET'])
+def term_extraction_celery_status(request):
+    project_id = request.GET.get('project_id')
+    if not project_id:
+        return Response({'msg': 'Project ID not provided'}, status=400)
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return Response({'msg': 'Project not found'}, status=404)
+
+    term_extract_status = [
+        file_ins.termsmodel_file_default_glossary
+        for file_ins in project.files_and_jobs_set.all()
+        if file_ins.termsmodel_file_default_glossary
+    ]
+
+    if term_extract_status:
+        serializer = CeleryStatusForTermExtractionSerializer(term_extract_status, many=True)
+        return Response(serializer.data, status=200)
+    else:
+        return Response({'msg': 'No files to extract the terms or already extracted'}, status=200)
     
 @api_view(['GET',])
 def get_pos(request):
