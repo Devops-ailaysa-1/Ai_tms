@@ -190,15 +190,15 @@ class Terminologyextract(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
-class CeleryStatusForTermExtraction(models.Model):
-    #term_model_document = models.OneToOneField(Document, null=True, blank=False,on_delete=models.CASCADE, related_name='document_default_glossary')
-    #term_model =  models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
-    gloss_model = models.ForeignKey(Glossary, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
-    status = models.CharField(max_length=200, null=True, blank=False)
-    gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
-    celery_id = models.CharField(max_length=200, null=True, blank=False)
-    #celery_done_extraction = models.BooleanField(default=False)
-    done_extraction = models.BooleanField(default=False)
-    term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')
+# class CeleryStatusForTermExtraction(models.Model):
+#     #term_model_document = models.OneToOneField(Document, null=True, blank=False,on_delete=models.CASCADE, related_name='document_default_glossary')
+#     #term_model =  models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
+#     gloss_model = models.ForeignKey(Glossary, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
+#     status = models.CharField(max_length=200, null=True, blank=False)
+#     gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
+#     celery_id = models.CharField(max_length=200, null=True, blank=False)
+#     #celery_done_extraction = models.BooleanField(default=False)
+#     done_extraction = models.BooleanField(default=False)
+#     term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')
 
 
