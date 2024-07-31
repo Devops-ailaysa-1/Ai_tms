@@ -1200,7 +1200,7 @@ def extraction_text(request):
         if celery_instance_id:
             gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =celery_instance_id )
             serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instance,many=True)
-            return Response(serializer.data, status=400)
+            return Response(serializer.data, status=200)
         else:
             return Response({'msg':'No files to extract the terms or already extracted'},status=200)
     else:
