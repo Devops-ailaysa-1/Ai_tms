@@ -1212,10 +1212,11 @@ def term_extraction_celery_status(request):
     proj_ins = Project.objects.get(id= project_id)
     file_term_extract_celery_status = []
     for file_ins in proj_ins.files_and_jobs_set[1]:
-
-        if file_ins.termsmodel_file_default_glossary:
-            file_term_extract_celery_status.append(file_ins.termsmodel_file_default_glossary)
-    
+        termsmodel_file_glossary = file_ins.termsmodel_file_default_glossary
+        print("termsmodel_file_glossary-->",termsmodel_file_glossary)
+        if termsmodel_file_glossary:
+            file_term_extract_celery_status.append(termsmodel_file_glossary)
+    print("file_term_extract_celery_status--->",file_term_extract_celery_status)
     if file_term_extract_celery_status:
         #gloss_term_extraction_instance = CeleryStatusForTermExtraction.objects.filter(id__in =file_term_extract_celery_status )
         serializer = CeleryStatusForTermExtractionSerializer(file_term_extract_celery_status,many=True)
