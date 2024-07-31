@@ -122,7 +122,7 @@ class GlossaryFileView(viewsets.ViewSet):
 ###############################Terms CRUD########################################
 
 
-from rest_framework.decorators import action
+ 
 
 @api_view(['GET',])
 def check_gloss_task_id_for_project_task_id(request):
@@ -1128,16 +1128,11 @@ from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 def get_ner_with_textunit_merge(file_id,gloss_model_id):
     try:    
         file_instance = File.objects.get(id=file_id)
-        print(gloss_model_id)
         gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
-        print("file_instance-->",file_instance)
-        print("file_id-->",file_id)
         file_path = file_instance.get_source_file_path
         path_list = re.split("source/", file_path)
 
         doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
-
-        print("file_path--->",doc_json_path)
         with open(doc_json_path,'rb') as fp:
             file_json = json.load(fp)
         file_json = json.loads(file_json)
@@ -1181,7 +1176,7 @@ def extraction_text(request):
     
     gloss_task_inst = Task.objects.get(id = gloss_task_id)
     gloss_job  = gloss_task_inst.job #### to save on job in gloss 
-    glossary_project = gloss_task_inst.proj_obj.glossary_project
+    glossary_project = gloss_task_inst.proj_obj.glossary_project   #####################################
      
     if not file_ids:
         return Response({'msg': 'Need file ids'})

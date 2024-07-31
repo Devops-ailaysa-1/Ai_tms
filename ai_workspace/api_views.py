@@ -1367,9 +1367,9 @@ class TaskView(APIView):
                 if task.document:
                     task.document.delete()
                 task.delete()
-            #if project.project_type_id == 3 and project.glossary_project.file_translate_glossary:
-                #Task.objects.create_glossary_tasks_of_jobs(jobs=[job,],klass=Task)
-                #print("Task created for individual gloss project --> default gloss")   
+            if project.project_type_id == 3 and task.proj_obj.glossary_project and task.proj_obj.glossary_project.individual_gloss_project:
+                Task.objects.create_glossary_tasks_of_jobs(jobs=[job,],klass=Task)
+                print("Task created for individual gloss project --> default gloss")   
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
