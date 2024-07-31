@@ -1126,52 +1126,52 @@ def requesting_ner(joined_term_unit):
 import re
 @task(queue='default')
 def get_ner_with_textunit_merge(file_id):
-    #try:    
-    file_instance = File.objects.get(id=file_id)
-    print("file_instance-->",file_instance)
-    print("file_id-->",file_id)
-    celery_instance_doc =  CeleryStatusForTermExtraction.objects.get(term_model_file=file_instance)
-    print("celery_instance_doc-->",celery_instance_doc)
-    file_path = file_instance.get_source_file_path
-    path_list = re.split("source/", file_path)
+    try:    
+        file_instance = File.objects.get(id=file_id)
+        print("file_instance-->",file_instance)
+        print("file_id-->",file_id)
+        celery_instance_doc =  CeleryStatusForTermExtraction.objects.get(term_model_file=file_instance)
+        print("celery_instance_doc-->",celery_instance_doc)
+        file_path = file_instance.get_source_file_path
+        path_list = re.split("source/", file_path)
 
-    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+        doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
-    print("file_path--->",doc_json_path)
-    with open(doc_json_path,'rb') as fp:
-        file_json = json.load(fp)
-    file_json = json.loads(file_json)
-    terms = []
-    text_unit = []
-    for i in  file_json['text']:
-        for j in file_json['text'][i]:
-            if j['source']:
-                text_unit.append(j['source'])
-        full_text_unit_merge = "".join(text_unit)
-        terms.extend(requesting_ner(full_text_unit_merge))
+        print("file_path--->",doc_json_path)
+        with open(doc_json_path,'rb') as fp:
+            file_json = json.load(fp)
+        file_json = json.loads(file_json)
+        terms = []
         text_unit = []
+        for i in  file_json['text']:
+            for j in file_json['text'][i]:
+                if j['source']:
+                    text_unit.append(j['source'])
+            full_text_unit_merge = "".join(text_unit)
+            terms.extend(requesting_ner(full_text_unit_merge))
+            text_unit = []
 
-    celery_instance_doc.status = "FINISHED"
-    file_instance.file_document_set.done_extraction = True
-    celery_instance_doc.done_extraction = True
-    celery_instance_doc.save()
-    terms =  list(set(terms))
-    gloss_model_inst = celery_instance_doc.gloss_model
-    gloss_job_inst = celery_instance_doc.gloss_job
-    termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
-    TermsModel.objects.bulk_create(termsmodel_instances)
-    print("terms_created")
-    file_instance.save()
+        celery_instance_doc.status = "FINISHED"
+        file_instance.file_document_set.done_extraction = True
+        celery_instance_doc.done_extraction = True
+        celery_instance_doc.save()
+        terms =  list(set(terms))
+        gloss_model_inst = celery_instance_doc.gloss_model
+        gloss_job_inst = celery_instance_doc.gloss_job
+        termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
+        TermsModel.objects.bulk_create(termsmodel_instances)
+        print("terms_created")
+        file_instance.save()
 
-    # except:
-    #     file_instance.term_extraction_done = False
-    #     celery_instance_doc.status = "ERROR"
-    #     celery_instance_doc.done_extraction = False
-    #     file_instance.save()
-    #     print("terms_error")
+    except:
+        file_instance.term_extraction_done = False
+        celery_instance_doc.status = "ERROR"
+        celery_instance_doc.done_extraction = False
+        file_instance.save()
+        print("terms_error")
  
     
-@api_view(['GET',])
+@api_view(['POST',])
 def extraction_text(request):
     file_ids = request.POST.getlist('file_id',None)
     gloss_task_id = request.POST.get('gloss_task_id',None)
