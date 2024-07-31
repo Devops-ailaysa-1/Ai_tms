@@ -1367,11 +1367,15 @@ class TaskView(APIView):
                 if task.document:
                     task.document.delete()
                 task.delete()
-            if project.project_type_id == 3 and task.proj_obj.glossary_project and task.proj_obj.glossary_project.file_translate_glossary:
-                from ai_glex.models import TermsModel
-                TermsModel.objects.filter(job=job).delete()
-                Task.objects.create_glossary_tasks_of_jobs(jobs=[job,],klass=Task)
-                print("Task created for individual gloss project --> default gloss")   
+            if project.project_type_id == 3:
+                glossary_project = getattr(task.proj_obj, 'glossary_project', None)
+                file_translate_glossary = getattr(task.proj_obj, 'file_translate_glossary', None)
+                
+                if glossary_project and file_translate_glossary:
+                    from ai_glex.models import TermsModel
+                    TermsModel.objects.filter(job=job).delete()
+                    Task.objects.create_glossary_tasks_of_jobs(jobs=[job], klass=Task)
+                    print("Task created for individual gloss project --> default gloss") 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
