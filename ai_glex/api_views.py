@@ -1125,7 +1125,7 @@ def requesting_ner(joined_term_unit):
 import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 @task(queue='default')
-def get_ner_with_textunit_merge(file_id):
+def get_ner_with_textunit_merge(file_id,gloss_model_inst):
     try:    
         file_instance = File.objects.get(id=file_id)
         print("file_instance-->",file_instance)
@@ -1150,12 +1150,12 @@ def get_ner_with_textunit_merge(file_id):
             text_unit = []
 
         file_instance.status = "FINISHED"
-        file_instance.file_document_set.done_extraction = True
+        #file_instance.file_document_set.done_extraction = True
         file_instance.done_extraction = True
         file_instance.save()
         terms =  list(set(terms))
         gloss_job_inst = file_instance.gloss_job
-        gloss_model_inst = gloss_job_inst.project.glossary
+        #gloss_model_inst = gloss_job_inst.project.glossary
         termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
         TermsModel.objects.bulk_create(termsmodel_instances)
         print("terms_created")
@@ -1190,12 +1190,12 @@ def extraction_text(request):
         file_instance.is_extract = True #### saving for listing the file which is used to extract the text
  
         
-        file_instance.gloss_model = glossary_project
+        #file_instance.gloss_model = glossary_project
         file_instance.gloss_job = gloss_job
         file_instance.save()  # Save term_model
         
         celery_instance_ids.append(file_instance.id)
-        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,))
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project))
         file_instance.celery_id = celery_id
         file_instance.status = "PENDING"
         file_instance.save()  # Save celery status
