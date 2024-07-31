@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
 from .models import ( Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryTasks,GlossarySelected,
-                     MyGlossary,GlossaryMt,CeleryStatusForTermExtraction)
+                     MyGlossary,GlossaryMt)  
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
 from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps 
@@ -114,11 +114,11 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
 
-
+ 
 class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
     #termsmodel_file_default_glossary = FileSerializer(required=False)
-    file_name = serializers.ReadOnlyField(source='term_model_file.filename')
+    #file_name = serializers.ReadOnlyField(source='term_model_file.filename')
+    term_model_file = serializers.ReadOnlyField(source='id')
     class Meta:
-        model = CeleryStatusForTermExtraction
-        fields = ("id",'gloss_model',
-                  'status','gloss_job','celery_id','done_extraction','term_model_file','file_name')
+        model = File
+        fields = ("id",'status','gloss_job','celery_id','done_extraction','term_model_file','file_name')
