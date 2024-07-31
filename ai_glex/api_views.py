@@ -1154,6 +1154,7 @@ def get_ner_with_textunit_merge(file_id):
         celery_instance_doc.status = "FINISHED"
         file_instance.file_document_set.done_extraction = True
         celery_instance_doc.done_extraction = True
+        file_instance.done_extraction = True
         celery_instance_doc.save()
         terms =  list(set(terms))
         gloss_model_inst = celery_instance_doc.gloss_model
