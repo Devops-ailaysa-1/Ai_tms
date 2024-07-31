@@ -1225,7 +1225,7 @@ def term_extraction_celery_status(request):
 
     term_extract_status = [
         file_ins.termsmodel_file_default_glossary
-        for file_ins in project.files_and_jobs_set.all()
+        for file_ins in project.files_and_jobs_set[1]
         if file_ins.termsmodel_file_default_glossary
     ]
 
