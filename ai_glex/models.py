@@ -197,7 +197,6 @@ class CeleryStatusForTermExtraction(models.Model):
     status = models.CharField(max_length=200, null=True, blank=False)
     gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
     celery_id = models.CharField(max_length=200, null=True, blank=False)
-    #num_of_segment_done = models.CharField(max_length=200, null=True, blank=False)
-    #num_of_segment = models.CharField(max_length=200, null=True, blank=False)
+    #celery_done_extraction = models.BooleanField(default=False)
     done_extraction = models.BooleanField(default=False)
     term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')
