@@ -117,7 +117,7 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
  
 class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
     #termsmodel_file_default_glossary = FileSerializer(required=False)
-    #file_name = serializers.ReadOnlyField(source='term_model_file.filename')
+    file_name = serializers.ReadOnlyField(source='filename')
     term_model_file = serializers.ReadOnlyField(source='id')
     class Meta:
         model = File
