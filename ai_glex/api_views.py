@@ -1125,9 +1125,11 @@ def requesting_ner(joined_term_unit):
 import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 @task(queue='default')
-def get_ner_with_textunit_merge(file_id,gloss_model_inst):
+def get_ner_with_textunit_merge(file_id,gloss_model_id):
     try:    
         file_instance = File.objects.get(id=file_id)
+        print(gloss_model_id)
+        gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
         print("file_instance-->",file_instance)
         print("file_id-->",file_id)
         file_path = file_instance.get_source_file_path
@@ -1195,7 +1197,7 @@ def extraction_text(request):
         file_instance.save()  # Save term_model
         
         celery_instance_ids.append(file_instance.id)
-        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project))
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project.id))
         file_instance.celery_id = celery_id
         file_instance.status = "PENDING"
         file_instance.save()  # Save celery status
