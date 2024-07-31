@@ -1351,8 +1351,6 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
-        job  = task.job
-        project = task.job.project
         authorize(request,resource=task,action="delete",actor=self.request.user)
         # it will check for task is assigned to any editor or not. if so, it will return error message
         if task.task_info.filter(task_assign_info__isnull=False):
@@ -1360,27 +1358,33 @@ class TaskView(APIView):
         else:
             # if it is the single task in the project, then it will internally delete the project
             if len(task.job.project.get_tasks) == 1:
+                check_delete_default_gloss_task(task,is_single_task=True)
                 task.job.project.delete()
             elif task.file:
                 if os.path.splitext(task.file.filename)[1] == ".pdf":
                     task.file.delete()
                 if task.document:
                     task.document.delete()
+                check_delete_default_gloss_task(task,is_single_task=False)    
                 task.delete()
-            if project.project_type_id == 3:
-                glossary_project = getattr(task.proj_obj, 'glossary_project', None)
-                if glossary_project:
-                    print(task.proj_obj.glossary_project)
-
-                    file_translate_glossary = getattr(task.proj_obj.glossary_project, 'file_translate_glossary', None)
-                    if file_translate_glossary:
-                        print("-->",task.proj_obj.glossary_project.file_translate_glossary)
-                        from ai_glex.models import TermsModel
-                        TermsModel.objects.filter(job=job).delete()
-                        Task.objects.create_glossary_tasks_of_jobs(jobs=[job], klass=Task)
-                        print("Task created for individual gloss project --> default gloss") 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
+def check_delete_default_gloss_task(task,is_single_task=False):
+    from ai_glex.models import TermsModel
+    from ai_workspace.serializers import ProjectQuickSetupSerializer
+    job = task.job
+
+    if task.is_default_glossary_task:  
+        if is_single_task:
+            project = job.project
+            ProjectQuickSetupSerializer().create_default_gloss(project=project,jobs=[job],ai_user=project.ai_user)
+            print("project with Task created for individual gloss project --> default gloss")
+        else:        
+            TermsModel.objects.filter(job=job).delete()
+            Task.objects.create_glossary_tasks_of_jobs(jobs=[job], klass=Task)
+            print("Task created for individual gloss project --> default gloss")
+    else:
+        print("Task is not --> default gloss")
 
 ################# Create Project from Temp project ################
 @api_view(['POST',])
