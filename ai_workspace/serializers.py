@@ -629,8 +629,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
 					
 					project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
-					if project_ins_gloss.project_name:
-						project_ins_gloss.project_name += "_glossary"
+					project_ins_gloss.project_name = project.project_name+"_glossary"
+					 
+						
 					project_ins_gloss.save()
 					for job in jobs:
 						Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
