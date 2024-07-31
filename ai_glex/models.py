@@ -200,3 +200,5 @@ class CeleryStatusForTermExtraction(models.Model):
     #celery_done_extraction = models.BooleanField(default=False)
     done_extraction = models.BooleanField(default=False)
     term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')
+
+
