@@ -239,7 +239,18 @@ class TermUploadView(viewsets.ModelViewSet):
         
         if task:
             job = Task.objects.get(id=task).job
+            project = job.project
+            project_type_id = project.project_type_id
             project_name = job.project.project_name
+
+            ### to check the given task id is gloss task or trans task
+            if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
+                print("the given task id is project trans task")
+                job = get_or_create_indiv_gloss(trans_project_task=task)
+                ### return the output with gloss project task
+            else:
+                print("the given task id is gloss trans task")
+                            
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
             try:
@@ -273,7 +284,7 @@ class TermUploadView(viewsets.ModelViewSet):
         project = job.project
         project_type_id = project.project_type_id
         ### to check the given task id is gloss task or trans task
-        if not project_type_id == 3 : # from transeditor which request with trans task
+        if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
             print("the given task id is project trans task")
             job = get_or_create_indiv_gloss(trans_project_task=task)
             ### return the output with gloss project task
