@@ -342,8 +342,8 @@ class Project(models.Model):
             return None
 
         else:
-            task_jobs = [i.job.id for i in tasks]
-            task_files = [i.file.id for i in tasks]
+            task_jobs = [i.job.id for i in tasks if i.job]
+            task_files = [i.file.id for i in tasks if i.file]
             docs = Document.objects.filter(job__in=task_jobs,file__in=task_files).all()
             total_segments = 0
             if not docs:
