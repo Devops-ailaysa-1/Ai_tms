@@ -949,6 +949,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
         #task = Task.objects.get(job=doc.job)
+        task = seg.task_obj
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
