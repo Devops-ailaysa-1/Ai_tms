@@ -150,7 +150,7 @@ def get_or_create_indiv_gloss(trans_project_task):
         if not gloss_job_ins:
             ### if the job does not exists create a job instance for the gloss project for project and also creating a Task
             gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=instance.project)
-            tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_job_ins,klass=Task)
+            tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
             task_assign = TaskAssign.objects.assign_task(project=instance.project)
             
             print("----->> job is created")
