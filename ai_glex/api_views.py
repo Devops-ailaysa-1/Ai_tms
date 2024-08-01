@@ -168,19 +168,23 @@ def check_gloss_task_id_for_project_task_id(request):
     job_ins = Task.objects.get(id=task).job
     source_language = job_ins.source_language
     target_language = job_ins.target_language
+    if getattr(trans_project_ins,'individual_gloss_project',None):
 
-    gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
-    gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+        gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
+        gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
     
-    if not gloss_job_ins:
-        
-        return Response({"msg":"not gloss job"},status = 400)
+        if not gloss_job_ins:
+            
+            return Response({"msg":"not gloss job"},status = 400)
+        else:
+            gloss_task_id = gloss_job_ins.job_tasks_set.last().id
+            
+            return Response({'gloss_project_id':gloss_job_ins.project_id , 
+                            'gloss_id': trans_project_ins.individual_gloss_project.id,
+                            'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id},status = 200)
     else:
-        gloss_task_id = gloss_job_ins.job_tasks_set.last().id
-        
-        return Response({'gloss_project_id':gloss_job_ins.project_id , 
-                         'gloss_id': trans_project_ins.individual_gloss_project.id,
-                         'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id})
+        print("---> no gloss project is created")
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TermUploadView(viewsets.ModelViewSet):
@@ -250,7 +254,7 @@ class TermUploadView(viewsets.ModelViewSet):
                 ### return the output with gloss project task
             else:
                 print("the given task id is gloss trans task")
-                            
+
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
             try:
