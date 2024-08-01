@@ -146,9 +146,13 @@ def get_or_create_indiv_gloss(trans_project_task):
         
         gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
         gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+        
         if not gloss_job_ins:
-            ### if the job does not exists create a job instance for the gloss project for project
+            ### if the job does not exists create a job instance for the gloss project for project and also creating a Task
             gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=instance.project)
+            tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_job_ins,klass=Task)
+            task_assign = TaskAssign.objects.assign_task(project=instance.project)
+            
             print("----->> job is created")
         return gloss_job_ins
     
@@ -174,8 +178,9 @@ def check_gloss_task_id_for_project_task_id(request):
         gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
     
         if not gloss_job_ins:
+            print("no gloss job")
             
-            return Response({"msg":"not gloss job"},status = 400)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             gloss_task_id = gloss_job_ins.job_tasks_set.last().id
             
