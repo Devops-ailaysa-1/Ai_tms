@@ -1189,44 +1189,44 @@ import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 @task(queue='default')
 def get_ner_with_textunit_merge(file_id,gloss_model_id):
-    try:    
-        file_instance = File.objects.get(id=file_id)
-        gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
-        file_path = file_instance.get_source_file_path
-        path_list = re.split("source/", file_path)
+    # try:    
+    file_instance = File.objects.get(id=file_id)
+    gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
+    file_path = file_instance.get_source_file_path
+    path_list = re.split("source/", file_path)
 
-        doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
-        with open(doc_json_path,'rb') as fp:
-            file_json = json.load(fp)
-        file_json = json.loads(file_json)
-        terms = []
+    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+    with open(doc_json_path,'rb') as fp:
+        file_json = json.load(fp)
+    file_json = json.loads(file_json)
+    terms = []
+    text_unit = []
+    for i in  file_json['text']:
+        for j in file_json['text'][i]:
+            if j['source']:
+                text_unit.append(j['source'])
+        full_text_unit_merge = "".join(text_unit)
+        terms.extend(requesting_ner(full_text_unit_merge))
         text_unit = []
-        for i in  file_json['text']:
-            for j in file_json['text'][i]:
-                if j['source']:
-                    text_unit.append(j['source'])
-            full_text_unit_merge = "".join(text_unit)
-            terms.extend(requesting_ner(full_text_unit_merge))
-            text_unit = []
 
-        file_instance.status = "FINISHED"
-        #file_instance.file_document_set.done_extraction = True
-        file_instance.done_extraction = True
-        file_instance.save()
-        terms =  list(set(terms))
-        gloss_job_inst = file_instance.gloss_job
-        #gloss_model_inst = gloss_job_inst.project.glossary
-        termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
-        TermsModel.objects.bulk_create(termsmodel_instances)
-        print("terms_created")
-        file_instance.save()
+    file_instance.status = "FINISHED"
+    #file_instance.file_document_set.done_extraction = True
+    file_instance.done_extraction = True
+    file_instance.save()
+    terms =  list(set(terms))
+    gloss_job_inst = file_instance.gloss_job
+    #gloss_model_inst = gloss_job_inst.project.glossary
+    termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
+    TermsModel.objects.bulk_create(termsmodel_instances)
+    print("terms_created")
+    file_instance.save()
 
-    except:
-        file_instance.term_extraction_done = False
-        file_instance.status = "ERROR"
-        file_instance.done_extraction = False
-        file_instance.save()
-        print("terms_error")
+    # except:
+    #     file_instance.term_extraction_done = False
+    #     file_instance.status = "ERROR"
+    #     file_instance.done_extraction = False
+    #     file_instance.save()
+    #     print("terms_error")
  
 from ai_workspace.models import File
 @api_view(['POST',])
