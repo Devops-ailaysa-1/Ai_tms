@@ -948,7 +948,7 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        task = Task.objects.get(job=doc.job)
+        #task = Task.objects.get(job=doc.job)
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
