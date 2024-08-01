@@ -47,7 +47,6 @@ import requests
 def job_lang_pair_check(gloss_job_list, src, tar):
     for gloss_pair in gloss_job_list:
         if gloss_pair.source_language_id == src and gloss_pair.target_language_id == tar:
-            print(gloss_pair)
             return gloss_pair
     return None
 
@@ -122,7 +121,44 @@ class GlossaryFileView(viewsets.ViewSet):
 ###############################Terms CRUD########################################
 
 
- 
+##### function to find the project's gloss project
+def get_or_create_indiv_gloss(trans_project_task):
+    task_ins = Task.objects.get(id=trans_project_task)
+    job_ins = task_ins.job
+    
+    trans_project_ins = job_ins.project  ### get project instance
+    job_ins = Task.objects.get(id=trans_project_task).job  ### get all the task instance
+    ### get the src anf tar pair for a given task
+    source_language = job_ins.source_language
+    target_language = job_ins.target_language
+
+    user = trans_project_ins.ai_user
+
+    ## check if the gloss table contains the individual gloss project 
+    try:
+        instance = Glossary.objects.get(file_translate_glossary=trans_project_ins)
+    except Glossary.DoesNotExist:   ######### if the glossary does not exist create a individual gloss 
+        from ai_workspace.serializers import ProjectQuickSetupSerializer
+        ProjectQuickSetupSerializer().create_default_gloss(trans_project_ins,[job_ins],user)
+        instance = Glossary.objects.get(file_translate_glossary=trans_project_ins)
+
+    if instance: ## if the instance is present get all the job of the existing project individual glossary
+        
+        gloss_job_list = trans_project_ins.individual_gloss_project.project.project_jobs_set.all()
+        gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+        if not gloss_job_ins:
+            ### if the job does not exists create a job instance for the gloss project for project
+            gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=instance.project)
+            print("----->> job is created")
+        return gloss_job_ins
+    
+    else:
+        return None
+
+
+
+
+
 
 @api_view(['GET',])
 def check_gloss_task_id_for_project_task_id(request):
@@ -232,11 +268,17 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.POST.get('task')
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
-        job = Task.objects.get(id=task).job
+        
+        #job = Task.objects.get(id=task).job
+        
+        job = get_or_create_indiv_gloss(trans_project_task=task)
+
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
+        
         if edit_allow == False:
             return Response({"msg":"Already someone is working"},status = 400)
+        
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
             serializer.save()
