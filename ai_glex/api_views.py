@@ -182,9 +182,9 @@ def check_gloss_task_id_for_project_task_id(request):
             
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=gloss_proj)
-            tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
-            task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
+            #gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=gloss_proj)
+            #tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
+            #task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
 
             gloss_task_id = gloss_job_ins.job_tasks_set.last().id
             
