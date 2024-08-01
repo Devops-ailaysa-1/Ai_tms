@@ -608,12 +608,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				
 				
 			project_ins_gloss.save()
-			for job in jobs:
+			for job in jobs:  ##### creating a list of jobs for gloss
 				Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
 			
-			gloss_jobs = project_ins_gloss.get_jobs
-			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,
-								is_default_project_glossary=True) # creating gloss with translation project instance
+			gloss_jobs = project_ins_gloss.get_jobs ### get the job from the created api
+			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
+			
 			tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 			GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
@@ -650,7 +650,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by) 
 				#### creating dumy gloss for project 1 and 2
-				self.create_default_gloss(project,jobs,ai_user) #### ----------->>>>>> creating default glossary
+				#self.create_default_gloss(project,jobs,ai_user) #### ----------->>>>>> creating default glossary
 
 				obj_is_allowed(project,"create",user)
 
