@@ -269,10 +269,11 @@ class TermUploadView(viewsets.ModelViewSet):
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
         
-        #job = Task.objects.get(id=task).job
+        project_type_id = Task.objects.get(id=task).job.project.project_type_id
         
-        job = get_or_create_indiv_gloss(trans_project_task=task)
-
+        if not project_type_id ==3: # from transeditor which request with trans task
+            job = get_or_create_indiv_gloss(trans_project_task=task)
+            ### return the output with gloss project task
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
         
