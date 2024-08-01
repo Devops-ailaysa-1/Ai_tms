@@ -127,7 +127,7 @@ def get_or_create_indiv_gloss(trans_project_task):
     job_ins = task_ins.job
     
     trans_project_ins = job_ins.project  ### get project instance
-    job_ins = Task.objects.get(id=trans_project_task).job  ### get all the task instance
+    # job_ins = Task.objects.get(id=trans_project_task).job  ### get all the task instance
     ### get the src anf tar pair for a given task
     source_language = job_ins.source_language
     target_language = job_ins.target_language
@@ -254,12 +254,12 @@ class TermUploadView(viewsets.ModelViewSet):
             job = Task.objects.get(id=task).job
             project = job.project
             project_type_id = project.project_type_id
-            project_name = job.project.project_name
+            project_name = project.project_name
 
             ### to check the given task id is gloss task or trans task
             if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
                 print("the given task id is project trans task")
-                job = get_or_create_indiv_gloss(trans_project_task=task)
+                job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the gloss task
                 ### return the output with gloss project task
             else:
                 print("the given task id is gloss trans task")
