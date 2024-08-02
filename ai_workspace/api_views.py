@@ -1759,10 +1759,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)    #
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
 
-        print("Task assign detail ===> ", task_assign_detail)
-        print("tasks ===> ", tasks)
-
-
         # For authorization
         tsks = Task.objects.filter(id__in=tasks)
         for tsk in tsks:
@@ -1778,7 +1774,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             i.update(extra)
             final.append(i)
         
-        print("Final Task assign detail ===> ", task_assign_detail)
 
         with transaction.atomic():
             serializer = TaskAssignInfoSerializer(data=final,context={'request':request},many=True)
