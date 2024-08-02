@@ -484,33 +484,33 @@ def has_glossary_project(project):
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
-def glossaries_list(request,project_id):   ###### this function is for wordchoise option list select
+def glossaries_list(request,project_id):  
     project = Project.objects.get(id=project_id)
-    option = request.GET.get('option')
-    #print("option-->",option)
-    #print("project--->",project)
+    option = request.GET.get('option',None)
+    task = request.GET.get('task',None)
     user = request.user.team.owner if request.user.team else request.user
-    #print("user--->",user)
-    if option == 'glossary':
+    
+    if option == 'glossary': ### for gloss
         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
-    else:
+    else: ### word choice
         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
-    #print("queryset",queryset)
-    target_languages = project.get_target_languages
+    if task:
+        task_instance = Task.objects.get(id=task)
+        job = task_instance.job
+        target_languages = [job.target__language]
+        print("given task given for individual gloss project")
+    else:
+        target_languages = project.get_target_languages
     queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct().order_by('-id')   #### project's task's job gloss list
     
-    #print("queryset",queryset)
-    #print("queryset",len(queryset))
 
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request })
     data = serializer.data
 
-
- 
     return Response(data)
 
 class GlossarySelectedCreateView(viewsets.ViewSet):
