@@ -1735,7 +1735,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
         step = request.POST.get('step')
         task_assign_detail = request.POST.get('task_assign_detail')
-        files=request.FILES.getlist('instruction_file')
+        files = request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         reassign = request.POST.get('reassigned') 
@@ -1758,7 +1758,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = data.pop('task_assign_detail')
         task_assign_detail = json.loads(task_assign_detail)    #
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
-       
+
+        print("Task assign detail ===> ", task_assign_detail)
+        print("tasks ===> ", tasks)
+
+
         # For authorization
         tsks = Task.objects.filter(id__in=tasks)
         for tsk in tsks:
@@ -1769,10 +1773,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             if msg:
                 return Response({'Error':msg},status=400)
 
-        for i in task_assign_detail:
-            i.update(data)
+        for i in task_assign_detail: 
+            i.update(data) 
             i.update(extra)
             final.append(i)
+        
+        print("Final Task assign detail ===> ", task_assign_detail)
+
         with transaction.atomic():
             serializer = TaskAssignInfoSerializer(data=final,context={'request':request},many=True)
             if serializer.is_valid():
