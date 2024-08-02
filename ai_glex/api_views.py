@@ -120,13 +120,15 @@ class GlossaryFileView(viewsets.ViewSet):
 
 ###############################Terms CRUD########################################
 
-
+from django.http import Http404
 ##### function to find the project's gloss project
 def get_or_create_indiv_gloss(trans_project_task):
     task_ins = Task.objects.get(id=trans_project_task)
     job_ins = task_ins.job
     
     trans_project_ins = job_ins.project  ### get project instance
+    if trans_project_ins.project_type_id == 3:
+        raise Http404("the given task is the project gloss task")
     # job_ins = Task.objects.get(id=trans_project_task).job  ### get all the task instance
     ### get the src anf tar pair for a given task
     source_language = job_ins.source_language
@@ -149,7 +151,8 @@ def get_or_create_indiv_gloss(trans_project_task):
         
         if not gloss_job_ins:
             ### if the job does not exists create a job instance for the gloss project for project and also creating a Task
-            gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=instance.project)
+            gloss_job_ins = Job.objects.create(source_language=source_language,
+                                               target_language=target_language,project=instance.project)
             tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
             task_assign = TaskAssign.objects.assign_task(project=instance.project)
             
@@ -258,8 +261,8 @@ class TermUploadView(viewsets.ModelViewSet):
 
             ### to check the given task id is gloss task or trans task
             if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
-                print("the given task id is project trans task")
-                job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the gloss task
+                 
+                job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
                 ### return the output with gloss project task
             else:
                 print("the given task id is gloss trans task")
@@ -298,7 +301,7 @@ class TermUploadView(viewsets.ModelViewSet):
         project_type_id = project.project_type_id
         ### to check the given task id is gloss task or trans task
         if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
-            print("the given task id is project trans task")
+
             job = get_or_create_indiv_gloss(trans_project_task=task)
             ### return the output with gloss project task
         else:
@@ -487,7 +490,7 @@ def has_glossary_project(project):
 def glossaries_list(request,project_id):  
     project = Project.objects.get(id=project_id)
     option = request.GET.get('option',None)
-    task = request.GET.get('task',None)
+    task = request.GET.get('task',None) ## task id given for individual gloss in task wise target language
     user = request.user.team.owner if request.user.team else request.user
     
     if option == 'glossary': ### for gloss
@@ -497,15 +500,21 @@ def glossaries_list(request,project_id):
     if task:
         task_instance = Task.objects.get(id=task)
         job = task_instance.job
-        target_languages = [job.target__language]
-        print("given task given for individual gloss project")
+        target_languages = job.target_language
+        queryset = queryset.filter(glossary_project__isnull=False)
+        queryset = queryset.filter(project_jobs_set__source_language_id=project.project_jobs_set.first().source_language.id)
+        queryset = queryset.filter(project_jobs_set__target_language_id=target_languages.id) 
+        queryset = queryset.filter(glossary_project__term__isnull=False)
+        queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
+
     else:
         target_languages = project.get_target_languages
-    queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
-                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
-                .filter(project_jobs_set__target_language__language__in = target_languages)\
-                .filter(glossary_project__term__isnull=False)\
-                .exclude(id=project.id).distinct().order_by('-id')   #### project's task's job gloss list
+        queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                    .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
+                    .filter(project_jobs_set__target_language__language__in = target_languages)\
+                    .filter(glossary_project__term__isnull=False)\
+                    .exclude(id=project.id).distinct().order_by('-id')   
+    #### project's task's job gloss list
     
 
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request })

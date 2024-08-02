@@ -609,7 +609,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				
 			project_ins_gloss.save()
 			for job in jobs:  ##### creating a list of jobs for gloss
-				Job.objects.create(source_language=job.source_language,target_language=job.target_language,project=project_ins_gloss)
+				source_language = job.source_language
+				target_language = job.target_language
+				Job.objects.create(source_language=source_language,target_language=target_language,project=project_ins_gloss)
 			
 			gloss_jobs = project_ins_gloss.get_jobs ### get the job from the created api
 			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
