@@ -602,12 +602,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		from .api_views import AddStoriesView
 		project_type = project.project_type_id
 		if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
-			
+			default_step = Steps.objects.get(id=1) #### creating step editor or reviewer
 			project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
 			project_ins_gloss.project_name = project.project_name+"_glossary"
 				
-				
 			project_ins_gloss.save()
+			project_steps = ProjectSteps.objects.create(project=project_ins_gloss,steps=default_step) ## creating projectstep for the created instance
 			for job in jobs:  ##### creating a list of jobs for gloss
 				source_language = job.source_language
 				target_language = job.target_language

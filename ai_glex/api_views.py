@@ -500,7 +500,7 @@ def glossaries_list(request,project_id):
     if task:
         task_instance = Task.objects.get(id=task)
         job = task_instance.job
-        target_languages = job.target_language
+        target_languages = job.target_language # with single target
         queryset = queryset.filter(glossary_project__isnull=False)
         queryset = queryset.filter(project_jobs_set__source_language_id=project.project_jobs_set.first().source_language.id)
         queryset = queryset.filter(project_jobs_set__target_language_id=target_languages.id) 
@@ -508,7 +508,7 @@ def glossaries_list(request,project_id):
         queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
 
     else:
-        target_languages = project.get_target_languages
+        target_languages = project.get_target_languages ### with list of targets 
         queryset = queryset.filter(ai_user=user).filter(glossary_project__isnull=False)\
                     .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                     .filter(project_jobs_set__target_language__language__in = target_languages)\
