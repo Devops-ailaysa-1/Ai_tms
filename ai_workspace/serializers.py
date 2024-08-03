@@ -43,24 +43,24 @@ from ai_workspace.utils import federal_json_translate
 from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger('django')
 
-class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `fields` argument that
-    controls which fields should be displayed.
-    """
+# class DynamicFieldsModelSerializer(serializers.ModelSerializer):
+#     """
+#     A ModelSerializer that takes an additional `fields` argument that
+#     controls which fields should be displayed.
+#     """
 
-    def __init__(self, *args, **kwargs):
-        fields = kwargs.pop("allowed_fields", None)
-        # Instantiate the superclass normally
-        super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         fields = kwargs.pop("allowed_fields", None)
+#         # Instantiate the superclass normally
+#         super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
 
-        if fields:
-            # fields = fields.split(',')
-            # Drop any fields that are not specified in the `fields` argument.
-            allowed = set(fields)
-            existing = set(self.fields.keys())
-            for field_name in existing - allowed:
-                self.fields.pop(field_name)
+#         if fields:
+#             # fields = fields.split(',')
+#             # Drop any fields that are not specified in the `fields` argument.
+#             allowed = set(fields)
+#             existing = set(self.fields.keys())
+#             for field_name in existing - allowed:
+#                 self.fields.pop(field_name)
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -181,70 +181,70 @@ class ProjectStepsSerializer(serializers.ModelSerializer):
 		read_only_fields = ("id","project",)
 
 
-class ProjectCreationSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
-	source_language = serializers.DictField(read_only=True, source="_source_language")
-	target_languages = serializers.ListField(read_only=True, source="_target_languages")
-	files = FileSerializer(many=True, source="project_files_set")
-	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
-	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",\
-		required=False)
-	project_name = serializers.CharField(required=False)
+# class ProjectCreationSerializer(serializers.ModelSerializer):
+# 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
+# 	source_language = serializers.DictField(read_only=True, source="_source_language")
+# 	target_languages = serializers.ListField(read_only=True, source="_target_languages")
+# 	files = FileSerializer(many=True, source="project_files_set")
+# 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
+# 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",\
+# 		required=False)
+# 	project_name = serializers.CharField(required=False)
 
-	class Meta:
-		model = Project
-		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects",\
-				  "mt_engine", "source_language", "target_languages")
-		read_only_fields = ("id","ai_project_id")
-		extra_kwargs = {
-			"mt_engine":{
-				"required": False
-			}
-		}
-	def run_validation(self, data):
+# 	class Meta:
+# 		model = Project
+# 		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects",\
+# 				  "mt_engine", "source_language", "target_languages")
+# 		read_only_fields = ("id","ai_project_id")
+# 		extra_kwargs = {
+# 			"mt_engine":{
+# 				"required": False
+# 			}
+# 		}
+# 	def run_validation(self, data):
 
-		return super().run_validation(data=data)
+# 		return super().run_validation(data=data)
 
-	def to_representation(self, instance):
-		ret = super().to_representation(instance)
-		return  ret
+# 	def to_representation(self, instance):
+# 		ret = super().to_representation(instance)
+# 		return  ret
 
-	def is_valid(self, *args, **kwargs):
+# 	def is_valid(self, *args, **kwargs):
 
-		if not isinstance( self.initial_data['jobs'],dict ):
-			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
+# 		if not isinstance( self.initial_data['jobs'],dict ):
+# 			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
 
-		if isinstance( self.initial_data.get('subjects', None), str ):
-			self.initial_data['subjects'] = json.loads(self.initial_data['subjects'])
+# 		if isinstance( self.initial_data.get('subjects', None), str ):
+# 			self.initial_data['subjects'] = json.loads(self.initial_data['subjects'])
 
-		if isinstance( self.initial_data.get('contents', None), str ):
-			self.initial_data['contents'] = json.loads(self.initial_data['contents'])
+# 		if isinstance( self.initial_data.get('contents', None), str ):
+# 			self.initial_data['contents'] = json.loads(self.initial_data['contents'])
 
-		self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.\
-			initial_data['files']]
+# 		self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.\
+# 			initial_data['files']]
 
-		return super().is_valid(*args, **kwargs)
+# 		return super().is_valid(*args, **kwargs)
 
-	def create(self, validated_data):
-		ai_user = self.context["request"].user
-		project_jobs_set = validated_data.pop("project_jobs_set")
-		project_files_set = validated_data.pop("project_files_set")
-		proj_subject, proj_content_type = None, None
-		if "proj_subject" in validated_data:
-			proj_subject = validated_data.pop("proj_subject")
-		if "proj_content_type" in validated_data:
-			proj_content_type = validated_data.pop("proj_content_type")
+# 	def create(self, validated_data):
+# 		ai_user = self.context["request"].user
+# 		project_jobs_set = validated_data.pop("project_jobs_set")
+# 		project_files_set = validated_data.pop("project_files_set")
+# 		proj_subject, proj_content_type = None, None
+# 		if "proj_subject" in validated_data:
+# 			proj_subject = validated_data.pop("proj_subject")
+# 		if "proj_content_type" in validated_data:
+# 			proj_content_type = validated_data.pop("proj_content_type")
 
 
-		project = Project.objects.create(**validated_data,  ai_user=ai_user)
-		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
-		[project.project_files_set.create(**file_data) for file_data in project_files_set]
-		if proj_subject:
-			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-		if proj_content_type:
-			[project.proj_content_type.create(**content_data) for content_data in \
-			 proj_content_type]
-		return project
+# 		project = Project.objects.create(**validated_data,  ai_user=ai_user)
+# 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
+# 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
+# 		if proj_subject:
+# 			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+# 		if proj_content_type:
+# 			[project.proj_content_type.create(**content_data) for content_data in \
+# 			 proj_content_type]
+# 		return project
 
 class TemplangpairSerializer(serializers.ModelSerializer):
 	project = serializers.CharField(required=False,source="temp_proj_langpair")
@@ -289,9 +289,6 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		[temp_project.temp_proj_langpair.create(**lang_data) for lang_data in  langpair]
 		[temp_project.temp_proj_file.create(**file_data) for file_data in tempfiles]
 		return temp_project
-
-
-######################################## nandha ##########################################
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -377,11 +374,11 @@ class TbxUploadSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ProjectFilesCreateTypeSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = ProjectFilesCreateType
-		fields = ("id","file_create_type", "project")
-		read_only_fields = ("id","project",)
+# class ProjectFilesCreateTypeSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = ProjectFilesCreateType
+# 		fields = ("id","file_create_type", "project")
+# 		read_only_fields = ("id","project",)
 
 
 
@@ -391,19 +388,22 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	voice_proj_detail = VoiceProjectDetailSerializer(required=False,allow_null=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
-	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
-	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),\
+												  required=False,allow_null=True, write_only=True)
+	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),\
+												   required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	progress = serializers.SerializerMethodField()
-	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
-	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
+	subjects = ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
+	contents = ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	get_mt_by_page = serializers.BooleanField(required=False,allow_null=True)
 	book_project_id = serializers.ReadOnlyField(source='book_create_project.id')
-	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
+	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),\
+													  required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
 	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
@@ -592,36 +592,40 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:cached_value = None
 		return cached_value
 	
-	def create_default_gloss(self,project,jobs,ai_user):
+	def create_default_gloss(self, project, jobs, ai_user):
 		"""
 		Args : project is the transltion project to create the glossary project
 		jobs : is in list to create a job and task for the given project
 		ai_user : user
 		"""
-		from ai_glex.models import Glossary,GlossarySelected
+		from ai_glex.models import Glossary, GlossarySelected
 		from .api_views import AddStoriesView
 		project_type = project.project_type_id
 		if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
-			default_step = Steps.objects.get(id=1) #### creating step editor or reviewer
-			project_ins_gloss = Project.objects.create(project_type_id=3,ai_user=ai_user, mt_engine_id= 1) ### create a gloss's project
-			project_ins_gloss.project_name = project.project_name+"_glossary"
-				
-			project_ins_gloss.save()
+			default_step = Steps.objects.get(id=1) # Setting default step as Editing
+
+			# Checking if the project is a team/individual project
+			if ai_user.team:
+				team = Team.objects.get(owner=ai_user)
+
+			project_ins_gloss = Project.objects.create(project_type_id=3, ai_user=ai_user, mt_engine_id=1, team=team) # create a gloss's project
+			project_ins_gloss.project_name = project.project_name + "_glossary"	
+			project_ins_gloss.save()			
 			project_steps = ProjectSteps.objects.create(project=project_ins_gloss,steps=default_step) ## creating projectstep for the created instance
-			for job in jobs:  ##### creating a list of jobs for gloss
+
+			for job in jobs:  # Creating jobs for the default glossary
 				source_language = job.source_language
 				target_language = job.target_language
 				Job.objects.create(source_language=source_language,target_language=target_language,project=project_ins_gloss)
 			
-			gloss_jobs = project_ins_gloss.get_jobs ### get the job from the created api
+			gloss_jobs = project_ins_gloss.get_jobs # get Jobs of the glossary
 			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
 			
 			tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 			GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
-			print("created default glossary---->")
 		else:
-			print("project_type is not a translation project")
+			print("Default glossary cannot be created")
 
 
 	def create(self, validated_data):

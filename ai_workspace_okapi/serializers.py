@@ -19,23 +19,23 @@ from ai_auth.tasks import replace_with_gloss
 
 client = translate.Client()
 
-class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `fields` argument that
-    controls which fields should be displayed.
-    """
+# class DynamicFieldsModelSerializer(serializers.ModelSerializer):
+#     """
+#     A ModelSerializer that takes an additional `fields` argument that
+#     controls which fields should be displayed.
+#     """
 
-    def __init__(self, *args, **kwargs):
-        fields = kwargs.pop("exclude_fields", None)
-        # Instantiate the superclass normally
-        super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         fields = kwargs.pop("exclude_fields", None)
+#         # Instantiate the superclass normally
+#         super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
 
-        if fields:
-            # fields = fields.split(',')
-            # Drop any fields that are not specified in the `fields` argument.
-            excluded = set(fields)
-            for field_name in excluded:
-                self.fields.pop(field_name)
+#         if fields:
+#             # fields = fields.split(',')
+#             # Drop any fields that are not specified in the `fields` argument.
+#             excluded = set(fields)
+#             for field_name in excluded:
+#                 self.fields.pop(field_name)
 
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")

@@ -126,19 +126,17 @@ class GlossaryFileView(viewsets.ViewSet):
             [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list for job in jobs]
         return Response({"Msg":"Files Deleted"})
 
-###############################Terms CRUD########################################
 
 from django.http import Http404
-##### function to find the project's gloss project
+
 def get_or_create_indiv_gloss(trans_project_task):
     task_ins = Task.objects.get(id=trans_project_task)
     job_ins = task_ins.job
     
-    trans_project_ins = job_ins.project  ### get project instance
+    trans_project_ins = job_ins.project  ### get Standard project instance
     if trans_project_ins.project_type_id == 3:
-        raise Http404("the given task is the project gloss task")
-    # job_ins = Task.objects.get(id=trans_project_task).job  ### get all the task instance
-    ### get the src anf tar pair for a given task
+        raise Http404("The given task belongs to Glossary project")
+
     source_language = job_ins.source_language
     target_language = job_ins.target_language
 
@@ -147,7 +145,7 @@ def get_or_create_indiv_gloss(trans_project_task):
     ## check if the gloss table contains the individual gloss project 
     try:
         instance = Glossary.objects.get(file_translate_glossary=trans_project_ins)
-    except Glossary.DoesNotExist:   ######### if the glossary does not exist create a individual gloss 
+    except Glossary.DoesNotExist:   # Creating a new glossary based on the Standard project if not already exists 
         from ai_workspace.serializers import ProjectQuickSetupSerializer
         ProjectQuickSetupSerializer().create_default_gloss(trans_project_ins,[job_ins],user)
         instance = Glossary.objects.get(file_translate_glossary=trans_project_ins)
@@ -164,7 +162,6 @@ def get_or_create_indiv_gloss(trans_project_task):
             tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
             task_assign = TaskAssign.objects.assign_task(project=instance.project)
             
-            print("----->> job is created")
         return gloss_job_ins
     
     else:
@@ -273,7 +270,7 @@ class TermUploadView(viewsets.ModelViewSet):
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
                 ### return the output with gloss project task
             else:
-                print("the given task id is gloss trans task")
+                return Response({'msg':'Task is not Glossary project task'})
 
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
@@ -284,13 +281,13 @@ class TermUploadView(viewsets.ModelViewSet):
         
             edit_allow = self.edit_allowed(job)
         else:
-            return Response({'msg':'No task'})
+            return Response({'msg':'No Task received'})
         
         
         additional_info = [{'project_name':project_name,'source_language':str(source_language),
                                 'target_language':str(target_language),'edit_allowed':edit_allow}]
         
-        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        pagin_tc = self.paginator.paginate_queryset(queryset, request, view=self)
  
         serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)

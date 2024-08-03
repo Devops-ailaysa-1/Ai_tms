@@ -91,6 +91,7 @@ from ai_auth.reports import AilaysaReport
 from django.db.models.query import QuerySet
 logger = logging.getLogger('django')
 AILAYSA_EMAILS = settings.AILAYSA_EMAILS.split(",")
+
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
@@ -373,7 +374,7 @@ def get_payment_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
-        print(user_invoice_details)
+        # print(user_invoice_details)
     except Exception as error:
         print(error)
     if user_invoice_details:
