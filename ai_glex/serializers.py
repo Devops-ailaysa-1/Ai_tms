@@ -20,6 +20,15 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
+    def create(self, validated_data):
+        from ai_glex.signals import update_words_from_template
+        instance = GlossaryFiles.objects.create(**validated_data)
+        celery_id = update_words_from_template.apply_async(args=(instance.id,))
+        instance.celery_id = celery_id
+        instance.status  = "PENDING"
+        instance.save()
+        return instance
+
 
 class MyGlossarySerializer(serializers.ModelSerializer):
     class Meta:
