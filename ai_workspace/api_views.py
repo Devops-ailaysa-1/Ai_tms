@@ -1379,7 +1379,8 @@ class TaskView(APIView):
                     task.file.delete()
                 if task.document:
                     task.document.delete()
-                #check_delete_default_gloss_task(task,is_single_task=False)    
+                #check_delete_default_gloss_task(task,is_single_task=False)
+            else:
                 task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
