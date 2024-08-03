@@ -1314,6 +1314,18 @@ def dashboard_credit_status(request):
     return Response({"credits_left": user.credit_balance}, status=200)
 
 ######### Tasks Assign to vendor #################
+from ai_workspace.serializers import TaskViewSerializer
+class TaskViewDetail(APIView):
+    def get(self, request, pk):
+        try:
+            item = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TaskViewSerializer(item)
+        return Response(serializer.data)
+
+
 class TaskView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
@@ -1349,26 +1361,59 @@ class TaskView(APIView):
 
         else:
             return Response({"msg": task_serlzr.errors}, status=400)
-
+    
     def delete(self, request, id):
-        task = Task.objects.get(id = id)
-        authorize(request,resource=task,action="delete",actor=self.request.user)
-        # it will check for task is assigned to any editor or not. if so, it will return error message
-        if task.task_info.filter(task_assign_info__isnull=False):
-            return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+        try:
+            task = Task.objects.get(id=id)
+        except Task.DoesNotExist:
+            return Response(data={"Message": "Task not found"}, status=404)
+
+        print("task--instance", task)
+        authorize(request, resource=task, action="delete", actor=self.request.user)
+
+        if task.task_info.filter(task_assign_info__isnull=False).exists():
+            return Response(data={"Message": "Task is assigned. Unassign and Delete"}, status=400)
+        
+        if len(task.job.project.get_tasks) == 1:
+            print("The deleting task's project contains only one task instance")
+            task.job.project.delete()
         else:
-            # if it is the single task in the project, then it will internally delete the project
-            if len(task.job.project.get_tasks) == 1:
-                #check_delete_default_gloss_task(task,is_single_task=True)
-                task.job.project.delete()
-            elif task.file:
+            if task.file:
                 if os.path.splitext(task.file.filename)[1] == ".pdf":
                     task.file.delete()
-                if task.document:
-                    task.document.delete()
-                #check_delete_default_gloss_task(task,is_single_task=False)    
-                task.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if task.document:
+                task.document.delete()
+        
+        try:
+            task.delete()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return Response(data={"Message": "An error occurred while deleting the task"}, status=500)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # def delete(self, request, id):
+    #     task = Task.objects.get(id = id)
+    #     print("task--instance",task)
+    #     authorize(request,resource=task,action="delete",actor=self.request.user)
+    #     # it will check for task is assigned to any editor or not. if so, it will return error message
+    #     if task.task_info.filter(task_assign_info__isnull=False): ### checking if the task instance is assigned to anyone
+    #         return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+    #     else:
+    #         # if it is the single task in the project, then it will internally delete the project
+    #         if len(task.job.project.get_tasks) == 1:
+    #             #check_delete_default_gloss_task(task,is_single_task=True)
+    #             print("the deleting task 's project contains only one task instance ")
+    #             task.job.project.delete()
+    #         elif task.file:
+    #             if os.path.splitext(task.file.filename)[1] == ".pdf":
+    #                 task.file.delete()
+    #             if task.document:
+    #                 task.document.delete()
+    #             #check_delete_default_gloss_task(task,is_single_task=False)
+    #         else:
+    #             task.delete()
+    #         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # def check_delete_default_gloss_task(task,is_single_task=False):
 #     from ai_glex.models import TermsModel
