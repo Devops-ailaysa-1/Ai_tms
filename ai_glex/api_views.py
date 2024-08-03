@@ -77,13 +77,13 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
-    
+        print("job_id---->",job_id)
         if job_id: ## from gloss page with gloss project 
-            job = json.loads(request.POST.get('job'))
-            obj = Job.objects.get(id=job)
-            data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+            # job = json.loads(request.POST.get('job'))
+            obj = Job.objects.get(id=job_id)
+            data = [{"project": obj.project.id, "file": file, "job":job_id, "usage_type":8} for file in files]
 
-        if task_id: ### from transeditor with translation project which is project's task id 
+        elif task_id: ### from transeditor with translation project which is project's task id 
             task_inst = Task.objects.get(id=task_id)
             job_inst = task_inst.job #### project's job
             gloss_project = job_inst.project.individual_gloss_project
@@ -92,11 +92,14 @@ class GlossaryFileView(viewsets.ViewSet):
 
             data = [{"project": gloss_project.project.id , "file": file, "job":gloss_job.id, "usage_type":8} for file in files]
 
-        else:
+        elif proj_id:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
             data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
         
+        else:
+            return Response ({'msg':'need task id or job id'},status=400)
+
         serializer = GlossaryFileSerializer(data=data,many=True)
         
         if serializer.is_valid():
