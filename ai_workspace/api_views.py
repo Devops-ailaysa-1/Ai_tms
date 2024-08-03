@@ -1313,6 +1313,18 @@ def dashboard_credit_status(request):
     return Response({"credits_left": user.credit_balance}, status=200)
 
 ######### Tasks Assign to vendor #################
+from ai_workspace.serializers import TaskViewSerializer
+class TaskViewDetail(APIView):
+    def get(self, request, pk):
+        try:
+            item = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TaskViewSerializer(item)
+        return Response(serializer.data)
+
+
 class TaskView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
@@ -1351,14 +1363,16 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
+        print("task--instance",task)
         authorize(request,resource=task,action="delete",actor=self.request.user)
         # it will check for task is assigned to any editor or not. if so, it will return error message
-        if task.task_info.filter(task_assign_info__isnull=False):
+        if task.task_info.filter(task_assign_info__isnull=False): ### checking if the task instance is assigned to anyone
             return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
         else:
             # if it is the single task in the project, then it will internally delete the project
             if len(task.job.project.get_tasks) == 1:
                 #check_delete_default_gloss_task(task,is_single_task=True)
+                print("the deleting task 's project contains only one task instance ")
                 task.job.project.delete()
             elif task.file:
                 if os.path.splitext(task.file.filename)[1] == ".pdf":
