@@ -36,7 +36,7 @@ urlpatterns = router.urls
 
 # api_views urls
 urlpatterns += [
-    path("get_task/<int:pk>/",api_views.TaskViewDetail.as_view(),name="get_task_ins"),
+    # path("get_task/<int:pk>/",api_views.TaskViewDetail.as_view(),name="get_task_ins"),
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("tasks/<int:id>/",api_views.TaskView.as_view(),name="delete_tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(),\

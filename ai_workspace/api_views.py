@@ -74,7 +74,7 @@ from cacheops import cached
 from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+from .serializers import (ProjectContentTypeSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSubjectSerializer, TempProjectSetupSerializer, \
                           TaskSerializer, FileSerializerv2, TmxFileSerializer, \
@@ -86,7 +86,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,\
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew) #ProjectCreationSerializer
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
@@ -696,9 +696,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and \
+            self.request.user in pr_managers else self.request.user
 
-        #checking for team access and indivual user access
+        # Checking for team access and indivual user access
         
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
@@ -3645,7 +3646,10 @@ class MyDocumentsView(viewsets.ModelViewSet):
         owner = user.team.owner if (user.team and user in project_managers) else user
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
-        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField()),doc_name=F('user_title')).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner))\
+            .distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),\
+            document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField()),doc_name=F('user_title'))\
+                .values('id','created_at','doc_name','word_count','open_as','document_type__type')
         q3 = list(chain(q1, q2))
         return q3
 
@@ -4296,6 +4300,7 @@ from .serializers import CombinedSerializer
 
 
 class CombinedProjectListView(viewsets.ModelViewSet):
+    
     permission_classes = [IsAuthenticated]
     serializer_class = CombinedSerializer
     paginator = PageNumberPagination()
@@ -4327,9 +4332,9 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         project_managers = request.user.team.get_project_manager if request.user.team else []
         owner = request.user.team.owner if (request.user.team and request.user in project_managers) else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
-                            .filter(task_id=None).order_by('-id')
-         
+                            .filter(task_id=None).order_by('-id')         
         search_query = request.GET.get('search')
+
         if search_query:
             queryset1 = queryset1.filter(project_name__icontains=search_query)
             queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
@@ -4348,7 +4353,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         ordered_queryset = sorted(merged_queryset, key=lambda obj: obj[field_name] if isinstance(obj, dict) else getattr(obj, field_name), reverse=reverse_order)
 
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
+        ser = CombinedSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 
@@ -4356,8 +4361,6 @@ from django.db.models import F, Value, Case, When
 from django.db.models.functions import Coalesce
 
 # Annotate the queryset to get the task_word_count for each task, defaulting to 0 if task_details is None
-
-
 # Convert the queryset to a dictionary
 
 
@@ -4402,9 +4405,6 @@ def analysed_true(pr,tasks):
                         "task_words":task_words}
 
 
-
-
-
 from .serializers import AssertSerializer
 from ai_workspace_okapi.models import ChoiceLists
 class AssertList(viewsets.ModelViewSet):
@@ -4416,6 +4416,7 @@ class AssertList(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
