@@ -1378,7 +1378,7 @@ class TaskView(APIView):
             task.job.project.delete()
         else:
             if task.file:
-                if os.path.splitext(task.file.name)[1] == ".pdf":
+                if os.path.splitext(task.file.filename)[1] == ".pdf":
                     task.file.delete()
             if task.document:
                 task.document.delete()
