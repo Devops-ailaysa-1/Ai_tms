@@ -34,7 +34,7 @@ class Glossary(models.Model): ########Glossary projecct################
     created_date            = models.DateTimeField(auto_now_add=True)
     modified_date           = models.DateTimeField(auto_now=True)
     
-    file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.DO_NOTHING,
+    file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.SET_NULL,
                                                    related_name="individual_gloss_project")
     is_default_project_glossary = models.BooleanField(default=False)
     
