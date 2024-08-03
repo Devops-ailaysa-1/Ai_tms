@@ -66,6 +66,11 @@ class GlossaryFileView(viewsets.ViewSet):
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
+    def retrieve(self,request,pk):
+        queryset=GlossaryFiles.objects.get(id=pk)
+        serializer=GlossaryFileSerializer(queryset)
+        return  Response(serializer.data)
+
     def create(self, request):
 
         proj_id = request.POST.get('project')
@@ -85,7 +90,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
         elif task_id: ### from transeditor with translation project which is project's task id 
             task_inst = Task.objects.get(id=task_id)
-            job_inst = task_inst.job #### project's job
+            job_inst = task_inst.job #### project trans's job , want proj gloss's job   
             gloss_project = job_inst.project.individual_gloss_project
             gloss_job_list = gloss_project.project.project_jobs_set.all()  
             gloss_job = job_lang_pair_check(gloss_job_list,job_inst.source_language.id ,job_inst.target_language.id )
@@ -1196,11 +1201,12 @@ def requesting_ner(joined_term_unit):
     if joined_term_unit:
         response_result = term_extraction_ner_and_terms(joined_term_unit)
         terms_from_request = []
-        for i in response_result['named_entities']:
-            if i['text']:
-                terms_from_request.append(i['text'])   
-        if response_result['terms']:
-            terms_from_request.extend(response_result['terms'])
+        if response_result['named_entities']:
+            for i in response_result['named_entities']:
+                if i['text']:
+                    terms_from_request.append(i['text'])   
+            if response_result['terms']:
+                terms_from_request.extend(response_result['terms'])
 
         return terms_from_request
     else:
@@ -1227,7 +1233,8 @@ def get_ner_with_textunit_merge(file_id,gloss_model_id):
             if j['source']:
                 text_unit.append(j['source'])
         full_text_unit_merge = "".join(text_unit)
-        terms.extend(requesting_ner(full_text_unit_merge))
+        if full_text_unit_merge:
+            terms.extend(requesting_ner(full_text_unit_merge))
         text_unit = []
 
     file_instance.status = "FINISHED"
