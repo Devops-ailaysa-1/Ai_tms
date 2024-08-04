@@ -290,6 +290,10 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		[temp_project.temp_proj_file.create(**file_data) for file_data in tempfiles]
 		return temp_project
 
+class TaskViewSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = Task
+		fields = "__all__"
 
 class TaskSerializer(serializers.ModelSerializer):
 	source_file_path = serializers.CharField(source="file.get_source_file_path", \
