@@ -61,8 +61,12 @@ class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
-        job = request.GET.get('job')
-        queryset=GlossaryFiles.objects.filter(job_id=job)
+        job = request.GET.get('job',None)
+        file_ids = request.GET.getlist('file_ids',None)
+        if file_ids:
+            queryset=GlossaryFiles.objects.filter(id__in=file_ids)
+        else:
+            queryset=GlossaryFiles.objects.filter(job_id=job)
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
@@ -504,6 +508,7 @@ def glossaries_list(request,project_id):
     else: ### word choice
         queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
     if task:
+        print("list choice gloss using task")
         task_instance = Task.objects.get(id=task)
         job = task_instance.job
         target_languages = job.target_language # with single target
@@ -1317,6 +1322,3 @@ def term_extraction_celery_status(request):
     else:
         return Response({'msg': 'No files to extract the terms or already extracted'}, status=200)
     
-@api_view(['GET',])
-def get_pos(request):
-    pass
