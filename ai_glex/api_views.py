@@ -274,8 +274,8 @@ class TermUploadView(viewsets.ModelViewSet):
                  
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
                 
-            else:
-                return Response({'msg':'Task is not Glossary project task'})
+            # else:
+            #     return Response({'msg':'Task is not Glossary project task'})
 
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
