@@ -606,7 +606,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		from ai_glex.models import Glossary, GlossarySelected
 		from .api_views import AddStoriesView
 		project_type = project.project_type_id
-		if project_type in [1,2] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
+		if project_type not in [3,10] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
 			default_step = Steps.objects.get(id=1) # Setting default step as Editing
 
 			# Checking if the project is a team/individual project

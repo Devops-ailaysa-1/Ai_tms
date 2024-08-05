@@ -231,6 +231,10 @@ class Segment(BaseSegment):
     @property
     def get_parent_seg_id(self):
         return self.id
+    
+    @property
+    def get_job(self):
+        return self.text_unit.task_obj.job
 
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
