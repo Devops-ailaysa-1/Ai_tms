@@ -281,7 +281,6 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 			['tempfiles']]
 		return super().is_valid(*args, **kwargs)
 
-
 	def create(self, validated_data):
 		langpair = validated_data.pop("temp_proj_langpair")
 		tempfiles = validated_data.pop("temp_proj_file")
@@ -597,11 +596,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return cached_value
 	
 	def create_default_gloss(self, project, jobs, ai_user):
+
 		"""
 		Args : project is the transltion project to create the glossary project
 		jobs : is in list to create a job and task for the given project
 		ai_user : user
 		"""
+
 		from ai_glex.models import Glossary, GlossarySelected
 		from .api_views import AddStoriesView
 		project_type = project.project_type_id
@@ -609,13 +610,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			default_step = Steps.objects.get(id=1) # Setting default step as Editing
 
 			# Checking if the project is a team/individual project
-			if ai_user.team:
-				team = Team.objects.get(owner=ai_user)
+			ai_user_team = Team.objects.get(owner=ai_user) if ai_user.team else None
 
-			project_ins_gloss = Project.objects.create(project_type_id=3, ai_user=ai_user, mt_engine_id=1, team=team) # create a gloss's project
+			project_ins_gloss = Project.objects.create(project_type_id=3, ai_user=ai_user, mt_engine_id=1, team=ai_user_team) # create a gloss's project
 			project_ins_gloss.project_name = project.project_name + "_glossary"	
 			project_ins_gloss.save()			
-			project_steps = ProjectSteps.objects.create(project=project_ins_gloss,steps=default_step) ## creating projectstep for the created instance
+			project_steps = ProjectSteps.objects.create(project=project_ins_gloss,steps=default_step) # creating projectstep for the created instance
 
 			for job in jobs:  # Creating jobs for the default glossary
 				source_language = job.source_language

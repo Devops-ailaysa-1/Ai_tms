@@ -85,8 +85,8 @@ class GlossaryFileView(viewsets.ViewSet):
         for i in files:
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
-                return Response({'msg':'file(s) not contained supported data'},status=400)
-        print("job_id---->",job_id)
+                return Response({'msg':'Upload failed. Download the template to upload the terms'}, status=400)
+        
         if job_id: ## from gloss page with gloss project 
             # job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job_id)
@@ -260,6 +260,7 @@ class TermUploadView(viewsets.ModelViewSet):
             print("Exception1-->", e)
 
     def list(self, request):
+        
         task = request.GET.get('task',None)
         
         if task:
@@ -268,11 +269,11 @@ class TermUploadView(viewsets.ModelViewSet):
             project_type_id = project.project_type_id
             project_name = project.project_name
 
-            ### to check the given task id is gloss task or trans task
-            if not project_type_id == 3 and not getattr(project,'glossary_project',None): # from transeditor which request with trans task
+            ### To check if the task is glossary task or a Standard project task
+            if not project_type_id == 3:
                  
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
-                ### return the output with gloss project task
+                
             else:
                 return Response({'msg':'Task is not Glossary project task'})
 
