@@ -22,7 +22,6 @@ from ai_workspace.models import TaskAssign, Task
 from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel,WriteToExcel_wordchoice
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
-from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace.models import Task
@@ -42,6 +41,7 @@ from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
 from celery.decorators import task
 import requests
+from django.db import transaction
 
 
 def job_lang_pair_check(gloss_job_list, src, tar):
@@ -119,16 +119,17 @@ class GlossaryFileView(viewsets.ViewSet):
             return Response (serializer.errors,status=400)
 
     def delete(self,request,pk=None):
-        file_delete_ids = request.GET.get('file_delete_ids')
-        delete_list = file_delete_ids.split(',')
+        delete_list = request.GET.getlist('file_delete_ids')
+        delete_list = delete_list.split(',')
         job = request.GET.get('job',None)
         project =request.GET.get('project')
-        if job:
-            [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
-        else:
-            proj = Project.objects.get(id=project)
-            jobs = proj.get_jobs
-            [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list for job in jobs]
+        with transaction.atomic():
+            if job:
+                [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
+            else:
+                proj = Project.objects.get(id=project)
+                jobs = proj.get_jobs
+                [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list for job in jobs]
         return Response({"Msg":"Files Deleted"})
 
 
