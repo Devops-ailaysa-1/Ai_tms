@@ -121,7 +121,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def delete(self,request,pk=None):
         delete_list = request.GET.getlist('file_delete_ids')
-        delete_list = delete_list.split(',')
+        #delete_list = delete_list.split(',')
         job = request.GET.get('job',None)
         project =request.GET.get('project')
         with transaction.atomic():
