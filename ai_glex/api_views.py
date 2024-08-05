@@ -62,11 +62,12 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def list(self,request):
         job = request.GET.get('job',None)
-        file_ids = request.GET.getlist('file_ids',None)
-        if file_ids:
-            queryset=GlossaryFiles.objects.filter(id__in=file_ids)
-        else:
-            queryset=GlossaryFiles.objects.filter(job_id=job)
+        # task_id = request.GET.getlist('task_id',None)
+        # if task_id:
+        #     job_ins = Task.objects.get(id=task_id).job
+        #     queryset=GlossaryFiles.objects.filter(job=job_ins)
+        # else:
+        queryset=GlossaryFiles.objects.filter(job_id=job)
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
@@ -184,22 +185,25 @@ def check_gloss_task_id_for_project_task_id(request):
     job_ins = Task.objects.get(id=task).job
     source_language = job_ins.source_language
     target_language = job_ins.target_language
+    
     if getattr(trans_project_ins,'individual_gloss_project',None):
         gloss_proj = trans_project_ins.individual_gloss_project.project
         gloss_job_list = gloss_proj.project_jobs_set.all()
         gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
     
-        if not gloss_job_ins:
-            print("no gloss job")
-            
+        if not gloss_job_ins:            
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            #gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=gloss_proj)
-            #tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
-            #task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
+            gloss_task_id = gloss_job_ins.job_tasks_set.last()
 
-            gloss_task_id = gloss_job_ins.job_tasks_set.last().id
-            
+            if gloss_task_id:
+                gloss_task_id = gloss_task_id.id
+            else:
+                gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=gloss_proj)
+                tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
+                task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
+                gloss_task_id = gloss_task_id.id
+
             return Response({'gloss_project_id':gloss_job_ins.project_id , 
                             'gloss_id': trans_project_ins.individual_gloss_project.id,
                             'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id},status = 200)

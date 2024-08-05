@@ -279,15 +279,14 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text'):
-    
-    from ai_workspace.api_views import get_consumable_credits_for_text, UpdateTaskCreditStatus
+                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
+    from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
 
     mt_called = True
 
-    if user_id == None:
-        user, uid, email, initial_credit = None, None, None, None
+    if user_id==None:
+        user,uid,email,initial_credit = None,None,None,None
 
     else:
         user = AiUser.objects.get(id=user_id)
@@ -299,13 +298,13 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     if cc == None:
         if isinstance(source_string,list):
             for src_text in source_string:
-                cc = 0
-                cc += get_consumable_credits_for_text(src_text,target_lang_code,source_lang_code)
+                cc=0
+                cc+= get_consumable_credits_for_text(src_text,target_lang_code,source_lang_code)
         else:
             cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
      
-    if isinstance(source_string,str) and special_character_check(source_string):
+    if isinstance(source_string,str) and special_character_check(source_string)  :
         mt_called = False
         translate = source_string
     
@@ -724,7 +723,16 @@ def get_consumption_of_file_translate(task):
 
 
 def segment_mt_and_glossary(segment,glossary_list):
-    pass
+    prompt = """the user will provide you the source English text and translated Tamil text for the same.
+check out if the translation is well adhered to the English text. if not, then provide the modified Tamil text.
+most common English to Tamil translation errors include: idioms, co locations, co occurrence, cultural nuances and morphological corrections.
+checkout for these errors as well as other errors too.
+the modified Tamil translation should more closely align with the source English text in meaning as well as grammatical side.
+final output:
+provide only the modified Tamil text.
+if needed change the sentence structure if it tends to align with the source English
+text perfectly.
+do not say what type of changes made or feedback or any other sort of things"""
 
 def segment_mt_llm_glossary(segment,glossary_list):
     pass
