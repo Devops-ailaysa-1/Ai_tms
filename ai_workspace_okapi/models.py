@@ -170,15 +170,8 @@ class Segment(BaseSegment):
     is_merged = models.BooleanField(default=False, null=True,)
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
-    #mt = models.TextField(null=True, blank=True)
-    mt_llm = models.TextField(null=True, blank=True)
-    mt_llm_glossary = models.TextField(null=True, blank=True)
-    #mt_glossary = models.TextField(null=True, blank=True)
-    # segment_choice = 
-
-
-
-
+    
+    
     def generate_cache_keys(self):
         cache_keys = [
             f'seg_progress_{self.text_unit.document.pk}',
