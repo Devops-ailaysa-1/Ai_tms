@@ -41,6 +41,7 @@ from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
 from celery.decorators import task
 import requests
+from django.http import Http404
 from django.db import transaction
 
 
@@ -125,15 +126,20 @@ class GlossaryFileView(viewsets.ViewSet):
         project =request.GET.get('project')
         with transaction.atomic():
             if job:
-                [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
+                objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
+                objects_to_delete.delete()
             else:
                 proj = Project.objects.get(id=project)
                 jobs = proj.get_jobs
-                [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list for job in jobs]
+
+                ids_to_delete = set(delete_list)
+                query = Q(id__in=ids_to_delete) & Q(job__in=jobs)
+
+                GlossaryFiles.objects.filter(query).delete()
         return Response({"Msg":"Files Deleted"})
 
 
-from django.http import Http404
+
 
 def get_or_create_indiv_gloss(trans_project_task):
     task_ins = Task.objects.get(id=trans_project_task)
