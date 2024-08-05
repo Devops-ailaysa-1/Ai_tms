@@ -722,3 +722,8 @@ def get_consumption_of_file_translate(task):
 
 
 
+def segment_mt_and_glossary(segment,glossary_list):
+    pass
+
+def segment_mt_llm_glossary(segment,glossary_list):
+    pass
