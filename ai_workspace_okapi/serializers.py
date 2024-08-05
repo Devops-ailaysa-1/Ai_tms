@@ -523,18 +523,21 @@ class MT_RawSerializer(serializers.ModelSerializer):
         segment = validated_data["segment"]
         active_segment = segment.get_active_object()
         mt_engine= validated_data["mt_engine"]
-        task_mt_engine = validated_data["task_mt_engine"]
+        # task_mt_engine = validated_data["task_mt_engine"]
 
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         
         #task = Task.objects.get(job=doc.job)
-        task = active_segment.task_obj
+        # task = active_segment.task_obj
         
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField())).filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
+        # Checking if target or temp_target is already present 
+        # due to functionalities like Pretranslation
+        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField()))\
+            .filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
 
         if seg_obj:
             if seg_obj.first().target:

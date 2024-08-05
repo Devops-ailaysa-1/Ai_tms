@@ -909,6 +909,10 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_user_and_doc(segment_id):
+
+        # Returns the Ai_User from which credits has to be debited and \
+        # the Document of the segment
+
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
@@ -916,6 +920,9 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def is_account_holder(request, doc, user):
+        
+        # Checking if request.user is a Project Manager or Account Holder.
+        # The second condition is true only for Account Holder
 
         if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
@@ -928,12 +935,14 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment_id, mt_params):
 
-        
+        # Getting the user from which credits to be debited &
+        # The Document object of the segment
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        #task = Task.objects.get(document=doc)
         seg  = Segment.objects.get(id=segment_id)
 
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+
+        # Getting the MT engine for the Task of the segment
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
         # If raw translation is already available and Proj & Task MT engines are same
@@ -942,15 +951,15 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
-
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
-        user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        #task = Task.objects.get(job=doc.job)
-        task = seg.task_obj
+        # user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+        # #task = Task.objects.get(job=doc.job)
+        # task = seg.task_obj
 
+        #
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
@@ -958,10 +967,13 @@ class MT_RawAndTM_View(views.APIView):
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
         
         if initial_credit > consumable_credits :
+            
             if mt_raw:
-                #############   Update   ############
+                # If MT raw is already present, but user has changed the MT engine,
+                # In that case, the MT Raw needs to be updated using the new MT Engine.
+
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                              doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk,cc=consumable_credits)
                 # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 # translation = replace_with_gloss(seg.source,translation_original,task)
 
@@ -969,9 +981,10 @@ class MT_RawAndTM_View(views.APIView):
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
                 obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
                 return MT_RawSerializer(obj).data, 200, "available"
+            
             else:
 
-                #########   Create   #######
+                # If there is not MT Raw, a new translation needs to be done
 
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
@@ -1135,24 +1148,8 @@ class MT_RawAndTM_View(views.APIView):
         project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_split_segment_set=segment_id).first()
         return project
 
-    # @staticmethod
-    # def get_words_list(sent):
-    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-    #     tokens=word_tokenize(sent)
-    #     target = [word for word in tokens if word not in punctuation]
-    #     words=[]
-    #     tg_word = [word for word in target] 
-    #     unigram = ngrams(tg_word , 1)
-    #     words.extend(list(" ".join(i) for i in unigram))
-    #     bigrams = ngrams(tg_word , 2)
-    #     words.extend(list(" ".join(i) for i in bigrams))
-    #     trigrams = ngrams(tg_word , 3)
-    #     words.extend(list(" ".join(i) for i in trigrams))
-    #     return words
-
-
-
     def get(self, request, segment_id):
+            
             tm_only = {
                         "segment": segment_id,
                         "mt_raw": "",
@@ -1162,9 +1159,14 @@ class MT_RawAndTM_View(views.APIView):
 
             mt_uc = request.GET.get("mt_uc", 'false')
 
-            # Getting MT params
-            mt_params = self.get_segment_MT_params(segment_id)
+            # Getting MT params from TaskAssign model
+            mt_params = self.get_segment_MT_params(segment_id) 
             
+            # split_check is a Utility function which returns
+            # True - if the segment is a normal segment i.e. instance of Segment or MergeSegment
+            # False - if the segment is an instance of SplitSegment
+
+
             if split_check(segment_id):
                 seg = Segment.objects.get(id=segment_id)
                 authorize(request, resource=seg, actor=request.user, action="read")
@@ -1176,36 +1178,41 @@ class MT_RawAndTM_View(views.APIView):
 
             # For normal and merged segments
             if split_check(segment_id):
+                
+                # Fetching translation from Translation memory
                 tm_data = self.get_tm_data(request, segment_id)
             
                 if tm_data and (mt_uc == 'false'):
                     return Response({**tm_only, "tm":tm_data}, status = 200 )
+                
+                # For MT / LLM translation
                 data, status_code, can_team = self.get_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
+                # project = MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 
-                seg_obj = Segment.objects.get(id=segment_id)
-                target_lang = seg_obj.text_unit.document.job.target_language_id
+                # seg_obj = Segment.objects.get(id=segment_id)
+                # target_lang = seg_obj.text_unit.document.job.target_language_id
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
 
             # For split segment
             else:
+                # Fetching translation from Translation memory
                 tm_data = self.get_tm_data(request, segment_id)
-
                 if tm_data and (mt_uc == False):
                     return Response({**tm_only, "tm": tm_data}, status=200)
 
+                # For MT / LLM translation
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
-                seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
-                target_lang = seg_obj.text_unit.document.job.target_language_id
+                # project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
+                # seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
+                # target_lang = seg_obj.text_unit.document.job.target_language_id
 
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
