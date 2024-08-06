@@ -756,6 +756,7 @@ class InternalFlowPrompts(models.Model):
 #         return self.category_name+'----'
 class SegmentChoices(models.Model):
     choice_name = models.CharField(max_length =100, null=True, blank=True)
+    option = models.CharField(max_length =100, null=True, blank=True)
     prompt = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

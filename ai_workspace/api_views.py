@@ -5202,9 +5202,9 @@ def segment_choice_mt_and_glossary(request):
     from ai_workspace_okapi.api_views import check_source_words
     from ai_staff.models import SegmentChoices
     from rest_framework.response import Response
-
     from ai_openai.utils import get_consumable_credits_for_openai_text_generator,get_prompt_chatgpt_turbo
     from ai_workspace.models import Segment
+
     user = request.user
     segment_id = request.GET.get('segment_id',None)
     seg_choice_id = request.GET.get('seg_choice_id',None)
