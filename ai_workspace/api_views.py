@@ -5226,7 +5226,7 @@ def segment_choice_mt_and_glossary(request):
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
     src_seg = segment_instance.source
-    tar_seg = segment_instance.target
+    tar_seg = segment_instance.seg_mt_raw.mt_raw ### taking the segment from the mt_raw table (1 to 1 relation) which is a base target
     seg_task = segment_instance.task_obj
     src_lang = seg_task.job.source_language.language
     tar_lang = seg_task.job.target_language.language
@@ -5252,7 +5252,7 @@ def segment_choice_mt_and_glossary(request):
             print("tar_seg---->",tar_seg)
             print("opt---->",seg_choice_ins.option)
 
-        elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
+        elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]: 
             print("src_seg------------->",src_seg)
             print("tar_seg------------->",tar_seg)
             print("gloss----->",gloss)
