@@ -5194,6 +5194,17 @@ def get_ner(request):
 
 
 ############# function for segment choice #######################
+def contains_valid_words(sentence):
+    # Define a regular expression pattern to match valid words
+    word_pattern = re.compile(r'\b\w+\b')
+    
+    # Find all words in the sentence
+    words = word_pattern.findall(sentence)
+    
+    # Check if all words are valid (i.e., they are not empty, punctuation, or digits)
+    return all(word.isalpha() for word in words)
+
+
 
 @api_view(['GET'])
 #@permission_classes([IsAuthenticated])
@@ -5222,36 +5233,40 @@ def segment_choice_mt_and_glossary(request):
 
     ### for cleaning sentence and extract tags
 
+    if contains_valid_words(src_seg):
 
-
-    tags = get_src_tags(tar_seg) 
-    
-    tar_seg = re.sub('<[^<]+?>', '', tar_seg)
-    src_seg = re.sub('<[^<]+?>', '', src_seg)
-
-    words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
-    #boolean,gloss= target_source_words(tar_seg,seg_task)
-    prompt = ''
-    if seg_choice_ins.choice_name == "mt_llm": ## rewrite
+        tags = get_src_tags(src_seg) 
         
-        prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
-    
-    elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
-        prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
-        
-    if prompt:
-        ### check the credit 
-        consumable_credits_user_text =  get_consumable_credits_for_text(prompt,source_lang='en',target_lang=None)
-        if initial_credit >= consumable_credits_user_text:
-            result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
-            para_sentence = result_prompt["choices"][0]["message"]["content"]
+        tar_seg = re.sub('<[^<]+?>', '', tar_seg)
+        src_seg = re.sub('<[^<]+?>', '', src_seg)
 
-            prompt_usage = result_prompt['usage']
-            total_token = prompt_usage['total_tokens']
-            consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-            return Response({'result':para_sentence,'tag':tags},status=200)
+
+        words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
+        #boolean,gloss= target_source_words(tar_seg,seg_task)
+        prompt = ''
+        if seg_choice_ins.choice_name == "mt_llm": ## rewrite
+            
+            prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
+        
+        elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
+            prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
+
+        if prompt:
+            ### check the credit 
+            consumable_credits_user_text =  get_consumable_credits_for_text(prompt,source_lang='en',target_lang=None)
+            if initial_credit >= consumable_credits_user_text:
+                
+                result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+                para_sentence = result_prompt["choices"][0]["message"]["content"]
+                prompt_usage = result_prompt['usage']
+                total_token = prompt_usage['total_tokens']
+                consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+
+                return Response({'result':para_sentence,'tag':tags},status=200)
+            else:
+                return  Response({'msg':'Insufficient Credits'},status=400)
         else:
-            return  Response({'msg':'Insufficient Credits'},status=400)
+            return Response({'msg':'no prompt'},status=400) 
     else:
-        return Response({'msg':'no prompt'},status=400)
+        return Response({'result':tar_seg,'tag':tags},status=200)
