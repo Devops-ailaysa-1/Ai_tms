@@ -24,7 +24,7 @@ urlpatterns += [
     path('term_save/',api_views.adding_term_to_glossary_from_workspace,name='adding-term-to-glossary-from-workspace'),
     path('whole_glossary_term_search/',api_views.whole_glossary_term_search),
     path('word_choices_list/',api_views.WordChoiceListView.as_view({'get': 'list'}),name='glossaries-list'),
-    #path('terms_simple_download/',api_views.terms_simple_download, name="gloss-simple-xlsx-download" ),
+    path('terms_simple_download/',api_views.terms_simple_download, name="gloss-simple-xlsx-download" ),
     path('term_mt/',api_views.get_word_mt),
     path('get_terminology',api_views.get_ner_terminology_extract),
     path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
