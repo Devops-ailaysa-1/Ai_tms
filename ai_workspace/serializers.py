@@ -605,7 +605,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		from ai_glex.models import Glossary, GlossarySelected
 		from .api_views import AddStoriesView
-		project_type = project.project_type_id
+		project_type = project.project_type_id ### standard project
 		if project_type not in [3,10] and not AddStoriesView.check_user_dinamalar(project.ai_user): ### check for not a din user
 			default_step = Steps.objects.get(id=1) # Setting default step as Editing
 
@@ -623,7 +623,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				Job.objects.create(source_language=source_language,target_language=target_language,project=project_ins_gloss)
 			
 			gloss_jobs = project_ins_gloss.get_jobs # get Jobs of the glossary
-			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
+			glossary = Glossary.objects.create(project=project,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
 			
 			tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
