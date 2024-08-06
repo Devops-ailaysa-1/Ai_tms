@@ -558,7 +558,7 @@ class BodyMatterSerializer(serializers.ModelSerializer):
 class SegmentChoicesSerializer(serializers.ModelSerializer):
     class Meta:
         model = SegmentChoices
-        fields = ("id","choice_name")
+        fields = ("id","choice_name","option")
 
 
 # class BookCategorySerializer(serializers.ModelSerializer):
