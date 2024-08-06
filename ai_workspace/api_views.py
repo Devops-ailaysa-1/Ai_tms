@@ -5247,8 +5247,16 @@ def segment_choice_mt_and_glossary(request):
         if seg_choice_ins.choice_name == "mt_llm": ## rewrite
             
             prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
-        
+            print("prompt---->",prompt)
+            print("tar_lang--->",tar_lang)
+            print("tar_seg---->",tar_seg)
+            print("opt---->",seg_choice_ins.option)
+
         elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
+            print("src_seg------------->",src_seg)
+            print("tar_seg------------->",tar_seg)
+            print("gloss----->",gloss)
+
             prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
 
         if prompt:
@@ -5257,6 +5265,7 @@ def segment_choice_mt_and_glossary(request):
             if initial_credit >= consumable_credits_user_text:
                 
                 result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+                print("result_prompt--->",result_prompt)
                 para_sentence = result_prompt["choices"][0]["message"]["content"]
                 prompt_usage = result_prompt['usage']
                 total_token = prompt_usage['total_tokens']
