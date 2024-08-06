@@ -90,14 +90,12 @@ from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, 
 from django.db import transaction
 from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
-from django.db import transaction
 from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
 from ai_auth.utils import filter_authorize,authorize_list
-from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 from ai_workspace_okapi.models import SegmentDiff
@@ -2877,8 +2875,8 @@ def target_source_words(target_mt,task):
     from ai_glex.models import TermsModel,GlossarySelected
     proj = task.job.project
     target_language = task.job.target_language
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 3).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 3)\
                 .filter(job__target_language=target_language)\
                 .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
                       params=[target_mt]).distinct().values('sl_term','tl_term')
