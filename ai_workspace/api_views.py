@@ -5253,6 +5253,11 @@ def segment_choice_mt_and_glossary(request):
 
         words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
         #boolean,gloss= target_source_words(tar_seg,seg_task)
+        ## output
+        # [{'sl_term': 'Neuralink', 'tl_term': 'நியூரோ பாலம்'},
+        # {'sl_term': 'neurotechnology', 'tl_term': 'பதட்டமாக தொழில்நுட்பம்'}]
+
+
         prompt = ''
         if seg_choice_ins.choice_name == "mt_llm": ## rewrite
             
