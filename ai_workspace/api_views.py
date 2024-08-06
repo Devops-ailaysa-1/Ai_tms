@@ -5204,6 +5204,7 @@ def segment_choice_mt_and_glossary(request):
     from rest_framework.response import Response
     from ai_openai.utils import get_consumable_credits_for_openai_text_generator,get_prompt_chatgpt_turbo
     from ai_workspace.models import Segment
+    from ai_workspace_okapi.api_views import get_src_tags
 
     user = request.user
     segment_id = request.GET.get('segment_id',None)
@@ -5218,6 +5219,16 @@ def segment_choice_mt_and_glossary(request):
     seg_task = segment_instance.task_obj
     src_lang = seg_task.job.source_language.language
     tar_lang = seg_task.job.target_language.language
+
+    ### for cleaning sentence and extract tags
+
+
+
+    tags = get_src_tags(tar_seg) 
+    
+    tar_seg = re.sub('<[^<]+?>', '', tar_seg)
+    src_seg = re.sub('<[^<]+?>', '', src_seg)
+
     words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
     #boolean,gloss= target_source_words(tar_seg,seg_task)
     prompt = ''
@@ -5227,6 +5238,7 @@ def segment_choice_mt_and_glossary(request):
     
     elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
         prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
+        
     if prompt:
         ### check the credit 
         consumable_credits_user_text =  get_consumable_credits_for_text(prompt,source_lang='en',target_lang=None)
@@ -5238,7 +5250,7 @@ def segment_choice_mt_and_glossary(request):
             total_token = prompt_usage['total_tokens']
             consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-            return Response({'result':para_sentence},status=200)
+            return Response({'result':para_sentence,'tag':tags},status=200)
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
     else:
