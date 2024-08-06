@@ -16,7 +16,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
                     FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,
-                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
+                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,SegmentChoices)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -28,7 +28,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,DesignerOrientationSerializer,
                          ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer,
-                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)
+                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer,SegmentChoicesSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -1396,3 +1396,16 @@ class LevelView(viewsets.ViewSet):
         return Response(serializer.data)
     
 
+
+class SegmentChoicesView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+
+    @cached
+    def get_queryset(self):
+        queryset = SegmentChoices.objects.all().order_by('id')
+        return queryset
+    
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = SegmentChoicesSerializer(queryset,many=True)
+        return Response(serializer.data)

@@ -754,3 +754,14 @@ class InternalFlowPrompts(models.Model):
 
 #     def __str__(self) -> str:
 #         return self.category_name+'----'
+class SegmentChoices(models.Model):
+    choice_name = models.CharField(max_length =100, null=True, blank=True)
+    prompt = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        if self.choice_name:
+            return self.choice_name +'----'+self.prompt
+        else:
+            return None

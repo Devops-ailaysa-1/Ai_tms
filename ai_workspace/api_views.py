@@ -5191,3 +5191,55 @@ def get_ner(request):
     ner_new = list(set(ner))
     return JsonResponse({"ner": ner_new}, safe=False)
 
+
+
+############# function for segment choice #######################
+
+@api_view(['GET'])
+#@permission_classes([IsAuthenticated])
+def segment_choice_mt_and_glossary(request):
+
+    from ai_workspace_okapi.api_views import check_source_words
+    from ai_staff.models import SegmentChoices
+    from rest_framework.response import Response
+
+    from ai_openai.utils import get_consumable_credits_for_openai_text_generator,get_prompt_chatgpt_turbo
+    from ai_workspace.models import Segment
+    user = request.user
+    segment_id = request.GET.get('segment_id',None)
+    seg_choice_id = request.GET.get('seg_choice_id',None)
+    seg_choice_ins = SegmentChoices.objects.get(id=seg_choice_id)
+    segment_instance = Segment.objects.get(id=segment_id)
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    src_seg = segment_instance.source
+    tar_seg = segment_instance.target
+    seg_task = segment_instance.task_obj
+    src_lang = seg_task.job.source_language.language
+    tar_lang = seg_task.job.target_language.language
+    words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
+    #boolean,gloss= target_source_words(tar_seg,seg_task)
+    prompt = ''
+    if seg_choice_ins.choice_name == "mt_llm": ## rewrite
+        
+        prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
+    
+    elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]:
+        prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
+    if prompt:
+        ### check the credit 
+        consumable_credits_user_text =  get_consumable_credits_for_text(prompt,source_lang='en',target_lang=None)
+        if initial_credit >= consumable_credits_user_text:
+            result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+            para_sentence = result_prompt["choices"][0]["message"]["content"]
+
+            prompt_usage = result_prompt['usage']
+            total_token = prompt_usage['total_tokens']
+            consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+            return Response({'result':para_sentence},status=200)
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+    else:
+        return Response({'msg':'no prompt'},status=400)

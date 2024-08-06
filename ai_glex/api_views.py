@@ -138,6 +138,10 @@ class GlossaryFileView(viewsets.ViewSet):
                 GlossaryFiles.objects.filter(query).delete()
         return Response({"Msg":"Files Deleted"})
 
+### for deleting celery task
+def task_delete_operation(delete_list,job):
+    objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
+    objects_to_delete.delete()
 
 
 
