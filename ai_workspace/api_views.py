@@ -5288,6 +5288,7 @@ def segment_choice_mt_and_glossary(request):
             else:
                 return  Response({'msg':'Insufficient Credits'},status=400)
         else:
-            return Response({'msg':'no prompt'},status=400) 
+            print("no prompt") ## return the mt_raw because no prompt
+            return Response({'result':tar_seg,'tag':tags},status=400) 
     else:
         return Response({'result':tar_seg,'tag':tags},status=200)
