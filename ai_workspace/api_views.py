@@ -5194,6 +5194,8 @@ def get_ner(request):
 
 
 ############# function for segment choice #######################
+import re
+
 def contains_valid_words(sentence):
     # Define a regular expression pattern to match valid words
     word_pattern = re.compile(r'\b\w+\b')
@@ -5201,8 +5203,16 @@ def contains_valid_words(sentence):
     # Find all words in the sentence
     words = word_pattern.findall(sentence)
     
-    # Check if all words are valid (i.e., they are not empty, punctuation, or digits)
-    return all(word.isalpha() for word in words)
+    # Check if there are any valid words
+    if not words:
+        return False
+    
+    # Check if there is only one word and it is alphabetic
+    if len(words) == 1 and words[0].isalpha():
+        return False
+    
+    # Check if there are multiple valid words and at least one is alphabetic
+    return any(word.isalpha() for word in words)
 
 
 
@@ -5230,12 +5240,12 @@ def segment_choice_mt_and_glossary(request):
     seg_task = segment_instance.task_obj
     src_lang = seg_task.job.source_language.language
     tar_lang = seg_task.job.target_language.language
+    tags = get_src_tags(src_seg) 
 
     ### for cleaning sentence and extract tags
 
     if contains_valid_words(src_seg):
 
-        tags = get_src_tags(src_seg) 
         
         tar_seg = re.sub('<[^<]+?>', '', tar_seg)
         src_seg = re.sub('<[^<]+?>', '', src_seg)
@@ -5247,12 +5257,14 @@ def segment_choice_mt_and_glossary(request):
         if seg_choice_ins.choice_name == "mt_llm": ## rewrite
             
             prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
+            print("rewrite----->")
             print("prompt---->",prompt)
             print("tar_lang--->",tar_lang)
             print("tar_seg---->",tar_seg)
             print("opt---->",seg_choice_ins.option)
 
         elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]: 
+            print("gloss")
             print("src_seg------------->",src_seg)
             print("tar_seg------------->",tar_seg)
             print("gloss----->",gloss)
