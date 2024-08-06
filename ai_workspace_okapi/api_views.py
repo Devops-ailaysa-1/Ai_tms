@@ -2856,7 +2856,7 @@ def check_source_words(user_input,task):
     from ai_glex.models import TermsModel,GlossarySelected
     proj = task.job.project
     target_language = task.job.target_language
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
+    glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')#.filter(glossary__project__project_type_id = 10).values('glossary')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
                 .filter(job__target_language=target_language).filter(tl_term__isnull=False).exclude(tl_term='')\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
