@@ -623,7 +623,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				Job.objects.create(source_language=source_language,target_language=target_language,project=project_ins_gloss)
 			
 			gloss_jobs = project_ins_gloss.get_jobs # get Jobs of the glossary
-			glossary = Glossary.objects.create(project=project,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
+			glossary = Glossary.objects.create(project=project_ins_gloss,file_translate_glossary=project,is_default_project_glossary=True) # creating gloss with translation project instance
 			
 			tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=gloss_jobs,klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
