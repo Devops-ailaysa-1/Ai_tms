@@ -514,12 +514,15 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         data["mt_engine"] = proj_mt_engine_id
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
+
+        # print("Data in internal_value ===> ", data) # {'segment': 292, 'mt_engine': 2, 'task_mt_engine': 2}
+
         return super().to_internal_value(data=data)
 
 
 
     def create(self, validated_data):
-
+        
         segment = validated_data["segment"]
         active_segment = segment.get_active_object()
         mt_engine= validated_data["mt_engine"]
@@ -545,15 +548,20 @@ class MT_RawSerializer(serializers.ModelSerializer):
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
                 # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
                 # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
         else:
-            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+
+            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)            
+
+            # validated_data["mt_glossary"] = "MT + Glossary "
+            # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary "
+
             # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
             # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
-                
- 
+
+
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         return instance

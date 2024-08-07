@@ -308,7 +308,6 @@ class Project(models.Model):
     def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id in [3] and getattr(self,'glossary_project',None): ### changes and getattr is written because some of the glossary project does not contains glossary instance 
-            print("Project contains glossary Project relation")
             terms = self.glossary_project.term.all()
             if terms.count() == 0:
                 return "Yet to start"

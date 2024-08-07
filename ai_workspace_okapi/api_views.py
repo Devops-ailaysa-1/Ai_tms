@@ -557,6 +557,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
 
     def get(self, request, document_id):
+
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
         segments = document.segments_for_find_and_replace
@@ -569,6 +570,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
             mt_raw_update(task.id,page_segments) # to pretranslate segments in that page
+        
         segments_ser = SegmentSerializer(page_segments, many=True)
 
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
