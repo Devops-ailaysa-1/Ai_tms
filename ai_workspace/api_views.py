@@ -5319,9 +5319,11 @@ def get_task_segment_diff(request):
                 if segment_diff:
                     insertion_result = number_of_words_insert(segment_diff.sentense_diff_result)
                     deletion_result =  number_of_words_delete(segment_diff.sentense_diff_result)
-                    if insertion_result[-1]:
+                    print("-----")
+                    print(insertion_result,deletion_result)
+                    if insertion_result:
                         no_of_insert.append(insertion_result)
-                    if deletion_result[-1]:
+                    if deletion_result:
                         no_of_delete.append(deletion_result)
 
     return Response({'insertion_done':len(no_of_insert),
