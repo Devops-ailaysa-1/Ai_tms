@@ -5313,15 +5313,16 @@ def get_task_segment_diff(request):
     from tqdm import tqdm
     no_of_insert = []
     no_of_delete = []
-    for i in tqdm(task_ins.document.get_segments()):
-        for j in i.segment_history.all():
-            for k in j.segment_difference.all():
-                insertion_result =  number_of_words_insert(k)
-                deletion_result =  number_of_words_delete(k)
-                if insertion_result[-1]:
-                    no_of_insert.append(insertion_result)
-                if deletion_result[-1]:
-                    no_of_delete.append(deletion_result)
+    for segment in tqdm(task_ins.document.get_segments()):
+        for segment_history in segment.segment_history.all():
+            for segment_diff in segment_history.segment_difference.all():
+                if segment_diff:
+                    insertion_result =  number_of_words_insert(segment_diff.sentense_diff_result)
+                    deletion_result =  number_of_words_delete(segment_diff.sentense_diff_result)
+                    if insertion_result[-1]:
+                        no_of_insert.append(insertion_result)
+                    if deletion_result[-1]:
+                        no_of_delete.append(deletion_result)
 
     return Response({'insertion_done':len(no_of_insert),
                      'deletion_done':len(no_of_delete)})
