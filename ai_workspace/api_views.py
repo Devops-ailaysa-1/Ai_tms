@@ -5308,23 +5308,25 @@ def get_task_segment_diff(request):
     task = request.GET.get('task',None)
     if not task:
         return Response({'msg':'Need Task'})
-    task_ins = Task.objects.get(id=task)
+    task_ins = Task.objects.filter(id=task)
+    if not task_ins:
+        return Response({'msg':'No Task is present'})
+    else:
+        task_ins = task_ins.last()
     from ai_workspace.utils import number_of_words_delete,number_of_words_insert
     from tqdm import tqdm
-    no_of_insert = []
-    no_of_delete = []
+    no_of_insert = 0
+    no_of_delete = 0
     for segment in tqdm(task_ins.document.get_segments()):
         for segment_history in segment.segment_history.all():
             for segment_diff in segment_history.segment_difference.all():
                 if segment_diff:
                     insertion_result = number_of_words_insert(segment_diff.sentense_diff_result)
                     deletion_result =  number_of_words_delete(segment_diff.sentense_diff_result)
-                    print("-----")
-                    print(insertion_result,deletion_result)
                     if insertion_result:
-                        no_of_insert.append(insertion_result)
+                        no_of_insert = no_of_insert+insertion_result
                     if deletion_result:
-                        no_of_delete.append(deletion_result)
+                        no_of_delete = no_of_delete+deletion_result
 
-    return Response({'insertion_done':len(no_of_insert),
-                     'deletion_done':len(no_of_delete)})
+    return Response({'task_id':task_ins.id,'insertion_done':no_of_insert,
+                     'deletion_done':no_of_delete , 'lang_pair':task_ins.job.source_target_pair})
