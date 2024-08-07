@@ -722,17 +722,5 @@ def get_consumption_of_file_translate(task):
 
 
 
-def segment_mt_and_glossary(segment,glossary_list):
-    prompt = """the user will provide you the source English text and translated Tamil text for the same.
-check out if the translation is well adhered to the English text. if not, then provide the modified Tamil text.
-most common English to Tamil translation errors include: idioms, co locations, co occurrence, cultural nuances and morphological corrections.
-checkout for these errors as well as other errors too.
-the modified Tamil translation should more closely align with the source English text in meaning as well as grammatical side.
-final output:
-provide only the modified Tamil text.
-if needed change the sentence structure if it tends to align with the source English
-text perfectly.
-do not say what type of changes made or feedback or any other sort of things"""
 
-def segment_mt_llm_glossary(segment,glossary_list):
-    pass
+    

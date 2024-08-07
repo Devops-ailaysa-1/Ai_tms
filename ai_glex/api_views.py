@@ -138,6 +138,10 @@ class GlossaryFileView(viewsets.ViewSet):
                 GlossaryFiles.objects.filter(query).delete()
         return Response({"Msg":"Files Deleted"})
 
+### for deleting celery task
+def task_delete_operation(delete_list,job):
+    objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
+    objects_to_delete.delete()
 
 
 
@@ -1167,7 +1171,46 @@ class WordChoiceListView(viewsets.ViewSet):
             queryset = queryset.filter(Q(project_jobs_set__source_language=task_obj.job.source_language) & Q(project_jobs_set__target_language=task_obj.job.target_language)).order_by('-id')
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+def arrange_gloss_terms_for_download(gloss_list,pos=False):
+    gloss_data_frame = pd.DataFrame(gloss_list).dropna()
+    if pos:
+        gloss_data_frame.columns=['Source term','Target term','POS']
+    else:
+        gloss_data_frame.columns=['Source term','Target term']
+    gloss_data_frame = gloss_data_frame.sort_values(by='Source term', key=lambda x: x.str.lower())
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
+    writer.save()
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    encoded_filename = 'glossary_terms.xlsx'
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+    .format(encoded_filename)
+    response['X-Suggested-Filename'] = encoded_filename
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    output.seek(0)
+    response.write(output.read())
+    return response
     
+
+
+@api_view(['GET',])  
+def terms_simple_download(request):
+    user = request.user.team.owner if request.user.team else request.user
+    task = request.GET.get('task',None)
+    task_ins = Task.objects.get(id=task)
+    job = task_ins.job
+    gloss_list = list(TermsModel.objects.filter(job=job).values_list('sl_term','tl_term','pos'))
+    if gloss_list:
+        response = arrange_gloss_terms_for_download(gloss_list,pos=True)
+        return response
+    else:
+        return Response({'msg':'no gloss term'},status=400)
+
+
+
 
 
 @api_view(['GET',])
@@ -1178,21 +1221,7 @@ def download_gloss_dinamalar(request):
  
     gloss_list = list(MyGlossary.objects.filter(user=user).values_list('sl_term','tl_term'))
     if gloss_list:
-        gloss_data_frame = pd.DataFrame(gloss_list).dropna()
-        gloss_data_frame.columns=['Source term','Target term']
-        gloss_data_frame = gloss_data_frame.sort_values(by='Source term', key=lambda x: x.str.lower())
-        output = io.BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
-        writer.save()
-        response = HttpResponse(content_type='application/vnd.ms-excel')
-        encoded_filename = 'glossary_terms.xlsx'
-        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
-        .format(encoded_filename)
-        response['X-Suggested-Filename'] = encoded_filename
-        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
-        output.seek(0)
-        response.write(output.read())
+        response = arrange_gloss_terms_for_download(gloss_list,pos=False)
         return response
     else:
         return Response({'msg':'no gloss term'},status=400)

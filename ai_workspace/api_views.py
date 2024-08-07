@@ -5191,3 +5191,109 @@ def get_ner(request):
     ner_new = list(set(ner))
     return JsonResponse({"ner": ner_new}, safe=False)
 
+
+
+############# function for segment choice #######################
+import re
+
+def contains_valid_words(sentence):
+    # Define a regular expression pattern to match valid words
+    word_pattern = re.compile(r'\b\w+\b')
+    
+    # Find all words in the sentence
+    words = word_pattern.findall(sentence)
+    
+    # Check if there are any valid words
+    if not words:
+        return False
+    
+    # Check if there is only one word and it is alphabetic
+    if len(words) == 1 and words[0].isalpha():
+        return False
+    
+    # Check if there are multiple valid words and at least one is alphabetic
+    return any(word.isalpha() for word in words)
+
+
+
+@api_view(['GET'])
+#@permission_classes([IsAuthenticated])
+def segment_choice_mt_and_glossary(request):
+
+    from ai_workspace_okapi.api_views import check_source_words
+    from ai_staff.models import SegmentChoices
+    from rest_framework.response import Response
+    from ai_openai.utils import get_consumable_credits_for_openai_text_generator,get_prompt_chatgpt_turbo
+    from ai_workspace.models import Segment
+    from ai_workspace_okapi.api_views import get_src_tags
+
+    user = request.user
+    segment_id = request.GET.get('segment_id',None)
+    seg_choice_id = request.GET.get('seg_choice_id',None)
+    seg_choice_ins = SegmentChoices.objects.get(id=seg_choice_id)
+    segment_instance = Segment.objects.get(id=segment_id)
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    src_seg = segment_instance.source
+    tar_seg = segment_instance.seg_mt_raw.mt_raw ### taking the segment from the mt_raw table (1 to 1 relation) which is a base target
+    seg_task = segment_instance.task_obj
+    src_lang = seg_task.job.source_language.language
+    tar_lang = seg_task.job.target_language.language
+    tags = get_src_tags(src_seg) 
+
+    ### for cleaning sentence and extract tags
+
+    if contains_valid_words(src_seg):
+
+        
+        tar_seg = re.sub('<[^<]+?>', '', tar_seg)
+        src_seg = re.sub('<[^<]+?>', '', src_seg)
+
+
+        words,gloss = check_source_words(src_seg,seg_task) ### this function checks the gloss words and select relevent words from the source segment
+        #boolean,gloss= target_source_words(tar_seg,seg_task)
+        ## output
+        # [{'sl_term': 'Neuralink', 'tl_term': 'நியூரோ பாலம்'},
+        # {'sl_term': 'neurotechnology', 'tl_term': 'பதட்டமாக தொழில்நுட்பம்'}]
+
+
+        prompt = ''
+        if seg_choice_ins.choice_name == "mt_llm": ## rewrite
+            
+            prompt = seg_choice_ins.prompt.format(tar_lang,tar_seg)
+            print("rewrite----->")
+            print("prompt---->",prompt)
+            print("tar_lang--->",tar_lang)
+            print("tar_seg---->",tar_seg)
+            print("opt---->",seg_choice_ins.option)
+
+        elif seg_choice_ins.choice_name in ["mt_glossary","mt_llm_glossary"]: 
+            print("gloss")
+            print("src_seg------------->",src_seg)
+            print("tar_seg------------->",tar_seg)
+            print("gloss----->",gloss)
+
+            prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
+
+        if prompt:
+            ### check the credit 
+            consumable_credits_user_text =  get_consumable_credits_for_text(prompt,source_lang='en',target_lang=None)
+            if initial_credit >= consumable_credits_user_text:
+                
+                result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+                print("result_prompt--->",result_prompt)
+                para_sentence = result_prompt["choices"][0]["message"]["content"]
+                prompt_usage = result_prompt['usage']
+                total_token = prompt_usage['total_tokens']
+                consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+
+                return Response({'result':para_sentence,'tag':tags},status=200)
+            else:
+                return  Response({'msg':'Insufficient Credits'},status=400)
+        else:
+            print("no prompt") ## return the mt_raw because no prompt
+            return Response({'result':tar_seg,'tag':tags},status=400) 
+    else:
+        return Response({'result':tar_seg,'tag':tags},status=200)
