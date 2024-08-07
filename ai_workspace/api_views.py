@@ -5299,3 +5299,32 @@ def segment_choice_mt_and_glossary(request):
             return Response({'result':tar_seg,'tag':tags},status=200) 
     else:
         return Response({'result':tar_seg,'tag':tags},status=200)
+    
+
+#### to get the number of insert and delete in a list of segments using task id
+
+@api_view(['GET',])
+def get_task_segment_diff(request):
+    task = request.GET.get('task',None)
+    if not task:
+        return Response({'msg':'Need Task'})
+    task_ins = Task.objects.get(id=task)
+    from ai_workspace.utils import number_of_words_delete,number_of_words_insert
+    from tqdm import tqdm
+    no_of_insert = []
+    no_of_delete = []
+    for i in tqdm(task_ins.document.get_segments()):
+        for j in i.segment_history.all():
+            for k in j.segment_difference.all():
+                insertion_result =  number_of_words_insert(k)
+                deletion_result =  number_of_words_delete(k)
+                if insertion_result[-1]:
+                    no_of_insert.append(insertion_result)
+                if deletion_result[-1]:
+                    no_of_delete.append(deletion_result)
+
+    return Response({'insertion_done':len(no_of_insert),
+                     'deletion_done':len(no_of_delete)})
+
+                
+

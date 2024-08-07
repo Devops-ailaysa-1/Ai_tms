@@ -291,7 +291,20 @@ def progress_filter(queryset,value,users):
 
 	return queryset
 
+def number_of_words_insert(segment):
+    words_inserts = re.findall(r'<ins class="changed-word">(.+?)</ins>', segment)
+    len_words_inserts = 0
+    for i in words_inserts:
+        len_words_inserts+= len(i.split(" "))
+    return (words_inserts,len_words_inserts)
 
+
+def number_of_words_delete(segment):
+    words_deletes = re.findall(r'<del>(.+?)</del>', segment)
+    len_words_deletes = 0
+    for i in words_deletes:
+        len_words_deletes+= len(i.split(" "))
+    return (words_deletes,len_words_deletes)
 
 # import time
 # from functools import wraps

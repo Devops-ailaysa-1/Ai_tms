@@ -105,7 +105,8 @@ urlpatterns += [
 	path('task_report/',api_views.get_task_count_report),
 	path('ner/',api_views.get_ner),
     path('doc2docx/',api_views.doc2docx,name="doc-2-docx"),
-    path('get_segment_choice',api_views.segment_choice_mt_and_glossary,name="segment-choice")
+    path('get_segment_choice',api_views.segment_choice_mt_and_glossary,name="segment-choice"),
+    path('task_segment_diff',api_views.get_task_segment_diff,name='task-seg-diff')
 ]
 # views urls adding for local testing
 urlpatterns += [
