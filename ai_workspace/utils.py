@@ -292,23 +292,26 @@ def progress_filter(queryset,value,users):
 	return queryset
 
 def number_of_words_insert(segment):
-    words_inserts = re.findall(r'<ins class="changed-word">(.+?)</ins>', segment)
-    len_words_inserts = 0
-    for i in words_inserts:
-        len_words_inserts+= len(i.split(" "))
-    return (words_inserts,len_words_inserts)
+	words_inserts = re.findall(r'<ins class="changed-word">(.+?)</ins>', segment)
+	words_insert_with_classes =  re.findall(r'<ins>(.+?)</ins>', segment)  
+	len_words_inserts = 0
+	for words_insert in words_inserts:
+		len_words_inserts+= len(words_insert.split(" "))
+	for words_insert_with_class in words_insert_with_classes:
+		len_words_inserts+= len(words_insert_with_class.split(" "))
+	return len_words_inserts
 
 
 def number_of_words_delete(segment):
     words_deletes = re.findall(r'<del>(.+?)</del>', segment)  
-    words_delete_class =  re.findall(r'<del class="removed-word">(.+?)</del>', segment) 
+    words_delete_with_classes =  re.findall(r'<del class="removed-word">(.+?)</del>', segment) 
     len_words_deletes = 0
-    for i in words_deletes:
-        len_words_deletes+= len(i.split(" "))
-    for j in words_delete_class:
-        len_words_deletes+= len(j.split(" "))
+    for words_delete in words_deletes:
+        len_words_deletes += len(words_delete.split(" "))
+    for words_delete_with_class in words_delete_with_classes:
+        len_words_deletes += len(words_delete_with_class.split(" "))
 			
-    return (words_deletes,len_words_deletes)
+    return len_words_deletes
 
 # import time
 # from functools import wraps
