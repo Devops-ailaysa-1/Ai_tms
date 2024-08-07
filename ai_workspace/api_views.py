@@ -5326,6 +5326,3 @@ def get_task_segment_diff(request):
 
     return Response({'insertion_done':len(no_of_insert),
                      'deletion_done':len(no_of_delete)})
-
-                
-
