@@ -300,10 +300,14 @@ def number_of_words_insert(segment):
 
 
 def number_of_words_delete(segment):
-    words_deletes = re.findall(r'<del>(.+?)</del>', segment)
+    words_deletes = re.findall(r'<del>(.+?)</del>', segment)  
+    words_delete_class =  re.findall(r'<del class="removed-word">(.+?)</del>', segment) 
     len_words_deletes = 0
     for i in words_deletes:
         len_words_deletes+= len(i.split(" "))
+    for j in words_delete_class:
+        len_words_deletes+= len(j.split(" "))
+			
     return (words_deletes,len_words_deletes)
 
 # import time
