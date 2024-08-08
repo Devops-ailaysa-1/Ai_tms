@@ -650,7 +650,7 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=8) 
         elif value == "word_choices":
             queryset = queryset.filter(project_type_id=10)
-        print("QRF-->",queryset)
+        #print("QRF-->",queryset)
         return queryset
 
 
@@ -5273,8 +5273,10 @@ def segment_choice_mt_and_glossary(request):
             print("src_seg------------->",src_seg)
             print("tar_seg------------->",tar_seg)
             print("gloss----->",gloss)
-
+            print("prompt")
+            
             prompt = seg_choice_ins.prompt.format(src_seg,tar_seg,gloss)
+            print(prompt)
 
         if prompt:
             ### check the credit 
@@ -5294,6 +5296,55 @@ def segment_choice_mt_and_glossary(request):
                 return  Response({'msg':'Insufficient Credits'},status=400)
         else:
             print("no prompt") ## return the mt_raw because no prompt
-            return Response({'result':tar_seg,'tag':tags},status=400) 
+            return Response({'result':tar_seg,'tag':tags},status=200) 
     else:
         return Response({'result':tar_seg,'tag':tags},status=200)
+    
+
+#### to get the number of insert and delete in a list of segments using task id
+
+def seg_diff_ins_del_calculation(task_ins):
+    from ai_workspace.utils import number_of_words_delete,number_of_words_insert
+    from tqdm import tqdm
+    no_of_insert = 0
+    no_of_delete = 0
+    if getattr(task_ins.document,'get_segments',None):
+        for segment in tqdm(task_ins.document.get_segments()):
+            for segment_history in segment.segment_history.all():
+                for segment_diff in segment_history.segment_difference.all():
+                    if segment_diff:
+                        insertion_result = number_of_words_insert(segment_diff.sentense_diff_result)
+                        deletion_result =  number_of_words_delete(segment_diff.sentense_diff_result)
+                        if insertion_result:
+                            no_of_insert = no_of_insert+insertion_result
+                        if deletion_result:
+                            no_of_delete = no_of_delete+deletion_result
+    
+        return {'no_of_insert':no_of_insert,'no_of_delete':no_of_delete,'task_id':task_ins.id,'lang_pair':task_ins.job.source_target_pair}
+    else:
+        return Response({'msg':'No segment is created'})
+
+
+@api_view(['GET',])
+def get_task_segment_diff(request):
+    task = request.GET.get('task',None)
+    project = request.GET.get('project',None)
+ 
+ 
+    result_cal = []
+
+    if task:
+        task_ins = Task.objects.filter(id=task)
+        for task_in in task_ins:
+            result_cal.append(seg_diff_ins_del_calculation(task_in))
+    elif project:
+        project = Project.objects.get(id=project)
+        task_ins = project.get_tasks
+        for task_in in task_ins:
+            result_cal.append(seg_diff_ins_del_calculation(task_in))
+    else:
+        return Response({'msg':'need task or proj id'})
+    
+
+
+    return Response(result_cal,status=200)
