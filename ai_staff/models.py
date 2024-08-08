@@ -749,11 +749,10 @@ class InternalFlowPrompts(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
-# class BookCategory(models.Model):
-#     category_name =  models.CharField(max_length=100,null=True,blank=True)
+    def __str__(self) -> str:
+        return self.name
 
-#     def __str__(self) -> str:
-#         return self.category_name+'----'
+
 class SegmentChoices(models.Model):
     choice_name = models.CharField(max_length =100, null=True, blank=True)
     option = models.CharField(max_length =100, null=True, blank=True)

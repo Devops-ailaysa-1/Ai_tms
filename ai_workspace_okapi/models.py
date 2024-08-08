@@ -159,7 +159,6 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
-        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
 
 
@@ -385,8 +384,10 @@ class MT_RawTranslation(models.Model):
 
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
-    mt_raw = models.TextField()
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
+    mt_raw = models.TextField() # Option 3 - Only Machine Translation
+    mt_glossary = models.TextField() # Option 2 - Machine translation + glossary
+    mt_llm_glossary = models.TextField() # Option 3 - MT + LLM + Glossary
 
     @property
     def target_language(self):

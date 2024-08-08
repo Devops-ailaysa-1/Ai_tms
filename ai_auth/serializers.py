@@ -336,7 +336,6 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             return False
         
     def get_is_enterprise(self,obj):
-        print("inside ss")
         if obj.is_enterprise:
             return True
         else:
