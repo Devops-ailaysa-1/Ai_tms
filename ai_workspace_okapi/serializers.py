@@ -490,11 +490,13 @@ class MT_RawSerializer(serializers.ModelSerializer):
         model = MT_RawTranslation
         fields = (
             "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
-            "target_language"
+            "target_language", "mt_llm_glossary", "mt_glossary"
         )
 
         extra_kwargs = {
             "mt_raw": {"required": False},
+            "mt_llm_glossary": {"required": False},
+            "mt_glossary": {"required": False},
         }
 
     def to_internal_value(self, data):
@@ -531,8 +533,8 @@ class MT_RawSerializer(serializers.ModelSerializer):
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         
-        #task = Task.objects.get(job=doc.job)
-        # task = active_segment.task_obj
+        task = Task.objects.get(job=doc.job, file=doc.file)
+        task = active_segment.task_obj
         
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
@@ -548,18 +550,29 @@ class MT_RawSerializer(serializers.ModelSerializer):
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
             else:
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
+                
+                # Previous else block
+
+                # validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
                 # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
                 # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+
+
+                # New else block
+
+                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
+
+                validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
+                validated_data["mt_glossary"] = "MT + Glossary"
+                validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
+
         else:
+            
+            translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
 
-            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)            
-
-            # validated_data["mt_glossary"] = "MT + Glossary "
-            # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary "
-
-            # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
-            # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+            validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
+            validated_data["mt_glossary"] = "MT + Glossary"
+            validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
 
 
         instance = MT_RawTranslation.objects.create(**validated_data)

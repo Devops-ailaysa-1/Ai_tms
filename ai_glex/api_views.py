@@ -318,6 +318,7 @@ class TermUploadView(viewsets.ModelViewSet):
     def create(self, request):
         user = self.request.user
         task = request.POST.get('task')
+
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
         

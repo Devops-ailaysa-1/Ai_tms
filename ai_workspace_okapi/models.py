@@ -159,7 +159,6 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
-        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
 
 
