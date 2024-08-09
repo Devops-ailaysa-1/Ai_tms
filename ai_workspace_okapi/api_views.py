@@ -1582,7 +1582,6 @@ class DocumentToFile(views.APIView):
         task = document.task_set.prefetch_related('file','job__source_language','job__target_language').first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("task_data---->>>",task_data)
         DocumentViewByTask.correct_fields(task_data)
         
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
