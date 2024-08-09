@@ -318,6 +318,7 @@ class TermUploadView(viewsets.ModelViewSet):
     def create(self, request):
         user = self.request.user
         task = request.POST.get('task')
+
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
         
@@ -571,15 +572,22 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
+<<<<<<< HEAD
         glossaries = request.POST.getlist('glossary',None)
         project = request.POST.get('project',None) 
         if not glossaries:
             return Response(data={"Message":"need gloss or proj to add"}, status=400)
+=======
+        
+        glossaries = request.POST.getlist('glossary')
+        project = request.POST.get('project') 
+>>>>>>> origin/staging
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+            serializer.save()        
+
+            return Response(data={"Message":"glossary_added_successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

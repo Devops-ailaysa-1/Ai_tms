@@ -78,7 +78,7 @@ def delete_words_from_term_model(sender, instance, *args, **kwargs):
 
 
 def update_proj_settings(sender, instance, *args, **kwargs):
-    if instance.glossary.project.project_type_id == 10 and instance.project.get_mt_by_page == True:
+    if instance.glossary.project.project_type_id in [3,10] and instance.project.get_mt_by_page == True:
         instance.project.get_mt_by_page = False
         instance.project.save()
     else: 

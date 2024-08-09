@@ -676,7 +676,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if project_type == 3 or project_type == 10:
         # if project_type == 3:
             return GlossarySetupSerializer
-        print("project")
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -812,9 +811,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(serlzr.errors, status=409)
 
     def update(self, request, pk, format=None):
+
         instance = self.get_object()
         ser = self.get_serializer_class()
-        task_id=request.POST.get('task_id',None)
+        task_id = request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
@@ -885,6 +885,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
             
         else:
+
             serlzr = ser(instance, data=\
                 {**request.data, "files": request.FILES.getlist("files"),"team":[team]},
                 context={"request": request,'user_1':user_1}, partial=True)

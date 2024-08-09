@@ -819,8 +819,10 @@ def weighted_count_update(receiver,sender,assignment_id):
 ############################ For wordchoice ############################################
 
 OPEN_AI_GPT_MODEL_REPLACE = settings.OPEN_AI_GPT_MODEL_REPLACE  
+
 from ai_staff.models import InternalFlowPrompts
 import openai
+
 def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
@@ -833,25 +835,33 @@ def replace_mt_with_gloss(src,raw_mt,gloss):
 
 
 
-def replace_with_gloss(src,raw_mt,task):
-    from ai_glex.models import GlossarySelected
+def replace_with_gloss(src, raw_mt, task):
+    
+    from ai_glex.models import GlossarySelected, Glossary
     from ai_workspace_okapi.api_views import check_source_words, target_source_words
+    
     final_mt = raw_mt
     proj = task.job.project
-    word_choice = False
-    if GlossarySelected.objects.filter(project = proj, glossary__project__project_type_id=10).exists():
-        word_choice = True
-    # if word_choice:
-        source_words,gloss = check_source_words(src,task)
+
+    # if GlossarySelected.objects.filter(project=proj, glossary__project__project_type_id=10).exists():
+    
+    
+    # Checking if a glossary is added from Assets or
+    # or if a glossary is created on the fly
+
+    if GlossarySelected.objects.filter(project=proj).exists() or \
+        (Glossary.objects.filter(file_translate_glossary=proj).exists()):
+
+        source_words, gloss = check_source_words(src, task)
         if source_words:
             # all_target_replaced,gloss = target_source_words(raw_mt,task)
             # print("All---------->",all_target_replaced)
             # if not all_target_replaced:
             #     print("Inside----------")
-            final_mt = replace_mt_with_gloss(src,raw_mt,gloss)
+            final_mt = replace_mt_with_gloss(src, raw_mt, gloss)
+
     return final_mt
       
-##################################################################################################################
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
@@ -902,9 +912,14 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                        # mt = replace_with_gloss(seg.source,raw_mt,task)
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+
+                        # Adapting glossary
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        mt = replace_with_gloss(seg.source,raw_mt,task)
+
+                        # Without adapting glossary
+                        # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+
                         tags = get_tags(seg)
                         if tags:
                             seg.target = mt + tags
@@ -933,9 +948,14 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    # mt = replace_with_gloss(seg.source,raw_mt,task)
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+
+                    # Adapting glossary
+                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    mt = replace_with_gloss(seg.source,raw_mt,task)
+
+                    # Without adapting glossary
+                    # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
