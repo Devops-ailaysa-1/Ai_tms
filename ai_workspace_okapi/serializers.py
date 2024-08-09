@@ -490,13 +490,13 @@ class MT_RawSerializer(serializers.ModelSerializer):
         model = MT_RawTranslation
         fields = (
             "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
-            "target_language", "mt_llm_glossary", "mt_glossary"
+            "target_language", "mt_llm_glossary", "mt_only"
         )
 
         extra_kwargs = {
             "mt_raw": {"required": False},
             "mt_llm_glossary": {"required": False},
-            "mt_glossary": {"required": False},
+            "mt_only": {"required": False},
         }
 
     def to_internal_value(self, data):
