@@ -385,3 +385,7 @@ def tamil_spelling_check(text):
     payload = {'text': text,'lang_code': 'ta'}
     response = requests.request("POST", settings.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
     return response.json()
+
+
+############### mistral #####
+

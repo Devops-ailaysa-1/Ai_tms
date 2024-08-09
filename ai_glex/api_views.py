@@ -210,7 +210,7 @@ def check_gloss_task_id_for_project_task_id(request):
             if gloss_task_id:
                 gloss_task_id = gloss_task_id.id
             else:
-                gloss_job_ins = Job.objects.create(source_language=source_language,target_language=target_language,project=gloss_proj)
+                gloss_job_ins = Job.objects.get_or_create(source_language=source_language,target_language=target_language,project=gloss_proj)
                 tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
                 task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
                 gloss_task_id = gloss_task_id.id
@@ -572,9 +572,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-        
-        glossaries = request.POST.getlist('glossary')
-        project = request.POST.get('project') 
+        glossaries = request.POST.getlist('glossary',None)
+        project = request.POST.get('project',None) 
+        if not glossaries:
+            return Response(data={"Message":"need gloss or proj to add"}, status=400)
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):
