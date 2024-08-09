@@ -1386,7 +1386,6 @@ class TaskView(APIView):
                 task.document.delete()
         
         try:
-            task.job.delete()
             task.delete()
         except Exception as e:
             print(f"An error occurred: {e}")
