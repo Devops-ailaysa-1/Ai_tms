@@ -208,22 +208,23 @@ def check_gloss_task_id_for_project_task_id(request):
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             gloss_task_id = gloss_job_ins.job_tasks_set.last()
+            print("gloss_task_id",gloss_task_id)
 
             if gloss_task_id:
                 gloss_task_id = gloss_task_id.id
             else:
                 gloss_job_ins = Job.objects.get_or_create(source_language=source_language,target_language=target_language,project=gloss_proj)
-                if not gloss_job_ins.job_tasks_set.last(): ### for gloss project job always consists only one task unlike standard translation(may vary based on num of jobs)
-                    print("no task-------------------------------------->> 217")
+                if isinstance(gloss_job_ins,tuple):
+                    gloss_job_ins = gloss_job_ins[0]
                 tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
                 task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
+                gloss_task_id = gloss_job_ins.job_tasks_set.last()
                 gloss_task_id = gloss_task_id.id
 
             return Response({'gloss_project_id':gloss_job_ins.project_id , 
                             'gloss_id': trans_project_ins.individual_gloss_project.id,
                             'gloss_task_id':gloss_task_id, 'gloss_job_id':gloss_job_ins.id},status = 200)
     else:
-        print("---> no gloss project is created")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
