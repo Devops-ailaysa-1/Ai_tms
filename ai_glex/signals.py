@@ -25,7 +25,6 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
         for data in imported_data:
             if data[2]:
                 try:
-                    print("glossary---> advance file")
                     value = glex_model.TermsModel(
                             # data[0],          #Blank column
                             data[1],            #Autoincremented in the model
@@ -35,7 +34,6 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
                             data[10], data[11], data[12], data[13], data[14], data[15]
                     )
                 except:
-                    print("glossary---> bulk create file")
                     value = glex_model.TermsModel(
                                 data[1] if len(data) > 1 else None,  # Autoincremented in the model
                                 data[2].strip() if len(data) > 2 and data[2] else None,  # SL term column

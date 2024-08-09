@@ -385,9 +385,9 @@ class MT_RawTranslation(models.Model):
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
-    mt_raw = models.TextField() # Option 3 - Only Machine Translation
-    mt_glossary = models.TextField() # Option 2 - Machine translation + glossary
-    mt_llm_glossary = models.TextField() # Option 3 - MT + LLM + Glossary
+    mt_raw = models.TextField() # MT + Glossary - This is the option that will be shown in the target segment
+    mt_only = models.TextField() # Only Raw Machine Translation
+    mt_llm_glossary = models.TextField() # Machine Translation + Rewrite + Glossary
 
     @property
     def target_language(self):

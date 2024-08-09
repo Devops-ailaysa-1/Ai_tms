@@ -563,7 +563,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
                 translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
 
                 validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
-                validated_data["mt_glossary"] = "MT + Glossary"
+                validated_data["mt_only"] = translation_original
                 validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
 
         else:
@@ -571,7 +571,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
             translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
 
             validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
-            validated_data["mt_glossary"] = "MT + Glossary"
+            validated_data["mt_only"] = translation_original
             validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
 
 
