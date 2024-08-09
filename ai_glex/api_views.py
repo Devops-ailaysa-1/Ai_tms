@@ -571,8 +571,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-        glossaries = request.POST.getlist('glossary')
-        project = request.POST.get('project') 
+        glossaries = request.POST.getlist('glossary',None)
+        project = request.POST.get('project',None) 
+        if not glossaries:
+            return Response(data={"Message":"need gloss or proj to add"}, status=400)
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):

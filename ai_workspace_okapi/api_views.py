@@ -20,7 +20,6 @@ import urllib.parse
 import urllib.parse
 import xlsxwriter
 import rapidfuzz
-from json import JSONDecodeError
 from django.db.models.signals import post_save ,pre_save
 from os.path import exists
 from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
@@ -76,7 +75,6 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
 from django.urls import reverse
-from json import JSONDecodeError
 from .utils import SpacesService
 from google.cloud import translate_v2 as translate
 import os, io, requests, time
@@ -2062,10 +2060,10 @@ def WiktionaryParse(request):
     parser = WiktionaryParser()
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
-    word = parser.fetch(user_input)
+    word = parser.fetch([user_input])
     if word:
         if word[0].get('definitions')==[]:
-            word=parser.fetch(user_input.lower())
+            word=parser.fetch([user_input.lower()])
     res=[]
     tar=""
     for i in word:
