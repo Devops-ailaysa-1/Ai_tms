@@ -130,17 +130,14 @@ def renewal_list_daily_renewal():
         cycle_dates = [x for x in range(today.day,32)]
     else:
         cycle_dates = [today.day]
-    # print("cycle dates",cycle_dates)
     # subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
     #                 current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
     pu_list =PurchasedUnits.objects.filter(~Q(expiry__year=today.year,
                     expiry__month=today.month,expiry__day__in=cycle_dates)).filter(purchase_pack__recurring='daily')
-    # print("pu_list",pu_list)  
     logger.info(f"renewal list count {pu_list.count}")
     for pu in pu_list:
         created_at_time =  pu.buyed_at.time()
         execute_at = datetime.combine(today.date(), created_at_time, tzinfo=pu.buyed_at.tzinfo)
-        # print("new_datetime",new_datetime)
         renew_purchase_units.apply_async((pu.id,),eta=execute_at)
 
 
@@ -359,9 +356,11 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
 
 @task(queue='high-priority')
 def write_segments_to_db(validated_str_data, document_id): #validated_data
+
     '''
     To write segments from Json file(okapi) to segments database.
     '''
+
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
     validated_data = decoder.decode(validated_str_data)
 
@@ -865,10 +864,12 @@ def replace_with_gloss(src, raw_mt, task):
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
+
     '''
     This task is mainly used for get_mt (mt-only download) for the source files.
     This is called for page-wise translation.
     '''
+
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -877,7 +878,7 @@ def mt_raw_update(task_id,segments):
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='mt_raw_update', status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
@@ -889,7 +890,7 @@ def mt_raw_update(task_id,segments):
     else:
         final_segments = segments
 
-    update_list, update_list_for_merged,update_list_for_split = [],[],[]
+    update_list, update_list_for_merged, update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
     for seg in final_segments:###############Need to revise####################
@@ -907,7 +908,7 @@ def mt_raw_update(task_id,segments):
             mt_raw = None
     
         if mt_raw == None:
-            if seg.target == '' or seg.target==None:
+            if seg.target == '' or seg.target == None:
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
@@ -930,13 +931,17 @@ def mt_raw_update(task_id,segments):
                         seg.status_id = TranslationStatus.objects.get(status_id=103).id
                         if type(seg) is SplitSegment:
                             mt_split_segments.append({'seg':seg,'mt':mt})
-                        else:mt_segments.append({'seg':seg,'mt':mt})
+                        
+                        # Previous else block    
+                        # else:mt_segments.append({'seg':seg,'mt':mt})
+                        else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                     except:
                         seg.target = ''
                         seg.temp_target = ''
                         seg.status_id=None
                 else:
-                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,error_type="Insufficient Credits")
+                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,\
+                                                          error_type="Insufficient Credits")
                     break
                 if type(seg) is Segment:
                     update_list.append(seg)
@@ -955,7 +960,7 @@ def mt_raw_update(task_id,segments):
 
                     # Without adapting glossary
                     # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    
+
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt})
                     else:mt_segments.append({'seg':seg,'mt':mt})
@@ -970,6 +975,8 @@ def mt_raw_update(task_id,segments):
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
+                mt_llm_glossary = "MT + LLM + Glossary",
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i['seg'].id,
