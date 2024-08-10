@@ -109,7 +109,7 @@ class GlossaryListSerializer(serializers.ModelSerializer):
         return obj.project_jobs_set.first().source_language.language
 
     def get_target_lang(self,obj):
-         return [job.target_language.language for job in obj.project_jobs_set.all()]
+         return [job.target_language.language for job in obj.project_jobs_set.all() if job.job_tasks_set.all()] 
 
 class WholeGlossaryTermSerializer(serializers.ModelSerializer):
     term_id = serializers.ReadOnlyField(source = 'id')

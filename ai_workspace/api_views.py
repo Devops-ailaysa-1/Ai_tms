@@ -5330,12 +5330,11 @@ def seg_diff_ins_del_calculation(task_ins):
 def get_task_segment_diff(request):
     task = request.GET.get('task',None)
     project = request.GET.get('project',None)
- 
- 
     result_cal = []
-
     if task:
         task_ins = Task.objects.filter(id=task)
+        if not task_ins:
+            return Response({'msg':'need required task id or wrong task id'})
         for task_in in task_ins:
             result_cal.append(seg_diff_ins_del_calculation(task_in))
     elif project:
@@ -5345,7 +5344,4 @@ def get_task_segment_diff(request):
             result_cal.append(seg_diff_ins_del_calculation(task_in))
     else:
         return Response({'msg':'need task or proj id'})
-    
-
-
     return Response(result_cal,status=200)

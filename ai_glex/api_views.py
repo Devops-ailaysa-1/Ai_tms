@@ -175,8 +175,7 @@ def get_or_create_indiv_gloss(trans_project_task):
             ### if the job does not exists create a job instance for the gloss project for project and also creating a Task
             gloss_job_ins = Job.objects.create(source_language=source_language,
                                                target_language=target_language,project=instance.project)
-            if not gloss_job_ins.job_tasks_set.last(): ### for gloss project job always consists only one task unlike standard translation(may vary based on num of jobs)
-                print("no task-------------------------------------->>")
+            ### for gloss project job always consists only one task unlike standard translation(may vary based on num of jobs)
             tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
             task_assign = TaskAssign.objects.assign_task(project=instance.project)
             
@@ -219,6 +218,7 @@ def check_gloss_task_id_for_project_task_id(request):
                 tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
                 task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
                 gloss_task_id = gloss_job_ins.job_tasks_set.last()
+                print("gloss_task_id------->",gloss_task_id)
                 gloss_task_id = gloss_task_id.id
 
             return Response({'gloss_project_id':gloss_job_ins.project_id , 
@@ -526,8 +526,8 @@ def glossaries_list(request,project_id):
     
     if option == 'glossary': ### for gloss
         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
-    else: ### word choice
-        queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
+    # else: ### word choice
+    #     queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
     if task:
         print("list choice gloss using task")
         task_instance = Task.objects.get(id=task)
@@ -568,9 +568,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
             return Response({"msg":"project_id required"})
         
         if option == 'glossary':
-            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=3).filter(project_id=project).all()
-        else:
-            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=10).filter(project_id=project).all()
+            glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=3).filter(project_id=project)
+            #glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=3,glossary__term__job__job_tasks_set__isnull=False).distinct()
+        # else:
+        #     glossary_selected = GlossarySelected.objects.filter(glossary__project__project_type_id=10).filter(project_id=project).all()
 
         # glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
         serializer = GlossarySelectedSerializer(glossary_selected, many=True)
@@ -588,10 +589,6 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 
             return Response(data={"Message":"glossary_added_successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-    def update(self,request,pk):
-        pass
 
 
     def delete(self,request):
