@@ -19,24 +19,6 @@ from ai_auth.tasks import replace_with_gloss
 
 client = translate.Client()
 
-# class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-#     """
-#     A ModelSerializer that takes an additional `fields` argument that
-#     controls which fields should be displayed.
-#     """
-
-#     def __init__(self, *args, **kwargs):
-#         fields = kwargs.pop("exclude_fields", None)
-#         # Instantiate the superclass normally
-#         super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
-
-#         if fields:
-#             # fields = fields.split(',')
-#             # Drop any fields that are not specified in the `fields` argument.
-#             excluded = set(fields)
-#             for field_name in excluded:
-#                 self.fields.pop(field_name)
-
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target", allow_blank=True, allow_null=True,)
@@ -490,12 +472,12 @@ class MT_RawSerializer(serializers.ModelSerializer):
         model = MT_RawTranslation
         fields = (
             "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
-            "target_language", "mt_llm_glossary", "mt_only"
+            "target_language", "mt_only",  #"mt_llm_glossary",
         )
 
         extra_kwargs = {
             "mt_raw": {"required": False},
-            "mt_llm_glossary": {"required": False},
+            # "mt_llm_glossary": {"required": False},
             "mt_only": {"required": False},
         }
 
@@ -516,8 +498,6 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         data["mt_engine"] = proj_mt_engine_id
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
-
-        # print("Data in internal_value ===> ", data) # {'segment': 292, 'mt_engine': 2, 'task_mt_engine': 2}
 
         return super().to_internal_value(data=data)
 
@@ -564,7 +544,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
                 validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
                 validated_data["mt_only"] = translation_original
-                validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
+                # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
 
         else:
             
@@ -572,7 +552,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
             validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
             validated_data["mt_only"] = translation_original
-            validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
+            # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
 
 
         instance = MT_RawTranslation.objects.create(**validated_data)
