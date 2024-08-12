@@ -35,7 +35,6 @@ router.register(r'back-matter',api_views.BackMatterView,basename='back_matter')
 router.register(r'body-matter',api_views.BodyMatterView,basename='body_matter')
 router.register(r'level',api_views.LevelView,basename='level')
 router.register(r'genre',api_views.GenreView,basename='genre')
-router.register(r'segment-choice',api_views.SegmentChoicesView,basename='seg-choice')
 
  
 urlpatterns = router.urls

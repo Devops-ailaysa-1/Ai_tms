@@ -113,8 +113,6 @@ spring_host = os.environ.get("SPRING_HOST")
 END_POINT= settings.END_POINT
 
 
-
-
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
     def has_permission(self, request, view):
@@ -138,6 +136,7 @@ def get_empty_segments(doc):
 
 
 class DocumentViewByTask(views.APIView, PageNumberPagination):
+    
     permission_classes = [IsAuthenticated]
     PAGE_SIZE = page_size =  20
 
@@ -1008,11 +1007,8 @@ class MT_RawAndTM_View(views.APIView):
     def get_split_data(request, segment_id, mt_params):
 
         mt_raw_split = MtRawSplitSegment.objects.filter(split_segment_id=segment_id).first()
-
         split_seg = SplitSegment.objects.filter(id=segment_id).first()
-
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
-
         task = Task.objects.get(document=doc)
 
         # Getting the task MT engine
@@ -1029,8 +1025,8 @@ class MT_RawAndTM_View(views.APIView):
             if proj_mt_engine == task_assign_mt_engine:
 
                 # Adapting glossary
-                replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
-                mt_raw_split.mt_raw = replaced
+                mt_raw_split.mt_only = mt_raw_split.mt_raw
+                mt_raw_split.mt_raw = replace_with_gloss(split_seg.source, mt_raw_split.mt_raw, task)
                 mt_raw_split.save()
 
                 # Without adapting glossary
@@ -1042,11 +1038,8 @@ class MT_RawAndTM_View(views.APIView):
 
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
-
         initial_credit = user.credit_balance.get("total_left")
-
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
-
 
         if initial_credit > consumable_credits:
 
@@ -1054,31 +1047,35 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw_split:
 
                 # Without adapting glossary
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                # translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                #                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 
                 # Adapting glossary
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(split_seg.source,translation_original,task)
+                                              doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                translation = replace_with_gloss(split_seg.source, translation_original,task)
                 
-                MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
-                return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+                # Previous return statement
+                # MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
+                # return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+            
+                MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation, mt_only=translation_original)
+                return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, segment: split_seg.id}, 200, "available"
 
             # Creating new MT raw for split segment
             else:
-                # Without adapting glossary
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                # # Without adapting glossary
+                # translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                #                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 
                 # Adapting glossary
                 translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
                                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 translation = replace_with_gloss(split_seg.source, translation_original, task)
 
-                MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
+                MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "mt_only":translation_original, "split_segment_id" : segment_id})
 
-                return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
+                return {"mt_raw": translation, "mt_only":translation_original, "segment": split_seg.id}, 200, "available"
 
         else:
             return {}, 424, "unavailable"
@@ -1301,9 +1298,11 @@ def pre_process(data):
     return data
 
 def mt_raw_pre_process(data):
+
     '''
     This is to replace target key with mt_raw before going to okapi
     '''
+
     for key in data['text'].keys():
         for d in data['text'][key]:
             if d.get('mt_raw_target') != None:
