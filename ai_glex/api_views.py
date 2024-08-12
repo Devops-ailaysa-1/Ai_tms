@@ -1249,7 +1249,7 @@ def term_extraction_ner_and_terms(text):
 def requesting_ner(joined_term_unit):
     if joined_term_unit:
         response_result = term_extraction_ner_and_terms(joined_term_unit)
-        terms_from_request = response_result.json()['result']
+        terms_from_request = response_result['result']
         #terms_from_request = []
         # if response_result['named_entities']:
         #     for i in response_result['named_entities']:
