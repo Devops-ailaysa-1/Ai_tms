@@ -213,12 +213,12 @@ class Project(models.Model):
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
-    pre_translate = models.BooleanField(default=False)
-    mt_enable = models.BooleanField(default=True)
+    pre_translate = models.BooleanField(default=False) # Pre-translate all the content
+    mt_enable = models.BooleanField(default=True) # Apply Machine translation or not
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
-    get_mt_by_page = models.BooleanField(default=True) 
-    file_translate = models.BooleanField(default=False)
+    get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
+    file_translate = models.BooleanField(default=False) # Use for default glossary
 
 
     class Meta:

@@ -227,7 +227,6 @@ def page_no_update(can_page,is_update,page_len):
             src_json=copy.deepcopy(i.json)
             if is_update:
                 updated_page_no=int(i.page_no)-1
-                print("is__update",i)
                 i.page_no = updated_page_no
                 updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
@@ -276,7 +275,6 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        print("Pms----------->",project_managers)
         return user,project_managers
 
     def get_object(self, pk):

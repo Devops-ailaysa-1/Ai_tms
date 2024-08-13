@@ -143,7 +143,6 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     }
 
     us = models.UserCredits.objects.create(**kwarg)
-    print(us)
     return 'created'
 
 def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=True):
@@ -271,7 +270,6 @@ def my_handler(event, **kwargs):
     user=cust_obj.subscriber
     if user == None:
         raise ValueError("No user Found")
-    print("----user-------",user)
     invoice=data.get('object').get('id') 
     invoice_obj=Invoice.objects.get(id=invoice,djstripe_owner_account=default_djstripe_owner)
     sub=data['object']['lines']['data'][0]['subscription']
@@ -449,10 +447,7 @@ def modify_subscription_data(subscription):
 
 @webhooks.handler("customer.subscription.trial_will_end")
 def my_handler(event, **kwargs):
-    print("**** customer trial_end *****")
     data = event.data
-    print(event.data)
-    print("**** customer trial_end   End *****")
     sub = Subscription.objects.get(id=data.get('object').get('id'),djstripe_owner_account=default_djstripe_owner)
     user = sub.customer.subscriber
     auth_forms.user_trial_end(user=user,sub=sub)
@@ -472,10 +467,7 @@ def subscription_delete(sub):
 
 @webhooks.handler("customer.updated")
 def my_handler(event, **kwargs):
-    print("**** customer updated start *****")
-    print(event.data)
     data=event.data
-    print("**** customer updated end *****")
     custid=data['object']['id']
     address = data['object']['address']
     name = data['object']['name']
@@ -493,8 +485,6 @@ def update_aiuser_billing(custid,address,name=None):
         if addr== None:
             addr=models.BillingAddress(user=customer.subscriber)
         
-        print('addr>>>>',addr)
-
         if settings.STRIPE_LIVE_MODE == True :
             api_key = settings.STRIPE_LIVE_SECRET_KEY
         else:
@@ -540,10 +530,8 @@ def update_aiuser_billing(custid,address,name=None):
 
 @webhooks.handler("customer.subscription.deleted")
 def my_handler(event, **kwargs):
-    print("**** customer deleted start *****")
-    print(event.data)
+
     data=event.data
-    print("**** customer deleted end *****")
     custid=data.get('object').get('customer')
     cust_obj = Customer.objects.get(id=custid,djstripe_owner_account=default_djstripe_owner)
     user=cust_obj.subscriber
@@ -564,7 +552,6 @@ def expiry_yearly_sub(sub):
     if start.day != end.day:
         print("This is Not bill date")
 
-    print("no of months",abs(((start.year - end.year)*12)+start.month-end.month)+1)
     expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry
 

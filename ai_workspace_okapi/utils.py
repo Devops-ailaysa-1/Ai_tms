@@ -309,7 +309,6 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         translate = source_string
     
     elif user and not from_open_ai and initial_credit < cc:
-            print("Insufficient")
             translate = ''
     
     # FOR GOOGLE TRANSLATE
@@ -605,7 +604,6 @@ def count_pdf_pages(pdf_file):
             if line.startswith("Pages:"):
                 return int(line.split(':')[1])
     except:
-        print("count_pdf_pages function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
@@ -690,7 +688,6 @@ def pdf_char_check_for_document_trans(file_path):
                 return ["text" , len(pdfdoc.pages)]
         return ["ocr" , len(pdfdoc.pages)]
     except FileNotDecryptedError:
-        print("pdf_char_check_for_document_trans function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
 
 

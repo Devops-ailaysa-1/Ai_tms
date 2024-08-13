@@ -16,7 +16,8 @@ from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_de
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
 
-class Glossary(models.Model): ########Glossary projecct################
+class Glossary(models.Model):
+
     class GlossaryObjects(models.Manager):
         def get_queryset(self):
             return super().get_queryset().filter(usage_permission='Public')
@@ -24,6 +25,7 @@ class Glossary(models.Model): ########Glossary projecct################
         ('Public', 'Public'),
         ('Private', 'Private'),
     )
+
     project = models.OneToOneField(Project, null=False, blank=False, on_delete=models.CASCADE, related_name="glossary_project")
     primary_glossary_source_name = models.CharField(max_length=20, null=True, blank=True)
     details_of_PGS          = models.TextField(null=True, blank=True)
@@ -37,7 +39,7 @@ class Glossary(models.Model): ########Glossary projecct################
     file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.SET_NULL,
                                                    related_name="individual_gloss_project")
     is_default_project_glossary = models.BooleanField(default=False)
-    
+
     objects = models.Manager() # default built-in manager
     glossaryobjects = GlossaryObjects() # object manager for Glossary model
     
@@ -57,9 +59,6 @@ def get_file_upload_path(instance, filename):
 use_spaces = os.environ.get("USE_SPACES")
 
 
-
-######### GLOSSARY & FILES MODEL ###############
-
 class GlossaryFiles(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="glossary_project_usage_type")
@@ -78,12 +77,10 @@ class GlossaryFiles(models.Model):
     celery_id = models.CharField(max_length=200, null=True, blank=False)
     done_extraction = models.BooleanField(default=False)
     is_extract = models.BooleanField(default=False)
-    # def __str__(self):
-    #     return self.file_name
 
 #post_save.connect(update_words_from_template, sender=GlossaryFiles)
 post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
-###############################################################################
+
 
 class TermsModel(models.Model):
     sl_term         = models.CharField(max_length=200, null=False, blank=False)
@@ -137,14 +134,11 @@ class GlossaryMt(models.Model):
     mt_engine   = models.ForeignKey(AilaysaSupportedMtpeEngines,on_delete=models.CASCADE,related_name='term_mt_engine',null=True, blank=True)
 
 
-
-##############Glossary Tasks Model###################
 class GlossaryTasks(models.Model):
     glossary = models.ForeignKey(Glossary, on_delete=models.CASCADE, related_name='task')
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='job_task')
     # terms = models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=True, related_name='job_terms')
     objects = GlossaryTasksManager()
-#####################################################################################
 
 class Tbx_Download(models.Model):
     user                    = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True)
@@ -192,17 +186,5 @@ class Terminologyextract(models.Model):
     file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
-
-# class CeleryStatusForTermExtraction(models.Model):
-#     #term_model_document = models.OneToOneField(Document, null=True, blank=False,on_delete=models.CASCADE, related_name='document_default_glossary')
-#     #term_model =  models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
-#     gloss_model = models.ForeignKey(Glossary, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_default_glossary')
-#     status = models.CharField(max_length=200, null=True, blank=False)
-#     gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
-#     celery_id = models.CharField(max_length=200, null=True, blank=False)
-#     #celery_done_extraction = models.BooleanField(default=False)
-#     done_extraction = models.BooleanField(default=False)
-#     term_model_file =  models.OneToOneField(File, on_delete=models.CASCADE, null=True, blank=False,related_name='termsmodel_file_default_glossary')
 
 
