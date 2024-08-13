@@ -1261,12 +1261,13 @@ def requesting_ner(joined_term_unit):
 import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 @task(queue='default')
-def get_ner_with_textunit_merge(file_id,gloss_model_id):
+def get_ner_with_textunit_merge(file_id,gloss_model_id,gloss_job_id):
     # try:    
     file_instance = File.objects.get(id=file_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
     file_path = file_instance.get_source_file_path
     path_list = re.split("source/", file_path)
+    gloss_job_ins = Job.objects.get(id=gloss_job_id)
 
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
     with open(doc_json_path,'rb') as fp:
@@ -1288,9 +1289,9 @@ def get_ner_with_textunit_merge(file_id,gloss_model_id):
     file_instance.done_extraction = True
     file_instance.save()
     terms =  list(set(terms))
-    gloss_job_inst = file_instance.gloss_job
+    #gloss_job_inst = file_instance.gloss_job
     #gloss_model_inst = gloss_job_inst.project.glossary
-    termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_inst,glossary=gloss_model_inst) for term in terms]
+    termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
     print("terms_created")
     file_instance.save()
@@ -1329,7 +1330,7 @@ def extraction_text(request):
         #file_instance.save()  # Save term_model
         
         celery_instance_ids.append(file_instance.id)
-        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project.id))
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project.id,gloss_job.id))
         file_instance.celery_id = celery_id
         file_instance.status = "PENDING"
         file_instance.save()  # Save celery status
