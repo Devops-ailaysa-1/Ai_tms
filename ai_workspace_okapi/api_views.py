@@ -2346,16 +2346,19 @@ def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
+
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
     option = request.POST.get('option')  #simplify,shorten,rewrite
+
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document=doc_obj)
+
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
@@ -2365,11 +2368,12 @@ def paraphrasing_for_non_english(request):
     
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
-        return  Response({'msg':'Insufficient Credits'},status=400)
+        return  Response({'msg':'Insufficient Credits'}, status=400)
     
     tags = get_src_tags(sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
-    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence, source_lang='en', target_lang=None)
+    
     if initial_credit >= consumable_credits_user_text:
         prompt = get_prompt_sent(option,clean_sentence) 
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
@@ -2393,7 +2397,8 @@ def paraphrasing_for_non_english(request):
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
 
-        return Response({'result':rewrited ,'tag':tags})
+        # return Response({'result':rewrited ,'tag':tags}) # Without adapting glossary
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2423,6 +2428,7 @@ def paraphrasing(request):
     tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+
     if initial_credit >= consumable_credits_user_text:
         prompt = get_general_prompt(option,clean_sentence)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
