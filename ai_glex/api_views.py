@@ -132,7 +132,7 @@ class GlossaryFileView(viewsets.ViewSet):
                 ids_str = ','.join(map(str, terms_ids))
                 with connection.cursor() as cursor:
                     cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
-                objects_to_delete.term_file.all().delete()
+                #objects_to_delete.term_file.all().delete()
                 objects_to_delete.delete()
             else:
                 proj = Project.objects.get(id=project)
