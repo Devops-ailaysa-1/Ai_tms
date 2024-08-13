@@ -120,17 +120,20 @@ class GlossaryFileView(viewsets.ViewSet):
             return Response (serializer.errors,status=400)
 
     def delete(self,request,pk=None):
+        from django.db import connection
         delete_list = request.GET.getlist('file_delete_ids')
         job = request.GET.get('job',None)
         project =request.GET.get('project')
         with transaction.atomic():
             if job:
                 objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
-                # terms_ids = objects_to_delete.values_list('id', flat=True).distinct()
-                # print("terms_ids--->",terms_ids)
-                # ids_str = ','.join(map(str, terms_ids))
-                # with connection.cursor() as cursor:
-                #     cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
+                terms_ids =objects_to_delete.term_file.all()
+                if terms_ids:
+                    terms_ids = terms_ids.values_list("id",flat=True).distinct()
+                    print("terms_ids--->",terms_ids)
+                    ids_str = ','.join(map(str, terms_ids))
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
                  
                 objects_to_delete.delete()
             else:
