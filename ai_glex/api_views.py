@@ -831,9 +831,7 @@ def get_ner_terminology_extract(request):
         for file in files:
             terminology_instance = Terminologyextract.objects.create(file=file,project = proj)
             file_paths.append(terminology_instance.file.path)
-        print("FP----------->",file_paths)
         ner_terminology= ner_terminology_finder(file_paths)
-        print("NER TERM--------------->",ner_terminology)
         if ner_terminology:
             obj =[
                 TermsModel(pk = None,

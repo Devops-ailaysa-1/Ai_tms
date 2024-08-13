@@ -32,9 +32,7 @@ def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data.get("source_file_path")
     path_list = re.split("source/", source_file_path)
     path = path_list[0] + "doc_json/" + path_list[1] + ".json"
-    print("Exists")
     if not os.path.exists(path):
-        print("Not Exists")
         write_json_data(task)
     return path
 
@@ -452,10 +450,8 @@ def get_project_analysis(request,project_id):
                 proj_char_raw_total += char_count.raw_total
 
             ser = WordCountGeneralSerializer(word_count,context={'weighted':round(WWC),'char_weighted':round(WCC)})
-            print("WccC----------->",ser.data)
 
             res.append(ser.data)
-        print("project wwc------------>",proj_wwc)
         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':proj_wwc,'new':proj_new,'repetition':proj_repetition,\
                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total,\
@@ -483,7 +479,6 @@ def get_weighted_word_count(task):
         rates = UserDefinedRate.objects.filter(is_default = True).first()
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
-    print("status------------------>",ins)
     if not ins or ins.status == 1:
         analysis([task.id],task.job.project.id)
 
@@ -493,7 +488,6 @@ def get_weighted_word_count(task):
           word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
           word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
           word_count.repetition * rates.tm_repetition_percentage)/100
-    print("WWC-------------->",WWC)
     return round(WWC)
 
 def get_weighted_char_count(task):
@@ -781,14 +775,11 @@ def download_tmx_file(request,file_id):
 def notify_word_count(task_assign,word_count,char_count):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
-    print("$$$$$$$$$$$")
     receiver = task_assign.assign_to
     receivers = []
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
     receivers.append(receiver)
-    print("Rece",receivers)
     sender =  task_assign.task_assign_info.assigned_by
-    print("send",sender)
     unit = task_assign.task_assign_info.mtpe_count_unit.id
     obj = task_assign.task
     proj = obj.job.project.project_name
@@ -818,8 +809,6 @@ def notify_word_count(task_assign,word_count,char_count):
         #     message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
         # if unit == 2:
         #     message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
-        print("MSG---------->",message)
         if thread_id:
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-            print("Chat--------->",msg)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))

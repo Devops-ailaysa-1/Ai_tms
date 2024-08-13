@@ -915,7 +915,8 @@ def mt_raw_update(task_id,segments):
                     try:
 
                         # Adapting glossary
-                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                 user_id=task.owner_pk, cc=consumable_credits)
                         mt = replace_with_gloss(seg.source,raw_mt,task)
 
                         # Without adapting glossary
@@ -930,7 +931,7 @@ def mt_raw_update(task_id,segments):
                             seg.temp_target = mt
                         seg.status_id = TranslationStatus.objects.get(status_id=103).id
                         if type(seg) is SplitSegment:
-                            mt_split_segments.append({'seg':seg,'mt':mt})
+                            mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                         
                         # Previous else block    
                         # else:mt_segments.append({'seg':seg,'mt':mt})
@@ -955,15 +956,16 @@ def mt_raw_update(task_id,segments):
                 if initial_credit > consumable_credits:
 
                     # Adapting glossary
-                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                             user_id=task.owner_pk, cc=consumable_credits)
                     mt = replace_with_gloss(seg.source,raw_mt,task)
 
                     # Without adapting glossary
                     # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
 
                     if type(seg) is SplitSegment:
-                        mt_split_segments.append({'seg':seg,'mt':mt})
-                    else:mt_segments.append({'seg':seg,'mt':mt})
+                        mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                    else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                 else:
                     print("Insufficient credits")
                 
@@ -976,7 +978,7 @@ def mt_raw_update(task_id,segments):
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
                 mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
-                mt_llm_glossary = "MT + LLM + Glossary",
+                # mt_llm_glossary = "MT + LLM + Glossary",
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i['seg'].id,
@@ -989,6 +991,8 @@ def mt_raw_update(task_id,segments):
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
+                # mt_llm_glossary = "MT + LLM + Glossary",
                 split_segment_id= i['seg'].id,
             )
             for i in mt_split_segments

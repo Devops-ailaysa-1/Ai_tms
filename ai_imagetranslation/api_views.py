@@ -104,14 +104,12 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                     | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
                     |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        print("QS----------------->",queryset)
         return queryset
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
         #project_managers.append(user)
-        print("Pms----------->",project_managers)
         return user,project_managers
 
     def get_object(self, pk):
@@ -140,7 +138,6 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
         serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'pr_managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
-        print("resss",response)
         return response
 
     def retrieve(self,request,pk):
@@ -481,7 +478,6 @@ def ImageTranslatewordcount(request):
         image_inpaint_creation_instance = ImageInpaintCreation.objects.get(job__id=job_id) #source_image__user=request.user,
         source_json = image_inpaint_creation_instance.source_image.source_canvas_json
         total_sent=dict_rec_json(source_json) 
-        print(total_sent)
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),

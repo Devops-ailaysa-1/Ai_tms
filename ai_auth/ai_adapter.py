@@ -41,7 +41,6 @@ class MyAccountAdapter(DefaultAccountAdapter):
             "current_site": current_site,
             "key": emailconfirmation.key,
         }
-        print("Entered Confirmation Mail")
         if signup:
             email_template = "account/email/email_confirmation_signup"
         else:

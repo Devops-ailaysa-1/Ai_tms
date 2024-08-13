@@ -387,7 +387,7 @@ class MT_RawTranslation(models.Model):
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
     mt_raw = models.TextField() # MT + Glossary - This is the option that will be shown in the target segment
     mt_only = models.TextField() # Only Raw Machine Translation
-    mt_llm_glossary = models.TextField() # Machine Translation + Rewrite + Glossary
+    # mt_llm_glossary = models.TextField() # Machine Translation + Rewrite + Glossary
 
     @property
     def target_language(self):
@@ -404,7 +404,12 @@ class MT_RawTranslation(models.Model):
 class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
-    mt_raw = models.TextField(null=True, blank=True)
+    mt_raw = models.TextField(null=True, blank=True) # Translation that will be shown in the target segment
+    mt_only = models.TextField(null=True, blank=True) # Raw Machine translation (no glossary applied)
+    # mt_llm_glossary = models.TextField() # Machine Translation + Rewrite + Glossary
+
+    def __str__(self) -> str:
+        return self.mt_raw
 
 
 class Comment(models.Model):
