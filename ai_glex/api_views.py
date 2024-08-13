@@ -261,7 +261,7 @@ class TermUploadView(viewsets.ModelViewSet):
         #Not using now. not working correctly.
         from ai_workspace.models import Task,TaskAssignInfo
         user = self.request.user
-        task_obj = Task.objects.get(job_id = job.id)
+        task_obj = Task.objects.filter(job_id = job.id) ### for more than 2 task
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
@@ -276,7 +276,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def update_task_assign(self,job,user):
         from ai_workspace.models import Task,TaskAssignInfo
-        task_obj = Task.objects.get(job_id = job.id)
+        task_obj = Task.objects.filter(job_id = job.id) ### for more than 2 task
         try:
             obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
             if obj.status != 2:
@@ -1254,14 +1254,6 @@ def requesting_ner(joined_term_unit):
     if joined_term_unit:
         response_result = term_extraction_ner_and_terms(joined_term_unit)
         terms_from_request = response_result['result']
-        #terms_from_request = []
-        # if response_result['named_entities']:
-        #     for i in response_result['named_entities']:
-        #         if i['text']:
-        #             terms_from_request.append(i['text'])   
-        #     if response_result['terms']:
-        #         terms_from_request.extend(response_result['terms'])
-
         return terms_from_request
     else:
         return None
