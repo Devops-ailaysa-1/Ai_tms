@@ -130,4 +130,4 @@ class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
     term_model_file = serializers.ReadOnlyField(source='id')
     class Meta:
         model = File
-        fields = ("id",'status','gloss_job','celery_id','done_extraction','term_model_file','file_name')
+        fields = ("id",'status','celery_id','done_extraction','term_model_file','file_name')
