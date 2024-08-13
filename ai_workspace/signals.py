@@ -32,7 +32,6 @@ def create_project_dir(sender, instance, *args, **kwargs):
 
 
 def delete_project_dir(sender, instance, *args, **kwargs):
-    print(instance.project_dir_path)
     shutil.rmtree(instance.project_dir_path)
 
 def create_pentm_dir_of_project(sender, instance, created, *args, **kwargs):

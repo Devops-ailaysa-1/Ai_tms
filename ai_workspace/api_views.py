@@ -903,7 +903,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(serlzr.errors, status=409)
 
     def destroy(self, request, *args, **kwargs):
-        project = self.get_object()
+
+        # Previously used Project object fetching logic
+        # project = self.get_object()
+
+        pk = kwargs.get("pk", 0)
+        # If the Request user has a team, then Account Owner is the ai_user of the project
+        user = request.user.team.owner if request.user.team else request.user
+
+        project = Project.objects.filter(id=pk, ai_user=user).last()
+
+        # If any of the tasks in the project is assigned,
+        # it needs to be unassigned before deleting the project
         if project.assigned == True:
             return Response({'msg':'some tasks are assigned in this project. Unassign and delete'},status=400)
         else:
