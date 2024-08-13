@@ -1480,6 +1480,79 @@ def docx_merger(request):
     return res
 
 
+# from docx import Document
+# from docxcompose.composer import Composer
+# import mkepub
+# from bs4 import BeautifulSoup
+
+# @api_view(["POST"])
+# def docx_merger(request):
+
+#     '''
+#     To download the entire book into a docx or epub file format.
+#     If it is docx format, multiple docx files (for each chapter) is merged and download
+#     If it is an epub file, it is downloaded directly using the HTML data
+#     '''
+
+#     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+#     name = request.POST.get('book_name')
+#     files = request.FILES.getlist('docx_files')
+#     output_format = request.POST.get('format','docx') # default is docx
+
+#     if output_format == 'docx':
+#         composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
+#         result = Document()
+#         composer = Composer(result)
+
+#         for i in range(0, len(files)):
+#             doc = Document(files[i])
+#             set_font_to_times_new_roman(doc)
+
+#             if i != 0:
+#                 doc.add_page_break()
+
+#             composer.append(doc)
+
+#         composer.save(composed)
+#         res = download_file(composed)
+#         os.remove(composed)
+#         return res
+    
+#     elif output_format == 'epub':
+#         html_data_list = request.POST.getlist('html_data')  # Assuming this contains HTML content
+#         epub_file = name + ".epub" if len(name.split()) <= 5 else ' '.join(name.split()[:3]) + ".epub"
+        
+#         book = mkepub.Book(name)
+
+#         # Add chapters from HTML data
+#         for i, html_content in enumerate(html_data_list):
+#             # chapter_title = f'Chapter {i+1}'
+#             # book.add_page(chapter_title, html_content)
+#             # Clean up the HTML content using BeautifulSoup
+#             soup = BeautifulSoup(html_content, 'html.parser')
+#             cleaned_html = soup.prettify()
+
+#             chapter_title = f'Chapter {i+1}'
+#             book.add_page(chapter_title, cleaned_html)
+
+#             # Check for images in the HTML content
+#             images = request.FILES.getlist(f'images_{i+1}')
+#             for img in images:
+#                 img_data = img.read()
+#                 img_name = img.name
+#                 book.add_image(img_name, img_data)
+
+
+#         book.save(epub_file)
+#         res = download_file(epub_file)
+#         os.remove(epub_file)
+#         return res
+    
+#     else:
+#         return Response({"error": "Invalid file type specified. Use 'docx' or 'epub'"}, status=400)
+    
+
+
 def customize_refer(customize,search_term,lang):
     '''
     This function is for refer function in customize section. 
