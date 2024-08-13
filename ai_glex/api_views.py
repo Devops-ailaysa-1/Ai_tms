@@ -1365,3 +1365,30 @@ def term_extraction_celery_status(request):
     else:
         return Response({'msg': 'No files to extract the terms or already extracted'}, status=200)
     
+
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
+@receiver(pre_delete, sender=Glossary)
+def glossary_delete_handler(sender, instance, **kwargs):
+    # Perform actions here
+    print(f'Instance {instance} is being deleted')
+
+@receiver(pre_delete, sender=Project)
+def project_delete_handler(sender, instance, **kwargs):
+    # Perform actions here
+    print(f'Instance {instance} is being deleted')
+
+@receiver(pre_delete, sender=File)
+def file_delete_handler(sender, instance, **kwargs):
+    # Perform actions here
+    print(f'Instance {instance} is being deleted')
+
+@receiver(pre_delete, sender=Job)
+def job_delete_handler(sender, instance, **kwargs):
+    # Perform actions here
+    print(f'Instance {instance} is being deleted')
+
+@receiver(pre_delete, sender=Task)
+def task_delete_handler(sender, instance, **kwargs):
+    # Perform actions here
+    print(f'Instance {instance} is being deleted')
