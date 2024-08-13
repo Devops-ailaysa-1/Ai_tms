@@ -1202,7 +1202,7 @@ class MT_RawAndTM_View(views.APIView):
                 tm_data = self.get_tm_data(request, segment_id)
             
                 if tm_data and (mt_uc == 'false'):
-                    return Response({**tm_only, "tm":tm_data}, status = 200 )
+                    return Response({**tm_only, "mt_only": "", "tm":tm_data}, status = 200 )
                 
                 # For MT / LLM translation
                 data, status_code, can_team = self.get_data(request, segment_id, mt_params)
@@ -1222,7 +1222,7 @@ class MT_RawAndTM_View(views.APIView):
                 # Fetching translation from Translation memory
                 tm_data = self.get_tm_data(request, segment_id)
                 if tm_data and (mt_uc == False):
-                    return Response({**tm_only, "tm": tm_data}, status=200)
+                    return Response({**tm_only, "mt_only": "", "tm": tm_data}, status=200)
 
                 # For MT / LLM translation
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
