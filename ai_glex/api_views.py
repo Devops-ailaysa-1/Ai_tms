@@ -129,13 +129,13 @@ class GlossaryFileView(viewsets.ViewSet):
                 gloss_file_instance  = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
                 terms_ids = []
                 for gloss_file in gloss_file_instance:
-                    terms_ids.extend(gloss_file.term_file.all())
-                if terms_ids:
-                    terms_ids = terms_ids.values_list("id",flat=True).distinct()
-                    print("terms_ids--->",terms_ids)
-                    ids_str = ','.join(map(str, terms_ids))
-                    with connection.cursor() as cursor:
-                        cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
+                    gloss_terms = gloss_file.term_file.all()
+                    if gloss_terms:
+                        terms_ids = gloss_terms.values_list("id",flat=True).distinct()
+                        print("terms_ids--->",terms_ids)
+                        ids_str = ','.join(map(str, terms_ids))
+                        with connection.cursor() as cursor:
+                            cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
                  
                 [i.delete() for i in gloss_file_instance]
             else:
