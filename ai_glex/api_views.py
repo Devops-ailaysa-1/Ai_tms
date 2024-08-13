@@ -1325,8 +1325,8 @@ def extraction_text(request):
  
         
         #file_instance.gloss_model = glossary_project
-        file_instance.gloss_job = gloss_job
-        file_instance.save()  # Save term_model
+        #file_instance.gloss_job = gloss_job
+        #file_instance.save()  # Save term_model
         
         celery_instance_ids.append(file_instance.id)
         celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project.id))
@@ -1371,24 +1371,25 @@ from django.dispatch import receiver
 @receiver(pre_delete, sender=Glossary)
 def glossary_delete_handler(sender, instance, **kwargs):
     # Perform actions here
+    print("Glossary_id",instance.id)
     print(f'Instance {instance} is being deleted')
 
 @receiver(pre_delete, sender=Project)
 def project_delete_handler(sender, instance, **kwargs):
-    # Perform actions here
+    print("Project",instance.id)
     print(f'Instance {instance} is being deleted')
 
 @receiver(pre_delete, sender=File)
 def file_delete_handler(sender, instance, **kwargs):
-    # Perform actions here
+    print("File",instance.id)
     print(f'Instance {instance} is being deleted')
 
 @receiver(pre_delete, sender=Job)
 def job_delete_handler(sender, instance, **kwargs):
-    # Perform actions here
+    print("Job",instance.id)
     print(f'Instance {instance} is being deleted')
 
 @receiver(pre_delete, sender=Task)
 def task_delete_handler(sender, instance, **kwargs):
-    # Perform actions here
+    print("Task",instance.id)
     print(f'Instance {instance} is being deleted')
