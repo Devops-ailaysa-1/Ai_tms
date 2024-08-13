@@ -126,8 +126,10 @@ class GlossaryFileView(viewsets.ViewSet):
         project =request.GET.get('project')
         with transaction.atomic():
             if job:
-                objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
-                terms_ids =objects_to_delete.term_file.all()
+                gloss_file_instance  = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
+                terms_ids = []
+                for gloss_file in gloss_file_instance:
+                    terms_ids.extend(gloss_file.term_file.all())
                 if terms_ids:
                     terms_ids = terms_ids.values_list("id",flat=True).distinct()
                     print("terms_ids--->",terms_ids)
@@ -135,7 +137,7 @@ class GlossaryFileView(viewsets.ViewSet):
                     with connection.cursor() as cursor:
                         cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
                  
-                objects_to_delete.delete()
+                [i.delete() for i in gloss_file_instance]
             else:
                 proj = Project.objects.get(id=project)
                 jobs = proj.get_jobs
