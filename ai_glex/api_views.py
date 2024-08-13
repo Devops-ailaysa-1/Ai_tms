@@ -127,7 +127,7 @@ class GlossaryFileView(viewsets.ViewSet):
         with transaction.atomic():
             if job:
                 objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
-                terms_ids = objects_to_delete.values_list('term_file_id', flat=True).distinct()
+                terms_ids = objects_to_delete.values_list('id', flat=True).distinct()
                 print("terms_ids--->",terms_ids)
                 ids_str = ','.join(map(str, terms_ids))
                 with connection.cursor() as cursor:
