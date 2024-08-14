@@ -1184,11 +1184,12 @@ def get_word_mt(request):
         target_new = translation if source else target
         tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
         data = GlossaryMtSerializer(tt).data
-        if sl_code in ['en']:
+        if sl_code in ['en'] and segment_id:
             segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
             pos_tag = term_pos_identify(segment_obj,task_obj,text)
             data['pos_tag'] = pos_tag
         else:
+             print("No segment id is given")
              data['pos_tag'] = None
  
         return Response(data,status=201)
