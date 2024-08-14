@@ -30,7 +30,7 @@ from django.db.models import Q
 from .serializers import TermsSerializer
 from rest_framework.decorators import api_view,permission_classes
 from nltk import word_tokenize
-from ai_workspace.models import Task,Project,TaskAssign,File
+from ai_workspace.models import Task,Project,TaskAssign,File,FileTermExtracted
 from ai_workspace_okapi.models import Document 
 from ai_workspace_okapi.utils import get_translation
 import pandas as pd
@@ -1331,12 +1331,11 @@ def requesting_ner(joined_term_unit):
 import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
 @task(queue='default')
-def get_ner_with_textunit_merge(file_id,gloss_model_id,gloss_task_id):
+def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
     # try:
-    from ai_workspace.models import FileTermExtracted
-    file_instance = File.objects.get(id=file_id)
+    file_extraction_instance = FileTermExtracted.objects.get(id=file_extraction_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
-    file_path = file_instance.get_source_file_path
+    file_path = file_extraction_instance.file.get_source_file_path ## get the file path from the file instance(relate)
     path_list = re.split("source/", file_path)
     gloss_task_ins = Task.objects.get(id=gloss_task_id)
     gloss_job_ins = gloss_task_ins.job
@@ -1356,25 +1355,18 @@ def get_ner_with_textunit_merge(file_id,gloss_model_id,gloss_task_id):
             terms.extend(requesting_ner(full_text_unit_merge))
         text_unit = []
 
-    file_instance.status = "FINISHED"
-    #file_instance.file_document_set.done_extraction = True
-    file_instance.done_extraction = True
-    file_instance.save()
+    file_extraction_instance.status = "FINISHED"
+ 
+    file_extraction_instance.save()
     terms =  list(set(terms))
-    #gloss_job_inst = file_instance.gloss_job
-    #gloss_model_inst = gloss_job_inst.project.glossary
+ 
     termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
-    FileTermExtracted.objects.create(file=file_instance,task=gloss_task_ins)
+    
     print("terms_created")
-    file_instance.save()
+    file_extraction_instance.save()
 
-    # except:
-    #     file_instance.term_extraction_done = False
-    #     file_instance.status = "ERROR"
-    #     file_instance.done_extraction = False
-    #     file_instance.save()
-    #     print("terms_error")
+ 
  
 from ai_workspace.models import File
 @api_view(['POST',])
@@ -1391,25 +1383,20 @@ def extraction_text(request):
      
     if not file_ids:
         return Response({'msg': 'Need file ids'})
-
+    
     celery_instance_ids = []
     for file_id in file_ids:
-        file_instance = File.objects.get(id=file_id)
-        file_instance.is_extract = True #### saving for listing the file which is used to extract the text
+        file_instance = File.objects.get(id=file_id) ### got file instance
  
-        
-        #file_instance.gloss_model = glossary_project
-        #file_instance.gloss_job = gloss_job
-        #file_instance.save()  # Save term_model
-        
-        celery_instance_ids.append(file_instance.id)
-        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_id,glossary_project.id,gloss_task_inst.id))
-        file_instance.celery_id = celery_id
-        file_instance.status = "PENDING"
-        file_instance.save()  # Save celery status
+        file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=gloss_task_inst) ### creating file extraction instance
+        celery_instance_ids.append(file_extraction_instance.id)
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_extraction_instance,glossary_project.id,gloss_task_inst.id))
+        file_extraction_instance.celery_id = celery_id
+        file_extraction_instance.status = "PENDING"
+        file_extraction_instance.save()   
 
     if celery_instance_ids:
-        gloss_term_extraction_instances = File.objects.filter(id__in=celery_instance_ids)
+        gloss_term_extraction_instances = FileTermExtracted.objects.filter(id__in=celery_instance_ids)
         serializer = CeleryStatusForTermExtractionSerializer(gloss_term_extraction_instances, many=True)
         return Response(serializer.data, status=200)
     else:
@@ -1418,6 +1405,7 @@ def extraction_text(request):
 @api_view(['GET'])
 def term_extraction_celery_status(request):
     project_id = request.GET.get('project_id')
+    task = request.GET.get('task')
     if not project_id:
         return Response({'msg': 'Project ID not provided'}, status=400)
 
@@ -1429,8 +1417,19 @@ def term_extraction_celery_status(request):
     term_extract_status = []
 
     for file_ins in project.files_and_jobs_set[1]:
+        task = Task.objects.get(id=task)
+        from ai_workspace.models import FileTermExtracted
         if file_ins.is_extract:
+            file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file=file_ins)
+            if file_extracted_term_ins:
+                file_ins.done_extraction = True
+                
+            else:
+                file_ins.done_extraction = False
+                file_ins.status = "Yet to Start"
+            file_ins.save()
             term_extract_status.append(file_ins)
+
 
 
     if term_extract_status:
