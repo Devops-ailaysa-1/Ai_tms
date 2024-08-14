@@ -898,7 +898,6 @@ class File(models.Model):
     deleted_at = models.BooleanField(default=False)
     done_extraction = models.BooleanField(default=False)
     status = models.CharField(max_length=200, null=True, blank=False)
-    #gloss_job = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job_default_glossary')
     celery_id = models.CharField(max_length=200, null=True, blank=False)
     is_extract = models.BooleanField(default=False)
 
@@ -1967,3 +1966,9 @@ class TaskNewsMT(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
+class FileTermExtracted(models.Model):
+    task =  models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_file_extract")
+    file = models.ForeignKey(File, on_delete=models.CASCADE,related_name="file_extraction")
+
+    class Meta:
+        unique_together = ("task", "file")
