@@ -1969,6 +1969,9 @@ class TaskNewsMT(models.Model):
 class FileTermExtracted(models.Model):
     task =  models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_file_extract")
     file = models.ForeignKey(File, on_delete=models.CASCADE,related_name="file_extraction")
+    done_extraction = models.BooleanField(default=False)
+    status = models.CharField(max_length=200, null=True, blank=False)
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
 
     class Meta:
         unique_together = ("task", "file")

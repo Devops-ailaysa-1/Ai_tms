@@ -124,11 +124,12 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
 
- 
+from ai_workspace.models import FileTermExtracted
+
 class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
-    #termsmodel_file_default_glossary = FileSerializer(required=False)
-    file_name = serializers.ReadOnlyField(source='filename')
-    term_model_file = serializers.ReadOnlyField(source='id')
+    file_name = serializers.ReadOnlyField(source='file_extraction.filename')
+    term_model_file = serializers.ReadOnlyField(source='file_extraction.id')
+
     class Meta:
-        model = File
+        model = FileTermExtracted
         fields = ("id",'status','celery_id','done_extraction','term_model_file','file_name')

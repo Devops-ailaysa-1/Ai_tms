@@ -419,13 +419,11 @@ class Files_Jobs_List(APIView):
             task = Task.objects.get(id=task)
             from ai_workspace.models import FileTermExtracted
             for file_ins in file_data:
-                print("file_data---->",file_ins)
                 file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file_id=file_ins['id'])
                 if file_extracted_term_ins:
                     file_ins['done_extraction']= True
                 else:
                     file_ins['done_extraction']= False
-                print("after_update--->",file_ins)
         glossary_selected = True if project.project.filter(glossary__project__project_type_id = 3).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
