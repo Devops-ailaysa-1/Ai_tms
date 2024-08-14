@@ -1357,7 +1357,6 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
 
     file_extraction_instance.status = "FINISHED"
  
-    file_extraction_instance.save()
     terms =  list(set(terms))
  
     termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
@@ -1390,7 +1389,7 @@ def extraction_text(request):
  
         file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=gloss_task_inst) ### creating file extraction instance
         celery_instance_ids.append(file_extraction_instance.id)
-        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_extraction_instance,glossary_project.id,gloss_task_inst.id))
+        celery_id = get_ner_with_textunit_merge.apply_async(args=(file_extraction_instance.id,glossary_project.id,gloss_task_inst.id))
         file_extraction_instance.celery_id = celery_id
         file_extraction_instance.status = "PENDING"
         file_extraction_instance.save()   
