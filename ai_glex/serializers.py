@@ -57,6 +57,20 @@ class GlossaryMtSerializer(serializers.ModelSerializer):
         model = GlossaryMt
         fields = "__all__"
 
+    # if sl_code in ['en']:
+    #     if segment_id:
+    #         from ai_qa.api_views import remove_tags
+    #         segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
+    #         if task_obj.job.target_language_code == "en":
+    #             segment_text = remove_tags(segment_obj.target)
+    #         else:
+    #             segment_text = remove_tags(segment_obj.source)
+            
+    #         pos_tag_res = segment_term_pos_identify(segment_text,text)
+    #         if pos_tag_res:
+
+
+
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)
 

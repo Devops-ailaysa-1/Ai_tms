@@ -132,7 +132,6 @@ class GlossaryFileView(viewsets.ViewSet):
                     gloss_terms = gloss_file.term_file.all()
                     if gloss_terms:
                         terms_ids = gloss_terms.values_list("id",flat=True).distinct()
-                        print("terms_ids--->",terms_ids)
                         ids_str = ','.join(map(str, terms_ids))
                         with connection.cursor() as cursor:
                             cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
@@ -265,7 +264,7 @@ class TermUploadView(viewsets.ModelViewSet):
         #Not using now. not working correctly.
         from ai_workspace.models import Task,TaskAssignInfo
         user = self.request.user
-        task_obj = Task.objects.get(job_id = job.id) ### for more than 2 task
+        task_obj = Task.objects.get(job_id = job.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
@@ -1124,6 +1123,23 @@ class MyGlossaryView(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+def term_pos_identify(segment_obj,task_obj,text):
+    # if sl_code in ['en']:
+    from ai_qa.api_views import remove_tags
+    # segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
+    if task_obj.job.target_language_code == "en":
+        segment_text = remove_tags(segment_obj.target)
+    else:
+        segment_text = remove_tags(segment_obj.source)
+    
+    pos_tag_res = segment_term_pos_identify(segment_text,text)
+    if pos_tag_res and pos_tag_res['tag']:
+        return pos_tag_res['tag']
+    else:
+        return None
+ 
+
+
 @api_view(['POST',])
 def get_word_mt(request):
     '''
@@ -1132,10 +1148,13 @@ def get_word_mt(request):
     and then return GlossaryMtSerializer data
     '''
     user = request.user.team.owner if request.user.team else request.user
+    from ai_workspace.models import Segment
     task_id = request.POST.get("task_id",None)
-    source = request.POST.get("source", "")
-    target = request.POST.get("target", "")
+    source = request.POST.get("source", None)
+    target = request.POST.get("target", None)
+    segment_id = request.POST.get("segment_id", None)
     task_obj = get_object_or_404(Task.objects.all(),id=task_id)
+    
     #mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
     mt_engine_id = 1 ### by default the gloss to google_mt
     if source:
@@ -1164,7 +1183,15 @@ def get_word_mt(request):
         source_new = translation if target else source
         target_new = translation if source else target
         tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
-        return Response(GlossaryMtSerializer(tt).data,status=201)
+        data = GlossaryMtSerializer(tt).data
+        if sl_code in ['en']:
+            segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
+            pos_tag = term_pos_identify(segment_obj,task_obj,text)
+            data['pos_tag'] = pos_tag
+        else:
+             data['pos_tag'] = None
+ 
+        return Response(data,status=201)
 
     else:
         return Response({"res": "Insufficient credits"}, status=400)
@@ -1251,8 +1278,21 @@ def term_extraction_ner_and_terms(text):
     TERM_EXTRACTION_URL = settings.TERM_EXTRACTION
     payload = {'text': text}
     response = requests.request("POST", TERM_EXTRACTION_URL, headers={}, data=payload, files=[])
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
 
+### finding tag
+
+def segment_term_pos_identify(sentence,word):
+    IDENTIFY_POS_URL = settings.IDENTIFY_POS
+    payload = {'sentence': sentence,'word':word}
+    response = requests.request("POST", IDENTIFY_POS_URL, headers={}, data=payload, files=[])
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
 
 def requesting_ner(joined_term_unit):
     if joined_term_unit:
@@ -1371,30 +1411,3 @@ def term_extraction_celery_status(request):
         return Response({'msg': 'No files to extract the terms or already extracted'}, status=200)
     
 
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
-@receiver(pre_delete, sender=Glossary)
-def glossary_delete_handler(sender, instance, **kwargs):
-    # Perform actions here
-    print("Glossary_id",instance.id)
-    print(f'Instance {instance} is being deleted')
-
-@receiver(pre_delete, sender=Project)
-def project_delete_handler(sender, instance, **kwargs):
-    print("Project",instance.id)
-    print(f'Instance {instance} is being deleted')
-
-@receiver(pre_delete, sender=File)
-def file_delete_handler(sender, instance, **kwargs):
-    print("File",instance.id)
-    print(f'Instance {instance} is being deleted')
-
-@receiver(pre_delete, sender=Job)
-def job_delete_handler(sender, instance, **kwargs):
-    print("Job",instance.id)
-    print(f'Instance {instance} is being deleted')
-
-@receiver(pre_delete, sender=Task)
-def task_delete_handler(sender, instance, **kwargs):
-    print("Task",instance.id)
-    print(f'Instance {instance} is being deleted')
