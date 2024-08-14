@@ -665,7 +665,8 @@ class GetTranslation(APIView):#############Mt update need to work###############
     @staticmethod
     def word_count(string):
         punctuations = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-        tokens = string.split(" ") #word_tokenize(string)
+        #if string:
+        tokens = word_tokenize(string) #string.split(" ") 
         tokens_new = [word for word in tokens if word not in punctuations]
         return len(tokens_new)
 
@@ -1124,8 +1125,8 @@ class MyGlossaryView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def term_pos_identify(segment_obj,task_obj,text):
-    pos_dict = {'VERB':'Verb','NOUN':'Noun','ADJ':'Adjective','ADV':'Adverb'}
-    pos_list = ['VERB','NOUN','ADJ','ADV']
+    pos_dict = {'VERB':'Verb','NOUN':'Noun','ADJ':'Adjective','ADV':'Adverb','PROPN':'NOUN'}
+    pos_list = ['VERB','NOUN','ADJ','ADV','PROPN']
     # if sl_code in ['en']:
     from ai_qa.api_views import remove_tags
     # segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
@@ -1181,7 +1182,7 @@ def get_word_mt(request):
 
     credit_balance = user.credit_balance.get("total_left")
     
-    word_count = GetTranslation.word_count(source)
+    word_count = GetTranslation.word_count(text) #source
 
     if credit_balance > word_count:
 
@@ -1196,10 +1197,12 @@ def get_word_mt(request):
             segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
             pos_tag = term_pos_identify(segment_obj,task_obj,text)
             data['pos_tag'] = pos_tag
+            data['root_word'] = lemma_word
         else:
             tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
             data['pos_tag'] = None
+            data['root_word'] = None
  
         return Response(data,status=201)
 
