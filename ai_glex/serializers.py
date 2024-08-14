@@ -132,4 +132,4 @@ class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FileTermExtracted
-        fields = ("id",'status','celery_id','done_extraction','term_model_file','file_name')
+        fields = ("id",'status','celery_id','done_extraction','term_model_file','file_name','task')
