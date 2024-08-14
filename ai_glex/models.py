@@ -73,10 +73,10 @@ class GlossaryFiles(models.Model):
     deleted_at = models.BooleanField(default=False)
     upload_date = models.DateTimeField(auto_now_add=True)
 
-    # status = models.CharField(max_length=200, null=True, blank=False)
-    # celery_id = models.CharField(max_length=200, null=True, blank=False)
-    # done_extraction = models.BooleanField(default=False)
-    # is_extract = models.BooleanField(default=False)
+    status = models.CharField(max_length=200, null=True, blank=False)
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
+    done_extraction = models.BooleanField(default=False)
+    is_extract = models.BooleanField(default=False)
 
 #post_save.connect(update_words_from_template, sender=GlossaryFiles)
 post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
