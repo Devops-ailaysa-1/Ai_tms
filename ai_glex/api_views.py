@@ -1124,6 +1124,8 @@ class MyGlossaryView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def term_pos_identify(segment_obj,task_obj,text):
+    pos_dict = {'VERB':'Verb','NOUN':'Noun','ADJ':'Adjective','ADV':'Adverb'}
+    pos_list = ['VERB','NOUN','ADJ','ADV']
     # if sl_code in ['en']:
     from ai_qa.api_views import remove_tags
     # segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
@@ -1134,7 +1136,11 @@ def term_pos_identify(segment_obj,task_obj,text):
     
     pos_tag_res = segment_term_pos_identify(segment_text,text)
     if pos_tag_res and pos_tag_res['tag']:
-        return pos_tag_res['tag']
+        if pos_tag_res['tag'] in pos_list:
+            tag = pos_tag_res['tag']
+            return pos_dict[tag]
+        else:
+            return None
     else:
         return None
  
