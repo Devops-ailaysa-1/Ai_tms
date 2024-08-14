@@ -665,7 +665,7 @@ class GetTranslation(APIView):#############Mt update need to work###############
     @staticmethod
     def word_count(string):
         punctuations = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-        tokens = word_tokenize(string)
+        tokens = string.split(" ") #word_tokenize(string)
         tokens_new = [word for word in tokens if word not in punctuations]
         return len(tokens_new)
 
@@ -1188,15 +1188,18 @@ def get_word_mt(request):
         translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
-        tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
-        data = GlossaryMtSerializer(tt).data
-        if sl_code in ['en'] and segment_id:
+
+        if (sl_code in ['en'] or tl_code in ['en']) and segment_id:
+            lemma_word = identify_lemma(source_new)
+            tt = GlossaryMt.objects.create(source = lemma_word,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
+            data = GlossaryMtSerializer(tt).data
             segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
             pos_tag = term_pos_identify(segment_obj,task_obj,text)
             data['pos_tag'] = pos_tag
         else:
-             print("No segment id is given")
-             data['pos_tag'] = None
+            tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
+            data = GlossaryMtSerializer(tt).data
+            data['pos_tag'] = None
  
         return Response(data,status=201)
 
@@ -1290,7 +1293,7 @@ def term_extraction_ner_and_terms(text):
     else:
         return None
 
-### finding tag
+### finding pos tag
 
 def segment_term_pos_identify(sentence,word):
     IDENTIFY_POS_URL = settings.IDENTIFY_POS
@@ -1301,6 +1304,19 @@ def segment_term_pos_identify(sentence,word):
     else:
         return None
 
+### finding lemma
+
+def identify_lemma(word):
+    IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
+    payload = {'word':word}
+    response = requests.request("POST", IDENTIFY_LEMMA_URL, headers={}, data=payload, files=[])
+    if response.status_code == 200:
+        return response.json()['lemma']
+    else:
+        return None
+
+### finding NER  
+    
 def requesting_ner(joined_term_unit):
     if joined_term_unit:
         response_result = term_extraction_ner_and_terms(joined_term_unit)
