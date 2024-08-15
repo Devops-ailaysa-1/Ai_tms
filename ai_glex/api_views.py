@@ -155,8 +155,8 @@ def task_delete_operation(delete_list,job):
 
 
 def get_or_create_indiv_gloss(trans_project_task):
-    task_ins = Task.objects.get(id=trans_project_task)
-    job_ins = task_ins.job
+    #task_ins = Task.objects.get(id=trans_project_task)
+    job_ins = trans_project_task.job #task_ins.job
     
     trans_project_ins = job_ins.project  ### get Standard project instance
     if trans_project_ins.project_type_id == 3:
@@ -340,8 +340,13 @@ class TermUploadView(viewsets.ModelViewSet):
 
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
-        
-        job = Task.objects.get(id=task).job
+        try:
+            task = Task.objects.get(id=task)
+        except Task.DoesNotExist:
+            return Response({'msg':'No Task found or task is deleted'},status=400)            
+
+        job = task.job
+        #job = Task.objects.get(id=task).job
         project = job.project
         project_type_id = project.project_type_id
         ### to check the given task id is gloss task or trans task
