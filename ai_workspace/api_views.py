@@ -410,20 +410,26 @@ class Files_Jobs_List(APIView):
 
     def get(self, request, project_id):
         task = request.GET.get("task",None)
+        print("task----->",task)
         jobs, files, contents, subjects, steps, project, gloss, glossary_files = self.get_queryset(project_id)
+        print("files---->",files)
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
-        files = FileSerializer(files, many=True)
-        file_data = files.data
+        files_ser = FileSerializer(files, many=True)
+        file_data = files_ser.data
+        print("file_data--->",file_data)
         if task:
             task = Task.objects.get(id=task)
+            print("task--obj",task)
             from ai_workspace.models import FileTermExtracted
             for file_ins_dict in file_data:
                 file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file_id=file_ins_dict.get('id'))
+                print("file_extra",file_extracted_term_ins)
                 if file_extracted_term_ins:
                     file_ins_dict['done_extraction']= True
                 else:
                     file_ins_dict['done_extraction']= False
+        print("file_dat", file_data)
         glossary_selected = True if project.project.filter(glossary__project__project_type_id = 3).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
