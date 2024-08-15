@@ -1356,6 +1356,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
         text_unit = []
 
     file_extraction_instance.status = "FINISHED"
+    file_extraction_instance.done_extraction =True
  
     terms =  list(set(terms))
  
