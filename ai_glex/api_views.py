@@ -1370,7 +1370,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
 def get_stand_proj_task_use_gloss_task(gloss_task):
     standard_project_task = gloss_task.job.project.glossary_project.file_translate_glossary.get_tasks
     for stand_task in standard_project_task:
-        if [stand_task.job.source_language,stand_task.job.target_language] == [gloss_task.job.source_language,task.job.target_language]:
+        if [stand_task.job.source_language,stand_task.job.target_language] == [gloss_task.job.source_language,gloss_task.job.target_language]:
             return stand_task
     return None
 
