@@ -1404,7 +1404,7 @@ def extraction_text(request):
 @api_view(['GET'])
 def term_extraction_celery_status(request):
     project_id = request.GET.get('project_id')
-    task = request.GET.get('task')
+    # task = request.GET.get('task',None)
     if not project_id:
         return Response({'msg': 'Project ID not provided'}, status=400)
 
@@ -1416,10 +1416,10 @@ def term_extraction_celery_status(request):
     term_extract_status = []
 
     for file_ins in project.files_and_jobs_set[1]:
-        task = Task.objects.get(id=task)
+        # task = Task.objects.get(id=task)
         from ai_workspace.models import FileTermExtracted
         if file_ins.is_extract:
-            file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file=file_ins)
+            file_extracted_term_ins = FileTermExtracted.objects.filter(file=file_ins) #task=task,
             if file_extracted_term_ins:
                 file_ins.done_extraction = True
                 
