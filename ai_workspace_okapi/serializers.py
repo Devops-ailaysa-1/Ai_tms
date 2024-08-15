@@ -73,6 +73,7 @@ class SegmentSerializer(serializers.ModelSerializer):
 from ai_workspace.models import Task,TaskAssignInfo
 import difflib
 class SegmentSerializerV2(SegmentSerializer):
+
     temp_target = serializers.CharField(trim_whitespace=False, allow_null=True)
     target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
@@ -84,14 +85,16 @@ class SegmentSerializerV2(SegmentSerializer):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def target_check(self, obj, target):
+
+        # Need to know the use case of this logic
+
         if obj.source[0].isspace():
             if target[0].isspace(): 
                 return target
             else:
-                return ' ' + target
+                return ' ' + target # Need to know the logic
         else:
             return target
-
 
     def update_task_assign(self,task_obj,user,status_id):
         try:
@@ -120,45 +123,62 @@ class SegmentSerializerV2(SegmentSerializer):
 
 
     def update(self, instance, validated_data):
+
         status = validated_data.get('status',None)
+
         if validated_data.get('target'):
-            validated_data['target'] = self.target_check(instance,validated_data.get('target'))
+            validated_data['target'] = self.target_check(instance, validated_data.get('target'))
+
         if validated_data.get('temp_target'):
-            validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
+            validated_data['temp_target'] = self.target_check(instance, validated_data.get('temp_target'))
+
         status_id = status.id if status else None 
+
         if status_id:
-            if status_id not in [109,110]:step = 1
-            else:step=2
+            # if status_id not in [109,110]:step = 1
+            # else:step=2
+
+            # Step 1 -> Post-Editing
+            # Step 2 -> Review
+            # Status 109, 110 -> Reviewing & Reviewed
+            step = 1 if status_id not in [109, 110] else 2
         else: step = None
+
         existing_step = 1 if instance.status_id not in [109,110] else 2 
+
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
-        else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
+        else: seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
+        
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False
 
-        if instance.target == '' and instance.temp_target == '':
-            if (instance.text_unit.document.job.project.mt_enable == False)\
-            or status_id in [101,102,105,106,109,110]:
-                user = instance.text_unit.document.doc_credit_debit_user
-                initial_credit = user.credit_balance.get("total_left")
-                consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                consumable = max(round(consumable_credits/3),1) 
-                if initial_credit < consumable:
-                    raise serializers.ValidationError("Insufficient Credits")
-                else:
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+
+        # Need to know the logic for deducting credtis for TM, Manual and Review steps
+        
+        # if instance.target == '' and instance.temp_target == '':
+        #     if (instance.text_unit.document.job.project.mt_enable == False)\
+        #     or status_id in [101,102,105,106,109,110]:
+        #         user = instance.text_unit.document.doc_credit_debit_user
+        #         initial_credit = user.credit_balance.get("total_left")
+        #         consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+        #         consumable = max(round(consumable_credits/3),1) 
+        #         if initial_credit < consumable:
+        #             raise serializers.ValidationError("Insufficient Credits")
+        #         else:
+        #             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
 
         res = super().update(instance, validated_data)
+
         if instance.target != '':
             instance.temp_target = instance.target 
             instance.save()
 
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
-        self.update_task_assign(task_obj,user_1,status_id)
+        self.update_task_assign(task_obj, user_1, status_id)
 
         return super().update(instance, validated_data)
 
@@ -714,13 +734,15 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=SegmentDiff
-        fields=('id','sentense_diff_result','save_type')
+        fields=('id','sentense_diff_result','save_type', 'diff_corrected')
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
+
     segment_difference=SegmentDiffSerializer(many=True)
     step_name=serializers.SerializerMethodField()
     status_id=serializers.ReadOnlyField(source='status.status_id')
     user_name=serializers.ReadOnlyField(source='user.fullname')
+
     class Meta:
         model = SegmentHistory
         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')

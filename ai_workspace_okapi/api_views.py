@@ -707,18 +707,23 @@ class SourceTMXFilesCreate(views.APIView):
 
 from rest_framework import serializers
 class SegmentsUpdateView(viewsets.ViewSet):
+
     def get_object(self, segment_id):
+
         qs = Segment.objects.all()
         #qs = filter_authorize(self.request, qs,self.request.user,"read")
 
+        # For normal and merge segments
         if split_check(segment_id):
             segment = get_object_or_404(qs, id=segment_id)
             return segment.get_active_object()
         else:
+            # For split segment
             return SplitSegment.objects.filter(id=segment_id).first()
 
     @staticmethod
     def get_update(segment, data, request):
+
         segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True, \
                                              context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
@@ -759,6 +764,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def split_update(self, request_data, segment):
+
         # To update split segments
         org_segment = SplitSegment.objects.get(id=segment.id).segment_id
         status = request_data.get("status",None)
@@ -770,25 +776,29 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else: 
             step = None
             status_obj = segment.status
+
         content = request_data['target'] if "target" in request_data else request_data['temp_target']
         existing_step = 1 if segment.status_id not in [109,110] else 2 
         seg_his_create = True if segment.temp_target!=content or existing_step != step else False
+
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
         else:segment.temp_target = request_data["temp_target"]
         segment.save()
+
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         return Response(SegmentSerializerV2(segment).data, status=201)
 
     def partial_update(self, request, *args, **kwargs):
+
         # Get a list of PKs to update
-        data={}
+        data = {}
         confirm_list = request.data.get('confirm_list', [])
         confirm_list = json.loads(confirm_list)
-        msg=None
-        success_list=[]
+        msg = None
+        success_list = []
         
         for item in confirm_list:
             try:
@@ -2304,9 +2314,15 @@ def spellcheck(request):
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
 
 
-############################segment history#############################################
 @api_view(['GET',])
 def get_segment_history(request):
+
+    '''
+    To list the history of changes in a target segment
+    The changes can be insertion, deletion or replacement
+
+    '''
+
     seg_id = request.GET.get('segment')
     try:
         if split_check(seg_id):
@@ -2316,10 +2332,13 @@ def get_segment_history(request):
             obj = SplitSegment.objects.filter(id=seg_id).first()
             history = obj.split_segment_history.all().order_by('-id') 
 
-        ser = SegmentHistorySerializer(history,many=True)
-        data_ser=ser.data
-        data=[i for i in data_ser if dict(i)['segment_difference']]
+        ser = SegmentHistorySerializer(history, many=True)
+        data_ser = ser.data
+
+        # Only for Segment History which has differences/changes
+        data = [i for i in data_ser if dict(i)['segment_difference']]
         return Response(data)
+    
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
 
@@ -2493,7 +2512,7 @@ def get_word_api(request):
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'})
 
-from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+from ai_workspace_okapi.models import SelflearningAsset, SegmentHistory, SegmentDiff
 
 
 @api_view(['GET',])
@@ -2814,45 +2833,61 @@ class SegmentDiffViewset(viewsets.ViewSet):
 
 
 from ai_workspace_okapi.utils import do_compare_sentence
+
+# Not used anywhere
 def prev_seg_his(instance):
-    seg_his_ins=SegmentHistory.objects.filter(segment_id=instance.segment_id)
+    seg_his_ins = SegmentHistory.objects.filter(segment_id=instance.segment_id)
     for i in seg_his_ins:
         print(i.segment_difference.all())
 
     seg_diff=segment_difference(sender=None, instance=instance)
 
 
+# Django signal to create the Segment difference
+# when a segment history is created
+
 def segment_difference(sender, instance, *args, **kwargs):
-    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+
+    seg_his = SegmentHistory.objects.filter(segment=instance.segment)
     #from current segment
-    edited_segment=''
-    target_segment=''
-    if len(seg_his)>=2:
-        edited_segment=seg_his.last().target
-        target_segment=seg_his[len(seg_his)-2].target
-    elif len(seg_his)==1:
+    
+    edited_segment = ''
+    target_segment = ''
+
+    if len(seg_his) >= 2:
+        edited_segment = seg_his.last().target
+        target_segment = seg_his[len(seg_his)-2].target
+
+    # If Segment history checked for the first time
+    elif len(seg_his) == 1:
+        
+        edited_segment = instance.target
+
         if hasattr(instance.segment,'seg_mt_raw'):
-            target_segment =instance.segment.seg_mt_raw.mt_raw  
+            
+            # Previous logic without Adaptive MT
+            # target_segment = instance.segment.seg_mt_raw.mt_raw
+
+            # New logic as per Adaptive MT
+            target_segment = instance.segment.seg_mt_raw.mt_only  
+
         elif instance.segment.temp_target:
-            target_segment=instance.segment.temp_target
-        else:target_segment = None
-        edited_segment=instance.target
- 
-         
+            target_segment = instance.segment.temp_target
+        else: target_segment = None
+        
 
     if (edited_segment and target_segment) :
-        edited_segment=remove_tags(edited_segment)
-        target_segment=remove_tags(target_segment)
+        edited_segment = remove_tags(edited_segment)
+        target_segment = remove_tags(target_segment)
+
         if edited_segment != target_segment: 
-            diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+            diff_sentense = do_compare_sentence(target_segment, edited_segment, sentense_diff=True)
             if diff_sentense:
-                result_sen,save_type=diff_sentense
-                if result_sen.strip()!=edited_segment.strip():
-                    SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                result_sen, save_type, content = diff_sentense
+                if result_sen.strip() != edited_segment.strip():
+                    SegmentDiff.objects.create(seg_history=instance, sentense_diff_result=result_sen, save_type=save_type, diff_corrected=content)
 
 post_save.connect(segment_difference, sender=SegmentHistory)
-
-
 
 
 @api_view(['POST'])
