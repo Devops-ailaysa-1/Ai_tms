@@ -127,8 +127,8 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 from ai_workspace.models import FileTermExtracted
 
 class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
-    file_name = serializers.ReadOnlyField(source='file_extraction.filename')
-    term_model_file = serializers.ReadOnlyField(source='file_extraction.id')
+    file_name = serializers.ReadOnlyField(source='file.filename')
+    term_model_file = serializers.ReadOnlyField(source='file.id')
 
     class Meta:
         model = FileTermExtracted
