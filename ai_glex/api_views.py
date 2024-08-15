@@ -1366,7 +1366,14 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     print("terms_created")
     file_extraction_instance.save()
 
- 
+
+def get_stand_proj_task_use_gloss_task(gloss_task):
+    standard_project_task = gloss_task.job.project.glossary_project.file_translate_glossary.get_tasks
+    for stand_task in standard_project_task:
+        if [stand_task.job.source_language,stand_task.job.target_language] == [gloss_task.job.source_language,task.job.target_language]:
+            return stand_task
+    return None
+
  
 from ai_workspace.models import File
 @api_view(['POST',])
@@ -1378,7 +1385,9 @@ def extraction_text(request):
         return Response({'msg':'Need gloss_task_id'})
     
     gloss_task_inst = Task.objects.get(id = gloss_task_id)
-    gloss_job  = gloss_task_inst.job #### to save on job in gloss 
+    stand_task = get_stand_proj_task_use_gloss_task(gloss_task_inst)
+    print("stand_task",stand_task)
+    #gloss_job  = gloss_task_inst.job #### to save on job in gloss 
     glossary_project = gloss_task_inst.proj_obj.glossary_project   #####################################
      
     if not file_ids:
@@ -1388,7 +1397,7 @@ def extraction_text(request):
     for file_id in file_ids:
         file_instance = File.objects.get(id=file_id) ### got file instance
  
-        file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=gloss_task_inst) ### creating file extraction instance
+        file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=stand_task) ### creating file extraction instance
         celery_instance_ids.append(file_extraction_instance.id)
         celery_id = get_ner_with_textunit_merge.apply_async(args=(file_extraction_instance.id,glossary_project.id,gloss_task_inst.id))
         file_extraction_instance.celery_id = celery_id
