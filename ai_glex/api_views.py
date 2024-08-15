@@ -1436,14 +1436,16 @@ def term_extraction_celery_status(request):
     except Project.DoesNotExist:
         return Response({'msg': 'Project not found'}, status=404)
     
+    try:
+        task = Task.objects.get(id=task)
+    except Task.DoesNotExist:
+        return Response({'msg':'No Task found or task is deleted'},status=400)       
+    
     term_extract_status = []
 
     for file_ins in project.files_and_jobs_set[1]:
-        task = Task.objects.get(id=task)
         for file_extr_ins in FileTermExtracted.objects.filter(file=file_ins,task=task):
             term_extract_status.append(file_extr_ins)
-
-
 
     if term_extract_status:
         serializer = CeleryStatusForTermExtractionSerializer(term_extract_status, many=True)
