@@ -1418,16 +1418,16 @@ def term_extraction_celery_status(request):
     for file_ins in project.files_and_jobs_set[1]:
         # task = Task.objects.get(id=task)
         from ai_workspace.models import FileTermExtracted
-        if file_ins.is_extract:
-            file_extracted_term_ins = FileTermExtracted.objects.filter(file=file_ins) #task=task,
-            if file_extracted_term_ins:
-                file_ins.done_extraction = True
+        # if file_ins.is_extract:
+        file_extracted_term_ins = FileTermExtracted.objects.get(file=file_ins) #task=task,
+            # if file_extracted_term_ins:
+            #     file_ins.done_extraction = True
                 
-            else:
-                file_ins.done_extraction = False
-                file_ins.status = "Yet to Start"
-            file_ins.save()
-            term_extract_status.append(file_ins)
+            # else:
+            #     file_ins.done_extraction = False
+            #     file_ins.status = "Yet to Start"
+            # file_ins.save()
+        term_extract_status.append(file_extracted_term_ins)
 
 
 
