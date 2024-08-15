@@ -216,7 +216,6 @@ def check_gloss_task_id_for_project_task_id(request):
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             gloss_task_id = gloss_job_ins.job_tasks_set.last()
-            print("gloss_task_id",gloss_task_id)
 
             if gloss_task_id:
                 gloss_task_id = gloss_task_id.id
@@ -227,7 +226,6 @@ def check_gloss_task_id_for_project_task_id(request):
                 tsk_gloss = Task.objects.create_glossary_tasks_of_jobs(jobs=[gloss_job_ins],klass=Task)
                 task_assign = TaskAssign.objects.assign_task(project=gloss_proj)
                 gloss_task_id = gloss_job_ins.job_tasks_set.last()
-                print("gloss_task_id------->",gloss_task_id)
                 gloss_task_id = gloss_task_id.id
 
             return Response({'gloss_project_id':gloss_job_ins.project_id , 
@@ -264,7 +262,11 @@ class TermUploadView(viewsets.ModelViewSet):
         #Not using now. not working correctly.
         from ai_workspace.models import Task,TaskAssignInfo
         user = self.request.user
-        task_obj = Task.objects.get(job_id = job.id)
+        try:
+            task_obj = Task.objects.get(job_id=job.id)
+        except Task.DoesNotExist:
+            return Response({'msg':'No Task found or task is deleted'},status=400)        
+        #task_obj = Task.objects.get(job_id = job.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
@@ -293,7 +295,11 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.GET.get('task',None)
         
         if task:
-            job = Task.objects.get(id=task).job
+            try:
+                task = Task.objects.get(id=task)
+            except Task.DoesNotExist:
+                return Response({'msg':'No Task found or task is deleted'},status=400)    
+            job = task.job
             project = job.project
             project_type_id = project.project_type_id
             project_name = project.project_name
@@ -303,8 +309,7 @@ class TermUploadView(viewsets.ModelViewSet):
                  
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
                 
-            # else:
-            #     return Response({'msg':'Task is not Glossary project task'})
+ 
 
             queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
             source_language = str(job.source_language)
@@ -1379,14 +1384,17 @@ from ai_workspace.models import File
 @api_view(['POST',])
 def extraction_text(request):
     file_ids = request.POST.getlist('file_id',None)
-    gloss_task_id = request.POST.get('gloss_task_id',None)
+    gloss_task_id = request.POST.get('gloss_task_id',None)  
+    trans_task_id = request.POST.get('trans_task_id',None)  
 
     if not gloss_task_id:
         return Response({'msg':'Need gloss_task_id'})
     
     gloss_task_inst = Task.objects.get(id = gloss_task_id)
-    stand_task = get_stand_proj_task_use_gloss_task(gloss_task_inst)
-    print("stand_task",stand_task)
+    if trans_task_id:
+        trans_task_id = Task.objects.get(id = trans_task_id)
+    else:
+        trans_task_id = get_stand_proj_task_use_gloss_task(gloss_task_inst)
     #gloss_job  = gloss_task_inst.job #### to save on job in gloss 
     glossary_project = gloss_task_inst.proj_obj.glossary_project   #####################################
      
@@ -1397,7 +1405,7 @@ def extraction_text(request):
     for file_id in file_ids:
         file_instance = File.objects.get(id=file_id) ### got file instance
  
-        file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=stand_task) ### creating file extraction instance
+        file_extraction_instance = FileTermExtracted.objects.create(file=file_instance,task=trans_task_id) ### creating file extraction instance
         celery_instance_ids.append(file_extraction_instance.id)
         celery_id = get_ner_with_textunit_merge.apply_async(args=(file_extraction_instance.id,glossary_project.id,gloss_task_inst.id))
         file_extraction_instance.celery_id = celery_id
@@ -1414,7 +1422,7 @@ def extraction_text(request):
 @api_view(['GET'])
 def term_extraction_celery_status(request):
     project_id = request.GET.get('project_id')
-    # task = request.GET.get('task',None)
+    task = request.GET.get('task',None)
     if not project_id:
         return Response({'msg': 'Project ID not provided'}, status=400)
 
@@ -1426,18 +1434,8 @@ def term_extraction_celery_status(request):
     term_extract_status = []
 
     for file_ins in project.files_and_jobs_set[1]:
-        # task = Task.objects.get(id=task)
-        from ai_workspace.models import FileTermExtracted
-        for file_extr_ins in FileTermExtracted.objects.filter(file=file_ins):
-        # if file_ins.is_extract:
-        #file_extracted_term_ins = FileTermExtracted.objects.get(file=file_ins) #task=task,
-            # if file_extracted_term_ins:
-            #     file_ins.done_extraction = True
-                
-            # else:
-            #     file_ins.done_extraction = False
-            #     file_ins.status = "Yet to Start"
-            # file_ins.save()
+        task = Task.objects.get(id=task)
+        for file_extr_ins in FileTermExtracted.objects.filter(file=file_ins,task=task):
             term_extract_status.append(file_extr_ins)
 
 
