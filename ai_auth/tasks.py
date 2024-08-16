@@ -6,6 +6,7 @@ import celery,re,pickle, copy
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
+from ai_openai.utils import get_consumable_credits_for_openai_text_generator
 from celery import shared_task
 from datetime import date
 from django.utils import timezone
@@ -828,6 +829,15 @@ def replace_mt_with_gloss(src,raw_mt,gloss):
         pr = prompt_phrase.format(src,raw_mt,gloss)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
+
+        # Credit calculation
+
+        # prompt_usage = completion['usage']
+        # total_token = prompt_usage['total_tokens']
+        # consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+
+
     except:
         res = raw_mt
     return res  
@@ -853,10 +863,6 @@ def replace_with_gloss(src, raw_mt, task):
 
         source_words, gloss = check_source_words(src, task)
         if source_words:
-            # all_target_replaced,gloss = target_source_words(raw_mt,task)
-            # print("All---------->",all_target_replaced)
-            # if not all_target_replaced:
-            #     print("Inside----------")
             final_mt = replace_mt_with_gloss(src, raw_mt, gloss)
 
     return final_mt

@@ -191,10 +191,6 @@ def get_or_create_indiv_gloss(trans_project_task):
         return None
 
 
-
-
-
-
 @api_view(['GET',])
 def check_gloss_task_id_for_project_task_id(request):
     trans_project_id = request.GET.get('trans_project_id',None) ### Need translation project id
@@ -235,9 +231,11 @@ def check_gloss_task_id_for_project_task_id(request):
 
 
 class TermUploadView(viewsets.ModelViewSet):
+
     '''
     This view is to add, list, update and delete the terms in glossary.
     '''
+
     permission_classes = [IsAuthenticated]
     serializer_class = TermsSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
@@ -287,6 +285,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def list(self, request):
         
+        # Task of the Standard or Advanced Translation project (Project ID 1 & 2)
         task = request.GET.get('task',None)
         
         if task:
@@ -295,7 +294,7 @@ class TermUploadView(viewsets.ModelViewSet):
             project_type_id = project.project_type_id
             project_name = project.project_name
 
-            ### To check if the task is glossary task or a Standard project task
+            # To check if the task is glossary task or a Standard project task
             if not project_type_id == 3:
                  
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
@@ -331,7 +330,7 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.POST.get('task')
 
         if not task:
-            return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg':'Task id required'}, status=status.HTTP_400_BAD_REQUEST)
         
         job = Task.objects.get(id=task).job
         project = job.project

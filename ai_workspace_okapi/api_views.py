@@ -2391,26 +2391,27 @@ def paraphrasing_for_non_english(request):
     
     tags = get_src_tags(sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
-    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence, source_lang='en', target_lang=None)
+    consumable_credits_user_text = get_consumable_credits_for_text(clean_sentence, source_lang='en', target_lang=None)
     
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt_sent(option,clean_sentence) 
-        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+        prompt = get_prompt_sent(option, clean_sentence) # Getting the right prompt from System values
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1) # Getting the "completion" from OpenAI GPT
         
         para_sentence = result_prompt["choices"][0]["message"]["content"]
       
-        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
+        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence, source_lang='en', target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
 
             # Without adapting glossary
             # rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
             
             # Adapting glossary
-            rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
-            replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)
+            rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
+            replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
 
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
+        
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['total_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)

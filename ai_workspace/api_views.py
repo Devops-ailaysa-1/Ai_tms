@@ -1380,14 +1380,13 @@ class TaskView(APIView):
         except Task.DoesNotExist:
             return Response(data={"Message": "Task not found"}, status=404)
 
-        print("task--instance", task)
         authorize(request, resource=task, action="delete", actor=self.request.user)
 
         if task.task_info.filter(task_assign_info__isnull=False).exists():
             return Response(data={"Message": "Task is assigned. Unassign and Delete"}, status=400)
-        
+
+        # For deleting Projects with only one task        
         if len(task.job.project.get_tasks) == 1:
-            print("The deleting task's project contains only one task instance")
             task.job.project.delete()
         else:
             if task.file:
