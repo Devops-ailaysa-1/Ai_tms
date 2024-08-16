@@ -244,13 +244,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
-            serializer = (DocumentSerializerV2(data={**doc_data, \
+            try:
+                doc_instance = Document.objects.get(file = task.file , job = task.job)
+                document = DocumentSerializerV2(doc_instance)
+            except: 
+                serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
                                                      }, ))
-            if serializer.is_valid(raise_exception=True):
-                document = serializer.save()
-                task.document = document
-                task.save()
+                if serializer.is_valid(raise_exception=True):
+                    document = serializer.save()
+            task.document = document
+            task.save()
             end_time_v2 = time.time()
         
         return document
