@@ -823,10 +823,25 @@ OPEN_AI_GPT_MODEL_REPLACE = settings.OPEN_AI_GPT_MODEL_REPLACE
 from ai_staff.models import InternalFlowPrompts
 import openai
 
+def gloss_prompt(gloss_list):
+    prompt = "The source word is {} and the translated word is {} and replaced this to {}"
+    prompt_list= []
+    for term in gloss_list:
+        gloss_prompt_concat = prompt.format(term.sl_term,term.tl_term,term.sl_term_translate)
+        if not term.pos == None:
+            pos_prompt = " and the pos tag for this is {}".format(term.pos)
+            gloss_prompt_concat = gloss_prompt_concat+pos_prompt
+            prompt_list.append(gloss_prompt_concat)
+            return "\n".join(prompt_list)
+
 def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
+        gloss = gloss_prompt(gloss)
+        print("gloss------------>>",gloss)
         pr = prompt_phrase.format(src,raw_mt,gloss)
+        print("pr---------->")
+        print(pr)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
 
