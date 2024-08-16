@@ -827,7 +827,7 @@ def gloss_prompt(gloss_list):
     prompt = "The source word is {} and the translated word is {} and replaced this to {}"
     prompt_list= []
     for term in gloss_list:
-        gloss_prompt_concat = prompt.format(term.sl_term,term.tl_term,term.sl_term_translate)
+        gloss_prompt_concat = prompt.format(term.sl_term,term.sl_term_translate,term.tl_term)
         if not term.pos == None:
             pos_prompt = " and the pos tag for this is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt

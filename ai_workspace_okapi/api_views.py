@@ -2963,8 +2963,8 @@ def check_source_words(user_input, task):
 
 
     gloss = [i for i in queryset]
-    words = [i.get('sl_term') for i in queryset]
-
+    #words = [i.get('sl_term') for i in queryset]
+    words = [i.sl_term for i in queryset]
     return words, gloss
 
 def target_source_words(target_mt,task):
