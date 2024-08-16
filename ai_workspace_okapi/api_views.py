@@ -245,11 +245,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
             try:
-                print("")
-                doc_instance = Document.objects.get(file = task.file , job = task.job)
-                task.document = doc_instance
+ 
+                document = Document.objects.get(file = task.file , job = task.job)
+                task.document = document
                 task.save()
-                document = DocumentSerializerV2(doc_instance)
+                 
             except: 
                 serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
@@ -258,7 +258,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     document = serializer.save()
                     task.document = document
                     task.save()
-            end_time_v2 = time.time()
         
         return document
     
