@@ -828,7 +828,7 @@ def gloss_prompt(gloss_list):
     prompt_list= []
     for term in gloss_list:
         gloss_prompt_concat = prompt.format(term.sl_term,term.sl_term_translate,term.tl_term)
-        if not term.pos == None:
+        if term.pos:
             pos_prompt = " and the pos tag for this is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt
             prompt_list.append(gloss_prompt_concat)
