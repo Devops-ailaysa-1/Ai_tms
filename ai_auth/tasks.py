@@ -831,7 +831,7 @@ def gloss_prompt(gloss_list):
             pos_prompt = " and the pos tag for this is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt
             prompt_list.append(gloss_prompt_concat)
-            return "\n".join(prompt_list)
+    return "\n".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
