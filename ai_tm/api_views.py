@@ -375,9 +375,7 @@ def get_project_analysis(request,project_id):
             task_ids = [i.id for i in tasks]
             for i in tasks:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
-                print("Ins-------------->",ins)
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                #print("STate------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
@@ -385,12 +383,10 @@ def get_project_analysis(request,project_id):
                     except TaskResult.DoesNotExist:
                         cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
-                    #print("stst",ins.status)
                 elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
                     cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 elif state == 'SUCCESS':
-                    print("Ins Status---------->",ins.status)
                     if ins.status == 1:
                         cel_task = analysis.apply_async((task_ids,proj.id,),queue='medium-priority' )
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
