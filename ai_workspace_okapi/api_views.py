@@ -2885,6 +2885,18 @@ def symspellcheck(request):
     
 ######################################For WORDCHOICES Feature########################################
 
+def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user):
+    for terms in selected_term_model_list:
+        if not terms.sl_term_translate:
+            
+            terms.sl_term_translate =get_translation(mt_engine_id = 1,
+                                                     source_string = terms.sl_term,
+                                                     source_lang_code=src_lang,target_lang_code=tar_lang,
+                                                     )
+            terms.save()
+    
+    return selected_term_model_list
+
 def check_source_words(user_input, task):
 
     '''
@@ -2896,14 +2908,24 @@ def check_source_words(user_input, task):
     from ai_glex.models import TermsModel, GlossarySelected, Glossary
 
     proj = task.job.project
+    user = proj.ai_user
     target_language = task.job.target_language
+    source_language = task.job.source_language
 
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')#.filter(glossary__project__project_type_id = 10).values('glossary')
 
+    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
+    #     filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
+    #                   params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term') 
+
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-        filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term') #.filter(glossary__project__project_type_id = 10)
-    
+              filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
+                            params=[user_input]).order_by('sl_term','-created_date').distinct('sl_term') 
+ 
+    queryset = term_model_source_translate(queryset,source_language.locale_code,target_language.locale_code,user) 
+    #queryset = queryset.values('sl_term','tl_term','sl_term_translate','pos')
+
+
     gloss = [i for i in queryset]
     words = [i.get('sl_term') for i in queryset]
 
