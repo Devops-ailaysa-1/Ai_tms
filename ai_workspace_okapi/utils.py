@@ -279,19 +279,23 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
+                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text'):
+    
+    # get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
+
+
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
 
     mt_called = True
 
     if user_id==None:
-        user,uid,email,initial_credit = None,None,None,None
+        user, uid, email, initial_credit = None, None, None, None
 
     else:
         user = AiUser.objects.get(id=user_id)
         uid = user.uid
-        email= user.email
+        email = user.email
         initial_credit = user.credit_balance.get("total_left")
 
 

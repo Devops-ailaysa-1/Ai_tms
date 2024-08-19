@@ -1952,7 +1952,7 @@ class CommentView(viewsets.ViewSet):
                 return split_segment.split_segment_comments_set.order_by('id')
 
 
-        if by=="document":
+        if by == "document":
             document = get_object_or_404(Document.objects.all(), id=id)
             comments_list=[]
             for segment in document.segments.all():
@@ -2625,9 +2625,11 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
+
     '''
     This is for Federal Task download. 
     '''
+
     from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
     from ai_workspace.serializers import TaskNewsDetailsSerializer
@@ -2875,7 +2877,9 @@ def segment_difference(sender, instance, *args, **kwargs):
         elif instance.segment.temp_target:
             target_segment = instance.segment.temp_target
         else: target_segment = None
-        
+    
+    # To show tags in target segment when a history is restored via frontend
+    tags = get_src_tags(edited_segment)
 
     if (edited_segment and target_segment) :
         edited_segment = remove_tags(edited_segment)
@@ -2886,7 +2890,8 @@ def segment_difference(sender, instance, *args, **kwargs):
             if diff_sentense:
                 result_sen, save_type, content = diff_sentense
                 if result_sen.strip() != edited_segment.strip():
-                    SegmentDiff.objects.create(seg_history=instance, sentense_diff_result=result_sen, save_type=save_type, diff_corrected=content)
+                    SegmentDiff.objects.create(seg_history=instance, sentense_diff_result=result_sen, save_type=save_type, \
+                                               diff_corrected=content, target_tags=tags)
 
 post_save.connect(segment_difference, sender=SegmentHistory)
 
@@ -2934,15 +2939,14 @@ def check_source_words(user_input, task):
     proj = task.job.project
     target_language = task.job.target_language
 
-    glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')#.filter(glossary__project__project_type_id = 10).values('glossary')
+    glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
         filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term') #.filter(glossary__project__project_type_id = 10)
+                      params=[user_input]).values('sl_term','tl_term', 'pos').order_by('sl_term','-created_date').distinct('sl_term')
     
     gloss = [i for i in queryset]
     words = [i.get('sl_term') for i in queryset]
-
     return words, gloss
 
 def target_source_words(target_mt,task):

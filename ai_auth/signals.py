@@ -220,8 +220,7 @@ def updated_user_taxid(sender, instance, *args, **kwargs):
     # if instance.stripe_tax_id==ss.stripe_tax_id and instance.tax_id==ss.tax_id:
     #     print("Already updated customer address")
     #     pass
-    res=update_user_tax_id(taxid=instance)
-    print("updated customer tax id")
+    res=update_user_tax_id(taxid=instance)    
 
 
 def update_user_tax_id(taxid):
@@ -298,8 +297,7 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
         if instance.last_login:
             obj = auth_model.InternalMember.objects.filter(internal_member = instance).exclude(role_id__in=[4,5]).first()
             obj.status = 2
-            obj.save()
-            print("status updated")
+            obj.save()            
 
 
 def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
@@ -380,8 +378,7 @@ def assign_object_task(sender, instance,user,role,*args, **kwargs):
         try:
             TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
         except IntegrityError as e: 
-            logger.warning("task_role already exist {instance.task_assign.task.id},{user.uid}")    
-        print("task created")
+            logger.warning("task_role already exist {instance.task_assign.task.id},{user.uid}")            
 
 def taskrole_update(instance,user):
     from ai_workspace.models import AiRoleandStep
@@ -411,7 +408,6 @@ def expiry_yearly_sub(billing_date):
     if start.day != end.day:
         print("This is Not bill date")
 
-    print("no of months",abs(((start.year - end.year)*12)+start.month-end.month)+1)
     expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry
 

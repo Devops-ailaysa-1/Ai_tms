@@ -94,8 +94,8 @@ class BaseSegment(models.Model):
     tagged_source = models.TextField(null=True, blank=True)
     coded_brace_pattern = models.TextField(null=True, blank=True)
     coded_ids_sequence = models.TextField(null=True, blank=True)
-    random_tag_ids = models.TextField(null=True, blank=True)
-    target_tags = models.TextField(null=True, blank=True)
+    random_tag_ids = models.TextField(null=True, blank=True) # Tag IDs of only Random tags
+    target_tags = models.TextField(null=True, blank=True) # This also includes Random tags
     okapi_ref_segment_id = models.CharField(max_length=50)
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
@@ -748,11 +748,13 @@ class ChoiceListSelected(models.Model):
 
 
 class SegmentDiff(models.Model):
+
     seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
     sentense_diff_result = models.TextField(null=True, blank=True)
-    diff_corrected = models.TextField(null=True, blank=True)
+    diff_corrected = models.TextField(null=True, blank=True) # Corrected content of the segment based on insertion/deletion/Replacement
     created_at=models.DateTimeField(auto_now_add=True)
     save_type=models.CharField(max_length=100,blank=True,null=True)
+    target_tags = models.TextField(null=True, blank=True) # Tags to be shown in the target when restored
 
     def __str__(self) -> str:
         return self.sentense_diff_result

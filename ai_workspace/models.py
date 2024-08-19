@@ -1729,6 +1729,7 @@ def edited_file_path(instance, filename):
     return file_path
 
 class TaskTranscriptDetails(models.Model):
+    
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField(null=True,blank=True)
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)

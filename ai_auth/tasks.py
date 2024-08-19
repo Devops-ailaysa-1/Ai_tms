@@ -178,8 +178,7 @@ def delete_hired_editors():
     '''
     This is to delete hired editors invite if he didn't accept for more than 7 days.
     '''
-    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()
-    print("deleted")
+    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()    
     logger.info("Delete Hired Editor")
 
 
@@ -342,8 +341,7 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
         lang_pair = lang_pair.union(query)
     res={}
     for obj in lang_pair:
-        tt = obj.source_lang.language if obj.source_lang_id == obj.target_lang_id else obj.target_lang.language
-        print(obj.user.fullname)
+        tt = obj.source_lang.language if obj.source_lang_id == obj.target_lang_id else obj.target_lang.language        
         if obj.user_id in res:
             res[obj.user_id].get('lang').append({'source':obj.source_lang.language,'target':tt})
         else:
@@ -984,7 +982,6 @@ def mt_raw_update(task_id,segments):
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
                 mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
-                # mt_llm_glossary = "MT + LLM + Glossary",
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i['seg'].id,
@@ -998,7 +995,6 @@ def mt_raw_update(task_id,segments):
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
                 mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
-                # mt_llm_glossary = "MT + LLM + Glossary",
                 split_segment_id= i['seg'].id,
             )
             for i in mt_split_segments
