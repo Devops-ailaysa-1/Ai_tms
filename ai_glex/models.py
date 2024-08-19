@@ -86,6 +86,7 @@ class TermsModel(models.Model):
     sl_term         = models.CharField(max_length=200, null=False, blank=False)
     tl_term         = models.CharField(max_length=200, null=True, blank=True)
     pos             = models.CharField(max_length=200, null=True, blank=True)
+    sl_term_translate = models.CharField(max_length=200, null=True, blank=True)
     sl_definition   = models.TextField(max_length=1000, blank=True, null=True)
     tl_definition   = models.TextField(max_length=1000, blank=True, null=True)
     context         = models.TextField(max_length=1000, blank=True, null=True)
