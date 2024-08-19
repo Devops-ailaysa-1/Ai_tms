@@ -129,8 +129,7 @@ class ConversionPortableDoc(APIView):
             #pdf consuming credits
                 consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
                 if initial_credit > consumable_credits:
-                    task_id = pdf_conversion(int(id))
-                    print("TaskId---------->",task_id)
+                    task_id = pdf_conversion(int(id))                    
                     celery_task[int(id)] = task_id  
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 else:

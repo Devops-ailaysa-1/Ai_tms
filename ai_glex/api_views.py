@@ -298,6 +298,7 @@ class TermUploadView(viewsets.ModelViewSet):
                 task = Task.objects.get(id=task)
             except Task.DoesNotExist:
                 return Response({'msg':'No Task found or task is deleted'},status=400)    
+            
             job = task.job
             project = job.project
             project_type_id = project.project_type_id
@@ -308,9 +309,7 @@ class TermUploadView(viewsets.ModelViewSet):
                  
                 job = get_or_create_indiv_gloss(trans_project_task=task) ## this task is the project trans task
                 
- 
-
-            queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
+            queryset = self.filter_queryset(TermsModel.objects.filter(job=job)).select_related('job')
             source_language = str(job.source_language)
             try:
                 target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
@@ -546,8 +545,7 @@ def glossaries_list(request,project_id):
         queryset = Project.objects.filter(ai_user=user).filter(project_type=3)
     # else: ### word choice
     #     queryset = Project.objects.filter(ai_user=user).filter(project_type=10)
-    if task:
-        print("list choice gloss using task")
+    if task:        
         task_instance = Task.objects.get(id=task)
         job = task_instance.job
         target_languages = job.target_language # with single target
@@ -767,8 +765,7 @@ def adding_term_to_glossary_from_workspace(request):
                 serializer = TermsSerializer(term_instance)
                 return Response(serializer.data)
 
-        else:
-            print("din user")
+        else:            
             data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
                     "tl_language":doc.job.target_language.id,"project":project_id,"user":user.id,\
                     "created_by":user.id}
@@ -832,8 +829,7 @@ def get_ner_terminology_extract(request):
             objs = []
             for  term in term_list:
                 objs.append(TermsModel(pk = None,sl_term=term.sl_term,job_id=job_instance.id,
-                                       pos=term.pos,glossary_id=proj.glossary_project.id))
-            print(objs,language_id)
+                                       pos=term.pos,glossary_id=proj.glossary_project.id))            
             if objs:
                 TermsModel.objects.bulk_create(objs)
                 choice_instance = TermsModel.objects.filter(job=job_instance)
@@ -888,8 +884,6 @@ def get_terms_mt(task_id,terms):
             term.tl_term = get_translation(1,term.sl_term,source_lang_code=job.source_language_code,
                                                                 target_lang_code=tar_code,user_id=user.id) 
             term.save()
-
-    print("Completed")
 
 ###########################################################################################################################
 @api_view(['GET',])
@@ -1158,13 +1152,16 @@ def term_pos_identify(segment_obj,task_obj,text):
 
 @api_view(['POST',])
 def get_word_mt(request):
+
     '''
     This function is to check for the mt of given word in that language. 
     if it exists, it will return the target_term else it will MT the source term and store 
     and then return GlossaryMtSerializer data
     '''
-    user = request.user.team.owner if request.user.team else request.user
+
     from ai_workspace.models import Segment
+
+    user = request.user.team.owner if request.user.team else request.user    
     task_id = request.POST.get("task_id",None)
     source = request.POST.get("source", None)
     target = request.POST.get("target", None)
@@ -1173,42 +1170,44 @@ def get_word_mt(request):
     
     #mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
     mt_engine_id = 1 ### by default the gloss to google_mt
+
     if source:
         sl_code = task_obj.job.source_language_code
         tl_code = task_obj.job.target_language_code
         text = source
-        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
+        target_mt = GlossaryMt.objects.filter(Q(source = source) & Q(mt_engine_id = mt_engine_id) \
+                                              & Q(task__job__target_language = task_obj.job.target_language)).last()
         if target_mt:
             return Response(GlossaryMtSerializer(target_mt).data,status=200)
     elif target:
         sl_code = task_obj.job.target_language_code
         tl_code = task_obj.job.source_language_code
         text = target
-        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id) & Q(task__job__target_language = task_obj.job.target_language)).last()
+        source_mt = GlossaryMt.objects.filter(Q(target_mt = target) & Q(mt_engine_id = mt_engine_id) \
+                                              & Q(task__job__target_language = task_obj.job.target_language)).last()
         if source_mt:
             return Response(GlossaryMtSerializer(source_mt).data,status=200)
     
-
     credit_balance = user.credit_balance.get("total_left")
     
     word_count = GetTranslation.word_count(text) #source
 
     if credit_balance > word_count:
 
-        translation = get_translation(mt_engine_id, text, sl_code, tl_code,user_id=user.id,cc=word_count)
+        translation = get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
 
         if (sl_code in ['en'] or tl_code in ['en']) and segment_id:
             lemma_word = identify_lemma(source_new)
-            tt = GlossaryMt.objects.create(source = lemma_word,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
+            tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
-            segment_obj = get_object_or_404(Segment.objects.all(),id=segment_id)
+            segment_obj = get_object_or_404(Segment.objects.all(), id=segment_id)
             pos_tag = term_pos_identify(segment_obj,task_obj,text)
             data['pos_tag'] = pos_tag
             data['root_word'] = lemma_word
         else:
-            tt = GlossaryMt.objects.create(source = source_new,task=None,target_mt = target_new,mt_engine_id=mt_engine_id)
+            tt = GlossaryMt.objects.create(source=source_new, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
             data['pos_tag'] = None
             data['root_word'] = None
@@ -1371,8 +1370,6 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
  
     termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
-    
-    print("terms_created")
     file_extraction_instance.save()
 
 

@@ -135,8 +135,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     sentence = ""
     for i in text_and_bounding_results.items():
         sentence =sentence+ i[1]['text']
-        sentence = sentence+ " "
-    print("----------------",sentence)
+        sentence = sentence+ " "    
     return text_and_bounding_results,text_box_list ,sentence
  
 

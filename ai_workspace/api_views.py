@@ -303,8 +303,7 @@ class FileView(viewsets.ModelViewSet):
     def get_queryset(self):
         return File.objects.filter(project__ai_user=self.request.user)
 
-    def create(self, request):
-        print(request.data)
+    def create(self, request):        
         serializer = FileSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -409,27 +408,21 @@ class Files_Jobs_List(APIView):
         return jobs, files, contents, subjects, steps, project, gloss, glossary_files
 
     def get(self, request, project_id):
-        task = request.GET.get("task",None)
-        print("task----->",task)
-        jobs, files, contents, subjects, steps, project, gloss, glossary_files = self.get_queryset(project_id)
-        print("files---->",files)
+        task = request.GET.get("task",None)    
+        jobs, files, contents, subjects, steps, project, gloss, glossary_files = self.get_queryset(project_id)        
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files_ser = FileSerializer(files, many=True)
-        file_data = files_ser.data
-        print("file_data--->",file_data)
+        file_data = files_ser.data        
         if task:
-            task = Task.objects.get(id=task)
-            print("task--obj",task)
+            task = Task.objects.get(id=task)            
             from ai_workspace.models import FileTermExtracted
             for file_ins_dict in file_data:
-                file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file_id=file_ins_dict.get('id'))
-                print("file_extra",file_extracted_term_ins)
+                file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file_id=file_ins_dict.get('id'))                
                 if file_extracted_term_ins:
                     file_ins_dict['done_extraction']= True
                 else:
-                    file_ins_dict['done_extraction']= False
-        print("file_dat", file_data)
+                    file_ins_dict['done_extraction']= False        
         glossary_selected = True if project.project.filter(glossary__project__project_type_id = 3).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
@@ -439,7 +432,8 @@ class Files_Jobs_List(APIView):
         return Response({"files":file_data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
-                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, "glossary_selected":glossary_selected}, status=200)
+                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, \
+                            "glossary_selected":glossary_selected, "id":project.id}, status=200)
 
 
 
@@ -1376,7 +1370,6 @@ class TaskView(APIView):
         return obj
 
     def post(self, request):
-        print(self.request.POST.dict())
         obj = self.get_object({**request.POST.dict()})
         if obj:
             task_ser = TaskSerializer(obj)
@@ -1411,7 +1404,16 @@ class TaskView(APIView):
                     task.file.delete()
             if task.document:
                 task.document.delete()
-        
+            
+            # Checking if the task is a task of a Glossary
+            from ai_glex.models import Glossary
+            if Glossary.objects.filter(project=task.job.project).exists():
+
+                # Checking if the glossary is a default glossary
+                if Glossary.objects.filter(project=task.job.project).first().is_default_project_glossary == True:
+                    # As Default glossary will not have multiple jobs.
+                    # Deleting the job will also delete the terms in TermsModel
+                    task.job.delete()
         try:
             task.delete()
         except Exception as e:
@@ -2660,6 +2662,7 @@ def convert_and_download_text_to_speech_source(request):
 
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
+
     '''
     it will call text_to_speech_celery_task and returns TaskTranscriptDetailSerializer data
     '''
@@ -2670,8 +2673,8 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     
     # Take the filepath and get the extention.
     
-    file,ext = os.path.splitext(obj.file.file.path)
-    dir,name_ = os.path.split(os.path.abspath(file))
+    file, ext = os.path.splitext(obj.file.file.path)
+    dir, name_ = os.path.split(os.path.abspath(file))
 
     # If ext is docx, it will convert it to txt and read the content and store it in data variable
 
@@ -2687,7 +2690,8 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file.close()
 
     # calculate the word_count of data by calling spring API, it returns word count.
-    # update word_count and char_count in TaskDetails database
+    # update word_count and char_count in TaskDetails model
+    
     seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
                  "processor_name":"plain-text-processor", "extension":".txt"}
     res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
@@ -2757,6 +2761,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
+    
     '''
     This function is to call text_to_speech_task of source_only_tasks. 
     it will get input either as task or project
@@ -2767,23 +2772,26 @@ def convert_text_to_speech_source(request):
         it will get source_only_tasks within project and repeat above and returns 
         TaskTranscriptDetailSerializer data
     '''
+
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender')
     voice_name = request.GET.get('voice_name')
     user = request.user
+
     if task:
-        obj = Task.objects.get(id = task)
+        obj = Task.objects.get(id=task)
         # authorize(request,resource=obj,action="read",actor=request.user)
         tt = text_to_speech_task(obj,language,gender,user,voice_name)
-        if tt!=None and tt.status_code == 400:
+        if tt != None and tt.status_code == 400:
             return tt
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
+        
     if project:
-        tasks =[]
+        tasks = []
         task_list = []
         pr = Project.objects.get(id=project)
         for _task in pr.get_source_only_tasks:

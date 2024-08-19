@@ -176,9 +176,7 @@ class AilaysaReport:
                 proj_count = proj_details.get(user)
             
             if user_credits_ls:
-                user_credi_details = user_credits_ls.get(user)
-                print(user_credi_details)
-
+                user_credi_details = user_credits_ls.get(user)               
 
             if subs_details:
                 try:
@@ -226,8 +224,7 @@ class AilaysaReport:
     def users_count_monthly(self,df):
         df3 = df.groupby(pd.Grouper(key='Created', axis=0, freq='M')).count()
         df4 = pd.DataFrame({'Created at':[cel.date().strftime("%Y-%b") for cel in df3.index],
-                    'No of users':[mail for mail in df3.Email]})
-        print("df4",df4)
+                    'No of users':[mail for mail in df3.Email]})        
         return df4
 
     # def chart_gen(self,df):
