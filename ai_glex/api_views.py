@@ -146,12 +146,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
                 GlossaryFiles.objects.filter(query).delete()
         return Response({"Msg":"Files Deleted"})
-
-### for deleting celery task
-def task_delete_operation(delete_list,job):
-    objects_to_delete = GlossaryFiles.objects.filter(job=job, id__in=delete_list)
-    objects_to_delete.delete()
-
+ 
 
 
 def get_or_create_indiv_gloss(trans_project_task):
@@ -1339,6 +1334,11 @@ def requesting_ner(joined_term_unit):
  
 import re
 from ai_glex.serializers import CeleryStatusForTermExtractionSerializer
+
+def split_list(lst, chunk_size=50):
+    """Splits a list into smaller lists of a specified chunk size."""
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+
 @task(queue='default')
 def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
     # try:
@@ -1358,12 +1358,12 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     for i in  file_json['text']:
         for j in file_json['text'][i]:
             if j['source']:
-                text_unit.append(j['source'])
-        full_text_unit_merge = "".join(text_unit)
-        if full_text_unit_merge:
+                text_unit.append(j['source']) ### all the paragraph stored in this list 
+    full_text_unit_merge = split_list(text_unit)
+    if full_text_unit_merge:
+        for text in full_text_unit_merge:
+            full_text_unit_merge = " ".join(text)
             terms.extend(requesting_ner(full_text_unit_merge))
-        text_unit = []
-
     file_extraction_instance.status = "FINISHED"
     file_extraction_instance.done_extraction =True
  

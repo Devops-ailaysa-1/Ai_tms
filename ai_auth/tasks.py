@@ -834,14 +834,11 @@ def gloss_prompt(gloss_list):
         prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
-def replace_mt_with_gloss(src,raw_mt,gloss):
+def replace_mt_with_gloss(src,raw_mt,gloss , target_language ,source_language ):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         gloss = gloss_prompt(gloss)
-        print("gloss------------>>",gloss)
-        pr = prompt_phrase.format(src,raw_mt,gloss)
-        print("pr---------->")
-        print(pr)
+        pr = prompt_phrase.format(src,raw_mt,gloss,target_language) 
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
 
@@ -876,9 +873,9 @@ def replace_with_gloss(src, raw_mt, task):
     if GlossarySelected.objects.filter(project=proj).exists() or \
         (Glossary.objects.filter(file_translate_glossary=proj).exists()):
 
-        source_words, gloss = check_source_words(src, task)
+        source_words, gloss   = check_source_words(src, task)
         if source_words:
-            final_mt = replace_mt_with_gloss(src, raw_mt, gloss)
+            final_mt = replace_mt_with_gloss(src, raw_mt, gloss  )
 
     return final_mt
       
