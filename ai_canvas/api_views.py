@@ -326,8 +326,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
         project = obj.project
         if src_page_no:
             can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)
-            if len(can_src_del)==1:
-                print("single page")
+            if len(can_src_del)==1:                
                 can_inst=can_src_del[0]
                 json=copy.deepcopy(can_inst.json)
                 json['objects']=[]
@@ -337,8 +336,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
                 thumbnail=CanvasDesignSerializer().thumb_create(json_str=json,formats='png',multiplierValue=1) 
                 can_inst.thumbnail=thumbnail
                 can_inst.save()
-            else:
-                print("multiple_ page")
+            else:                
                 can_src_del.get(page_no=int(src_page_no)).delete()
             can_page_last=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
@@ -498,8 +496,7 @@ def free_pix_api(request):
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     }
-    response = requests.get(url, params=request.GET.dict(),headers=headers)
-    print(response.json())
+    response = requests.get(url, params=request.GET.dict(),headers=headers)    
     if response.status_code == 200:
         return Response(response.json(),status=200)
     else:
@@ -609,8 +606,7 @@ class FontFileViewset(viewsets.ViewSet):
         if str(font_file).split('.')[-1] not in ['ttf','otf','woff','woff2']:
             return Response({'msg':'only ttf ,woff,woff2, otf suppported file'},status=400)
 
-        user = request.user.team.owner if request.user.team else request.user
-        print({**request.POST.dict(),'font_family':font_file})
+        user = request.user.team.owner if request.user.team else request.user        
         serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':user.id,'created_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
@@ -878,8 +874,7 @@ def image_list(request):
 class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
-    def create(self,request):
-        print("request.data",request.POST.dict())
+    def create(self,request):        
         serializer=TemplateGlobalDesignSerializerV2(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -1190,15 +1185,13 @@ def lang_detection(request):
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
     # canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
-    job_ids=request.query_params.getlist('job_id')
-    print("job_ids",job_ids)
+    job_ids=request.query_params.getlist('job_id')    
     for job_id in job_ids:
     
         design_instance = CanvasTranslatedJson.objects.get(job__id=job_id) #canvas_design__user=request.user, 
         total_sent=[]
         for i in design_instance.canvas_design.canvas_json_src.all():
-            total_sent.extend(dict_rec_json(i.json))
-        print(total_sent)
+            total_sent.extend(dict_rec_json(i.json))        
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),

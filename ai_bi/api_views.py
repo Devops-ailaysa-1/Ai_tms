@@ -170,8 +170,7 @@ class VendorListview(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_queryset(self,days):
-        queryset=get_users(is_vendor=True)
-        print(queryset)
+        queryset=get_users(is_vendor=True)        
         if days:
             date= timezone.now() - timezone.timedelta(days=int(days))
             queryset = queryset.filter(date_joined__gte=date)
@@ -198,8 +197,7 @@ from ai_bi.forms import bi_user_invite_mail
 
 
 def create_user(name,email,country,password):
-    hashed = make_password(password)
-    print("randowm pass",password)
+    hashed = make_password(password)    
     try:
         user = AiUser.objects.create(fullname =name,email=email,country_id=country,password=hashed)
         UserAttribute.objects.create(user=user)
@@ -227,8 +225,7 @@ class BiuserManagement(viewsets.ModelViewSet):
         return queryset
     
     def get_object(self):
-        pk = self.kwargs.get("pk", 0)
-        print(pk)
+        pk = self.kwargs.get("pk", 0)        
         try:
             return BiUser.objects.get(pk=pk)
         except BiUser.DoesNotExist:
@@ -265,8 +262,7 @@ class BiuserManagement(viewsets.ModelViewSet):
                 return Response(status=400)
 
     def retrieve(self, request, pk):
-        user=self.get_object()
-        print(user)
+        user=self.get_object()        
         userser=BiUserSerializer(user,many=False)
         return Response(userser.data,status=200)
     

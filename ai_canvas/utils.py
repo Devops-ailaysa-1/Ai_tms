@@ -180,8 +180,7 @@ import copy
 from ai_canvas.cmyk_conversion import convertImage
 def export_download(json_str,format,multipliervalue,base_image=False):
     dpi = (96,96)
-    json_ = json.dumps(json_str)
-    print("format__form_export_download",format)
+    json_ = json.dumps(json_str)    
     format = 'pdf' if format=='pdf-standard' else format
 
     if format in ["png","jpeg","pdf",'jpeg-print']:
@@ -253,11 +252,9 @@ def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",
     
     if no_pil_object:
         im = Image.open(io.BytesIO(requests.get(image_url, stream=True).content))
-        # im=Image.open(requests.get(image_url, stream=True).raw)
-        print(im)
+        # im=Image.open(requests.get(image_url, stream=True).raw)        
         im=im.convert("RGB")
-        name=image_url.split('/')[-1]
-        print("name",name)
+        name=image_url.split('/')[-1]        
         # im.save(img_io, format='PNG')
         # img_byte_arr = img_io.getvalue()
         # return core.files.File(core.files.base.ContentFile(img_byte_arr),)
@@ -267,8 +264,7 @@ def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",
             im=im.convert("RGB")
     img_io = io.BytesIO()
     im.save(img_io, format='PNG')
-    img_byte_arr = img_io.getvalue()
-    print("im_by_crted")
+    img_byte_arr = img_io.getvalue()    
     return core.files.File(core.files.base.ContentFile(img_byte_arr),name)
 
 
@@ -301,8 +297,7 @@ def download_font(url):
     response = requests.get(url)
     if response.status_code == 200:
         return response.content
-    else:
-        print(f"Failed to download font from {url}")
+    else:        
         return None
 
 def convert_to_base64(font_url):

@@ -198,16 +198,13 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                 if credits.ended_at == None:
                     enddate = credits.expiry
                     startdate = credits.created_at
-                    print("inside if")
                     avai_cp = credits.buyed_credits
-                else:
-                    print("else")
+                else:                    
                     if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') \
                                     <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                     # if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                         startdate = credits.created_at
-                        enddate = credits.expiry
-                        print("inside else")
+                        enddate = credits.expiry                        
                         avai_cp += credits.buyed_credits
 
 
@@ -220,8 +217,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
     @property
-    def username(self):
-        print("username field not available.so it is returning fullname")
+    def username(self):        
         return self.fullname
 
     @property

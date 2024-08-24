@@ -131,9 +131,7 @@ def get_or_none(classmodel, **kwargs):
     except classmodel.DoesNotExist:
         return None
 
-def create_design_jobs_and_tasks(data, project):
-    print("creating job and task")
-    print("Data----------->",data)
+def create_design_jobs_and_tasks(data, project):    
     from ai_workspace.models import Job,Task,TaskAssign
     j_klass = Job
     t_klass = Task
@@ -230,8 +228,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 # canvas_translate.all()[0].job.job_tasks_set.last().task_info.last().task_assign_info
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data.get('assigned',None): #assign_enable assigned
-            print("assigned")
+        if data.get('assigned',None): #assign_enable assigned            
             src_json = data['source_json']
             for count,i in enumerate(src_json):
                 i = assigne_json_change(i['json'])
@@ -254,10 +251,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         
     def get_canvas_translation(self,obj):
         user = self.context.get('user')
-        pr_managers = self.context.get('pr_managers')
-        print("User------------->",user)
-        print("Prmanagers--------------->",pr_managers)
-        print("Team Memberss-------->",user.get_team_members)
+        pr_managers = self.context.get('pr_managers')        
         team_members = user.get_team_members if user.get_team_members else []
         queryset = obj.canvas_translate.filter((Q(job__job_tasks_set__task_info__assign_to=user)\
                                                 & Q(job__job_tasks_set__task_info__task_assign_info__isnull=False)\
@@ -299,8 +293,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         default_step = Steps.objects.get(id=1)
         team = user.team if user.team else None
         project_instance =  Project.objects.create(project_type =project_type, ai_user=user,created_by=user,team=team)
-        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)
-        print("prIns--------------->",project_instance)
+        project_steps = ProjectSteps.objects.create(project=project_instance,steps=default_step)        
         file_name = validated_data.get('file_name',None)
         if file_name:
             project_instance.project_name =file_name
@@ -457,8 +450,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         src_words_all = ''
         for i in source_json_files_all:
             total_sentence =" ".join(dict_rec_json(i.json))
-            src_words_all= src_words_all+" "+total_sentence
-        print('src_words_all',"------",src_words_all)
+            src_words_all= src_words_all+" "+total_sentence        
         for count,tar_lang in enumerate(canvas_translation_tar_lang):
             lang_dict={'source_language':src_lang,'target_language':tar_lang}
             if CanvasTranslatedJson.objects.filter(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first()).exists():
@@ -504,8 +496,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             i['top']=i['top']*scale_multiplier_y
         return source_json_file
 
-    def update(self, instance, validated_data):
-        print("------------------inside update-----------------------")
+    def update(self, instance, validated_data):        
         req_host = self.context.get('request', HttpRequest()).get_host()
         canvas_translation_tar_lang=validated_data.get('canvas_translation_tar_lang')
         canvas_translation_tar_thumb=validated_data.get('canvas_translation_tar_thumb',None)
@@ -628,13 +619,11 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
 
-        if canvas_translation_tar_lang and src_lang:
-            print("translating")
+        if canvas_translation_tar_lang and src_lang:            
             source_json_files_all=instance.canvas_json_src.all()
             for count,src_json_file in enumerate(source_json_files_all):
                 for text in src_json_file.json['objects']:
-                    if text['type']== 'textbox' and 'name' in text.keys():
-                        print("--------------------------",text['name'])
+                    if text['type']== 'textbox' and 'name' in text.keys():                        
                         # text['evented'] = True
                         # text['']
                         TextboxUpdate.objects.get_or_create(canvas=instance,text=text['text'],text_id=text['name'])
@@ -781,8 +770,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
             if extension  not in ['svg','mp4','MP4','SVG']:
                 im = Image.open(instance.image.path)
                 instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
-            else:
-                print("svg")
+            else:                
                 instance.thumbnail=instance.image
             instance.save()
         return super().to_representation(instance)

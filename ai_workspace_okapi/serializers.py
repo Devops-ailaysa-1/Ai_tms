@@ -177,7 +177,7 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.save()
 
         if seg_his_create:
-            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
+            SegmentHistory.objects.create(segment_id=seg_id, user=self.context.get('request').user, target=content, status=status if status else instance.status)
         self.update_task_assign(task_obj, user_1, status_id)
 
         return super().update(instance, validated_data)
@@ -734,14 +734,14 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=SegmentDiff
-        fields=('id','sentense_diff_result','save_type', 'diff_corrected')
+        fields=('id','sentense_diff_result','save_type', 'diff_corrected', 'target_tags')
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
 
-    segment_difference=SegmentDiffSerializer(many=True)
-    step_name=serializers.SerializerMethodField()
-    status_id=serializers.ReadOnlyField(source='status.status_id')
-    user_name=serializers.ReadOnlyField(source='user.fullname')
+    segment_difference = SegmentDiffSerializer(many=True)
+    step_name = serializers.SerializerMethodField()
+    status_id = serializers.ReadOnlyField(source='status.status_id')
+    user_name = serializers.ReadOnlyField(source='user.fullname')
 
     class Meta:
         model = SegmentHistory

@@ -86,8 +86,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         )
 
-        password = self.validated_data['password']
-        print("valid",self.validated_data)
+        password = self.validated_data['password']        
        # password2 = self.validated_data['password2']
 
         # if password != password2:
@@ -130,8 +129,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             
         if campaign:
             ## users from campaign pages
-            #AilaysaCampaigns.objects.get(campaign_name=campaign)
-            print("campaign",campaign)
+            #AilaysaCampaigns.objects.get(campaign_name=campaign)            
             ai_camp = AilaysaCampaigns.objects.get(campaign_name=campaign)
             CampaignUsers.objects.create(user=user,campaign_name=ai_camp)
             if user.is_vendor:
@@ -254,8 +252,7 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         #read_only_fields = ('id',)
         depth = 2
 
-    def create(self, validated_data):
-        print("validated data",validated_data)
+    def create(self, validated_data):        
         request = self.context['request']
         user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)
         return user_attr
@@ -339,8 +336,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         if obj.is_enterprise:
             return True
         else:
-            if obj.team:
-                print("inside objs ")
+            if obj.team:                
                 return obj.team.owner.is_enterprise  
             else:
                 return False
@@ -397,9 +393,7 @@ class BillingAddressSerializer(serializers.ModelSerializer):
         exclude = ['user']
 
 
-    def validate(self, data):
-        print("validated data",data)
-        print("request context ",self.context.get('request').method)
+    def validate(self, data):        
 
         if self.context.get('request').method == 'POST':
             if data.get('line1',None) == '' or data.get('line1',None) == None:
@@ -420,8 +414,7 @@ class BillingAddressSerializer(serializers.ModelSerializer):
 
 
 
-    def save(self,*args,**kwargs):
-        print(self.context.get('request'))
+    def save(self,*args,**kwargs):        
         context_ = self.context.get('request')
         response=super().save(*args,**kwargs)
         update_billing_address2.send(
