@@ -832,11 +832,17 @@ def gloss_prompt(gloss_list):
         prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
-def replace_mt_with_gloss(src,raw_mt,gloss , target_language ,source_language ):
+def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     try:
+        src_lang = source_language.language
+        tar_lang = target_language.language
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         gloss = gloss_prompt(gloss)
-        pr = prompt_phrase.format(src,raw_mt,gloss,target_language) 
+        #pr = prompt_phrase.format(src,raw_mt,gloss,target_language)
+        pr = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)  
+        print("pr---------->>")
+        print(pr)
+        print(source_language , target_language)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
 
@@ -857,7 +863,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , target_language ,source_language ):
 def replace_with_gloss(src, raw_mt, task):
     
     from ai_glex.models import GlossarySelected, Glossary
-    from ai_workspace_okapi.api_views import check_source_words, target_source_words
+    from ai_workspace_okapi.api_views import check_source_words
     
     final_mt = raw_mt
     proj = task.job.project
@@ -871,9 +877,9 @@ def replace_with_gloss(src, raw_mt, task):
     if GlossarySelected.objects.filter(project=proj).exists() or \
         (Glossary.objects.filter(file_translate_glossary=proj).exists()):
 
-        source_words, gloss   = check_source_words(src, task)
+        source_words, gloss ,source_language , target_language  = check_source_words(src, task)
         if source_words:
-            final_mt = replace_mt_with_gloss(src, raw_mt, gloss  )
+            final_mt = replace_mt_with_gloss(src, raw_mt, gloss,source_language , target_language  )
 
     return final_mt
       
