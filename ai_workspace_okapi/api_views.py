@@ -2977,7 +2977,7 @@ def check_source_words(user_input, task):
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
               filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                            params=[identify_lemma(user_input)]).order_by('sl_term','-created_date').distinct('sl_term')
+                            params=[(user_input)]).order_by('sl_term','-created_date').distinct('sl_term')
                             # params=[identify_lemma(user_input)]).order_by('sl_term','-created_date').distinct('sl_term') 
  
     queryset = term_model_source_translate(queryset,source_language.locale_code,target_language.locale_code,user) 
