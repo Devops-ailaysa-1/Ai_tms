@@ -1286,9 +1286,6 @@ class BookBodySerializer(serializers.ModelSerializer):
 
         return instance
 
-
-
-
 class BookFrontMatterSerializer(serializers.ModelSerializer):
     order_list = serializers.CharField(required=False)
     obj=serializers.PrimaryKeyRelatedField(queryset=BookFrontMatter.objects.all(),

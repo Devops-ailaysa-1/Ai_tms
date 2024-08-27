@@ -836,10 +836,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss):
     try:
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         gloss = gloss_prompt(gloss)
-        print("gloss------------>>",gloss)
         pr = prompt_phrase.format(src,raw_mt,gloss)
-        print("pr---------->")
-        print(pr)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
 
