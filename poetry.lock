@@ -3984,6 +3984,19 @@ files = [
 traitlets = "*"
 
 [[package]]
+name = "mkepub"
+version = "1.2"
+description = "Simple minimalistic library for creating EPUB3 files"
+optional = false
+python-versions = "*"
+files = [
+    {file = "mkepub-1.2.tar.gz", hash = "sha256:6ef8336327c0e15348ed721d9ae16d6746228a7bc4a47360aaad553c2b74602c"},
+]
+
+[package.dependencies]
+jinja2 = "*"
+
+[[package]]
 name = "monotonic"
 version = "1.6"
 description = "An implementation of time.monotonic() for Python 2 & < 3.3"
@@ -8175,4 +8188,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7bdf1443d6f9a4b545d6bd73661eb6ab4a674ddfbf645260abe8182a5a930dbf"
+content-hash = "50cbbbd248a6df62023332512a3b6c159254abf5c52343eaef230e2c70be5f10"

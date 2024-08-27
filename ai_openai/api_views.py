@@ -1451,8 +1451,42 @@ def translate_html_file(request, input_file, target_language):
     return Response({"translated_html":translated_html})
 
 
+# from docx import Document
+# from docxcompose.composer import Composer
+# @api_view(["POST"])
+# def docx_merger(request):
+#     '''
+#     This function is to combine multiple docx file to single docx file and then download the file. 
+#     '''
+#     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+#     name = request.POST.get('book_name')
+#     files = request.FILES.getlist('docx_files')
+#     composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
+#     result = Document()
+#     composer = Composer(result)
+
+#     for i in range(0, len(files)):
+#         doc = Document(files[i])
+#         set_font_to_times_new_roman(doc)
+
+#         if i != 0:
+#             doc.add_page_break()
+
+#         composer.append(doc)
+
+#     composer.save(composed)
+#     res = download_file(composed)
+#     os.remove(composed)
+#     return res
+
+
+
 from docx import Document
 from docxcompose.composer import Composer
+import mkepub
+from bs4 import BeautifulSoup
+from django.shortcuts import get_object_or_404
+import requests
 @api_view(["POST"])
 def docx_merger(request):
     '''
@@ -1461,95 +1495,74 @@ def docx_merger(request):
     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
     name = request.POST.get('book_name')
     files = request.FILES.getlist('docx_files')
-    composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
-    result = Document()
-    composer = Composer(result)
-
-    for i in range(0, len(files)):
-        doc = Document(files[i])
-        set_font_to_times_new_roman(doc)
-
-        if i != 0:
-            doc.add_page_break()
-
-        composer.append(doc)
-
-    composer.save(composed)
-    res = download_file(composed)
-    os.remove(composed)
-    return res
-
-
-# from docx import Document
-# from docxcompose.composer import Composer
-# import mkepub
-# from bs4 import BeautifulSoup
-
-# @api_view(["POST"])
-# def docx_merger(request):
-
-#     '''
-#     To download the entire book into a docx or epub file format.
-#     If it is docx format, multiple docx files (for each chapter) is merged and download
-#     If it is an epub file, it is downloaded directly using the HTML data
-#     '''
-
-#     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-#     name = request.POST.get('book_name')
-#     files = request.FILES.getlist('docx_files')
-#     output_format = request.POST.get('format','docx') # default is docx
-
-#     if output_format == 'docx':
-#         composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
-#         result = Document()
-#         composer = Composer(result)
-
-#         for i in range(0, len(files)):
-#             doc = Document(files[i])
-#             set_font_to_times_new_roman(doc)
-
-#             if i != 0:
-#                 doc.add_page_break()
-
-#             composer.append(doc)
-
-#         composer.save(composed)
-#         res = download_file(composed)
-#         os.remove(composed)
-#         return res
+    output_format = request.POST.get('format','docx') # default is docx
     
-#     elif output_format == 'epub':
-#         html_data_list = request.POST.getlist('html_data')  # Assuming this contains HTML content
-#         epub_file = name + ".epub" if len(name.split()) <= 5 else ' '.join(name.split()[:3]) + ".epub"
+    if output_format == 'docx':
+        composed =  name + ".docx" if len(name.split())<=5 else ' '.join(name.split()[:3]).strip(punctuation)+ ".docx"
+        result = Document()
+        composer = Composer(result)
+
+        for i in range(0, len(files)):
+            doc = Document(files[i])
+            set_font_to_times_new_roman(doc)
+
+            if i != 0:
+                doc.add_page_break()
+
+            composer.append(doc)
+
+        composer.save(composed)
+        res = download_file(composed)
+        os.remove(composed)
+        return res
+    
+    elif output_format == 'epub':
+        book_id = request.data.get('book_id')
+        if not book_id:
+            return Response({"error": "book_id is required."}, status=400)
         
-#         book = mkepub.Book(name)
+        book = get_object_or_404(BookCreation, id=book_id)
+        preface = get_object_or_404(BookFrontMatter, book_creation=book)
+        chapters = BookBody.objects.filter(book_creation=book).order_by('id')
 
-#         # Add chapters from HTML data
-#         for i, html_content in enumerate(html_data_list):
-#             # chapter_title = f'Chapter {i+1}'
-#             # book.add_page(chapter_title, html_content)
-#             # Clean up the HTML content using BeautifulSoup
-#             soup = BeautifulSoup(html_content, 'html.parser')
-#             cleaned_html = soup.prettify()
+        epub_book = mkepub.Book(title=book.title)
+        
+        epub_book.add_page(title="Preface", content=preface.generated_content)
 
-#             chapter_title = f'Chapter {i+1}'
-#             book.add_page(chapter_title, cleaned_html)
+        for chapter in chapters:
+            soup = BeautifulSoup(chapter.html_data, 'html.parser')
+            cleaned_html = soup.prettify()
 
-#             # Check for images in the HTML content
-#             images = request.FILES.getlist(f'images_{i+1}')
-#             for img in images:
-#                 img_data = img.read()
-#                 img_name = img.name
-#                 book.add_image(img_name, img_data)
+            chapter_title = chapter.generated_content
+            epub_book.add_page(title=chapter_title, content=cleaned_html)
 
+            images = soup.find_all('img')
+            for img in images:
+                img_url = img.get('src')
+                if img_url:
+                    if img_url.startswith('http'):
+                        img_data = requests.get(img_url).content
+                    else:
+                        img_path = os.path.join('path_to_images', img_url)
+                        with open(img_path, 'rb') as img_file:
+                            img_data = img_file.read()
 
-#         book.save(epub_file)
-#         res = download_file(epub_file)
-#         os.remove(epub_file)
-#         return res
-    
-#     else:
-#         return Response({"error": "Invalid file type specified. Use 'docx' or 'epub'"}, status=400)
+                    img_name = os.path.basename(img_url)
+                    epub_book.add_image(img_name, img_data)
+                    img['src'] = img_name
+
+        epub_file_path = f"/tmp/{book.title}.epub"
+        epub_book.save(epub_file_path)
+
+        with open(epub_file_path, 'rb') as epub_file:
+            response = HttpResponse(epub_file.read(), content_type='application/epub+zip')
+            response['Content-Disposition'] = f'attachment; filename="{book.title}.epub"'
+        
+        os.remove(epub_file_path)
+
+        return response
+    else:
+        return Response({"error": "Invalid file type specified. Use 'docx' or 'epub'."}, status=400)
     
 
 

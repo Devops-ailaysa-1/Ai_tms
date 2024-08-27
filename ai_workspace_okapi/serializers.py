@@ -16,6 +16,7 @@ import re
 from .utils import split_check
 from django.db.models import Func, F, CharField
 from ai_auth.tasks import replace_with_gloss
+from ai_auth.models import Professionalidentity
 
 client = translate.Client()
 
@@ -611,11 +612,27 @@ class SegmentPageSizeSerializer(serializers.ModelSerializer):
         model = SegmentPageSize
         fields = "__all__"
 
+# class CommentSerializer(serializers.ModelSerializer):
+#     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
+#     class Meta:
+#         model = Comment
+#         fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
+
+
 class CommentSerializer(serializers.ModelSerializer):
+
+    avatar = serializers.SerializerMethodField()    
     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
+
     class Meta:
         model = Comment
-        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
+        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at','avatar')
+        
+    def get_avatar(self, obj):
+        professional_identity = Professionalidentity.objects.filter(user=obj.commented_by).first()
+        if professional_identity and professional_identity.avatar:
+            return professional_identity.avatar.url
+        return None
 
 class FilterSerializer(serializers.Serializer):
     status_list = serializers.JSONField(
