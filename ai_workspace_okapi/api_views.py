@@ -2960,7 +2960,7 @@ def matching_word(user_input):
     query = Q()
     for word in user_word:
         query |=Q(lower_sl_term__exact=word.lower())
-        return query
+    return query
     
 def check_source_words(user_input, task):
 
