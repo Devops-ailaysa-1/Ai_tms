@@ -315,7 +315,7 @@ def po_generate_pdf(po):
         if not pos.count() > 0:
             tasks = po.assignment.assignment_po.all()
             if tasks.count() == 0:
-                logger.warning(f"no tasks were found for po :{po.poid}")
+                logger.warning(f"no tasks were found for po")
                 return False
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
@@ -421,7 +421,7 @@ def get_task_total_amt(instance):
             tot_amount = 0
     else:
         # rasie error on invalid price should be rised
-        logger.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
+        logger.error("Invalid unit type for Po Assignment")
         tot_amount=0
     return tot_amount
 

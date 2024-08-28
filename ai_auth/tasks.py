@@ -822,14 +822,13 @@ from ai_staff.models import InternalFlowPrompts
 import openai
 
 def gloss_prompt(gloss_list):
-    prompt = "The source word is {} and the translated word is {} , replaced this word to {} for the given translated sentence"
     prompt_list= []
-    for term in gloss_list:
-        gloss_prompt_concat = prompt.format(term.sl_term,term.sl_term_translate,term.tl_term)
+    for count,term in enumerate(gloss_list):
+        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1,term.sl_term.strip(),term.sl_term_translate.strip(),term.tl_term.strip())
         if term.pos:
-            pos_prompt = " and the pos tag for this is {}".format(term.pos)
+            pos_prompt = " and POS tag is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt
-        prompt_list.append(gloss_prompt_concat)
+            prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):

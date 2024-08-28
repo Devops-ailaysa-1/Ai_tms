@@ -21,7 +21,6 @@ class ProzAdapter(OAuth2Adapter):
         headers = {'Authorization': 'Bearer {0}'.format(token.token)}
         resp = requests.get(self.profile_url, headers=headers)
         extra_data = resp.json()
-        logging.info("request_data --> ",extra_data)
         return self.get_provider().sociallogin_from_response(request, extra_data)
     
 

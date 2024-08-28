@@ -19,7 +19,6 @@ def forwards(apps, schema_editor):
         try:
             tsk_info = TaskAssignInfo.objects.get(task=task)
         except TaskAssignInfo.DoesNotExist:
-            logger.error(f"task_assign info not found for task :{task.id}")
             tsk_info = None
 
         mt_engine = task.job.project.mt_engine
@@ -45,7 +44,6 @@ def forwards(apps, schema_editor):
                 logger.warning(f"failed migration for task_assign: tsk_info {tsk_info.id}")
 
         task_assign_history=task.task_assign_history.filter(task=task).update(task_assign=task_assign)
-        logger.info(task_assign_history)
     
 
 class Migration(migrations.Migration):

@@ -2545,13 +2545,13 @@ def stripe_resync_instance(instance):
         else:
             stripe_data = instance.api_retrieve()
         instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
-        logging.info(f"Successfully Synced: {instance}")
+        logging.info(f"Successfully Synced:")
     except stripe.error.PermissionError as error:
         logger.error(error)
     except stripe.error.InvalidRequestError as error:
-        logger.error(f"Sync failed: {instance} error :{error}")
+        logger.error(f"Sync failed: error :{error}")
     except stripe.error.StripeErrorWithParamCode:
-        logger.error(f"Sync failed: {instance}")
+        logger.error(f"Sync failed:")
 
 
 @api_view(['GET'])

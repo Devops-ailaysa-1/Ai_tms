@@ -1572,7 +1572,7 @@ class DocumentToFile(views.APIView):
 
             
             else:
-                logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+                logger.info(f">>>>>>>> Error in output for document_id -><<<<<<<<<")
                 return JsonResponse({"msg": "Sorry! Something went wrong with file processing."}, status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
@@ -2595,7 +2595,7 @@ def download_mt_file(request):
             except Exception as e:
                 print("Exception during file output------> ", e)
         else:
-            logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+            logger.info(f">>>>>>>> Error in output for document_id -> <<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
     elif state == 'FAILURE' or state == 'REVOKED':
@@ -2945,7 +2945,7 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
     for terms in selected_term_model_list:
         if not terms.sl_term_translate:
             
-            terms.sl_term_translate =get_translation(mt_engine_id = 1,
+            terms.sl_term_translate = get_translation(mt_engine_id = 1,
                                                      source_string = terms.sl_term,
                                                      source_lang_code=src_lang,target_lang_code=tar_lang,
                                                      )

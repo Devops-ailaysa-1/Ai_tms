@@ -173,14 +173,12 @@ def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=T
 
     PC = models.PurchasedUnits.objects.create(**kwarg)
     logger.info(f"user:{user.uid}, buyed:{buyed_units}, credits_pack:{pack.credits}, quantity :{quants}, carry:{0}")
-    logger.info(PC)
     # if pack.secondary_unit_type =! None:
 
 
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
-    logger.info(event)
     data =event.data
     invoice=data.get('object').get('invoice',None)
     if invoice == None:
@@ -202,7 +200,6 @@ def my_handler(event, **kwargs):
         meta = data['object']['metadata']
         price_obj= Price.objects.get(id=meta['price'],djstripe_owner_account=default_djstripe_owner)
         cp = models.CreditPack.objects.get(product=price_obj.product)
-        logger.info(data['object']['metadata'])
         quants= int(meta.get('quantity',1))
         update_user_credits(user=user,cust=cust_obj,price=price_obj,
                         quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp)
@@ -247,7 +244,6 @@ def remove_pro_v_sub(customer,subscription):
 
 @webhooks.handler("invoice.paid")
 def my_handler(event, **kwargs):
-    logger.info(event.data)
     data =event.data
     paymentintent=data.get('object').get('payment_intent',None)
     if paymentintent:
