@@ -608,7 +608,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 from django.db.models.functions import Lower
-from ai_auth.tasks import matching_word
+from ai_workspace_okapi.api_views import matching_word
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
