@@ -1390,10 +1390,10 @@ class DocumentToFile(views.APIView):
             return {'status':True}
 
     #For Downloading Audio File################only for voice project###########Need to work
-    def download_audio_file(self,document_user,document_id,voice_gender,language_locale,voice_name):
-        res_1 = process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
+    def download_audio_file(self, document_user, document_id, voice_gender, language_locale, voice_name):
+        res_1 = process_audio_file(document_user, document_id, voice_gender, language_locale, voice_name)
         if res_1:
-            return Response(res_1,status=401)
+            return Response(res_1, status=401)
         else:
             doc = DocumentToFile.get_object(document_id)
             task = doc.task_set.first()
@@ -1505,21 +1505,26 @@ class DocumentToFile(views.APIView):
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
+
+        # This is checked, when the user tries to immediately download output file
+        # after opening the document, as segments will be only written by celery one by one.
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
             return JsonResponse({"msg": "File under process. Please wait a little while. \
                     Hit refresh and try again"}, status=400)
 
         output_type = request.GET.get("output_type", "")
+
+        # Getting query params required for voice download
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         voice_name = request.GET.get("voice_name",None)
         language_locale = request.GET.get("locale", None)
 
         document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
-        try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
-        except:managers = []
+        try: managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
+        except: managers = []
 
-        user=self.request.user.team.owner if self.request.user.team  else self.request.user
-        assign_objs=TaskAssign.objects.filter(task_id=doc.task_obj.id,assign_to=user)
+        user = self.request.user.team.owner if self.request.user.team  else self.request.user
+        assign_objs = TaskAssign.objects.filter(task_id=doc.task_obj.id, assign_to=user)
 
         agency = []
         if assign_objs.filter(assign_to__isnull=False):
@@ -1530,7 +1535,8 @@ class DocumentToFile(views.APIView):
                 if assign_to.team:
                     agency.append(assign_to.team.get_project_manager)
 
-        if (request.user ==  document_user) or (request.user in managers) or (request.user in agency) :
+        if (request.user ==  document_user) or (request.user in managers) or (request.user in agency):
+
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":
                 return self.download_source_file(document_id)
@@ -1567,8 +1573,7 @@ class DocumentToFile(views.APIView):
             
             else:
                 logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
-                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
-                            status=409)
+                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."}, status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
@@ -2707,7 +2712,8 @@ def download_converted_audio_file(request):
 
 #########################################Voice Task Download###################################################
 
-def process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name):
+def process_audio_file(document_user, document_id, voice_gender, language_locale, voice_name):
+
     '''
     This function is internally used in document download with voice as output type.
     this will get all the target segments in that document and write in a file. 
@@ -2716,6 +2722,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     or else it will call for google_long_text_file_process_cel celery task .
     stores the result in TaskTranscriptDetails table and return TaskTranscriptDetailSerializer data
     '''
+
     from ai_workspace.models import MTonlytaskCeleryStatus
     temp_name = segments_with_target(document_id)
     doc = Document.objects.get(id = document_id)
@@ -2727,9 +2734,11 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     task_data = ser.data
     target_language = language_locale if language_locale else task_data["target_language"]
     source_lang = task_data['source_language']
+
     text_file = open(temp_name, "r")
     data = text_file.read()
     text_file.close()
+    
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
     if initial_credit > consumable_credits:
@@ -2741,7 +2750,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
         else:
             filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
-            res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            res1,f2 = text_to_speech(file_path, target_language, filename_,voice_gender,voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             os.remove(filename_)
             os.remove(temp_name)
@@ -2766,7 +2775,7 @@ def segments_with_target(document_id):
     '''
     This function is internally called in process_audio_file() to write the target segments in file to send to google text_to_speech.
     For this we are first filtering non-empty targets.
-    and then write in temperory file and return it
+    and then write in temporary file and return it
     '''
 
     document = Document.objects.get(id=document_id)
@@ -2962,6 +2971,7 @@ def check_source_words(user_input, task):
     '''
 
     from ai_glex.models import TermsModel, GlossarySelected, Glossary
+    from ai_glex.api_views import identify_lemma
 
     proj = task.job.project
     user = proj.ai_user

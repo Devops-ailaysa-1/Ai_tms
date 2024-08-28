@@ -407,9 +407,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	book_project_id = serializers.ReadOnlyField(source='book_create_project.id')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),\
 													  required=False,write_only=True)
-	pre_translate = serializers.BooleanField(required=False,allow_null=True)
-	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
-	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
+	pre_translate = serializers.BooleanField(required=False, allow_null=True)
+	copy_paste_enable = serializers.BooleanField(required=False, allow_null=True)
+	from_text = serializers.BooleanField(required=False, allow_null=True, write_only=True)
 	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
