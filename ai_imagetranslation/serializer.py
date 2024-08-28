@@ -81,7 +81,6 @@ class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
         if not representation.get('thumbnail',None):
             if instance.target_canvas_json:
                 target_canvas_json=instance.target_canvas_json
-                # print("target_canvas_json",target_canvas_json)
                 if isinstance(target_canvas_json,dict) and  'backgroundImage' in target_canvas_json.keys():
                     target_canvas_json_bs64=thumbnail_create(json_str=target_canvas_json,formats='png')
                     name=instance.source_image.file_name
@@ -300,13 +299,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             # initial_credit = 200
             consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit: 
-                # obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers})
-                # print(obj_inst.data) 'translation_result':obj_inst.data,   
+                # obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers}) 
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
             tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
                                                          target_language=tar_lang.locale.first()) 
             img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
-            #print("JB & Tasks----------------------->", img_trans_jobs,img_trans_tasks)
+ 
             tar_bbox.job=img_trans_jobs[0][0]
             ########## job__creation #####
             
@@ -677,7 +675,7 @@ class StableDiffusionAPISerializer(serializers.ModelSerializer):
             # else:
             #     if sdstylecategoty.negative_prompt:
             #         negative_prompt=sdstylecategoty.negative_prompt #str(negative_prompt)+" "+
-            #         print("negative_prompt",negative_prompt)
+ 
             prompt = default_prompt.format(prompt)
  
         if not image_resolution:

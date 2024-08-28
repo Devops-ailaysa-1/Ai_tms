@@ -29,7 +29,7 @@ from langchain.llms import Cohere
 from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
-import os
+import os,logging
 import spacy
 import yake
 import requests
@@ -44,7 +44,7 @@ from langchain.retrievers.document_compressors import CohereRerank
 # llm = ChatOpenAI(model_name='gpt-4')
 OPEN_AI_GPT_MODEL_CHAT =  settings.OPEN_AI_GPT_MODEL_CHAT 
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
- 
+logger = logging.getLogger("django") 
 
 
 def tag_visible(element):
@@ -65,14 +65,14 @@ def epub_processing(file_path,text_word_count_check=False):
     text_str = ""
     with ZipFile(file_path) as zf:
         for i in zf.filelist:
-            print(i.filename)
+ 
             if i.filename.endswith("xhtml") or i.filename.endswith("html"):
                 html_content = zf.read(i)
-                # print(html_content)
+ 
                 text = text_from_html(html_content.decode("utf-8"))
                 # with open(i.filename , 'rb') as fp:  
                 text_str = text_str+text+"\n"
-    # print("---->",text_str)
+ 
     if text_word_count_check:
         return text_str
     else:
@@ -91,7 +91,7 @@ def loader(file_id) -> None:
         num = str(uuid.uuid4())
         persistent_dir=path_split[0]+"_"+str(num)+"/"
         os.makedirs(persistent_dir,mode=0o777)
-    print(persistent_dir)
+    logging.info(persistent_dir)
     if instance.file.name.endswith(".docx"):
         loader = Docx2txtLoader(instance.file.path)
     elif instance.file.name.endswith(".txt"):
@@ -147,7 +147,7 @@ def load_chat_history(instance):
     for i in instance.pdf_file_chat.all():
         if i.question and i.answer:
             memory.save_context({"question": i.question}, {"answer": i.answer})
-    print("memory-->",memory)
+ 
     return memory
 
 
@@ -171,7 +171,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     page_numbers = list(set(page_numbers))
     # result = qa.run(query=query)
     result = qa(query) 
-    print(result)
+ 
     return result['answer'] ,page_numbers
 
 
@@ -189,7 +189,7 @@ def gen_text_context_question(vectors_list,question):
     for i in vectors_list:
         context +=i.page_content
     prompt_template = prompt_temp_context_question(context,question)
-    # print(prompt_template)
+ 
     prompt_res = get_prompt_chatgpt_turbo(prompt = prompt_template,n=1) ##chatgpt
     generated_text =prompt_res['choices'][0]['message']['content']  ##chatgpt
     # generated_text = cohere_endpoint(prompt_template)
@@ -322,7 +322,7 @@ def check_file_language(list_of_file_path):
             if lang_code == "en":
                 file_paths.append(file_path)
                 extracted_text_list.append(extracted_text)
-    print("extracted_text_list",extracted_text_list)
+ 
     return file_paths ,extracted_text_list
 
 
@@ -336,7 +336,7 @@ def prompt_to_extract_ner_terms(terms):
     generated_text =result['choices'][0]['message']['content']
     if generated_text:
         generated_text = generated_text.split(",")
-        print("generated_text",generated_text)
+ 
         return generated_text
     else:
         return None
@@ -410,8 +410,7 @@ def ner_terminology_finder(file_paths):
         try:
             result ="" #json.loads(chat_response.choices[0].message.content)
         except Exception as e:
-            print("ERROR in JSON DECODE-------->",e)
-    print("terms",terms)
+            logging.error("ERROR in JSON DECODE-------->",e)
     if terms:
          return {'terminology':terms} 
     else:

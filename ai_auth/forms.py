@@ -180,7 +180,7 @@ def user_trial_end(user,sub):
         "end_date" : date2,
         "end_time":time2
         }
-    print("inside trial form")
+ 
     email =user.email
    # msg_plain = render_to_string("account/email/password_change.txt", context)
     msg_html = render_to_string("account/email/trial_ending.html", context)
@@ -196,9 +196,9 @@ def user_trial_end(user,sub):
             [email],
             html_message=msg_html,
         )
-        print("mailsent>>",ms)
+ 
     else:
-        print("user in block list")
+        logger.info("user in block list")
 
 
 
@@ -218,7 +218,7 @@ def vendor_status_mail(email,status):
         [email],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 
 
 
 def vendor_request_admin_mail(instance):
@@ -231,7 +231,7 @@ def vendor_request_admin_mail(instance):
         ['support@ailaysa.com'],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 
 
 def vendor_accepted_freelancer_mail(user):
     
@@ -244,7 +244,7 @@ def vendor_accepted_freelancer_mail(user):
         ['support@ailaysa.com'],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 
 
 def vendor_renewal_mail(link,email):
     context = {'link':link}
@@ -255,7 +255,7 @@ def vendor_renewal_mail(link,email):
         [email],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 
 
 
 def internal_user_credential_mail(context):
@@ -269,7 +269,7 @@ def internal_user_credential_mail(context):
         [email],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 
 
 def vendor_notify_post_jobs(detail):
     #pass
@@ -284,7 +284,7 @@ def vendor_notify_post_jobs(detail):
             [email],
             html_message=msg_html,
         )
-        print("available job alert mail sent>>")
+ 
 
 
 def external_member_invite_mail(context,email):
@@ -296,7 +296,6 @@ def external_member_invite_mail(context,email):
         [email],
         html_message=msg_html,
     )
-    print("mailsent>>")
 
 
 def unread_notification_mail(email_list):
@@ -310,7 +309,7 @@ def unread_notification_mail(email_list):
             [email],
             html_message=msg_html,
         )
-    print("notification mailsent>>")
+ 
 
 
 
@@ -324,7 +323,7 @@ def user_trial_extend_mail(user):
         [email],
         html_message=msg_html,
     )
-    print("trial_exten_mail_sent-->>>")
+ 
 
 
 
@@ -351,7 +350,7 @@ def existing_vendor_onboarding_mail(user,gen_password):
     msg.content_subtype = "html"
 
     sent=msg.send()
-    print("existing_vendor_onboarding_mail-->>>")
+ 
     if sent==0:
         return False
     else:
@@ -407,7 +406,8 @@ def campaign_user_invite_email(user,gen_password):
     msg.content_subtype = "html"
 
     sent=msg.send()
-    print("campaign_user_onboarding_mail-->>>")
+    
+    logger.info("campaign_user_onboarding_mail-->>>")
     if sent==0:
         return False
     else:
@@ -422,8 +422,7 @@ def bootcamp_marketing_ack_mail(user_name,user_email,file_path):
                 "docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "pdf":"application/pdf"}
     email =  os.getenv("HR_MAIL")
-    # print("email",email)
-    # email = "hemanthmurugan21@gmail.com"
+ 
 
     email_message = EmailMessage(Subject, plain_msg, settings.DEFAULT_FROM_EMAIL, [email])
     

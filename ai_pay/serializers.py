@@ -221,7 +221,6 @@ class InvoiceListSerializer(serializers.Serializer):
     #     return StripeInvoiceSerializer(query,many=True).data
 
     def to_representation(self, instance):
-        print("ordering",self._get_ordering())
         response = super().to_representation(instance)
         response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()], reverse=True)
         response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()],reverse=True)

@@ -14,4 +14,4 @@ def bi_user_invite_mail(email, user,password):
         [email],
         html_message=msg_html,
     )
-    print("mailsent>>")
+ 

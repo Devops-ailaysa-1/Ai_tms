@@ -151,9 +151,6 @@ def assigne_json_change(json_copy):
         for count ,i in enumerate(json_cpy_2['template_json']['objects']):
             if 'objects' in i.keys():
                 assigne_json_change(i)
-            # print(i.keys())
-            # if 'evented'== i.keys():
-                # print(i.keys())
             i['evented'] = False
             # if 'selectable'== i.keys():
             i['selectable'] =False
@@ -350,9 +347,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         
         # if not instance.file_name:
-        #     print("Inside 1")
+ 
         #     can_obj=CanvasDesign.objects.filter(user=instance.user.id,file_name__icontains='Untitled project')
-        #     # print("can_obj",can_obj)
+ 
         #     if can_obj:
         #         instance.file_name='Untitled project ({})'.format(str(len(can_obj)+1))
         #     else:
@@ -463,7 +460,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             consumed_credit = get_consumable_credits_for_text (src_words_all,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
             if initial_credit < consumed_credit:
                 #  obj = CanvasDesignSerializer(instance)
-                #  print("insuff",obj.data) 'translation_result':obj.data ,
+ 
                  raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),target_language=tar_lang.locale.first())
             canvas_jobs,canvas_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
@@ -910,7 +907,7 @@ class CategoryWiseGlobaltemplateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data=super().to_representation(instance)
         template=instance.template_global_categoty.all()
-        # print("template",template)
+ 
         if template is not None:
             return data
 
@@ -1277,7 +1274,7 @@ class EmojiCategorySerializer(serializers.ModelSerializer):
 
             # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
             #     os.remove(thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
+ 
 
         # if temp_global_design and new_project:
         #     width=temp_global_design.width
@@ -1428,7 +1425,8 @@ class AiAssertsSerializer(serializers.ModelSerializer):
 #         model=AssetImage
 #         fields='__all__'
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 class AssetImageSerializer(serializers.ModelSerializer):
      
@@ -1447,7 +1445,7 @@ class AssetImageSerializer(serializers.ModelSerializer):
             instance.category = imge_cat_inst
             instance.save()
         else:
-            print("no image")
+            logger.info("no image")
         instance.is_store=True
         instance.save()
         return instance

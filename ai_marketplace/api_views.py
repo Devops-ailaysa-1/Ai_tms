@@ -311,7 +311,7 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         user = self.request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user
         if user.is_vendor == True:
             try:
-                print(user.id)
+ 
                 id = request.GET.get('id')
                 queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=user.id)).distinct().order_by('-id').all()
                 pagin_tc = self.paginate_queryset(queryset, request , view=self)
@@ -333,7 +333,7 @@ class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             post = ProjectboardDetails.objects.get(id=post_id)
             sample_file=request.FILES.get('sample_file')
             serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':user.id},context={'request':request})
-            print(serializer.is_valid())
+ 
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
@@ -579,7 +579,7 @@ def vendor_applied_jobs_list(request): ##### Not using now
     This function is to return the applied jobs list 
     '''
     try:
-        print(request.user.id)
+ 
         queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
         serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
         return Response(serializer.data)
@@ -591,7 +591,7 @@ def vendor_applied_jobs_list(request): ##### Not using now
 @permission_classes([IsAuthenticated])
 def get_my_jobs(request): ##### Not using now
     tasks = Task.objects.filter(assign_to_id=request.user.id)
-    print(tasks)
+ 
     # tasks = Task.objects.filter(assign_to_id=request.user.id)
     tasks_serlzr = TaskSerializer(tasks, many=True)
     return Response(tasks_serlzr.data, status=200)
@@ -773,7 +773,7 @@ def get_previous_accepted_rate(request):
     for j in jobs:
         job_obj = Job.objects.get(id=j)
         authorize(request, resource=job_obj, actor=request.user, action="read")
-        print(job_obj.source_language,job_obj.target_language)
+ 
         vendor = AiUser.objects.get(id=vendor_id)
         query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('id')
         query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language)).last()
@@ -788,7 +788,7 @@ def get_previous_accepted_rate(request):
         for i in query_1:
             currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
             if i.get('service__mtpe_rate') != None:
-                print("Inside if")
+ 
                 out_1 = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
                         'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
                 if out_1:

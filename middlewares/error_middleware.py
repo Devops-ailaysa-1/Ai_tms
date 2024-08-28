@@ -39,7 +39,6 @@ class StackOverflowMiddleware(MiddlewareMixin):
              "data": request.POST.dict(), "user": request.user.username,
              "url_params": request.GET.dict()})
 
-            print("inserted id---->", str(result.inserted_id))
 
             client.close()
 

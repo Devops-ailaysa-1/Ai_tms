@@ -41,7 +41,7 @@ logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logging.error(f"Error : {str(e)}")
 
 def get_stripe_key():
     '''gets stripe api key for current environment'''
@@ -218,7 +218,6 @@ def customer_create_conn_account(client,seller):
     return conn_cust_create.get('id')
 
 def webhook_wait(invo_id):
-    print("inside webhook wait")
     try:
         Invoice.objects.get(id=invo_id)
     except:
@@ -310,7 +309,6 @@ def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
     tasks = po.po_task.all()
     check_task_uid(tasks)
-    print("inside gen po",po.poid)
     ## Need to remove added for old po support
     if tasks.count() <1:
         pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
@@ -734,13 +732,12 @@ def converttocent(amount,currency_code=None):
     return int(amount*100)
 
 def generate_invoice_by_stripe(po_li,user,gst=None):
-    print("user>.",user)
     pos = PurchaseOrder.objects.filter(poid__in=po_li)
     res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
     res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
     res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
     if user.id != pos.last().seller.id: # validate seller
-        print("given user is not po owner")
+        logging.info("given user is not po owner")
     elif res&res2&res3 >1:
         logger.error("Invoice creation Failed More Than on currency or clients")
         return None
@@ -865,7 +862,6 @@ def invoice_pdf_get(request):
 def cancel_stripe_invoice(request):
     try:
         id = request.POST.get('id',None)
-        print('id',id)
         if not id:
             raise ValueError("id_not_given")
         vendor = Account.objects.get(email=request.user.email)

@@ -24,7 +24,7 @@ from ai_auth.utils import add_months
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -144,7 +144,7 @@ def proz_connect(user, sociallogin=None , **kwargs):
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)
-#     print("-----------updated customer address-------")
+ 
 
 
 
@@ -406,7 +406,7 @@ def expiry_yearly_sub(billing_date):
     start=billing_date
     end=timezone.now()
     if start.day != end.day:
-        print("This is Not bill date")
+        logger.info("This is Not bill date")
 
     expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry

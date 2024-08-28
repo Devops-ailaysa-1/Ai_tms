@@ -206,7 +206,7 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
                 out = {'target_lang':i,'translation':ser.data}
                 res.append(out)
             else:
-                print(ser.errors)
+                logging.error(ser.errors)
         else:
             out = {'target_lang':i,'translation':"insufficient credits"}
             res.append(out)
@@ -1225,7 +1225,6 @@ def stream_article_response_en(title,completion,prompt,book_body_instance):
                 content=delta['content']
                 word=content+' '
                 str_con+=content
-                print(content)
                 yield '\ndata: {}\n\n'.format({"t":content})
         else:
             token_usage=num_tokens_from_string(str_con+" "+prompt)

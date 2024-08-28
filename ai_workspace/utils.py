@@ -237,7 +237,6 @@ def html_to_docx(html_content, docx_filename):
 def add_additional_content_to_docx(docx_filename, additional_content):
     doc = Document(docx_filename)
     for key, value in additional_content.items():
-        print(key)
         if key!='story':
             doc.add_paragraph(f'{key.capitalize()}:')
             doc.add_paragraph(f'{value}')

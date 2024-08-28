@@ -333,7 +333,7 @@ def integrity_error(func):
         try:
             return func(*args, **kwargs)
         except IntegrityError as e:
-            print("error---->", e)
+            logging.error("error---->", e)
             return Response({'message': "integrirty error"}, 409)
 
     return decorator
@@ -482,7 +482,7 @@ class TmxFilesOfProject(APIView):
 #             **data,
 #             **dict(batches=batches_data)
 #         }
-#         print("data---->", data)
+ 
 #         res = requests.post(
 #             f"http://{spring_host}:8080/project/report-analysis",
 #             data = {"report_params": json.dumps(data)}
@@ -661,7 +661,6 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=8) 
         elif value == "word_choices":
             queryset = queryset.filter(project_type_id=10)
-        #print("QRF-->",queryset)
         return queryset
 
 
@@ -1417,14 +1416,13 @@ class TaskView(APIView):
         try:
             task.delete()
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             return Response(data={"Message": "An error occurred while deleting the task"}, status=500)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # def delete(self, request, id):
     #     task = Task.objects.get(id = id)
-    #     print("task--instance",task)
     #     authorize(request,resource=task,action="delete",actor=self.request.user)
     #     # it will check for task is assigned to any editor or not. if so, it will return error message
     #     if task.task_info.filter(task_assign_info__isnull=False): ### checking if the task instance is assigned to anyone
@@ -1433,7 +1431,6 @@ class TaskView(APIView):
     #         # if it is the single task in the project, then it will internally delete the project
     #         if len(task.job.project.get_tasks) == 1:
     #             #check_delete_default_gloss_task(task,is_single_task=True)
-    #             print("the deleting task 's project contains only one task instance ")
     #             task.job.project.delete()
     #         elif task.file:
     #             if os.path.splitext(task.file.filename)[1] == ".pdf":
@@ -1614,13 +1611,13 @@ class ProjectAnalysisProperty(APIView):
                         if task_detail_serializer.is_valid(raise_exception=True):
                             task_detail_serializer.save()
                         else:
-                            print("error-->", task_detail_serializer.errors)
+                            logging.error("error-->", task_detail_serializer.errors)
                     else:
                         # if file is having any issue in  processing in spring
                         logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
-                    print("No entry")
+                    logging.error("No entry")
                 # to update processed file_ids
                 file_ids.append(task.file_id)
 
@@ -1751,8 +1748,9 @@ def bulk_task_accept(request):
             if serializer.is_valid():
                 serializer.save()
             else:
-                print("Error--------->",serializer.errors)
+                logging.error("Error--------->",serializer.errors)
         except:
+            logging.warning("passing bulk task")
             pass
     return Response({'msg':'Task Accept Succeded'})
 
@@ -1790,7 +1788,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
         if user.is_agency == True:
             for i in tasks:
-                print(i)
                 if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
                     return "There is no assign. you can't reassign" 
             return None
@@ -2858,7 +2855,7 @@ def download_task_target_file(request):
         output_file =  obj.task_file_detail.first().target_file
         return download_file(output_file.path)
     except BaseException as e:
-        print(f"Error : {str(e)}")
+        logging.error(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
 
@@ -3250,7 +3247,6 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
-        print(i.src_segment)
         tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__iexact = i.src_segment)
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
@@ -3955,7 +3951,7 @@ class DocumentImageView(viewsets.ViewSet):
             if i.image.url == image_url:
                 i.delete()
             else:
-                print("No match")
+                logging.error("No match")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -4093,8 +4089,6 @@ def doc2docx(request):
                         '--headless',
                         '--convert-to', 'docx',
                         "output.docx"], check=True)
-
-    print("path_data", path_data)
       
  
     res = download_file_doc(temp_docx_path_full) #download_file_doc
@@ -4283,7 +4277,7 @@ def translate_file_process(task_id):
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
         ser.save()
-    print(ser.errors)
+    logging.error(ser.errors)
 
 
 

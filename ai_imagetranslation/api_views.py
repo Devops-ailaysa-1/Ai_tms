@@ -187,7 +187,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             # response=
             # response.status_code = 200
             # response["Custom-Header"] = "Value"
-            # print(response)
+ 
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
@@ -493,19 +493,19 @@ def ImageTranslatewordcount(request):
 def call_back_rasie(instance_id):
     instance = ImageTranslate.objects.get(id=instance_id)
     serializer = ImageTranslateSerializer(instance)
-    print(serializer.data)
+ 
  
     
 
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:
-#         print("single___page",pages_list[0].json)
+ 
 #         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
 #         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
 #         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         
 #     else:
-#         print("multiple___page")
+ 
 #         buffer=io.BytesIO()
 #         with ZipFile(buffer, mode="a") as archive:
 #             for src_json in pages_list:
@@ -535,7 +535,7 @@ def call_back_rasie(instance_id):
 
 
     #     # serializer = ImageGenCustomizationSerializers(queryset, many=True)
-    #     # print(serializer.data)
+ 
     #     return Response(x)
 
 

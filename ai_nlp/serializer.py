@@ -65,7 +65,7 @@ def chat_page_chk(instance):
             page_count = count_pdf_pages(instance.file.path)
             file_format='pdf'
         except FileNotDecryptedError:
-            print("chat_page_chk function")
+ 
             raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
     elif instance.file.name.endswith(".epub"):
         text = epub_processing(instance.file.path,text_word_count_check=True)
@@ -113,7 +113,7 @@ class PdffileUploadSerializer(serializers.ModelSerializer):
             instance.save()
 
             count = PdffileUpload.objects.filter(file_name__contains=instance.file_name).exclude(id=instance.id).count()
-            print("count--->", count)
+ 
             celery_id = loader.apply_async(args=(instance.id,),)  
             instance.celery_id=celery_id
             instance.is_train=False

@@ -36,7 +36,6 @@ def pytest_generate_tests(metafunc):
         for i in range(0,len(data['input']['email'])):
             l = list()
             for j in  list(data['input'].keys()):
-                print(data['input'][j])
                 l.append(data['input'][j][i])
             k.append((tuple(l),data['output']['status'][i]))
             
@@ -49,7 +48,6 @@ def pytest_generate_tests(metafunc):
         for i in range(0,len(data['input']['email'])):
             l = list()
             for j in  list(data['input'].keys()):
-                print(data['input'][j])
                 l.append(data['input'][j][i])
             k.append((tuple(l),data['output']['status'][i]))
             
@@ -84,7 +82,6 @@ def pytest_generate_tests(metafunc):
 
 def get_test_json_data(filename):
     folder_path = os.path.abspath(os.path.dirname(__file__))
-    print("folder_path")
     folder = os.path.join(folder_path, 'fixtures')
     jsonfile = os.path.join(folder, filename)  
     with open(jsonfile) as file:

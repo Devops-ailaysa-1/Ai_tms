@@ -239,7 +239,6 @@ class HtmlToDocx(HTMLParser):
             # TODO handle non px units
 
     def add_styles_to_run(self, style):
-        print("is in add_style")
         if 'color' in style:
             if 'rgb' in style['color']:
                 color = re.sub(r'[a-z()]+', '', style['color'])
@@ -254,11 +253,9 @@ class HtmlToDocx(HTMLParser):
             self.run.font.color.rgb = RGBColor(*colors)
             
         if 'background-color' in style:
-            print("inside bg color")
             if 'rgb' in style['background-color']:
                 color = color = re.sub(r'[a-z()]+', '', style['background-color'])
                 colors = [int(x) for x in color.split(',')]
-                print("rgb" , colors)
             elif '#' in style['background-color']:
                 color = style['background-color'].lstrip('#')
                 colors = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))

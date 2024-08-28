@@ -207,7 +207,7 @@ def celery_revoke(request):
     app = Celery()
     task_id=request.POST.get('task_id')
     # result = AsyncResult(task_id)
-    # print(result.result)
+ 
     # if result:
     # ai_export_pdf.AsyncResult(task_id).revoke()
     app.control.revoke(task_id, terminate=True)
@@ -224,7 +224,7 @@ def celery_revoke(request):
 # def stop_task(request):
 #     task_id = request.GET.get('task_id')
 #     task = AsyncResult(task_id)
-#     print("TT---------->",task.state)
+ 
 #     if task.state == 'STARTED':
 #         app.control.revoke(task_id, terminated=True, signal='SIGKILL')
 #         return JsonResponse({'status':'Task has been stopped.'}) 

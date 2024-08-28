@@ -40,10 +40,10 @@ from django_oso.auth import authorize
 from ai_workspace.signals import invalidate_cache_on_save
 from django.shortcuts import get_object_or_404
 from celery.decorators import task
-import requests
+import requests,logging
 from django.http import Http404
 from django.db import transaction
-
+logger = logging.getLogger('django')
 
 def job_lang_pair_check(gloss_job_list, src, tar):
     for gloss_pair in gloss_job_list:
@@ -281,7 +281,7 @@ class TermUploadView(viewsets.ModelViewSet):
                 obj.status = 2
                 obj.save()
         except Exception as e:
-            print("Exception1-->", e)
+            logging.error("Exception1-->", e)
 
     def list(self, request):
         
@@ -348,7 +348,7 @@ class TermUploadView(viewsets.ModelViewSet):
             job = get_or_create_indiv_gloss(trans_project_task=task)
             ### return the output with gloss project task
         else:
-            print("the given task id is gloss trans task")
+            logging.info("the given task id is gloss trans task")
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
         
@@ -500,7 +500,7 @@ def tbx_write(request,task_id):
         return response
 
     except Exception as e:
-        print("Exception1-->", e)
+        logging.error("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})
 
 
@@ -785,7 +785,7 @@ def adding_term_to_glossary_from_workspace(request):
 #     if glossary_id:
 #         glossary = Glossary.objects.get(id = glossary_id)
 #         glss,created = GlossarySelected.objects.get_or_create(project=doc.job.project,glossary=glossary)
-#         print("RRR------------->",glss, created)
+ 
 
 
 #     glossary = Glossary.objects.get(id = glossary_id)

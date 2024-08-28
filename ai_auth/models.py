@@ -28,6 +28,8 @@ from ai_openai.signals import text_gen_credit_deduct
 from django.conf import settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 from django.core.exceptions import ValidationError
+import logging
+logger = logging.getLogger('django')
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -144,7 +146,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                     addon_buyed_credits += addon.buyed_credits
 
         except Exception as e:
-            print("NO ADD-ONS AVAILABLE")
+            logger.info("NO ADD-ONS AVAILABLE")
 
         try:
             sub_credits = obj.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
@@ -168,7 +170,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             #     total_credit_left += carry_on_credits.credits_left
 
         except:
-            print("No active subscription")
+            logger.error("No active subscription")
             # return total_credit_left
             return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
@@ -184,7 +186,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             for addon in addon_credits:
                 addons += addon.buyed_credits
         except Exception as e:
-            print("NO ADD-ONS AVAILABLE")
+            logger.error("NO ADD-ONS AVAILABLE")
         try:
             #sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
             # if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
@@ -211,7 +213,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             # if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             #     subscription += carry_on_credits.credits_left
         except:
-            print("No active subscription")
+            logger.error("No active subscription")
             return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
         return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
@@ -269,7 +271,7 @@ class UserAttribute(models.Model):
                                 content_type=content_type)
             self.user.user_permissions.add(permission)
         except Exception as e :
-            print(e)
+            logger.error(e)
         return super().save(*args, **kwargs)
 
     @property

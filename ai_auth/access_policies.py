@@ -74,12 +74,9 @@ class IsEnterpriseUser(BasePermission):
 #         team = request.POST.get('team' ,None)
 #         if not team:
 #             team = request.query_params.get('team', None)
-#         print(team)
-#         print(action)
+ 
 #         managers = Team.objects.get(name = team).internal_member_team_info.filter(role__name = "project owner")
-#         print("project_manager",managers)
-#         print("view",view)
-#         #print("action",action) 
+ 
 #         return request.user.internal_member.last() in managers
 
 #     # def is_internalmember(self,request, view, action) -> bool:
@@ -92,23 +89,18 @@ class IsEnterpriseUser(BasePermission):
 
 #         if team:
 #             team = Team.objects.get(name = team).id
-#         print(repr(request))
-#         print(request.user)
-#         print("inside team")
-#         print(team)
+ 
 #         if team:
 #             try:
 #                 team_owner = request.user.team_owner.id
-#                 print("id",request.user.team_owner.id)
+ 
 #             except ObjectDoesNotExist:
-#                 print("team Doesn't exists")
+ 
 #                 return False
 #         else:
 #             team_owner = None
                 
-#         # print(request.user.team_owner.id)
-
-#         print("team",team)
+ 
 #         if (team_owner == team) and (team_owner != None):
 #             return True
 #         else:
@@ -151,19 +143,16 @@ class IsEnterpriseUser(BasePermission):
 #     def is_project_owner(self, request, view, action: str) -> bool:
 #         team = request.POST.get('team')
 #         managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
-#         print("view",view)
-#         #print("action",action)
+ 
 #         return request.user in managers 
 
 
 #     def is_team_owner(request, view, action: str) -> bool:
 #         team = request.POST.get('team')
-#         print(request)
-#         print("inside team")
-#         print(team)
+ 
 #         if not team:
 #             team = request.user.team_owner.id
-#         print(request.user.team_owner.id)
+ 
 #         return request.user.team_owner.id == int(team)
 
 
