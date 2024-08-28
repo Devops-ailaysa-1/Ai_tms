@@ -2961,7 +2961,6 @@ def matching_word(user_input):
     query = Q()
     for word in user_word:
         query |=Q(lower_sl_term__exact=word.lower())
-    logger.info("query",query)
     return query
     
 def check_source_words(user_input, task):
@@ -2994,7 +2993,6 @@ def check_source_words(user_input, task):
 
     matching_exact_queryset = matching_word(user_input)
     lower_case_query = lower_case_query.filter(matching_exact_queryset)
-    logger.info("lower_case_query",lower_case_query)
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
 
     gloss = [i for i in queryset]

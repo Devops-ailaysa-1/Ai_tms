@@ -830,7 +830,7 @@ def gloss_prompt(gloss_list):
         if term.pos:
             pos_prompt = " and POS tag is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt
-            prompt_list.append(gloss_prompt_concat)
+        prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
@@ -839,9 +839,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         tar_lang = target_language.language
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         gloss = gloss_prompt(gloss)
-        logger.info("gloss",gloss)
         pr = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
-        logger.info(pr)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
         logger.info(res)
