@@ -824,7 +824,9 @@ import openai
 def gloss_prompt(gloss_list):
     prompt_list= []
     for count,term in enumerate(gloss_list):
-        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1,term.sl_term.strip(),term.sl_term_translate.strip(),term.tl_term.strip())
+        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1, term.sl_term.strip(), 
+                                                                term.sl_term_translate.strip(),
+                                                                term.tl_term.strip())
         if term.pos:
             pos_prompt = " and POS tag is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt

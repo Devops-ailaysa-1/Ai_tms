@@ -607,7 +607,8 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         ids = glossary_selected_delete_ids.split(',')
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
+from django.db.models.functions import Lower
+from ai_auth.tasks import matching_word
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
@@ -639,12 +640,18 @@ def glossary_search(request):
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
     
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
-                .filter(job__target_language__language=target_language)\
-                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term','glossary__project__project_name')
+    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+    #             .filter(job__target_language__language=target_language)\
+    #             .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+    #                   params=[user_input]).distinct().values('sl_term','tl_term','glossary__project__project_name')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
+              filter(tl_term__isnull=False).exclude(tl_term='')
+    lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
+
+    matching_exact_queryset = matching_word(user_input)
+    lower_case_query = lower_case_query.filter(matching_exact_queryset)
     
-    queryset_final = queryset1.union(queryset)
+    queryset_final = queryset1.union(lower_case_query)
     #queryset_final = queryset
     if queryset_final:
         res=[]
