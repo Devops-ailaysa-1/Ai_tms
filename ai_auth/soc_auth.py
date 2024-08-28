@@ -13,7 +13,7 @@ class GoogleLogin(SocialLoginView): # if you want to use Authorization Code Gran
     callback_url = settings.GOOGLE_CALLBACK_URL
     client_class = OAuth2Client
 
-    #print("request session",self.request.session)
+ 
 
 #from django.template.defaulttags import token_kwargs
 

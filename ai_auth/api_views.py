@@ -95,7 +95,7 @@ AILAYSA_EMAILS = settings.AILAYSA_EMAILS.split(",")
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def get_stripe_api_key():
     if settings.STRIPE_LIVE_MODE == True :
@@ -374,9 +374,9 @@ def get_payment_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
-        # print(user_invoice_details)
+ 
     except Exception as error:
-        print(error)
+        logger.error(error)
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
@@ -398,7 +398,7 @@ def get_addon_details(request):
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         add_on_list = PaymentIntent.objects.filter(Q(customer_id=user)&Q(metadata__contains={"type":"Addon"})).all()
     except Exception as error:
-        print(error)
+        logger.error(error)
     if add_on_list:
         out=[]
         for i in add_on_list:
@@ -428,7 +428,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
     # if trial == True :
     #     date_time = timezone.now()
     #     trial_end = int(time.mktime(date_time.timetuple()))
-    #     print("trial_end>>>",trial_end)
+ 
     # else:
     #     trial_end = None
 
@@ -436,7 +436,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     # if user.country.sortname == 'IN':
     #     addr=BillingAddress.objects.get(user=user)
-    #     print(addr.state)
+ 
     #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
     #     if state.exists() and state.first().state_code == 'TN':
     #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
@@ -505,7 +505,7 @@ def find_taxrate(user,trial=False):
 
 def subscribe_trial(price,customer=None):
     product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
-    print("product_name>>",product_name)
+ 
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -668,7 +668,7 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,coupon,quantity=1):
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
-    print(tax_rate)
+    logger.info(tax_rate)
     stripe.api_key = api_key
     data1=stripe.InvoiceItem.create(
                 customer=Aicustomer.id,
@@ -953,7 +953,7 @@ def campaign_subscribe(user,camp):
             # )
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
-            print("error in creating subscription ",user.uid)
+            logger.error("error in creating subscription ",user.uid)
 
     price_addon = Price.objects.get(product__name=camp.campaign_name.Addon_name,
                         currency=currency,
@@ -1235,9 +1235,7 @@ def TransactionSessionInfo(request):
     response = stripe.checkout.Session.retrieve(
                  session_id
                     )
-    # print("Bank Details")
-    # print()
-    # print(response)
+ 
     try:
         amount = response.get("total_details").get("amount_discount")
 
@@ -1653,7 +1651,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             if thread_ser.is_valid():
                 thread_ser.save()
             else:
-                print("Errors--->",thread_ser.errors)
+                logger.error("Errors--->",thread_ser.errors)
 
 
     @integrity_error
@@ -1888,7 +1886,7 @@ def teams_list(request):
             team = Team.objects.get(owner_id = j.user_id)
             teams.append(({'team_id':team.id,'team':team.name,'role':j.role.name}))
         except:
-            print("No team")
+            logger.error("No team")
     return JsonResponse({'team_list':teams})
 
 
@@ -1906,9 +1904,7 @@ def teams_list(request):
 #     response = stripe.checkout.Session.retrieve(
 #                  session_id
 #                     )
-#     # print("Bank Details")
-#     # print()
-#     # print(response)
+ 
 #     if response.mode == "subscription":
 #         try:
 #             invoice =Invoice.objects.get(subscription=response.subscription)
@@ -2172,7 +2168,7 @@ def ai_social_login(request):
     process = request.POST.get('process',None)
 
     # base_url="http://127.0.0.1:8089"
-    # print(reverse(provider_id +'_login'))
+ 
     # url=base_url+reverse(provider_id +'_login')
 
     # req = RequestFactory().get(
@@ -2257,8 +2253,7 @@ def ai_social_callback(request):
     #     return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
 
-    # print(session.get_decoded())
-    # print(session.get_decoded().get('socialaccount_user_state',None))
+ 
     user_state=load_state(state)
     if user_state == None:
         logger.error(f"on social login state none {state}")
@@ -2532,11 +2527,11 @@ def resync_instances(queryset):
                 stripe_data = instance.api_retrieve()
             instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
         except stripe.error.PermissionError as error:
-            print(error)
+            logger.error(error)
         except stripe.error.InvalidRequestError as error:
-            print(f"Sync failed: {instance} error :{error}")
+            logger.error(f"Sync failed: {instance} error :{error}")
         except stripe.error.StripeErrorWithParamCode:
-            print(f"Sync failed: {instance}")
+            logger.error(f"Sync failed: {instance}")
 
 def stripe_resync_instance(instance):
 ## cloned from djstripe.admin.views removed queryset
@@ -2550,13 +2545,13 @@ def stripe_resync_instance(instance):
         else:
             stripe_data = instance.api_retrieve()
         instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
-        print(f"Successfully Synced: {instance}")
+        logging.info(f"Successfully Synced:")
     except stripe.error.PermissionError as error:
-        print(error)
+        logger.error(error)
     except stripe.error.InvalidRequestError as error:
-        print(f"Sync failed: {instance} error :{error}")
+        logger.error(f"Sync failed: error :{error}")
     except stripe.error.StripeErrorWithParamCode:
-        print(f"Sync failed: {instance}")
+        logger.error(f"Sync failed:")
 
 
 @api_view(['GET'])
@@ -2605,7 +2600,6 @@ class CampaignRegistrationView(viewsets.ViewSet):
             serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
             if serializer.is_valid():
                 serializer.save()
-            print("serializer",serializer.data)
             user = AiUser.objects.get(id=serializer.data["user_id"])
             ser = AiUserDetailsSerializer(user)
             access_token, refresh_token = jwt_encode(user)
@@ -2662,7 +2656,6 @@ def reports_dashboard(request):
     data["total_languages"]=len(repo.total_languages_used())
     data["total_countries"] =len(countries)
     data["paid_users"]=paid_users.count()
-    print(subs_info)
     for sub in subs_info[0]:
         data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
         # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
@@ -2801,8 +2794,6 @@ class AilaysaPurchasedUnits:
         if to_deduct_units > self.get_units(service_name)['total_units_left']:
              raise ValueError ('deducting more than available credits')
         carry_units = 0
-        print("objs" , units_objs)
-        print("to_deduct_units-->out" , to_deduct_units)
         with transaction.atomic():
             for i in units_objs:
                 if to_deduct_units <= i.units_left:
@@ -2810,16 +2801,14 @@ class AilaysaPurchasedUnits:
                     i.units_left = units
                     i.save()
                     to_deduct_units = 0
-                    print("inside detect")
+ 
                 elif to_deduct_units > i.units_left:
                     carry_units = to_deduct_units - i.units_left
                     i.units_left = 0
                     i.save()
-                    print("carry units",carry_units)
-                    print("inside non detect")
+ 
                 if carry_units == 0:
-                    print("inside carry")
-                    print("to_de",to_deduct_units)
+ 
                     to_deduct_units = 0
                     break
                 else:

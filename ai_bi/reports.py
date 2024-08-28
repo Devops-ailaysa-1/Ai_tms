@@ -52,7 +52,7 @@ class AilaysaReport:
             for proj in projs:
                 jobs = proj.project_jobs_set.all()
                 for job in jobs:
-                    #print(job.__str__())
+ 
                     langpair.append(job.__str__())
             pairs[user]=langpair
             tot_langpairs.extend(pairs)
@@ -115,7 +115,7 @@ class AilaysaReport:
             for proj in projs:
                 jobs = proj.project_jobs_set.all()
                 for job in jobs:
-                    #print(job.__str__())
+ 
                     langpair.append(job.__str__())
             pairs[user.email]=langpair
         for key, value in pairs.items():
@@ -174,7 +174,7 @@ class AilaysaReport:
             
             if user_credits_ls:
                 user_credi_details = user_credits_ls.get(user)
-                print(user_credi_details)
+ 
 
 
             if subs_details:

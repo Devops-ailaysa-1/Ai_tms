@@ -22,7 +22,6 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
-# print("MISTRAL_AI_API_KEY",MISTRAL_AI_API_KEY)
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
 
 
@@ -193,7 +192,7 @@ def get_chapters(pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        print("JSON decoding error:", e)
+        logging.error("JSON decoding error:", e)
     chapters = []
     for title in data:
         chapters.append(title)
@@ -206,7 +205,7 @@ def get_sub_headings(title, pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        print("JSON decoding error:", e)
+        logging.error("JSON decoding error:", e)
 
     if title in data:
         value = data.get(title)
@@ -242,7 +241,7 @@ def search_wikipedia(search_term,lang):
         content = page_data['query']['pages'][page_id]['extract']
         return {"Title": title, "Content": content, "URL": URL}
     else:
-        print("No search results found.")
+        logging.info("No search results found.")
         return {}
 
 
@@ -289,9 +288,9 @@ def google_custom_search(query):
                 dt = {'title':title,'link':link,'description':description}
                 res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res
 
 
@@ -301,7 +300,6 @@ def bing_search(query):
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
     params = {"q": query, "count": 10, "textDecorations": True, "textFormat": "HTML"}
     response = requests.get(search_url, headers=headers, params=params)
-    print(response.status_code)
     res = []
     if response.status_code == 200:
         if response.json().get('webPages'):
@@ -314,9 +312,9 @@ def bing_search(query):
                     dt = {'title':name,'link':url,'description':description}
                     res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res   
 
 
@@ -340,9 +338,9 @@ def bing_news_search(query):
                 dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
                 res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res
 
 

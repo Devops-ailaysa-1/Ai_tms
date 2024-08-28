@@ -12,7 +12,7 @@ bind = "0.0.0.0:8000"
 # Number of worker processes (adjust as needed)
 workers = 1
 worker_connections = 10
-# print("cc-->",2 * multiprocessing.cpu_count() + 1)
+ 
 # threads = 3
 # Set the maximum number of requests a worker will process before restarting
 max_requests = 1000

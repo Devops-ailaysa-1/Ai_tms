@@ -521,7 +521,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
            
             if res:
                 matched_jobs.append(i)
-        print(matched_jobs)
+ 
         return ProjectPostJobSerializer(matched_jobs,many=True,context={'request':self.context.get("request")}).data
 
 

@@ -17,7 +17,6 @@ import os
 import re
 import requests , bleach
 import urllib.parse
-import urllib.parse
 import xlsxwriter
 import rapidfuzz
 from django.db.models.signals import post_save ,pre_save
@@ -43,6 +42,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from spellchecker import SpellChecker
 from django.http import  FileResponse
+from django.db.models.functions import Lower
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
@@ -1572,7 +1572,7 @@ class DocumentToFile(views.APIView):
 
             
             else:
-                logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+                logger.info(f">>>>>>>> Error in output for document_id -><<<<<<<<<")
                 return JsonResponse({"msg": "Sorry! Something went wrong with file processing."}, status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
@@ -2595,7 +2595,7 @@ def download_mt_file(request):
             except Exception as e:
                 print("Exception during file output------> ", e)
         else:
-            logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+            logger.info(f">>>>>>>> Error in output for document_id -> <<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
     elif state == 'FAILURE' or state == 'REVOKED':
@@ -2945,7 +2945,7 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
     for terms in selected_term_model_list:
         if not terms.sl_term_translate:
             
-            terms.sl_term_translate =get_translation(mt_engine_id = 1,
+            terms.sl_term_translate = get_translation(mt_engine_id = 1,
                                                      source_string = terms.sl_term,
                                                      source_lang_code=src_lang,target_lang_code=tar_lang,
                                                      )
@@ -2953,6 +2953,15 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
     
     return selected_term_model_list
 
+
+
+def matching_word(user_input):
+    user_word = user_input.split()
+    query = Q()
+    for word in user_word:
+        query |=Q(lower_sl_term__exact=word.lower())
+        return query
+    
 def check_source_words(user_input, task):
 
     '''
@@ -2971,16 +2980,20 @@ def check_source_words(user_input, task):
 
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
-    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-    #     filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-    #                   params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term') 
 
+    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
+    #           filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
+    #                         params=[user_input]).order_by('sl_term','-created_date').distinct('sl_term') 
+    
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-              filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                            params=[(user_input)]).order_by('sl_term','-created_date').distinct('sl_term')
-                            # params=[identify_lemma(user_input)]).order_by('sl_term','-created_date').distinct('sl_term') 
- 
-    queryset = term_model_source_translate(queryset,source_language.locale_code,target_language.locale_code,user) 
+              filter(tl_term__isnull=False).exclude(tl_term='')
+    
+    lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
+
+    matching_exact_queryset = matching_word(user_input)
+    lower_case_query = lower_case_query.filter(matching_exact_queryset)
+    
+    queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
     #queryset = queryset.values('sl_term','tl_term','sl_term_translate','pos')
 
 

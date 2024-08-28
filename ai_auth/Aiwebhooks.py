@@ -19,7 +19,7 @@ logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def check_referred(user):
     try:
@@ -173,14 +173,12 @@ def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=T
 
     PC = models.PurchasedUnits.objects.create(**kwarg)
     logger.info(f"user:{user.uid}, buyed:{buyed_units}, credits_pack:{pack.credits}, quantity :{quants}, carry:{0}")
-    print(PC)
     # if pack.secondary_unit_type =! None:
 
 
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
-    print(event)
     data =event.data
     invoice=data.get('object').get('invoice',None)
     if invoice == None:
@@ -202,7 +200,6 @@ def my_handler(event, **kwargs):
         meta = data['object']['metadata']
         price_obj= Price.objects.get(id=meta['price'],djstripe_owner_account=default_djstripe_owner)
         cp = models.CreditPack.objects.get(product=price_obj.product)
-        print(data['object']['metadata'])
         quants= int(meta.get('quantity',1))
         update_user_credits(user=user,cust=cust_obj,price=price_obj,
                         quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp)
@@ -217,8 +214,7 @@ def my_handler(event, **kwargs):
         #     'invoice':invoice_obj.id
         #     }
         # us = models.UserCredits.objects.create(**kwarg)
-        # print(us)
-        # print(event.data.object)
+ 
 
 
 # @webhooks.handler("customer.subscription.created")
@@ -248,7 +244,6 @@ def remove_pro_v_sub(customer,subscription):
 
 @webhooks.handler("invoice.paid")
 def my_handler(event, **kwargs):
-    print(event.data)
     data =event.data
     paymentintent=data.get('object').get('payment_intent',None)
     if paymentintent:
@@ -283,7 +278,7 @@ def my_handler(event, **kwargs):
     #meta = data['object']['metadata']
     price_obj= Price.objects.get(id=price,djstripe_owner_account=default_djstripe_owner)
     if price_obj.id != subscription.plan.id:
-        print("Subscription not updated yet")
+        logger.info("Subscription not updated yet")
     #sub_type=data['object']['lines']['data'][0]['metadata']['type']
     if subscription.status == 'trialing':
         trial = True
@@ -291,7 +286,7 @@ def my_handler(event, **kwargs):
     else:
         cp = models.CreditPack.objects.get(product=price_obj.product,type='Subscription')
         trial=False
-    #print(data['object']['metadata'])
+ 
     #quants= int(meta.get('quantity'))
     update_user_credits(user=user,cust=cust_obj,price=price_obj,
                         quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp,subscription=subscription,trial=trial)
@@ -550,7 +545,7 @@ def expiry_yearly_sub(sub):
     start=sub.billing_cycle_anchor
     end=timezone.now()
     if start.day != end.day:
-        print("This is Not bill date")
+        logger.info("This is Not bill date")
 
     expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry

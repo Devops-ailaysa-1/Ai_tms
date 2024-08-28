@@ -68,7 +68,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         try:
             validators.validate_password(password=password)
         except exceptions.ValidationError as e:
-            print("Errors---->",list(e))
+            logger.error("Errors---->",list(e))
             raise serializers.ValidationError({"error":list(e)})
         return super().run_validation(data)
 

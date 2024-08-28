@@ -29,7 +29,8 @@ from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
 from django import core
 from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
-
+import logging
+logger = logging.getLogger("django")
 def replace_punctuation(text):
     for punctuation_mark in string.punctuation:
         text = text.replace(punctuation_mark, "")
@@ -90,7 +91,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
     def run_validation(self,data):
         if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
-            print("data__sub__cat",data.get('sub_catagories'))
+            logging.info("data__sub__cat",data.get('sub_catagories'))
         return super().run_validation(data)
  
 
@@ -136,7 +137,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
 
-        print("consumable_credit",consumable_credit)
+ 
 
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
@@ -374,7 +375,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
                 ImageGeneratorPrompt.objects.filter(id=inst.id).update(prompt_mt=eng_prompt)
-                print("Translated Prompt--------->",eng_prompt)
+ 
                 image_res = get_prompt_image_generations(eng_prompt,image_reso.image_resolution,inst.no_of_image)
             else:
                 image_res = get_prompt_image_generations(inst.prompt,image_reso.image_resolution,inst.no_of_image)
@@ -754,7 +755,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
             blog_keyword = re.sub(r'\d+.','',blog_keyword)
             blog_keyword = blog_keyword.strip()
             if special_character_check(blog_keyword):
-                print("punc")
+                logging.info("punc")
             else:
                 blog_keyword = replace_punctuation(blog_keyword)
                 if trans == True:
@@ -1532,7 +1533,7 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
                 if res.get('msg') == None:
                     consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
             else:
-                print("not_short")
+                logging.error("not_short")
         else:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         return instance
@@ -1570,7 +1571,6 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
 
         if ocr_result_path.endswith(('.doc', '.docx')):
             extracted_text = docx2txt.process(ocr_result_path)
-            print("extracted_text",extracted_text)
             if instance.document:
                 instance.document.html_data = extracted_text
                 instance.document.save()
@@ -1624,5 +1624,4 @@ class MyDocumentOCRSerializer(serializers.ModelSerializer):
         if validated_data.get('html_data',None):
             instance.html_data = validated_data.get('html_data')
             instance.save()
-        print("instance",instance)
         return instance

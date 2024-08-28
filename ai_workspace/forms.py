@@ -9,7 +9,8 @@ from ai_staff.models import Languages
 import json
 from decimal import *
 from ai_workspace.models import TaskAssignInfo
-
+import logging
+logger = logging.getLogger(__name__)
 
 class JobForm(forms.ModelForm):
 	class Meta:
@@ -119,7 +120,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    print("assign detail mailsent>>")
+    logging.info("assign detail mailsent>>")
 
 
 def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reason):
@@ -136,7 +137,7 @@ def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reaso
         emails,
         html_message=msg_html,
     )
-    print("assign vendor status-->>>")
+    logging.info("assign vendor status-->>>")
 
 
 

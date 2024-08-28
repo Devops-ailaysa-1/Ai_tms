@@ -13,8 +13,8 @@ from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags,
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 from django.core.cache import cache
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
-
-
+import logging
+logger = logging.getLogger("django")
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -307,7 +307,7 @@ class MergeSegment(BaseSegment):
         # Resetting the raw MT once a merged segment is restored
         first_seg_in_merge = self.segments.all().first()
         try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
-        except: print("No translation done for merged segment yet !!!")
+        except: logging.error("No translation done for merged segment yet !!!")
 
         # Clearing the relations between MergeSegment and Segment
         self.segments.clear()

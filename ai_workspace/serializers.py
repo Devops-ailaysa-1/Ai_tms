@@ -630,7 +630,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 			GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
 		else:
-			print("Default glossary cannot be created")
+			logging.info("Default glossary cannot be created")
 
 
 	def create(self, validated_data):
@@ -708,7 +708,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				task_assign = TaskAssign.objects.assign_task(project=project)
 
 		except BaseException as e:
-			print("Exception---------->",e)
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
 		return  project
@@ -1462,7 +1461,6 @@ def msg_send_customer_rate_change(task_assign):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    print("customer rate change mailsent to vendor>>")	
 
 
 def notify_client_status(task_assign,response,reason):
@@ -1499,8 +1497,6 @@ def notify_client_status(task_assign,response,reason):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    print("customer status mailsent to vendor>>")	
-
 
 def notify_task_status(task_assign,status,reason):
     from ai_marketplace.serializers import ThreadSerializer
@@ -1551,7 +1547,7 @@ def notify_task_status(task_assign,status,reason):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    print("assign status mailsent from vendor to customer>>")		
+    logging.info("assign status mailsent from vendor to customer>>")		
 		
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
@@ -1644,8 +1640,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			try:
 				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:
+				logging.warning("pass error for update")
 				pass
-			print("po update",po_update)
 			if len(po_update)>0:
 				try:
 					po = po_modify(instance.task_assign_info.id,po_update)

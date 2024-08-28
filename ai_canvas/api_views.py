@@ -55,7 +55,8 @@ import base64
 from ai_staff.serializer import DesignShapeSerializer
 from ai_staff.models import DesignShape
 # HOST_NAME="http://0.0.0.0:8091"
-
+import logging
+logger = logging.getLogger('django')
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
@@ -231,7 +232,7 @@ def page_no_update(can_page,is_update,page_len):
                 updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
             else:
-                print("no_update")
+                logging.info("no_update")
             src_json['projectid']['pages']=page_len
             i.json=src_json
             i.save()
@@ -568,7 +569,7 @@ class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
                                 # 'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail },partial = True)
         if serializer.is_valid():
             serializer.save()
-            # print(serializer.data)
+ 
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
@@ -1222,7 +1223,7 @@ def Designerwordcount(request):
 #     with zipfile.ZipFile(zip_path, 'w') as zipf:
 #         can_src=can_des.canvas_json_src.all()
 #         for src_json_file in can_src:
-#             print("src_json_file---> CanvasSourceJsonFiles")
+ 
 #             src_json=can_des.canvas_translate.all()
 #             if src_json_file.json:
 #                 compressed_data_img=export_download(json_str=src_json_file.json,format=format,multipliervalue=multipliervalue)
@@ -1234,7 +1235,7 @@ def Designerwordcount(request):
 #                 zipf.write(file_path, 'source_target/' , zipfile.ZIP_DEFLATED )
 #                 for j in src_json:
 #                     form=".{}".format(format)
-#                     print("src_json",j.source_language,'---',j.target_language)
+ 
 #                     if j.canvas_json_tar.last():
 #                         tar_json_file=j.canvas_json_tar.last()
 #                         if tar_json_file:
@@ -1263,7 +1264,7 @@ def Designerwordcount(request):
 #             try:
 #                 source_path = src.thumbnail.path
 #             except:
-#                 print("no thumbnail",src.id)
+ 
 #             name = os.path.basename(src.thumbnail.name)
 #             destination = f"/source/{name}" 
 #             zipf.write(source_path, destination)
@@ -1281,7 +1282,7 @@ def Designerwordcount(request):
 #                 try:
 #                     source_path = tar.thumbnail.path
 #                 except:
-#                     print("no thumbnail",tar.id)
+ 
 #                 name = os.path.basename(tar.thumbnail.name)
 #                 destination = f"/{tar_lang_code}/{name}"
 #                 zipf.write(source_path, destination)
@@ -1307,7 +1308,7 @@ def Designerwordcount(request):
 #         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
 #         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
 #         if src__single_inst.json:
-#             print("contains src__json")
+ 
 #             if file_format=='png':
  
 #                 values=export_download(src__single_inst.json,file_format,export_size)
@@ -1361,7 +1362,7 @@ def Designerwordcount(request):
 #                 TemplateGlobalDesign.objects.get(id=pk).delete()
 #             return Response({'msg':'deleted'})
 #         except:
-#             print("error in del")
+ 
 #             return Response({'msg':'template Does not exist'})
 
 
@@ -1393,7 +1394,7 @@ def Designerwordcount(request):
 
 #         # ** get image
 #         if prompt_id==None:
-#             print("SD creatin")
+ 
 #             serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
 #             if serializer.is_valid():
 #                 serializer.save()
@@ -1402,25 +1403,25 @@ def Designerwordcount(request):
             
 #             id=serializer.data.get("id")
 #             wait=0 
-#             print("enter...........")
+ 
 #             while True:
 #                 ins=get_object_or_404(StableDiffusionAPI,id=id)
 #                 if ins.status=="DONE":
 #                     break
 #                 else:
 #                     wait+=1
-#             print("exiting............")
+ 
 #             # id=89
 #             instance=get_object_or_404(StableDiffusionAPI,id=id)
 #         else:
-#             print("no SD creatin")
+ 
 #             instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
 #         background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
 #         # bg_images=list(background)
 #         prompt = instance.prompt
 #         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
 #         font_family = list(font)
-#         print("template_genarating.........................")
+ 
 #         template=genarate_template(instance,template,prompt,font_family,background)        
 #         return JsonResponse({"data":template})
     
@@ -1430,7 +1431,7 @@ def Designerwordcount(request):
 #     temp_width = int(template.width)
 #     template_data=[]
 #     for i in range(0,5):
-#         print(i)
+ 
 #         text_grid,image_grid=grid_position(temp_width,temp_height)
 #         temp={}   
 #         data=copy.deepcopy(jsonStructure) 
@@ -1441,7 +1442,7 @@ def Designerwordcount(request):
 #         backgroundImage =random_background_image(template,bg_images)
 #         data.get("objects").append(backgroundImage)
 
-#         print("j")
+ 
 #         """  Image 0 """
 #         image=genarate_image(instance,image_grid,template)
 #         data.get("objects").append(image)
@@ -1462,7 +1463,7 @@ def Designerwordcount(request):
 #         # data["backgroundImage"]["fill"]=generate_random_rgba()
 #         data["backgroundImage"]["width"]=int(temp_width)
 #         data["backgroundImage"]["height"]=int(temp_height)
-#         print(data)
+ 
 #         # thumnail creation
 #         thumbnail={}
 #         thumbnail['thumb']=create_thumbnail(data,formats='png')

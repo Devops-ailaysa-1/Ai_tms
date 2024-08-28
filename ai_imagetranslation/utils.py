@@ -452,7 +452,7 @@ def background_remove(instance):
     files=[('image',(file_name,open(image_path,'rb'),'image/jpeg'))]
     headers = {}
     response = requests.request("POST", BACKGROUND_REMOVAL_URL, headers=headers, data=payload, files=files)
-    print("image_path----->",image_path)
+ 
     
     image_path = result_base_path+response.json()['result_path'].split("/")[-1]
     mask=Image.open(requests.get(image_path, stream=True).raw)
@@ -502,7 +502,8 @@ def sd_status_check(ids,url):
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json()
 
- 
+import logging
+logger = logging.getLogger("django") 
 from celery.decorators import task
 
 class SDXL:
@@ -537,10 +538,10 @@ class SDXL:
         }
         if negative_prompt:
             data["negative_prompt"]=negative_prompt
-        print(self.url , self.headers)
+ 
         response = requests.post(self.url, json=data, headers=self.headers)
         if response.status_code == 200:
-            print(
+            logging.info(
                 f"Success! You have {response.headers['X-remaining-credits']} credits remaining"
             )
             return Image.open(BytesIO(response.content))
@@ -579,7 +580,7 @@ def stable_diffusion_public_segmind(ins_id): #prompt,41,height,width,negative_pr
         sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         sd_instance.status="DONE"
         sd_instance.save()
-        print("finished_generate")
+ 
     except Exception as e:
         sd_instance.status="ERROR"
         sd_instance.save()
@@ -597,15 +598,15 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
     model="sdxl"
     # consumble_credits_to_image_generate= get_consumable_credits_for_image_generation_sd(number_of_image=1)
     if sd_instance.width==sd_instance.height==512:
-        print("512")
+ 
         model="sdv1"
-    print(model)
+ 
     models={"sdxl" :{'model_name':"sdxl" ,"url":"https://stablediffusionapi.com/api/v4/dreambooth",
                      "fetch_url":"https://stablediffusionapi.com/api/v4/dreambooth/fetch" },
             "sdv1": {'model_name': "stable-diffusion-v1-5","url":"https://stablediffusionapi.com/api/v3/text2img",
                      "fetch_url":"https://stablediffusionapi.com/api/v3/fetch/{}"}}
     
-    print( models[model]['model_name'])
+ 
     data = {
             "key":STABLE_DIFFUSION_PUBLIC_API ,
             "model_id": models[model]['model_name'],
@@ -629,7 +630,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
     x=response.json()
     process=False
     while True:
-        print("processing")
+        logging.info("processing")
         sd_instance.status="PENDING"
         sd_instance.save()
         res_id=response.json()['id']
@@ -649,7 +650,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         sd_instance.status="DONE"
         sd_instance.save()
-        print("finished_generate")
+        logging.info("finished_generate")
         
         # return 
     else:
@@ -709,12 +710,11 @@ def find_frame_and_dutation_video(path):
 
     # headers = {'Content-Type': 'application/json'}
     # response = requests.request("POST", url, headers=headers, data=payload)
-    # print(response.json())
+ 
     # if response.status_code==200:
     #     response=response.json()
     #     reference_id=response['id']
-    #     print("reference_id",reference_id)
-    #     print(response['output'])
+ 
     #     if len(response['output'])==0 and response['status']=='processing':
     #         while True:
     #             response=sd_status_check(reference_id)

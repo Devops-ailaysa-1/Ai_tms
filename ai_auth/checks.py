@@ -59,8 +59,6 @@ class AilaysaTroubleShoot:
     def account_signup_check(self):
         self.account_basic_check()
         self.subscription_check()
-        print("issues",self.issues)
-        print(self.issues.filter(issue="no_stripe_customer_found").last())
         if not self.issues.filter(issue="no_stripe_customer_found").last() in self.issues_found:
             self.credits_check()
         return self.issues_found

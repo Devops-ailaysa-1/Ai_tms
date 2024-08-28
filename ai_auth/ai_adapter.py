@@ -27,8 +27,7 @@ class MyAccountAdapter(DefaultAccountAdapter):
         """
         "Build  Absoulute Uri can be Used after domain is included in Sites"
         url = join(settings.SIGNUP_CONFIRM_URL, emailconfirmation.key)
-        # print("Entered Get email uri",url)
-        # print("Setting link>",settings.SIGNUP_CONFIRM_URL)
+ 
         #ret = build_absolute_uri(request, url
         return url
 

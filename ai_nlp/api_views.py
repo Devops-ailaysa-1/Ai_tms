@@ -19,7 +19,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view,permission_classes
 from ai_workspace.api_views import get_consumable_credits_for_text
-
+import logging
+logger = logging.getLogger(__name__)
 
 @api_view(['POST', ])
 def named_entity(request):
@@ -63,7 +64,7 @@ def wordapi_synonyms(request):
                 else:
                     continue
             except Exception as e:
-                print("Exception ---> ", e)
+                logger.error("Exception ---> ", e)
                 continue
 
     find_synonyms(tokens)
@@ -103,7 +104,7 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         file=request.FILES.get('file',None)
         if not file:
             return Response({'msg':'no file attached'})
-        print(str(file))
+ 
         user,pr_managers = self.get_user() 
         data = {'user':user.id,'managers':pr_managers,'file':file,'file_name':file._get_name()}
         serializer = PdffileUploadSerializer(data={**data},context={'request':request})
@@ -178,7 +179,7 @@ def pdf_chat(request):
             # consumable_credits_user_text =  get_consumable_credits_for_text(chat_text,lang,'en')
 
             # if lang!= 'en':
-                # print(lang,language,"--",consumable_credits_user_text)
+ 
                 # chat_text = get_translation(mt_engine_id=1 , source_string = chat_text,source_lang_code=lang , 
                                             # target_lang_code='en',user_id=user.id,from_open_ai=True)
 
@@ -276,7 +277,7 @@ class PublicBookViewset(viewsets.ViewSet,PageNumberPagination):
 #         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
 #         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
 #         #project_managers.append(user)
-#         print("Pms----------->",project_managers)
+ 
 #         return user,project_managers
 
 

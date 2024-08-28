@@ -204,10 +204,8 @@ def check(uploaded_file,job):
 
 def get_tm_analysis(doc_data,job):
         #[list(result) for key, result  in groupby(tasks, key=lambda item: item.job)]
-        #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
-        #print("Doc data in Analysis---------------->",doc_data)
         sources = []
         sources_ = []
         tm_lists = []
@@ -225,7 +223,6 @@ def get_tm_analysis(doc_data,job):
         files=[]
         files_ = TmxFileNew.objects.filter(job_id=job.id).all()
         for file in files_:
-            print(check(file,job))
             if check(file,job):
                 files.append(file)
         unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
@@ -250,7 +247,7 @@ def get_word_count(tm_analysis,project,task):
     tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition,raw_total =0,0,0,0,0,0,0,0,0,0
     char_tm_100,char_tm_95_99,char_tm_85_94,char_tm_75_84,char_tm_50_74,char_tm_101,char_tm_102,char_new,char_repetition,char_raw_total =0,0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
-        #print("J-------------->",j)
+
         if i>0:
             previous = tm_analysis[i-1]
             pre_ratio = previous.get('ratio')*100
@@ -288,14 +285,12 @@ def get_word_count(tm_analysis,project,task):
         if j.get('repeat'):
             repetition+=j.get('word_count')*j.get('repeat')
             char_repetition+=len(j.get('sent'))*j.get('repeat')
-            #print("Repetition-------------->",repetition)
         raw_total+=j.get('word_count')
         char_raw_total+=len(j.get('sent'))
     raw_total_final = raw_total + repetition
     char_raw_total_final = char_raw_total + char_repetition
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
     cc = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
-    #print("CCCCC-------------------------->",cc)
     if cc:
         obj1 = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
         obj1.update(tm_100 = char_tm_100,tm_95_99 = char_tm_95_99,tm_85_94 = char_tm_85_94,tm_75_84 = char_tm_75_84,\

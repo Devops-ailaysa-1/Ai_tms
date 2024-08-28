@@ -26,7 +26,7 @@ def Letters_Numbers(user_input):
     out=re.finditer(r'([0-9]+\.?\-?\_?[0-9]*?[\p{Ll}\p{Lu}]+)|([\p{Ll}\p{Lu}]+[-_]*\d+)',user_input,re.MULTILINE)
     for i in out:
         data.append(i.group(0))
-    print(data)
+ 
     return data
 
 def UppercaseLatinWords(user_input):
@@ -35,7 +35,7 @@ def UppercaseLatinWords(user_input):
     for i in datanew:
         if i.isupper():
             data.append(i)
-    print(data)
+ 
     return data
 
 def MixedcaseLatinWords(user_input):
@@ -57,31 +57,31 @@ def MixedcaseLatinWords(user_input):
 #     text_tokens = word_tokenize(source)
 #     stop_words=stopwords.words('english')
 #     tokens_new = [word for word in text_tokens if word not in punctuation and word not in stop_words]
-#     # print("Tokens--->",tokens_new)
+ 
 #     unigram=ngrams(tokens_new,1)
-#     # print(unigram)
+ 
 #     single_words=list(" ".join(i) for i in unigram)
-#     # print(single_words)
+ 
 #     bigrams = ngrams(tokens_new,2)
 #     double_words=list(" ".join(i) for i in bigrams)
-#     # print(double_words)
+ 
 #     trigrams = ngrams(tokens_new,3)
 #     triple_words=list(" ".join(i) for i in trigrams)
-#     # print(triple_words)
+ 
 #     fourgrams = ngrams(tokens_new,4)
 #     four_words=list(" ".join(i) for i in fourgrams)
-#     # print(four_words)
+ 
 #     data=findwords(single_words)
 #     data.extend(findwords(double_words))
 #     data.extend(findwords(triple_words))
 #     data.extend(findwords(four_words))
-#     # print("********",data)
+ 
 #     return data
 
 
 def CapitalLetter(user_input,target):
     data=[]
-    print(user_input)
+ 
     m1=re.findall(r'^\p{Lu}',user_input)
     m2=re.findall(r'^\p{Lu}',target)
     res=[i.istitle() for i in m1]
@@ -721,7 +721,6 @@ def QA_Check(request):
 
     #### USER LETTER CASE  ###
     # letter_case,message = letter_case_view(source, target, doc_id)
-    # print("^&*^&*^&*",letter_case)
     # out1={'source':[],'target':[],"ErrorNote":[]}
     # if letter_case:
     #     out1['target'].extend(letter_case)

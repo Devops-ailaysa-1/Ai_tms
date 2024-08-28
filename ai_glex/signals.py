@@ -3,7 +3,8 @@ from tablib import Dataset
 import pandas as pd
 from celery.decorators import task
 #from ai_auth.tasks import update_words_from_template_task
-
+import logging
+logger = logging.getLogger(__name__)
 
 def count_entries(file_path):
     df = pd.read_excel(file_path) 
@@ -80,4 +81,4 @@ def update_proj_settings(sender, instance, *args, **kwargs):
         instance.project.get_mt_by_page = False
         instance.project.save()
     else: 
-        print("Nothing to change on  update_proj_settings function")
+        logging.info("Nothing to change on  update_proj_settings function")

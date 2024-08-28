@@ -32,8 +32,8 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
 from ai_auth.models import AiUser, Professionalidentity,VendorOnboarding
 import json,requests,os
 from django.http import JsonResponse,HttpResponse
-
-
+import logging
+logger = logging.getLogger("django")
 
 def integrity_error(func):
     def decorator(*args, **kwargs):
@@ -460,7 +460,7 @@ def vendor_language_pair(request):
                         if service and unit_type and unit_rate:
                             ser_ven=create_service_types(service,vender_lang_pair[0],unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
-                    print("Exception--------->",e)
+                    ("Exception--------->",e)
                     try:
                         ven_lan_pair=VendorLanguagePair.objects.get_or_create(user=user,source_lang=src_lang,target_lang=tar_lang)
                         ven_service_info=VendorServiceInfo.objects.filter(lang_pair=ven_lan_pair)[0]

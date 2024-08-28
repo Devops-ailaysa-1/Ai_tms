@@ -2,7 +2,8 @@ import requests
 from allauth.socialaccount.providers.oauth2.views import (OAuth2Adapter, OAuth2LoginView, OAuth2CallbackView)
 from .provider import ProzProvider
 from django.conf import settings
-
+import logging
+logger = logging.getLogger('django')
 
 class ProzAdapter(OAuth2Adapter):
     provider_id = ProzProvider.id
@@ -20,7 +21,6 @@ class ProzAdapter(OAuth2Adapter):
         headers = {'Authorization': 'Bearer {0}'.format(token.token)}
         resp = requests.get(self.profile_url, headers=headers)
         extra_data = resp.json()
-        print("request_data --> ",extra_data)
         return self.get_provider().sociallogin_from_response(request, extra_data)
     
 

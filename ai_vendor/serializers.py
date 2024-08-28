@@ -8,7 +8,8 @@ from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
 from rest_framework.response import Response
-
+import logging
+logger = logging.getLogger("django")
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
     cv_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
@@ -150,7 +151,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
              try:lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
              except BaseException as e:
-                 print(f"Error : {str(e)}")
+                 (f"Error : {str(e)}")
 
          if service_data:
              for i in service_data:

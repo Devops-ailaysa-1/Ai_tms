@@ -266,9 +266,9 @@ def send_bootcamp_mail(obj_id):
     auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
                                                 user_email=instance.email)
     if sent:
-        print("Mail sent")
+        logger.info("Mail sent")
     else:
-        print('Mail Not sent')
+        logger.info('Mail Not sent')
 
 
 @task(queue='low-priority')
@@ -349,7 +349,7 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
             'project_deadline':instance.proj_deadline.date().strftime("%d-%m-%Y"),'bid_deadline':instance.bid_deadline.date().strftime('%d-%m-%Y'),\
             'proj_post_title':instance.proj_name,'posted_by':instance.customer.fullname,'services':services}
     auth_forms.vendor_notify_post_jobs(res)
-    print("mailsent")
+    logger.info("mailsent")
 
 
 
@@ -699,7 +699,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
         ProjectAnalysisProperty.get(project_id)
         logger.info("analysis property called")
     except Exception as e:
-        print(f'Error in task: {e}')
+        logger.error(f'Error in task: {e}')
         retries += 1
         if retries > max_retries:
             logger.info("retries exceeded")
@@ -806,7 +806,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                         if existing_cc != char_count:
                             notify_word_count(assigns,word_count,char_count)
         except Exception as e:
-            print(f'Error in notify: {e}')
+            logger.error(f'Error in notify: {e}')
             pass
     logger.info('billable count updated and mail sent')
 
@@ -822,14 +822,13 @@ from ai_staff.models import InternalFlowPrompts
 import openai
 
 def gloss_prompt(gloss_list):
-    prompt = "The source word is {} and the translated word is {} and replaced this to {}"
     prompt_list= []
-    for term in gloss_list:
-        gloss_prompt_concat = prompt.format(term.sl_term,term.sl_term_translate,term.tl_term)
+    for count,term in enumerate(gloss_list):
+        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1,term.sl_term.strip(),term.sl_term_translate.strip(),term.tl_term.strip())
         if term.pos:
-            pos_prompt = " and the pos tag for this is {}".format(term.pos)
+            pos_prompt = " and POS tag is {}".format(term.pos)
             gloss_prompt_concat = gloss_prompt_concat+pos_prompt
-        prompt_list.append(gloss_prompt_concat)
+            prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
@@ -838,7 +837,6 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         tar_lang = target_language.language
         prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
         gloss = gloss_prompt(gloss)
-        #pr = prompt_phrase.format(src,raw_mt,gloss,target_language)
         pr = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)  
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
@@ -986,7 +984,7 @@ def mt_raw_update(task_id,segments):
                         mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                     else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                 else:
-                    print("Insufficient credits")
+                    logger.info("Insufficient credits")
                 
     
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
