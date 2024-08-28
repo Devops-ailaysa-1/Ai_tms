@@ -2957,9 +2957,11 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 def matching_word(user_input):
     user_word = user_input.split()
+    logger.info("user_word",user_word)
     query = Q()
     for word in user_word:
         query |=Q(lower_sl_term__exact=word.lower())
+    logger.info("query",query)
     return query
     
 def check_source_words(user_input, task):
@@ -2992,13 +2994,10 @@ def check_source_words(user_input, task):
 
     matching_exact_queryset = matching_word(user_input)
     lower_case_query = lower_case_query.filter(matching_exact_queryset)
-    
+    logger.info("lower_case_query",lower_case_query)
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
-    #queryset = queryset.values('sl_term','tl_term','sl_term_translate','pos')
-
 
     gloss = [i for i in queryset]
-    #words = [i.get('sl_term') for i in queryset]
     words = [i.sl_term for i in queryset]
     return words, gloss ,source_language , target_language
 
