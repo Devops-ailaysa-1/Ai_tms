@@ -12,14 +12,21 @@ from ai_openai.html2docx_custom import HtmlToDocx
 import re
 
 model_edit = settings.OPENAI_EDIT_MODEL
-OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL   
+OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL
 
+GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
+GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
 
 logger = logging.getLogger('django')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+import google.generativeai as genai
+ 
+
+genai.configure(api_key=GOOGLE_GEMINI_API)
+model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL)
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
@@ -387,3 +394,12 @@ def tamil_spelling_check(text):
 
 ############### mistral #####
 
+
+
+
+
+####### google gemini #############
+
+def gemini_model_generative(prompt):
+    response = model.generate_content(prompt)
+    return response.text
