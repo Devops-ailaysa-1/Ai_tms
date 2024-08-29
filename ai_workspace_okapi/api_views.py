@@ -2956,11 +2956,12 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 
 def matching_word(user_input):
+    from ai_glex.api_views import identify_lemma
     user_word = user_input.split()
     logger.info("user_word",user_word)
     query = Q()
     for word in user_word:
-        query |=Q(lower_sl_term__exact=word.lower())
+        query |=Q(lower_sl_term__exact=identify_lemma(word.lower()))
     return query
     
 def check_source_words(user_input, task):
@@ -2972,7 +2973,7 @@ def check_source_words(user_input, task):
     '''
 
     from ai_glex.models import TermsModel, GlossarySelected, Glossary
-    from ai_glex.api_views import identify_lemma
+    
 
     proj = task.job.project
     user = proj.ai_user
