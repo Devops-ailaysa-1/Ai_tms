@@ -834,6 +834,8 @@ def gloss_prompt(gloss_list):
     return "\n".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
+    from ai_staff.models import LanguageGrammarPrompt
+    from ai_openai.utils import gemini_model_generative
     try:
         src_lang = source_language.language
         tar_lang = target_language.language
@@ -842,7 +844,9 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         pr = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
         res = completion["choices"][0]["message"]["content"]
-        logger.info(res)
+        lang_gram_prompt = LanguageGrammarPrompt.objects.get(language=target_language)
+        res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
+        
 
         # Credit calculation
 
