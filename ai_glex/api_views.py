@@ -137,6 +137,7 @@ class GlossaryFileView(viewsets.ViewSet):
                             cursor.execute(f"DELETE FROM ai_glex_termsmodel WHERE id IN ({ids_str})")
                  
                 [i.delete() for i in gloss_file_instance]
+                #return Response({"Msg":"Files Deleted"})
             else:
                 proj = Project.objects.get(id=project)
                 jobs = proj.get_jobs
@@ -146,6 +147,8 @@ class GlossaryFileView(viewsets.ViewSet):
 
                 GlossaryFiles.objects.filter(query).delete()
         return Response({"Msg":"Files Deleted"})
+            
+        #return Response({"Msg":"No Files to Delete"})
  
 
 
