@@ -11,10 +11,6 @@ from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from ai_auth.tasks import record_api_usage
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
-import json
-import logging
-import os
-import re
 import requests , bleach
 import urllib.parse
 import xlsxwriter
@@ -2957,11 +2953,11 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 def matching_word(user_input):
     from ai_glex.api_views import identify_lemma
+    user_input = identify_lemma(user_input)
     user_word = user_input.split()
-    logger.info("user_word",user_word)
     query = Q()
     for word in user_word:
-        query |=Q(lower_sl_term__exact=identify_lemma(word.lower()))
+        query |=Q(lower_sl_term__exact= word.lower())
     return query
     
 def check_source_words(user_input, task):
@@ -2992,6 +2988,8 @@ def check_source_words(user_input, task):
     
     lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
 
+    if user_input[-1] == ".":
+        user_input = user_input[:-1]
     matching_exact_queryset = matching_word(user_input)
     lower_case_query = lower_case_query.filter(matching_exact_queryset)
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
