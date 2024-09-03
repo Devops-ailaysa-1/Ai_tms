@@ -2972,6 +2972,7 @@ def check_source_words(user_input, task):
     '''
 
     from ai_glex.models import TermsModel, GlossarySelected, Glossary
+    from ai_workspace_okapi.utils import nltk_lemma
     
 
     proj = task.job.project
@@ -2993,7 +2994,7 @@ def check_source_words(user_input, task):
     lower_case_query = queryset.annotate(lower_sl_term=Lower(F('sl_term')))
     
     for obj in lower_case_query:
-        obj.lower_sl_term = lemmatizer.lemmatize(obj.lower_sl_term) # Apply lemmatization to the annotated field in a separate step
+        obj.lower_sl_term = nltk_lemma(obj.lower_sl_term) # Apply lemmatization to the annotated field in a separate step
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
