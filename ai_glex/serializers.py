@@ -49,7 +49,8 @@ class TermsSerializer(serializers.ModelSerializer):
         from ai_workspace_okapi.utils import nltk_lemma
         instance = TermsModel.objects.create(**validated_data)
         if instance.sl_term:
-            instance.root_word =  nltk_lemma(instance.sl_term)
+            # if instance.pos == 'Verb'
+            instance.root_word =  nltk_lemma(instance.sl_term.lower())
             instance.save()
         return instance
        
@@ -57,7 +58,7 @@ class GlossarySelectedSerializer(serializers.ModelSerializer):
     glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
     class Meta:
         model = GlossarySelected
-        fields = ('id','project','glossary','glossary_name',)
+        fields = ('id','project','glossary','glossary_name')
 
 class GlossaryMtSerializer(serializers.ModelSerializer):
     class Meta:
