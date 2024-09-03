@@ -45,7 +45,14 @@ class TermsSerializer(serializers.ModelSerializer):
         #           'sl_source', 'tl_source', 'gender', 'termtype', 'geographical_usage', 'usage_status', 
         #           'term_location', 'created_date', 'modified_date', 'glossary', 'file', 'job', 'edit_allowed', )
     
-
+    def create(self,validated_data):
+        from ai_workspace_okapi.utils import nltk_lemma
+        instance = TermsModel.objects.create(**validated_data)
+        if instance.sl_term:
+            instance.root_word =  nltk_lemma(instance.sl_term)
+            instance.save()
+        return instance
+       
 class GlossarySelectedSerializer(serializers.ModelSerializer):
     glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
     class Meta:

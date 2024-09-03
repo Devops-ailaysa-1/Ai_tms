@@ -881,8 +881,8 @@ def replace_with_gloss(src, raw_mt, task):
     if GlossarySelected.objects.filter(project=proj).exists() or \
         (Glossary.objects.filter(file_translate_glossary=proj).exists()):
 
-        source_words, gloss ,source_language , target_language  = check_source_words(src, task)
-        if source_words:
+        gloss ,source_language , target_language  = check_source_words(src, task)
+        if gloss:
             final_mt = replace_mt_with_gloss(src, raw_mt, gloss,source_language , target_language  )
 
     return final_mt
