@@ -40,7 +40,6 @@ from spellchecker import SpellChecker
 from django.http import  FileResponse
 from django.db.models.functions import Lower
 from rest_framework.views import APIView
-from django.db.models import Q
 import urllib.parse
 import nltk
 import json, time
@@ -2960,7 +2959,7 @@ def matching_word(user_input):
     query = Q()
     for word in user_word:
         word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
-        query |=Q(lower_sl_term__exact= word_lemma.lower())
+        query |=Q(root_word__exact= word_lemma.lower())
     return query
     
 def check_source_words(user_input, task):

@@ -20,7 +20,7 @@ spring_host = os.environ.get("SPRING_HOST")
 
 client = translate.Client()
 
-
+lemmatizer = WordNetLemmatizer()
 
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
@@ -736,7 +736,6 @@ def get_consumption_of_file_translate(task):
 
 
 def nltk_lemma(word,pos="v"):
-    lemmatizer = WordNetLemmatizer()
     return lemmatizer.lemmatize(word, pos=pos)
 
     
