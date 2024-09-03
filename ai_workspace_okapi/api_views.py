@@ -2953,7 +2953,7 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 
 def matching_word(user_input):
-    from ai_workspace_okapi.models import nltk_lemma
+    from ai_workspace_okapi.utils import nltk_lemma
     #from ai_glex.api_views import identify_lemma
     #user_input = identify_lemma(user_input)
     user_word = user_input.split()
