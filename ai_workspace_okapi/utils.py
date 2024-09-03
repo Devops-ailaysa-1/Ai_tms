@@ -13,7 +13,7 @@ from pptx import Presentation
 import string
 import backoff
 from ai_staff.models import InternalFlowPrompts
-
+from nltk.stem import WordNetLemmatizer
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -734,5 +734,9 @@ def get_consumption_of_file_translate(task):
 
 
 
+
+def nltk_lemma(word,pos="v"):
+    lemmatizer = WordNetLemmatizer()
+    return lemmatizer.lemmatize(word, pos=pos)
 
     

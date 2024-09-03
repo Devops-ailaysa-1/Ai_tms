@@ -21,7 +21,7 @@ from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
 from django.contrib.auth import settings
 from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
-from django.db.models import Q
+from django.db.models import Q,F
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django_celery_results.models import TaskResult
@@ -2951,13 +2951,16 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 
 
+
 def matching_word(user_input):
-    from ai_glex.api_views import identify_lemma
-    user_input = identify_lemma(user_input)
+    from ai_workspace_okapi.models import nltk_lemma
+    #from ai_glex.api_views import identify_lemma
+    #user_input = identify_lemma(user_input)
     user_word = user_input.split()
     query = Q()
     for word in user_word:
-        query |=Q(lower_sl_term__exact= word.lower())
+        word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
+        query |=Q(lower_sl_term__exact= word_lemma.lower())
     return query
     
 def check_source_words(user_input, task):
@@ -2986,7 +2989,11 @@ def check_source_words(user_input, task):
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
               filter(tl_term__isnull=False).exclude(tl_term='')
     
-    lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
+    #lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
+    lower_case_query = queryset.annotate(lower_sl_term=Lower(F('sl_term')))
+    
+    for obj in lower_case_query:
+        obj.lower_sl_term = lemmatizer.lemmatize(obj.lower_sl_term) # Apply lemmatization to the annotated field in a separate step
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
@@ -2995,8 +3002,7 @@ def check_source_words(user_input, task):
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
 
     gloss = [i for i in queryset]
-    words = [i.sl_term for i in queryset]
-    return words, gloss ,source_language , target_language
+    return gloss ,source_language , target_language
 
 def target_source_words(target_mt,task):
 
