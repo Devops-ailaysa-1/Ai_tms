@@ -45,7 +45,7 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
                 value.glossary_id = glossary_obj.id
                 value.file_id = instance.id
                 value.job_id = instance.job_id
-                value.root_word = nltk_lemma(value.sl_term)
+                value.root_word = nltk_lemma(value.sl_term.lower())
                 value.save()
                 instance.status  = "PENDING"
                 instance.save()
