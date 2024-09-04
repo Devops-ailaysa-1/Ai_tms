@@ -1,10 +1,8 @@
-from django.core.mail import send_mail
-import smtplib
 from ai_pay.api_views import po_modify_weigted_count
 from celery.utils.log import get_task_logger
 import celery,re,pickle, copy
 import djstripe
-logger = get_task_logger(__name__)
+logger = get_task_logger('django')
 from celery.decorators import task
 from ai_openai.utils import get_consumable_credits_for_openai_text_generator
 from celery import shared_task
@@ -30,7 +28,6 @@ import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
 #from translate.storage.tmx import tmxfile
-from celery_progress.backend import ProgressRecorder
 from time import sleep
 from django.core.management import call_command
 import calendar
@@ -847,6 +844,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
+            logger.info(res)
             res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
         
 
