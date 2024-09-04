@@ -14,8 +14,19 @@ import string
 import backoff
 from ai_staff.models import InternalFlowPrompts
 from nltk.stem import WordNetLemmatizer
+from rest_framework import serializers
 
+from google.cloud import translate_v3beta1 as translate
+from django import core
+import requests, os
+import subprocess
+import io
+import logging
+from rest_framework import serializers
+logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
+GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
+GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
 
 client = translate.Client()
@@ -556,8 +567,7 @@ def get_prompt_sent(opt,sent):
     return prompt
 
 
-GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
-GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
+
 
 google_mime_type = {'doc':'application/msword',	 
                     'docx':	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -569,9 +579,7 @@ google_mime_type = {'doc':'application/msword',
                     'txt':  'application/msword' }
 
 
-from google.cloud import translate_v3beta1 as translate
-from django import core
-import requests, os
+
 
 def file_translate(task,file_path,target_language_code):
     from ai_auth.tasks import record_api_usage
@@ -582,7 +590,7 @@ def file_translate(task,file_path,target_language_code):
     file_name = file_type[0]
     client = translate.TranslationServiceClient()
     if file_format not in google_mime_type.keys():
-        print("file not support")
+        logger.info(f"file not support {user}")
     mime_type = google_mime_type.get(file_format,None)
     with open(file_path, "rb") as document:
         document_content = document.read()
@@ -590,22 +598,20 @@ def file_translate(task,file_path,target_language_code):
 
     usage = get_consumption_of_file_translate(task)
 
-    record_api_usage.apply_async(("GCP","Document Translation",user.uid,user.email,usage), queue='low-priority')
+    try:
+        record_api_usage.apply_async(("GCP","Document Translation",user.uid,user.email,usage), queue='low-priority')
+    except Exception as e:
+        logger.error(f"Error during file translation: {e}")
 
-    response = client.translate_document(request={
-            "parent": parent,
-            "target_language_code": target_language_code,
-            "document_input_config": document_input_config,
-            "is_translate_native_pdf_only":True})  #is_translate_native_pdf_only isTranslateNativePdfOnly
+    response = client.translate_document(request={"parent": parent,"target_language_code": target_language_code,"document_input_config": document_input_config,
+            "is_translate_native_pdf_only":True})  
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
     return file_obj,file_name
 
 
-import subprocess
-import io
-from rest_framework import serializers
+
 def count_pdf_pages(pdf_file):
     # Count the pages in the PDF using pdfinfo
     try:
@@ -687,7 +693,7 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
-from rest_framework import serializers
+
 
 def pdf_char_check_for_document_trans(file_path):
     tot_str=''
@@ -736,6 +742,10 @@ def get_consumption_of_file_translate(task):
 
 
 def nltk_lemma(word,pos="v"):
-    return lemmatizer.lemmatize(word, pos=pos)
+    print(word)
+    if word:
+        return lemmatizer.lemmatize(word.strip(), pos=pos)
+    else:
+        return None
 
     

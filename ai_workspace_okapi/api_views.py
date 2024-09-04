@@ -2997,6 +2997,7 @@ def check_source_words(user_input, task):
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
+        
     matching_exact_queryset = matching_word(user_input)
     lower_case_query = lower_case_query.filter(matching_exact_queryset)
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
