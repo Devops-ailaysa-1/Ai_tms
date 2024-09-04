@@ -2940,10 +2940,8 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
     for terms in selected_term_model_list:
         if not terms.sl_term_translate:
             
-            terms.sl_term_translate = get_translation(mt_engine_id = 1,
-                                                     source_string = terms.sl_term,
-                                                     source_lang_code=src_lang,target_lang_code=tar_lang,
-                                                     )
+            terms.sl_term_translate = get_translation(mt_engine_id = 1,source_string = terms.sl_term,
+                                                     source_lang_code=src_lang,target_lang_code=tar_lang)
             terms.save()
     
     return selected_term_model_list
@@ -2953,8 +2951,6 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 def matching_word(user_input):
     from ai_workspace_okapi.utils import nltk_lemma
-    #from ai_glex.api_views import identify_lemma
-    #user_input = identify_lemma(user_input)
     user_word = user_input.split()
     query = Q()
     for word in user_word:
@@ -2997,7 +2993,7 @@ def check_source_words(user_input, task):
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
-        
+
     matching_exact_queryset = matching_word(user_input)
     lower_case_query = lower_case_query.filter(matching_exact_queryset)
     queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 

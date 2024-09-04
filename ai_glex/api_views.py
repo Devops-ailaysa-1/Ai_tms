@@ -1165,7 +1165,7 @@ def get_word_mt(request):
     '''
 
     from ai_workspace.models import Segment
-
+    from ai_workspace_okapi.utils import nltk_lemma
     user = request.user.team.owner if request.user.team else request.user    
     task_id = request.POST.get("task_id",None)
     source = request.POST.get("source", None)
@@ -1204,7 +1204,7 @@ def get_word_mt(request):
         target_new = translation if source else target
 
         if (sl_code in ['en'] or tl_code in ['en']) and segment_id:
-            lemma_word = identify_lemma(source_new)
+            lemma_word = nltk_lemma(source_new)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
             segment_obj = get_object_or_404(Segment.objects.all(), id=segment_id)

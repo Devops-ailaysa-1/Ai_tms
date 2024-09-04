@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, \
-    MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
+from .models import (Document, Segment, TextUnit, MT_RawTranslation,MT_Engine, 
+                     TranslationStatus, FontSize, Comment)#, MergeSegment
 import json
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
