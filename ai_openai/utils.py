@@ -23,10 +23,19 @@ logger = logging.getLogger('django')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 import google.generativeai as genai
- 
+from google.generativeai.types import HarmCategory, HarmBlockThreshold 
 
 genai.configure(api_key=GOOGLE_GEMINI_API)
-model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL)
+generation_config = {
+  "temperature": 1,
+  "top_p": 0.95,
+  "top_k": 64,
+  "max_output_tokens": 8192,
+  "response_mime_type": "text/plain",
+}
+
+
+model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL,generation_config=generation_config)
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
@@ -401,5 +410,12 @@ def tamil_spelling_check(text):
 ####### google gemini #############
 
 def gemini_model_generative(prompt):
-    response = model.generate_content(prompt)
+    response = model.generate_content(prompt,safety_settings={
+ 
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT:HarmBlockThreshold.BLOCK_NONE,
+ 
+        
+    })
     return response.text
