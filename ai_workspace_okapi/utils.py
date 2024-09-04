@@ -5,6 +5,7 @@ from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
 from django.core.files import File as DJFile
+from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 from PyPDF2 import PdfFileReader
 from PyPDF2.errors import FileNotDecryptedError
@@ -14,6 +15,7 @@ import backoff
 from ai_staff.models import InternalFlowPrompts
 from nltk.stem import WordNetLemmatizer
 from rest_framework import serializers
+
 from google.cloud import translate_v3beta1 as translate_file
 from django import core
 import requests, os
@@ -28,7 +30,7 @@ GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
 
 
-
+client = translate.Client()
 lemmatizer = WordNetLemmatizer()
 
 def special_character_check(s): 
