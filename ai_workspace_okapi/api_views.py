@@ -2947,7 +2947,7 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
     return selected_term_model_list
 
 
-
+ 
 
 def matching_word(user_input):
     from ai_workspace_okapi.utils import nltk_lemma
@@ -2956,6 +2956,9 @@ def matching_word(user_input):
     for word in user_word:
         word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
         query |=Q(root_word__exact= word_lemma.lower())
+        query |=Q(sl_term__exact= word)
+        query |=Q(sl_term__exact = word.lower())
+        query |=Q(sl_term__exact = word_lemma)
     return query
     
 def check_source_words(user_input, task):
@@ -2977,29 +2980,26 @@ def check_source_words(user_input, task):
 
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
-
-    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-    #           filter(tl_term__isnull=False).exclude(tl_term='').extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-    #                         params=[user_input]).order_by('sl_term','-created_date').distinct('sl_term') 
     
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-              filter(tl_term__isnull=False).exclude(tl_term='')
+              filter(tl_term__isnull=False).exclude(tl_term='') ### all the glossary words has been listed here for this task
     
- 
-    #lower_case_query = queryset.annotate(lower_sl_term=Lower(F('sl_term')))
-    
-    #for obj in lower_case_query:
-    #    obj.lower_sl_term = nltk_lemma(obj.lower_sl_term)  
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
+    
+    queryset = queryset.annotate(lower_sl_term=Lower('sl_term'))
 
     matching_exact_queryset = matching_word(user_input)
-    lower_case_query = queryset.filter(matching_exact_queryset)
-    queryset = term_model_source_translate(lower_case_query,source_language.locale_code,target_language.locale_code,user) 
+    lower_case_query = queryset.annotate(lower_sl_term=Lower('sl_term'))
 
-    gloss = [i for i in queryset]
-    return gloss ,source_language , target_language
+    all_sorted_query = lower_case_query.filter(matching_exact_queryset)
+    selected_gloss__term_instances = term_model_source_translate(all_sorted_query,
+                                                                 source_language.locale_code,
+                                                                 target_language.locale_code, user) 
+
+     
+    return selected_gloss__term_instances ,source_language , target_language
 
 def target_source_words(target_mt,task):
 
