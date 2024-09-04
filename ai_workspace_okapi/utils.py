@@ -5,7 +5,6 @@ from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
 from django.core.files import File as DJFile
-from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 from PyPDF2 import PdfFileReader
 from PyPDF2.errors import FileNotDecryptedError
@@ -15,8 +14,7 @@ import backoff
 from ai_staff.models import InternalFlowPrompts
 from nltk.stem import WordNetLemmatizer
 from rest_framework import serializers
-
-from google.cloud import translate_v3beta1 as translate
+from google.cloud import translate_v3beta1 as translate_file
 from django import core
 import requests, os
 import subprocess
@@ -29,7 +27,7 @@ GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID'
 GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
 
-client = translate.Client()
+
 
 lemmatizer = WordNetLemmatizer()
 
@@ -588,7 +586,7 @@ def file_translate(task,file_path,target_language_code):
     file_type = file_path.split("/")[-1].split(".")
     file_format=file_type[-1]   
     file_name = file_type[0]
-    client = translate.TranslationServiceClient()
+    client = translate_file.TranslationServiceClient()
     if file_format not in google_mime_type.keys():
         logger.info(f"file not support {user}")
     mime_type = google_mime_type.get(file_format,None)
