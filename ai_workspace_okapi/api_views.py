@@ -2985,11 +2985,11 @@ def check_source_words(user_input, task):
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
               filter(tl_term__isnull=False).exclude(tl_term='')
     
-    #lower_case_query = queryset.annotate(lower_sl_term = Lower('sl_term'))
-    lower_case_query = queryset.annotate(lower_sl_term=Lower(F('sl_term')))
+ 
+    #lower_case_query = queryset.annotate(lower_sl_term=Lower(F('sl_term')))
     
-    for obj in lower_case_query:
-        obj.lower_sl_term = nltk_lemma(obj.lower_sl_term) # Apply lemmatization to the annotated field in a separate step
+    #for obj in lower_case_query:
+    #    obj.lower_sl_term = nltk_lemma(obj.lower_sl_term)  
 
     if user_input[-1] == ".":
         user_input = user_input[:-1]
