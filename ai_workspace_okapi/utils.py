@@ -742,7 +742,6 @@ def get_consumption_of_file_translate(task):
 
 
 def nltk_lemma(word,pos="v"):
-    print(word)
     if word:
         return lemmatizer.lemmatize(word.strip(), pos=pos)
     else:
