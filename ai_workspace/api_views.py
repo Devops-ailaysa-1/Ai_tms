@@ -4266,7 +4266,7 @@ def translate_file(request):
     else:
         return Response({'msg':'task_id or project_id must'})    
 
-from ai_exportpdf.utils import pdf_char_check
+
 def translate_file_process(task_id):
     '''
     This function is to call google file translate and store the translated file in the
@@ -4277,7 +4277,8 @@ def translate_file_process(task_id):
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
         ser.save()
-    logging.error(ser.errors)
+    else:
+        logging.error(ser.errors)
 
 
 

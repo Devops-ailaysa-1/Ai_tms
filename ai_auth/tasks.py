@@ -560,7 +560,7 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
 
-@task(queue='high-priority')
+@task(queue='high-priority', max_retries=2, default_retry_delay=60)
 def translate_file_task_cel(task_id):
     '''
     This celery task is for processing file as by calling 'Document translate API of google'
