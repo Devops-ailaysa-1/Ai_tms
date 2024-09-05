@@ -752,8 +752,13 @@ class InternalFlowPrompts(models.Model):
     def __str__(self) -> str:
         return self.name
 
+class ExtraReplacePrompt(models.Model):
+    internal_prompt = models.OneToOneField(InternalFlowPrompts, related_name='replace_internal_prmpt', on_delete=models.CASCADE)
+    language = models.ForeignKey(Languages, related_name='gextra_prmpt_lang', on_delete=models.CASCADE)
+    prompt = models.TextField(null=True,blank=True)
 
-
+    def __str__(self) -> str:
+        return self.prompt
 
 class LanguageGrammarPrompt(models.Model):
     language = models.ForeignKey(Languages, related_name='gram_prmpt_lang', on_delete=models.CASCADE)
@@ -762,3 +767,4 @@ class LanguageGrammarPrompt(models.Model):
 
     def __str__(self) -> str:
         return self.prompt_name
+    

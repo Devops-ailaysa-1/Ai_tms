@@ -836,17 +836,37 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     try:
         src_lang = source_language.language
         tar_lang = target_language.language
-        prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
+        
+        internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
+        prompt_phrase = internal_flow_instance.prompt_phrase
         gloss = gloss_prompt(gloss)
-        pr = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
+        
+        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
+
+        ## appending extraprompt for replaceing
+        from ai_staff.models import ExtraReplacePrompt
+        extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=tar_lang)
+        if extra_prompt:
+            replace_prompt = replace_prompt + extra_prompt.last().prompt
+        
+        print("replace_prompt",replace_prompt)
+
+
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
+        
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
+        
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
-        
+            gemini_result = gemini_model_generative(lang_gram_prompt.prompt.format(res))
+            if not gemini_result:
+                logger.error("resturning raw mt due to error in gemini")
+                return raw_mt
+            else:
+                return gemini_result 
 
+        
         # Credit calculation
 
         # prompt_usage = completion['usage']
