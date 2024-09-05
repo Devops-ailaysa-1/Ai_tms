@@ -654,9 +654,9 @@ def glossary_search(request):
 
     matching_exact_queryset = matching_word(user_input)
     all_sorted_query = queryset.filter(matching_exact_queryset)
-    print("all_sorted_query",all_sorted_query)
      
     queryset_final = queryset1.union(all_sorted_query)
+    print("queryset_final---->>",queryset_final)
     #queryset_final = queryset
     if queryset_final:
         res=[]
