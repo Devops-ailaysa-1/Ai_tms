@@ -2939,11 +2939,9 @@ def symspellcheck(request):
 def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user):
     for terms in selected_term_model_list:
         if not terms.sl_term_translate:
-            
             terms.sl_term_translate = get_translation(mt_engine_id = 1,source_string = terms.sl_term,
                                                      source_lang_code=src_lang,target_lang_code=tar_lang)
             terms.save()
-    
     return selected_term_model_list
 
 
@@ -2988,18 +2986,17 @@ def check_source_words(user_input, task):
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
-    queryset = queryset.annotate(lower_sl_term=Lower('sl_term'))
 
     matching_exact_queryset = matching_word(user_input)
-    lower_case_query = queryset.annotate(lower_sl_term=Lower('sl_term'))
 
-    all_sorted_query = lower_case_query.filter(matching_exact_queryset)
-    selected_gloss__term_instances = term_model_source_translate(all_sorted_query,
-                                                                 source_language.locale_code,
+    print("matching_exact_queryset",matching_exact_queryset)
+
+    all_sorted_query = queryset.filter(matching_exact_queryset)
+    print("all_sorted_query",all_sorted_query)
+    selected_gloss_term_instances = term_model_source_translate(all_sorted_query, source_language.locale_code,
                                                                  target_language.locale_code, user) 
-
-     
-    return selected_gloss__term_instances ,source_language , target_language
+    print("selected_gloss_term_instances",selected_gloss_term_instances)
+    return selected_gloss_term_instances ,source_language , target_language
 
 def target_source_words(target_mt,task):
 
