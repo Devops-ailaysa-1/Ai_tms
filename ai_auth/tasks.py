@@ -832,36 +832,35 @@ def gloss_prompt(gloss_list):
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
-    from ai_openai.utils import gemini_model_generative
-    # try:
-    src_lang = source_language.language
-    tar_lang = target_language.language
-    
-    internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
-    prompt_phrase = internal_flow_instance.prompt_phrase
-    gloss = gloss_prompt(gloss)
-    
-    replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
+    from ai_openai.utils import gemini_model_generative , antropic_generative_model
+    try:
+        src_lang = source_language.language
+        tar_lang = target_language.language
+        
+        internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
+        prompt_phrase = internal_flow_instance.prompt_phrase
+        gloss = gloss_prompt(gloss)
+        
+        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
 
-    ## appending extraprompt for replaceing
-    from ai_staff.models import ExtraReplacePrompt
-    extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
-    if extra_prompt:
-        replace_prompt = replace_prompt + extra_prompt.last().prompt
-    
-    logger.info("replace_prompt",replace_prompt)
-    logger.info("extra_prompt",extra_prompt)
-    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
-                                                messages=[{"role": "user", "content": replace_prompt}])
-    res = completion["choices"][0]["message"]["content"]
-    
-    lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
-    
-    if lang_gram_prompt:
-        lang_gram_prompt = lang_gram_prompt.last()
-        res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
-    
-
+        ## appending extraprompt for replaceing
+        from ai_staff.models import ExtraReplacePrompt
+        extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+        if extra_prompt:
+            replace_prompt = replace_prompt + extra_prompt.last().prompt
+        
+        logger.info("replace_prompt",replace_prompt)
+        logger.info("extra_prompt",extra_prompt)
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
+                                                    messages=[{"role": "user", "content": replace_prompt}])
+        res = completion["choices"][0]["message"]["content"]
+        
+        lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
+        
+        if lang_gram_prompt:
+            lang_gram_prompt = lang_gram_prompt.last()
+            #res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
+            res = antropic_generative_model(lang_gram_prompt.prompt.format(res))
             
             # Credit calculation
 
@@ -871,9 +870,9 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
             # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
 
 
-    # except:
-    #     logger.info("error in process ing adaptive prompt")
-    #     res = raw_mt
+    except:
+        logger.info("error in process ing adaptive prompt")
+        res = raw_mt
     return res  
 
 
