@@ -10,7 +10,7 @@ from django.conf import settings
 from docx import Document
 from ai_openai.html2docx_custom import HtmlToDocx
 import re
-import anthropic
+#import anthropic
 model_edit = settings.OPENAI_EDIT_MODEL
 OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL
 
@@ -35,7 +35,7 @@ generation_config = {
   "response_mime_type": "text/plain",
 }
 
-anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+#anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL,generation_config=generation_config)
 
@@ -427,12 +427,11 @@ def gemini_model_generative(prompt):
 ## ANTHROPIC_API_KEY
 
 def antropic_generative_model(prompt):
-    message = anthropic_client.messages.create(
-        model="claude-3-5-sonnet-20240620",
-        max_tokens=1024,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return message.content[0].text
+    pass
+    # message = anthropic_client.messages.create(model="claude-3-5-sonnet-20240620",max_tokens=1024,
+    #     messages=[
+    #         {"role": "user", "content": prompt}
+    #     ]
+    # )
+    # return message.content[0].text
     
