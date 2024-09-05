@@ -2970,7 +2970,6 @@ def check_source_words(user_input, task):
 
     from ai_glex.models import TermsModel, GlossarySelected 
      
-
     proj = task.job.project
     user = proj.ai_user
     target_language = task.job.target_language
