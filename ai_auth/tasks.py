@@ -851,7 +851,6 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         print("replace_prompt",replace_prompt)
 
-
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
         
@@ -899,6 +898,7 @@ def replace_with_gloss(src, raw_mt, task):
         (Glossary.objects.filter(file_translate_glossary=proj).exists()):
 
         gloss ,source_language , target_language  = check_source_words(src, task)
+        print("gloss_replace_with_gloss",gloss)
         if gloss:
             final_mt = replace_mt_with_gloss(src, raw_mt, gloss,source_language , target_language  )
 
