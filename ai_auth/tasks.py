@@ -858,12 +858,12 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
-            gemini_result = gemini_model_generative(lang_gram_prompt.prompt.format(res))
-            if not gemini_result:
-                logger.error("resturning raw mt due to error in gemini")
-                return raw_mt
-            else:
-                return gemini_result 
+            res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
+            # if not gemini_result:
+            #     logger.error("returning raw mt due to error in gemini")
+            #     return raw_mt
+            # else:
+            #     return gemini_result 
 
         
         # Credit calculation
@@ -1067,8 +1067,6 @@ def record_api_usage(provider,service,uid,email,usage):
     from ai_auth.utils import record_usage
     record_usage(provider,service,uid,email,usage)
 
-from ai_glex import models as glex_model
-from tablib import Dataset
 # @task(queue='high-priority')
 # def update_words_from_template_task(file_ids):
     
@@ -1195,6 +1193,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
 
 
 def proz_list_send_email(projectpost_id):
+    from ai_marketplace.api_views import get_proz_lang_pair
+    from rest_framework.response import Response
     '''
     This task is to notify proz users about available projectpost. In this we are calling proz-API
     by sending the custom message. Person from proz approves and forward it.(Is the flow)

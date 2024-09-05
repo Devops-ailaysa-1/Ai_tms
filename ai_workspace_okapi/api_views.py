@@ -2986,17 +2986,14 @@ def check_source_words(user_input, task):
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
-
     matching_exact_queryset = matching_word(user_input)
 
-    print("matching_exact_queryset",matching_exact_queryset)
-
     all_sorted_query = queryset.filter(matching_exact_queryset)
-    print("all_sorted_query",all_sorted_query)
+
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, source_language.locale_code,
                                                                  target_language.locale_code, user) 
-    print("selected_gloss_term_instances",selected_gloss_term_instances)
-    return selected_gloss_term_instances ,source_language , target_language
+
+    return selected_gloss_term_instances, source_language, target_language
 
 def target_source_words(target_mt,task):
 
