@@ -431,3 +431,13 @@ IDENTIFY_LEMMA = os.getenv('IDENTIFY_LEMMA')
 ### GEMINI API ####
 GOOGLE_GEMINI_API = os.getenv('GOOGLE_GEMINI_API')
 GOOGLE_GEMINI_MODEL = os.getenv('GOOGLE_GEMINI_MODEL')
+
+
+NOTEBOOK_ARGUMENTS = [
+"--ip",
+"0.0.0.0",
+"--port",
+"8888",
+"--allow-root",
+"--no-browser",
+]

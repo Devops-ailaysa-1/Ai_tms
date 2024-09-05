@@ -849,21 +849,18 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         if extra_prompt:
             replace_prompt = replace_prompt + extra_prompt.last().prompt
         
-        print("replace_prompt",replace_prompt)
-
+        logger.info("replace_prompt",replace_prompt)
+        logger.info("extra_prompt",extra_prompt)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
+        logger.info(res)
         
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
         
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
             res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
-            # if not gemini_result:
-            #     logger.error("returning raw mt due to error in gemini")
-            #     return raw_mt
-            # else:
-            #     return gemini_result 
+ 
 
         
         # Credit calculation
