@@ -2954,6 +2954,7 @@ def matching_word(user_input):
     for word in user_word:
         word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
         query |=Q(root_word__exact= word_lemma.lower())
+        query |=Q(sl_term__exact= word_lemma.lower())
         query |=Q(sl_term__exact= word)
         query |=Q(sl_term__exact = word.lower())
         query |=Q(sl_term__exact = word_lemma)
@@ -2967,9 +2968,8 @@ def check_source_words(user_input, task):
     if the terms are present then it will return source list and values list(sl_term,tl_term) 
     '''
 
-    from ai_glex.models import TermsModel, GlossarySelected, Glossary
-    from ai_workspace_okapi.utils import nltk_lemma
-    
+    from ai_glex.models import TermsModel, GlossarySelected 
+     
 
     proj = task.job.project
     user = proj.ai_user
