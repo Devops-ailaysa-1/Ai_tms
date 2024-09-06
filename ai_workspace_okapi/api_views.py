@@ -2954,7 +2954,7 @@ def matching_word(user_input):
     for word in user_word:
         word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
         query |=Q(root_word__exact= word_lemma.lower())
-        query |=Q(sl_term__exact= word_lemma.lower())
+        query |=Q(sl_term__exact = word_lemma.lower())
         query |=Q(sl_term__exact= word)
         query |=Q(sl_term__exact = word.lower())
         query |=Q(sl_term__exact = word_lemma)
@@ -2988,9 +2988,9 @@ def check_source_words(user_input, task):
     matching_exact_queryset = matching_word(user_input)
 
     all_sorted_query = queryset.filter(matching_exact_queryset)
-    print(all_sorted_query.count())
+    print("before count-->",all_sorted_query.count())
     all_sorted_query = all_sorted_query.distinct()
-    print(all_sorted_query.count())
+    print("after count-->",all_sorted_query.count())
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, source_language.locale_code,
                                                                  target_language.locale_code, user) 
 
