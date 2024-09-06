@@ -2968,12 +2968,14 @@ def check_source_words(user_input, task):
     if the terms are present then it will return source list and values list(sl_term,tl_term) 
     '''
 
-    from ai_glex.models import TermsModel, GlossarySelected 
+    from ai_glex.models import TermsModel, GlossarySelected
+    from ai_qa.api_views import remove_tags
      
     proj = task.job.project
     user = proj.ai_user
     target_language = task.job.target_language
     source_language = task.job.source_language
+    user_input = remove_tags(user_input)
 
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 

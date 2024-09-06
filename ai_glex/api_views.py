@@ -610,6 +610,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         ids = glossary_selected_delete_ids.split(',')
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
 from django.db.models.functions import Lower
 from ai_workspace_okapi.api_views import matching_word
 @api_view(['POST',])
@@ -620,7 +621,7 @@ def glossary_search(request):
     This function is to search user_input(segment source) against MYGlossary and TermsModel 
     and returns the match if any.
     '''
-
+    from ai_qa.api_views import remove_tags
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
@@ -641,6 +642,8 @@ def glossary_search(request):
     
     if user_input[-1] == ".":
         user_input = user_input[:-1]
+    
+    user_input = remove_tags(user_input)
     
     queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
