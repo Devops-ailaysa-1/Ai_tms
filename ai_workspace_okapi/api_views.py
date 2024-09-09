@@ -3008,7 +3008,6 @@ def check_source_words(user_input, task):
 
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
-    
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
               filter(tl_term__isnull=False).exclude(tl_term='') ### all the glossary words has been listed here for this task
     
@@ -3019,11 +3018,9 @@ def check_source_words(user_input, task):
     matching_exact_queryset = matching_word(user_input)
 
     all_sorted_query = queryset.filter(matching_exact_queryset)
-    print("before count-->",all_sorted_query.count())
     all_sorted_query = all_sorted_query.distinct()
-    print("after count-->",all_sorted_query.count())
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, source_language.locale_code,
-                                                                 target_language.locale_code, user) 
+                                                                target_language.locale_code, user) 
 
     return selected_gloss_term_instances, source_language, target_language
 

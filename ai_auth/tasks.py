@@ -849,8 +849,6 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         if extra_prompt:
             replace_prompt = replace_prompt + extra_prompt.last().prompt
         
-        logger.info("replace_prompt",replace_prompt)
-        logger.info("extra_prompt",extra_prompt)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
                                                   messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
@@ -859,7 +857,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(res))
+            res = gemini_model_generative(lang_gram_prompt.prompt.format(gloss, res))
             #res = antropic_generative_model(lang_gram_prompt.prompt.format(res))
             
             # Credit calculation
