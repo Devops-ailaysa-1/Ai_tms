@@ -857,7 +857,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(gloss, res))
+            res = gemini_model_generative(lang_gram_prompt.prompt.format(src_lang,src,raw_mt ,gloss, res))
             #res = antropic_generative_model(lang_gram_prompt.prompt.format(res))
             
             # Credit calculation
