@@ -852,7 +852,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         logger.info("replace_prompt",replace_prompt)
         logger.info("extra_prompt",extra_prompt)
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
-                                                    messages=[{"role": "user", "content": replace_prompt}])
+                                                  messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
         
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)

@@ -16,7 +16,7 @@ OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL
 
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
-ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
+#ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
 
