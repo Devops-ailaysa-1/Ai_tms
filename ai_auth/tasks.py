@@ -829,7 +829,9 @@ def gloss_prompt(gloss_list):
             #pos_prompt = " and POS tag is {}".format(term.pos)
         #    gloss_prompt_concat = gloss_prompt_concat+pos_prompt
         prompt_list.append(gloss_prompt_concat)
-    return ",".join(prompt_list)
+    
+    
+    return "Original Term→ Changing Term: "+ ",".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
@@ -844,16 +846,20 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         #replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
 
-        replace_prompt = prompt_phrase.format(raw_mt,gloss)
-        logger.info("replace_prompt",replace_prompt)
+        #replace_prompt = prompt_phrase.format(raw_mt,gloss)
+        #logger.info("replace_prompt",replace_prompt)
  
         #from ai_staff.models import ExtraReplacePrompt
         #extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
         #if extra_prompt:
         #    replace_prompt = replace_prompt + extra_prompt.last().prompt
+        content = raw_mt +"\n\n"+ gloss
+        messages=[
+            {"role": "system", "content": prompt_phrase},
+            {"role": "user", "content": content}
+        ]
         
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
-                                                  messages=[{"role": "user", "content": replace_prompt}])
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
         res = completion["choices"][0]["message"]["content"]
         
         #lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
