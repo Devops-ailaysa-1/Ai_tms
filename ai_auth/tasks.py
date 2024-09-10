@@ -821,14 +821,15 @@ import openai
 def gloss_prompt(gloss_list):
     prompt_list= []
     for count,term in enumerate(gloss_list):
-        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1, term.sl_term.strip(), 
-                                                                term.sl_term_translate.strip(),
-                                                                term.tl_term.strip())
-        if term.pos:
-            pos_prompt = " and POS tag is {}".format(term.pos)
-            gloss_prompt_concat = gloss_prompt_concat+pos_prompt
+        #gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1, term.sl_term.strip(), 
+        #                                                        term.sl_term_translate.strip(),
+        #                                                        term.tl_term.strip())
+        gloss_prompt_concat = "{} → {}".format(term.sl_term_translate.strip(),term.tl_term.strip())
+        #if term.pos:
+            #pos_prompt = " and POS tag is {}".format(term.pos)
+        #    gloss_prompt_concat = gloss_prompt_concat+pos_prompt
         prompt_list.append(gloss_prompt_concat)
-    return "\n".join(prompt_list)
+    return ",".join(prompt_list)
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
@@ -841,24 +842,26 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         prompt_phrase = internal_flow_instance.prompt_phrase
         gloss = gloss_prompt(gloss)
         
-        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
+        #replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
 
-        ## appending extraprompt for replaceing
-        from ai_staff.models import ExtraReplacePrompt
-        extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
-        if extra_prompt:
-            replace_prompt = replace_prompt + extra_prompt.last().prompt
+        replace_prompt = prompt_phrase.format(raw_mt,gloss)
+        logger.info("replace_prompt",replace_prompt)
+ 
+        #from ai_staff.models import ExtraReplacePrompt
+        #extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+        #if extra_prompt:
+        #    replace_prompt = replace_prompt + extra_prompt.last().prompt
         
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,
                                                   messages=[{"role": "user", "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
         
-        lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
+        #lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
         
-        if lang_gram_prompt:
-            lang_gram_prompt = lang_gram_prompt.last()
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(src_lang,src,raw_mt ,gloss, res))
-            #res = antropic_generative_model(lang_gram_prompt.prompt.format(res))
+        #if lang_gram_prompt:
+        #    lang_gram_prompt = lang_gram_prompt.last()
+        #    res = gemini_model_generative(lang_gram_prompt.prompt.format(src_lang,src,raw_mt ,gloss, res))
+             
             
             # Credit calculation
 
