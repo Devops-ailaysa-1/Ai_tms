@@ -843,6 +843,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
         prompt_phrase = internal_flow_instance.prompt_phrase
         gloss = gloss_prompt(gloss)
+        print(gloss)
         
         #replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
 
@@ -861,6 +862,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
         res = completion["choices"][0]["message"]["content"]
+        logger.info(res)
         
         #lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
         
