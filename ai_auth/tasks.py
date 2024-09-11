@@ -830,26 +830,42 @@ def gloss_prompt(gloss_list):
         prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
+def tamil_morph_prompt(src_seg , tar_seg,gloss_list):
+    messages=[
+                {"role": "system", "content": """i will provide you the source english text, its relative translation and word list
+            fetch out the relative translated word from the translation for the english word in the list.
+            output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
+            output format: {english word : tamil word}
+                """},
+                {"role": "user", "content": src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list}
+                    ]
+    return messages
+
+
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative , antropic_generative_model
+    from ai_staff.models import ExtraReplacePrompt
     try:
         src_lang = source_language.language
         tar_lang = target_language.language
-        
+
+        # if tar_lang == "Tamil":
+        #     tamil_morph_prompt(src,raw_mt,gloss) # ------>>>
+
         internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
         prompt_phrase = internal_flow_instance.prompt_phrase
         gloss = gloss_prompt(gloss)
-        
-        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src, tar_lang, raw_mt,gloss, tar_lang)
 
- 
-        from ai_staff.models import ExtraReplacePrompt
+        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss, tar_lang)
+        
         extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+
         if extra_prompt:
             replace_prompt = replace_prompt + extra_prompt.last().prompt
         
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": replace_prompt}])
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
+                                                                                             "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
         
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
