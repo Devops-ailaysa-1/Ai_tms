@@ -841,7 +841,7 @@ def tamil_gloss_compare_with(gloss_list):
 
 def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
 
-    terms_trans_dict = []
+    terms_trans_dict = {}
 
     gloss_list_sl_term = tamil_gloss(gloss_list)
     content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
