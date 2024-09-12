@@ -966,13 +966,13 @@ class WholeGlossaryTermSearchView(generics.ListAPIView):
     pagination_class = NoPagination
    
 
-    def get_queryset(self):
-        user = self.request.user.team.owner if self.request.user.team else self.request.user
-        queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
-                    .filter(glossary_project__term__isnull=False).distinct()
-        glossary_ids = [glossary_id] if glossary_id else [i.glossary_project.id for i in queryset]
-        query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
-        return query
+    # def get_queryset(self):
+    #     user = self.request.user.team.owner if self.request.user.team else self.request.user
+    #     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+    #                 .filter(glossary_project__term__isnull=False).distinct()
+    #     glossary_ids = [glossary_id] if glossary_id else [i.glossary_project.id for i in queryset]
+    #     query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
+    #     return query
 
 
 @api_view(['GET',])
@@ -988,8 +988,7 @@ def whole_glossary_term_search(request):
         return Response({'msg':'term required'},status=400)
     search_in = request.GET.get('search_in',None)
     user = request.user.team.owner if request.user.team else request.user
-    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
-                .filter(glossary_project__term__isnull=False).distinct()
+    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False).filter(glossary_project__term__isnull=False).distinct()
     glossary_ids = [glossary_id] if glossary_id else [i.glossary_project.id for i in queryset]
     query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
     if search_in == 'source':

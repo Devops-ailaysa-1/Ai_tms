@@ -830,7 +830,17 @@ def gloss_prompt(gloss_list):
         prompt_list.append(gloss_prompt_concat)
     return "\n".join(prompt_list)
 
+def tamil_gloss(gloss_list):
+    prompt_list = []
+    for term in gloss_list:
+        prompt_list.append(term.sl_term.strip())
+    return ",".join(prompt_list)
+
+def tamil_gloss_compare_with(gloss_list):
+    pass
+
 def tamil_morph_prompt(src_seg , tar_seg,gloss_list):
+    gloss_list = tamil_gloss(gloss_list)
     messages=[
                 {"role": "system", "content": """i will provide you the source english text, its relative translation and word list
             fetch out the relative translated word from the translation for the english word in the list.
@@ -839,7 +849,14 @@ def tamil_morph_prompt(src_seg , tar_seg,gloss_list):
                 """},
                 {"role": "user", "content": src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list}
                     ]
-    return messages
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+    res = completion["choices"][0]["message"]["content"]
+
+    for i in res.split(","):
+        terms_trans = i.strip().split(":")
+        print(terms_trans[0].strip(), terms_trans[1].strip())
+
+    return res
 
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
@@ -850,8 +867,9 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         src_lang = source_language.language
         tar_lang = target_language.language
 
-        # if tar_lang == "Tamil":
-        #     tamil_morph_prompt(src,raw_mt,gloss) # ------>>>
+        if tar_lang == "Tamil":
+            tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss) # ------>>>
+            print("tamil_morph_result---->>",tamil_morph_result)
 
         internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
         prompt_phrase = internal_flow_instance.prompt_phrase
