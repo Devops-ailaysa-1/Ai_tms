@@ -836,8 +836,18 @@ def tamil_gloss(gloss_list):
         prompt_list.append(term.sl_term.strip())
     return ",".join(prompt_list)
 
-def tamil_gloss_compare_with(gloss_list):
-    pass
+def tamil_correction(src_seg,terms_trans_dict):
+     
+    messages=[{"role": "system", "content": """Your task is to modify a provided Tamil sentence based on specific guidelines. Here's the necessary information you'll need to execute the task:
+    Please remember to focus on splitting the original word into its root and morphological parts. Once that is done, replace the original word in the sentence with the modified root of the original word while keeping the morphological structure intact.
+    output:  provide only the modified sentence.
+    do not generate anything else. no feedback or intermediate steps.
+                """},
+                {"role": "user", "content":src_seg+"\n\n"+terms_trans_dict }]
+    print("messages",messages)
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+    res = completion["choices"][0]["message"]["content"]
+    return res
 
 def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
 
@@ -861,11 +871,19 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
         print("terms_trans--->",terms_trans)
         if terms_trans[0].strip():
             sl_term = terms_trans[0].strip()
-            if sl_term in gloss_list:
-                term_instance = gloss_list.filter(sl_term=sl_term).last()
-                if term_instance:
-                    terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]
-    return terms_trans_dict
+            #if sl_term in gloss_list:
+            term_instance = gloss_list.filter(sl_term=sl_term).last()
+            if term_instance:
+                #terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]\
+                terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
+    
+    if terms_trans_dict:
+        return tamil_correction(src_seg,terms_trans_dict)
+    return None
+
+
+
+
 
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
@@ -878,7 +896,11 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
 
         if tar_lang == "Tamil":
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss) # ------>>>
-            print("tamil_morph_result---->>",tamil_morph_result)
+            if tamil_morph_result:
+                print("from ----->>> tamil_morph_result")
+                return tamil_morph_result
+             
+            #print("tamil_morph_result---->>",tamil_morph_result)
 
         internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
         prompt_phrase = internal_flow_instance.prompt_phrase
