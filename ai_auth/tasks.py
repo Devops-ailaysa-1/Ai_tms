@@ -848,7 +848,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
     messages=[{"role": "system", "content": """i will provide you the source english text, its relative translation and word list
             fetch out the relative translated word from the translation for the english word in the list.
             output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
-            output format: {english word : tamil word}
+            output format: english word : tamil word in comma seperated
                 """},
                 {"role": "user", "content":content }]
     
