@@ -836,14 +836,14 @@ def tamil_gloss(gloss_list):
         prompt_list.append(term.sl_term.strip())
     return ",".join(prompt_list)
 
-def tamil_correction(src_seg,terms_trans_dict):
+def tamil_correction(tar_seg,terms_trans_dict):
      
     messages=[{"role": "system", "content": """Your task is to modify a provided Tamil sentence based on specific guidelines. Here's the necessary information you'll need to execute the task:
     Please remember to focus on splitting the original word into its root and morphological parts. Once that is done, replace the original word in the sentence with the modified root of the original word while keeping the morphological structure intact.
     output:  provide only the modified sentence.
     do not generate anything else. no feedback or intermediate steps.
                 """},
-                {"role": "user", "content":src_seg+"\n\n"+terms_trans_dict }]
+                {"role": "user", "content":tar_seg+"\n\n"+",".join(terms_trans_dict) }]
     print("messages",messages)
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
     res = completion["choices"][0]["message"]["content"]
@@ -878,7 +878,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
                 terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
     
     if terms_trans_dict:
-        return tamil_correction(src_seg,terms_trans_dict)
+        return tamil_correction(tar_seg,terms_trans_dict)
     return None
 
 
