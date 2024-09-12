@@ -839,24 +839,33 @@ def tamil_gloss(gloss_list):
 def tamil_gloss_compare_with(gloss_list):
     pass
 
-def tamil_morph_prompt(src_seg , tar_seg,gloss_list):
-    gloss_list = tamil_gloss(gloss_list)
-    messages=[
-                {"role": "system", "content": """i will provide you the source english text, its relative translation and word list
+def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
+
+    terms_trans_dict = []
+
+    gloss_list_sl_term = tamil_gloss(gloss_list)
+    content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
+    messages=[{"role": "system", "content": """i will provide you the source english text, its relative translation and word list
             fetch out the relative translated word from the translation for the english word in the list.
             output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
             output format: {english word : tamil word}
                 """},
-                {"role": "user", "content": src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list}
-                    ]
+                {"role": "user", "content":content }]
+    
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
     res = completion["choices"][0]["message"]["content"]
+    print("res----->",res)
 
     for i in res.split(","):
         terms_trans = i.strip().split(":")
-        print(terms_trans[0].strip(), terms_trans[1].strip())
-
-    return res
+        print("terms_trans--->",terms_trans)
+        if terms_trans[0].strip():
+            sl_term = terms_trans[0].strip()
+            if sl_term in gloss_list:
+                term_instance = gloss_list.filter(sl_term=sl_term).last()
+                if term_instance:
+                    terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]
+    return terms_trans_dict
 
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
@@ -891,7 +900,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         
         if lang_gram_prompt:
             lang_gram_prompt = lang_gram_prompt.last()
-            logger.info(lang_gram_prompt)
+            logger.info(res)
             res = gemini_model_generative(lang_gram_prompt.prompt.format(res)) #src_lang,src,raw_mt ,gloss, 
             logger.info(res)
             
@@ -904,7 +913,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
 
 
     except:
-        logger.info("error in process ing adaptive prompt")
+        print("error in process ing adaptive prompt")
         res = raw_mt
     return res 
 
