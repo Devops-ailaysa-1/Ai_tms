@@ -919,7 +919,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
                 print("inside tamil check--->",tamil_morph_result)
 
  
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,tamil_morph_result,res)) #src_lang,src,raw_mt ,gloss, 
+            res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
  
             
             # Credit calculation
