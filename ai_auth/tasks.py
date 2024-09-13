@@ -889,50 +889,50 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative , antropic_generative_model
     from ai_staff.models import ExtraReplacePrompt
-    try:
-        src_lang = source_language.language
-        tar_lang = target_language.language
+    #try:
+    src_lang = source_language.language
+    tar_lang = target_language.language
 
-        internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
-        prompt_phrase = internal_flow_instance.prompt_phrase
-        gloss = gloss_prompt(gloss)
+    internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
+    prompt_phrase = internal_flow_instance.prompt_phrase
+    gloss = gloss_prompt(gloss)
 
-        replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss, tar_lang)
+    replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss, tar_lang)
+    
+    extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+
+    if extra_prompt:
+        replace_prompt = replace_prompt + extra_prompt.last().prompt
+    
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
+                                                                                            "content": replace_prompt}])
+    res = completion["choices"][0]["message"]["content"]
+
+    lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
+
+    
+    if lang_gram_prompt:
+        tamil_morph_result = ""
+        lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
+        if tar_lang == "Tamil":
+            tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
+            print("inside tamil check--->",tamil_morph_result)
+
+
+        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
+
         
-        extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+        # Credit calculation
 
-        if extra_prompt:
-            replace_prompt = replace_prompt + extra_prompt.last().prompt
-        
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
-                                                                                             "content": replace_prompt}])
-        res = completion["choices"][0]["message"]["content"]
- 
-        lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
- 
-        
-        if lang_gram_prompt:
-            tamil_morph_result = ""
-            lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
-            if tar_lang == "Tamil":
-                tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
-                print("inside tamil check--->",tamil_morph_result)
-
- 
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
- 
-            
-            # Credit calculation
-
-            # prompt_usage = completion['usage']
-            # total_token = prompt_usage['total_tokens']
-            # consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
-            # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+        # prompt_usage = completion['usage']
+        # total_token = prompt_usage['total_tokens']
+        # consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
 
 
-    except:
-        logger.error("error in process ing adaptive prompt")
-        res = raw_mt
+    # except:
+    #     logger.error("error in process ing adaptive prompt")
+    #     res = raw_mt
     return res 
 
 
