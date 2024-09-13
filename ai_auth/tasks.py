@@ -864,11 +864,9 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
     
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
     res = completion["choices"][0]["message"]["content"]
-    print("res----->",res)
-
     for i in res.split(","):
         terms_trans = i.strip().split(":")
-        print("terms_trans--->",terms_trans)
+ 
         if terms_trans[0].strip():
             sl_term = terms_trans[0].strip()
             #if sl_term in gloss_list:
@@ -877,9 +875,10 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
                 #terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]\
                 terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
     
-    if terms_trans_dict:
-        return tamil_correction(tar_seg,terms_trans_dict)
-    return None
+    # if terms_trans_dict:
+    #     return tamil_correction(tar_seg,terms_trans_dict)
+    print("terms_trans_dict---->",terms_trans_dict)
+    return terms_trans_dict
 
 
 
@@ -893,14 +892,6 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     try:
         src_lang = source_language.language
         tar_lang = target_language.language
-
-        # if tar_lang == "Tamil":
-        #     tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss) # ------>>>
-        #     if tamil_morph_result:
-        #         print("from ----->>> tamil_morph_result")
-        #         return tamil_morph_result
-             
- 
 
         internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
         prompt_phrase = internal_flow_instance.prompt_phrase
@@ -916,15 +907,20 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
                                                                                              "content": replace_prompt}])
         res = completion["choices"][0]["message"]["content"]
-        logger.info(res)
+ 
         lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
-        logger.info(lang_gram_prompt)
+ 
         
         if lang_gram_prompt:
-            lang_gram_prompt = lang_gram_prompt.last()
-            logger.info(res)
-            res = gemini_model_generative(lang_gram_prompt.prompt.format(res)) #src_lang,src,raw_mt ,gloss, 
-            logger.info(res)
+            tamil_morph_result = ""
+            lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
+            if tar_lang == "Tamil":
+                tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
+                print("inside tamil check--->",tamil_morph_result)
+
+ 
+            res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,tamil_morph_result,res)) #src_lang,src,raw_mt ,gloss, 
+ 
             
             # Credit calculation
 
@@ -935,7 +931,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
 
 
     except:
-        print("error in process ing adaptive prompt")
+        logger.error("error in process ing adaptive prompt")
         res = raw_mt
     return res 
 
