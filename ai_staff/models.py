@@ -506,7 +506,7 @@ class DocumentType(models.Model):
 class AiCustomize(models.Model):
     # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     customize = models.CharField(max_length =200, null=True, blank=True)  
-    prompt =   models.CharField(max_length =200, null=True, blank=True)
+    prompt =  models.TextField(null=True,blank=True)   
     instruct = models.CharField(max_length =300, null=True, blank=True)
     grouping = models.CharField(max_length =200, null=True, blank=True)  
     # category = models.ForeignKey(AiCustomCategory , related_name='custom_category_name', on_delete=models.CASCADE,null=True, blank=True)
