@@ -4,7 +4,7 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
                     ImageGeneratorResolution,TranslateCustomizeDetails, CustomizationSettings,
                     BlogArticle,BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle,BlogOutlineSession,
-                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle,NewsPromptDetails)
+                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle,NewsPromptDetails,MyStyle)
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
@@ -13,7 +13,7 @@ from .utils import get_consumable_credits_for_openai_text_generator,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
                     get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
 from ai_workspace_okapi.utils import get_translation
-from ai_tms.settings import  OPENAI_MODEL
+
 from django.db.models import Q
 from ai_openai.utils import outline_gen
 from googletrans import Translator
@@ -24,9 +24,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
 from ai_openai.utils import get_prompt_gpt_turbo_1106
-from django.db.models import Case, IntegerField, When, Value
-from django.db.models.functions import Coalesce
-from django.db.models import Case, ExpressionWrapper, F
+# from django.db.models import Case, IntegerField, When, Value
+# from django.db.models.functions import Coalesce
+# from django.db.models import Case, ExpressionWrapper, F
 from django import core
 from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
 import logging
@@ -1624,4 +1624,36 @@ class MyDocumentOCRSerializer(serializers.ModelSerializer):
         if validated_data.get('html_data',None):
             instance.html_data = validated_data.get('html_data')
             instance.save()
+        return instance
+    
+
+
+class MyStyleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyStyle
+        fields = ("id","user","brand_voice_result_prompt")
+
+    
+    def create(self,validated_data):
+        user = self.context.get('request').user
+        brand_voice_result_prompt = validated_data.get('brand_voice_result_prompt',None)
+        if not brand_voice_result_prompt:
+            raise serializers.ValidationError({'msg':'Need brand voice for rewrite with your style'}, code=400)
+
+        brnd_voic = MyStyle.objects.filter(user=user)
+        
+        if not brnd_voic:
+            instance = MyStyle.objects.create(brand_voice_result_prompt=brand_voice_result_prompt,user=user)
+            return instance
+        
+        else:
+            raise serializers.ValidationError({'msg':'already brand voice created'}, code=400)
+
+    def update(self, instance, validated_data):
+ 
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+ 
+        instance.save()
         return instance

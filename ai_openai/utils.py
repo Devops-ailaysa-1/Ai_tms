@@ -434,4 +434,7 @@ def antropic_generative_model(prompt):
     #     ]
     # )
     # return message.content[0].text
-    
+
+
+def brand_voice():
+    pass

@@ -3853,8 +3853,6 @@ def instant_translation_custom(request):
     if change detected, then it calls for the customize option again in the function express_custom(), 
     else it will return the already stored one from the model ExpressProjectAIMT.
     '''
-    from ai_openai.serializers import AiPromptSerializer
-    from ai_openai.api_views import customize_response
     task = request.POST.get('task')
     output_list = []
     option = request.POST.get('option')#Shorten#Simplify#Rewrite
