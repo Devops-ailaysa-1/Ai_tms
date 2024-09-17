@@ -1,6 +1,6 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,BlogCreation ,BlogKeywordGenerate,Blogtitle,
                      BlogOutline,BookCreation,BookTitle,BookBody,BlogOutlineSession ,TranslateCustomizeDetails,CustomizationSettings,
-                     ImageGenerationPromptResponse, BookBackMatter,BookFrontMatter,BookBodyDetails,)
+                     ImageGenerationPromptResponse, BookBackMatter,BookFrontMatter,BookBodyDetails,MyStyle)
 import logging ,os         
 from django.core import serializers
 import logging ,os ,json
@@ -11,7 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, AiPromptGetSerializer,AiPromptCustomizeSerializer,ImageGeneratorPromptSerializer,
                           TranslateCustomizeDetailSerializer ,BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
                         BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer,CustomizationSettingsSerializer,BookCreationSerializer,BookTitleSerializer,
-                        BookBodySerializer,BookBodyDetailSerializer,)
+                        BookBodySerializer,BookBodyDetailSerializer,MyStyleSerializer)
 from rest_framework.views import  Response
 from django.http import JsonResponse, Http404, HttpResponse
 from rest_framework.decorators import permission_classes ,api_view
@@ -32,12 +32,15 @@ logger = logging.getLogger('django')
 from string import punctuation
 from django.db.models import Q
 from ai_openai.models import BookBody
-from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer
+from ai_openai.serializers import BookBackMatterSerializer,BookFrontMatterSerializer ,LangscapeOcrPRSerializer,MyDocumentOCRSerializer
 from .utils import search_wikipedia,search_wiktionary,bing_search,bing_news_search
-from ai_openai.models import BookBody
 from ai_staff.models import PromptStartPhrases
 from .utils import get_summarize
 from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import tamil_spelling_check
+from ai_openai.models import LangscapeOcrPR
+ 
+
 
 class AiPromptViewset(viewsets.ViewSet):
     '''
@@ -155,14 +158,22 @@ def instant_customize_response(customize ,user_text,used_tokens):
     return final,cust_tokens
 
 
-def customize_response(customize ,user_text,tone,used_tokens):
+def customize_response(customize ,user_text,tone,used_tokens,style_instance):
     '''
     This function is internally called in customize_text_openai. 
     In this function it will format prompt according to the customize option and called 
     openAI API return the response, total_tokens and prompt.
     '''
     user_text = user_text.strip()+"\n\nNote: don't give the result in markdown should be in plain text"
-    if customize.prompt or customize.customize == "Text completion":
+    if style_instance:
+        print()
+        prompt = style_instance.brand_voice_result_prompt+"Rewrite the sentence based on the given content \n sentence:"+user_text 
+        response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+        tokens = response['usage']['total_tokens']
+        total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
+        total_tokens += used_tokens
+    
+    elif customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text 
@@ -227,12 +238,14 @@ def customize_text_openai(request):
     pdf = request.POST.get('pdf',None)
     book = request.POST.get('book',None)
     customize_id = request.POST.get('customize_id')
+    my_style = request.POST.get('my_style',None)
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
     language =  request.POST.get('language',None)
-    customize = AiCustomize.objects.get(id = customize_id)
+
+    
     target_langs = request.POST.getlist('target_lang')
-    mt_engine = request.POST.get('mt_engine',None)
+    mt_engine = request.POST.get('mt_engine',None)    
     detector = Translator()
 
     if task != None:
@@ -255,8 +268,22 @@ def customize_text_openai(request):
             lang = lang[0]
         lang = get_lang_code(lang)
 
+    if my_style:
+        mystyle_instance = MyStyle.objects.filter(user=request.user,id=my_style).last()
+
+        customize_id=None
+        customize = None
+        if not mystyle_instance.brand_voice_result_prompt:
+             return  Response({'msg':'no brand voice style'},status=400)
+
+    elif customize_id:
+        mystyle_instance=None
+        customize = AiCustomize.objects.get(id = customize_id)
+    else:
+        return  Response({'msg':'need customize or my style'},status=400)
+
     # if the customization ids are related to refer group
-    if customize.id in [25,26,27,28]:
+    if customize_id and customize.id in [25,26,27,28]:
         result = customize_refer(customize,user_text,lang)
         return Response(result)
         
@@ -268,7 +295,7 @@ def customize_text_openai(request):
     
     # if customization is translate, then it will first store customization details in 
     # AiPromptcustomize and then call translate_text() function and return the results.
-    if customize.customize == "Translate":
+    if customize_id and customize.customize == "Translate":
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
            return  Response({'msg':'Insufficient Credits'},status=400) 
@@ -296,13 +323,14 @@ def customize_text_openai(request):
         and translate the given text to english and then call the openAI API and store the prompt response
         and again translate the prompt response into user_given language and return the results. 
         '''
-        initial_credit = user.credit_balance.get("total_left")
+        
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
-            response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
+            
+            response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens,mystyle_instance)
 
             result_txt = response["choices"][0]["message"]["content"]
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
@@ -317,7 +345,7 @@ def customize_text_openai(request):
         if language is english, then call the customize_response (which forms the prompt with given details and
         calls openAI API and returns the response)
         '''
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens,mystyle_instance)
         result_txt = response["choices"][0]["message"]["content"]
     
     # Deduct the credits for openAI API calling
@@ -327,7 +355,7 @@ def customize_text_openai(request):
     data = {'document':document,'task':task,'pdf':pdf,'book':book,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
-            'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
+            'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated,'my_style':mystyle_instance}
     ser = AiPromptCustomizeSerializer(data=data)
     if ser.is_valid():
         ser.save()
@@ -1594,10 +1622,7 @@ def customize_refer(customize,search_term,lang):
 
 #     return Response({"src":src_lang,"tar":trg_lang})
 
-from ai_openai.utils import tamil_spelling_check
-from ai_openai.models import LangscapeOcrPR
-from ai_openai.serializers import LangscapeOcrPRSerializer,MyDocumentOCRSerializer
-from ai_workspace.serializers import MyDocumentSerializer
+
 class LangscapeOcrPRViewset(viewsets.ViewSet,PageNumberPagination):
     page_size=20
 
@@ -1691,3 +1716,46 @@ def tamil_spell_chk(request):
         return Response({'msg':'need text'},status=status.HTTP_400_BAD_REQUEST)
     result = tamil_spelling_check(text)
     return Response(result,status=status.HTTP_200_OK)
+
+
+class MyStyleViewset(viewsets.ViewSet):
+
+    def get_object(self, pk):
+        try:
+            return MyStyle.objects.get(user=self.request.user,id=pk)
+        except MyStyle.DoesNotExist:
+            raise Http404
+        
+    def retrieve(self,request,pk):
+        instance = self.get_object(pk=pk)
+        serializer = MyStyleSerializer(instance)
+        return Response(serializer.data)
+    
+    def list(self,request):
+        instance_list = MyStyle.objects.filter(user=self.request.user)
+        serializer = MyStyleSerializer(instance_list,many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def create(self, request):
+        serializer = MyStyleSerializer(data={**request.POST.dict(),'user':request.user.id},context={'request':request}) #'file':file
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self,request,pk):
+        obj = self.get_object(pk=pk)
+
+        serializer = MyStyleSerializer(obj,data=request.data,partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            updated_serializer = MyStyleSerializer(obj)
+                 
+            return Response(updated_serializer.data)
+        return Response(serializer.errors,status=400)    
+    
+    def destroy(self,request,pk):
+        obj = MyStyle.objects.get(user=request.user,id = pk)
+        obj.delete()
+        return Response({'msg':'deleted successfully'},status=200)
