@@ -19,7 +19,7 @@ router.register(r'custom_settings',api_views.AiCustomizeSettingViewset ,basename
 router.register(r'bookbodydetail',api_views.BookBodyDetailsViewset ,basename='ai_bookbody_det') 
 router.register(r'news_transcribe',api_views.NewsTranscribeViewset ,basename='news_transcribe')
 router.register(r'ocr-proof-reading',api_views.LangscapeOcrPRViewset ,basename='langscape-ocr-func')
-router.register(r'my-voice',api_views.MyStyleViewset ,basename='langscape-ocr-func')
+router.register(r'my-style',api_views.MyStyleViewset ,basename='langscape-ocr-func')
 urlpatterns = router.urls
 
  
