@@ -1359,7 +1359,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     path_list = re.split("source/", file_path)
     gloss_task_ins = Task.objects.get(id=gloss_task_id)
     gloss_job_ins = gloss_task_ins.job
-    source_language_code = task.job.source_language.locale_code
+    source_language_code = gloss_task_ins.job.source_language.locale_code
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
     with open(doc_json_path,'rb') as fp:
         file_json = json.load(fp)
