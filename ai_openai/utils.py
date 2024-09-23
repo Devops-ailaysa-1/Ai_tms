@@ -426,7 +426,7 @@ def gemini_model_generative(prompt):
 
 def gemini_model_term_extract(text):
     model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,generation_config=generation_config,
-                                system_instruction="Given the following text, identify and extract the most relevant keywords, and terminology specific to its content genre. Consider the subject matter, industry jargon, and specialized terms that are unique to this genre. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.\n\nResponse result: The result should be in the comma-separated and don't give any acknowledge",)
+                        system_instruction="Given the following Italian text, identify and extract the most relevant Italian or English keywords, and terminology specific to its content genre. Consider the subject matter, industry jargon, and specialized terms that are unique to this genre. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.\n\nResponse result: The result should be in the comma-separated of Italian and English Term and don't give any acknowledge",)
     chat_session = model_term.start_chat(history=[])
     response = chat_session.send_message(text)
     gemini_res = response.text.split(",")
