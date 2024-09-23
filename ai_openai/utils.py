@@ -421,13 +421,13 @@ def gemini_model_generative(prompt):
                                                     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT:HarmBlockThreshold.BLOCK_NONE,})
     return response.text
 
-model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,
-                                generation_config=generation_config,
-                                system_instruction="Given the following text, identify and extract the most relevant keywords, and terminology specific to its content genre. Consider the subject matter, industry jargon, and specialized terms that are unique to this genre. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.\n\nResponse result: The result should be in the comma-separated and don't give any acknowledge",)
+
 
 
 def gemini_model_term_extract(text):
-    chat_session = model.start_chat(history=[])
+    model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,generation_config=generation_config,
+                                system_instruction="Given the following text, identify and extract the most relevant keywords, and terminology specific to its content genre. Consider the subject matter, industry jargon, and specialized terms that are unique to this genre. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.\n\nResponse result: The result should be in the comma-separated and don't give any acknowledge",)
+    chat_session = model_term.start_chat(history=[])
     response = chat_session.send_message(text)
     return response.text.split(",")
 
