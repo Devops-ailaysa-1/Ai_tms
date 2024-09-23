@@ -18,19 +18,16 @@ from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializ
 from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
-from ai_workspace.models import TaskAssign, Task
+from ai_workspace.models import TaskAssign, Task,Project,File,FileTermExtracted
 from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel,WriteToExcel_wordchoice
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from ai_workspace.models import Task
-from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.db.models import Q
 from .serializers import TermsSerializer
 from rest_framework.decorators import api_view,permission_classes
 from nltk import word_tokenize
-from ai_workspace.models import Task,Project,TaskAssign,File,FileTermExtracted
 from ai_workspace_okapi.models import Document 
 from ai_workspace_okapi.utils import get_translation
 import pandas as pd
@@ -43,6 +40,7 @@ from celery.decorators import task
 import requests,logging
 from django.http import Http404
 from django.db import transaction
+
 logger = logging.getLogger('django')
 
 def job_lang_pair_check(gloss_job_list, src, tar):
@@ -1353,14 +1351,15 @@ def split_list(lst, chunk_size=50):
 
 @task(queue='default')
 def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
-    # try:
+    from ai_openai.utils import gemini_model_term_extract
+    lang_code_list = ['it']
     file_extraction_instance = FileTermExtracted.objects.get(id=file_extraction_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
     file_path = file_extraction_instance.file.get_source_file_path ## get the file path from the file instance(relate)
     path_list = re.split("source/", file_path)
     gloss_task_ins = Task.objects.get(id=gloss_task_id)
     gloss_job_ins = gloss_task_ins.job
-
+    source_language_code = task.job.source_language.locale_code
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
     with open(doc_json_path,'rb') as fp:
         file_json = json.load(fp)
@@ -1375,12 +1374,15 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     if full_text_unit_merge:
         for text in full_text_unit_merge:
             full_text_unit_merge = " ".join(text)
-            terms.extend(requesting_ner(full_text_unit_merge))
+            if source_language_code not in lang_code_list:                    
+                terms.extend(requesting_ner(full_text_unit_merge))
+    
+        if source_language_code  not in lang_code_list:
+              terms.extend(gemini_model_term_extract(" ".join(full_text_unit_merge)))
+            
     file_extraction_instance.status = "FINISHED"
     file_extraction_instance.done_extraction =True
- 
     terms =  list(set(terms))
- 
     termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
     file_extraction_instance.save()
@@ -1394,9 +1396,10 @@ def get_stand_proj_task_use_gloss_task(gloss_task):
     return None
 
  
-from ai_workspace.models import File
+
 @api_view(['POST',])
 def extraction_text(request):
+    
     file_ids = request.POST.getlist('file_id',None)
     gloss_task_id = request.POST.get('gloss_task_id',None)  
     trans_task_id = request.POST.get('trans_task_id',None)  

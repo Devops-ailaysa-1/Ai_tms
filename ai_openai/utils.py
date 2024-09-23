@@ -16,6 +16,7 @@ OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL
 
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
+GOOGLE_TERM_EXTRACTION = settings.GOOGLE_TERM_EXTRACTION
 #ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
@@ -38,6 +39,7 @@ generation_config = {
 #anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL,generation_config=generation_config)
+
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
@@ -418,9 +420,16 @@ def gemini_model_generative(prompt):
                                                     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
                                                     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT:HarmBlockThreshold.BLOCK_NONE,})
     return response.text
-    # except:
-    #     logger.error("error in processing prompt in gemini")
-    #     return None
+
+model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,
+                                generation_config=generation_config,
+                                system_instruction="Given the following text, identify and extract the most relevant keywords, and terminology specific to its content genre. Consider the subject matter, industry jargon, and specialized terms that are unique to this genre. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.\n\nResponse result: The result should be in the comma-separated and don't give any acknowledge",)
+
+
+def gemini_model_term_extract(text):
+    chat_session = model.start_chat(history=[])
+    response = chat_session.send_message(text)
+    return response.text.split(",")
 
 
 ### antropic #### 
