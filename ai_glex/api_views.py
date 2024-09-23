@@ -1372,15 +1372,14 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
             if j['source']:
                 text_unit.append(j['source']) ### all the paragraph stored in this list 
     full_text_unit_merge = split_list(text_unit)
-    if full_text_unit_merge:
+    if full_text_unit_merge and source_language_code not in lang_code_list:
         for text in full_text_unit_merge:
-            full_text_unit_merge = " ".join(text)
-            if source_language_code not in lang_code_list:                    
-                terms.extend(requesting_ner(full_text_unit_merge))
+            full_text_unit_merge = " ".join(text)                   
+            terms.extend(requesting_ner(full_text_unit_merge))
     
-    if text_unit and (source_language_code  not in lang_code_list):
-            logging.info("the lang is ltaly")
-            terms.extend(gemini_model_term_extract(" ".join(text_unit)))
+    elif text_unit and (source_language_code  in lang_code_list): 
+        logging.info(f"the lang is {source_language_code}")
+        terms.extend(gemini_model_term_extract(" ".join(text_unit)))
             
     file_extraction_instance.status = "FINISHED"
     file_extraction_instance.done_extraction =True
