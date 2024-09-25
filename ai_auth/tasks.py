@@ -914,7 +914,7 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         if tar_lang == "Tamil":
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
 
-
+        print("----------->",lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res))
         res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,
                                                                      str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
 
