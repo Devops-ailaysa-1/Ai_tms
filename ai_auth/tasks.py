@@ -875,9 +875,6 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
                 #terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]\
                 terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
     
-    # if terms_trans_dict:
-    #     return tamil_correction(tar_seg,terms_trans_dict)
-    print("terms_trans_dict---->",terms_trans_dict)
     return terms_trans_dict
 
 
@@ -916,10 +913,10 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
         if tar_lang == "Tamil":
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
-            print("inside tamil check--->",tamil_morph_result)
 
 
-        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
+        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,
+                                                                     str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
 
         
         # Credit calculation
