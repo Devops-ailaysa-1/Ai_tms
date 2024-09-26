@@ -2960,14 +2960,21 @@ def matching_word(user_input,lang_code):
         word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
 
         # Combine multiple conditions with one query operation using OR
-        query |= (
-            Q(root_word__exact=word_lemma_v) |
-            Q(sl_term__exact=word_lemma_v) |
-            Q(sl_term__exact=word_lower) |
-            Q(root_word__exact=word_lemma_n) |
-            Q(sl_term__icontains=word_lemma_v) |
-            Q(sl_term__icontains=word_lower)
-        )
+        if lang_code == "it":
+            query |= (
+                            Q(root_word__exact=word_lemma_v) |
+                            Q(root_word__exact=word_lemma_n) |
+                            Q(sl_term__exact=word_lower)
+                        )
+        else:
+            query |= (
+                Q(root_word__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lower) |
+                Q(root_word__exact=word_lemma_n) |
+                Q(sl_term__icontains=word_lemma_v) |
+                Q(sl_term__icontains=word_lower)
+            )
         
     return query
 
