@@ -2951,7 +2951,7 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 def matching_word(user_input,lang_code):
     from ai_workspace_okapi.utils import nltk_lemma
-    from ai_glex.models import identify_lemma_it
+    from ai_glex.api_views import identify_lemma_it
     user_words = user_input.split()
     query = Q()
     if lang_code == "it":
