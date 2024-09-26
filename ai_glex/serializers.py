@@ -48,9 +48,9 @@ class TermsSerializer(serializers.ModelSerializer):
     def create(self,validated_data):
         from ai_workspace_okapi.utils import nltk_lemma
         instance = TermsModel.objects.create(**validated_data)
-        if instance.sl_term:
-            # if instance.pos == 'Verb'
-            instance.root_word =  nltk_lemma(instance.sl_term.lower())
+        if instance.sl_term: 
+            lang_code = instance.job.source_language.locale_code
+            instance.root_word =  nltk_lemma(word=instance.sl_term.lower(),language=lang_code)
             instance.save()
         return instance
        

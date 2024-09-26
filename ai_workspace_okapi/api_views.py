@@ -2947,34 +2947,17 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
  
 
-# def matching_word(user_input):
-#     from ai_workspace_okapi.utils import nltk_lemma
-#     user_word = user_input.split()
-#     query = Q()
-#     for word in user_word:
-#         word_lemma = nltk_lemma(word, pos='v') ## v for verb , a for adverb , n for noun
-#         query |=Q(root_word__exact= word_lemma.lower())
-#         query |=Q(sl_term__exact = word_lemma.lower())
-#         query |=Q(sl_term__exact= word)
-#         query |=Q(sl_term__exact = word.lower())
-#         query |=Q(sl_term__exact = word_lemma)
-#         #######
-#         query |=Q(root_word__icontains= word_lemma.lower())
-#         query |=Q(sl_term__icontains = word_lemma.lower())
-#         query |=Q(sl_term__icontains= word)
-#         query |=Q(sl_term__icontains = word.lower())
-#         query |=Q(sl_term__icontains = word_lemma)
-#     return query
+ 
 
-def matching_word(user_input):
+def matching_word(user_input,lang_code):
     from ai_workspace_okapi.utils import nltk_lemma
     user_words = user_input.split()
     query = Q()
     
     for word in user_words:
         word_lower = word.lower()
-        word_lemma_v = nltk_lemma(word, pos='v').lower()  # Verb lemma
-        word_lemma_n = nltk_lemma(word, pos='n').lower()  # Noun lemma
+        word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
+        word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
 
         # Combine multiple conditions with one query operation using OR
         query |= (

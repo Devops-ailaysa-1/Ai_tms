@@ -741,7 +741,11 @@ def get_consumption_of_file_translate(task):
 
 
 
-def nltk_lemma(word,pos="v"):
+def nltk_lemma(word,pos="v",language=None):
+    from ai_glex.api_views import identify_lemma
+    if language and word:
+        result = identify_lemma(word,language=language)
+        return result
     if word:
         return lemmatizer.lemmatize(word.strip(), pos=pos)
     else:
