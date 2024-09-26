@@ -20,10 +20,11 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
     instance = GlossaryFiles.objects.get(id=instance_id)
     glossary_obj = instance.project.glossary_project
     dataset = Dataset()
+    instance_job_id = instance.job_id
+    instance_id = instance.id
+    lang_code = instance.job.source_language.locale_code
     imported_data = dataset.load(instance.file.read(), format='xlsx')
     if instance.source_only == False and instance.job.source_language != instance.job.target_language:
-        
-
         for data in imported_data:
             if data[2]:
                 try:
@@ -43,9 +44,9 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
                                 data[4].strip() if len(data) > 4 and data[4] else None)  # For word choice
                                                
                 value.glossary_id = glossary_obj.id
-                value.file_id = instance.id
-                value.job_id = instance.job_id
-                value.root_word = nltk_lemma(value.sl_term.lower())
+                value.file_id = instance_id
+                value.job_id = instance_job_id 
+                value.root_word = nltk_lemma(word=value.sl_term.lower(),language=lang_code)
                 value.save()
                 instance.status  = "PENDING"
                 instance.save()

@@ -609,7 +609,6 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-from django.db.models.functions import Lower
 from ai_workspace_okapi.api_views import matching_word
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -633,6 +632,7 @@ def glossary_search(request):
         task = Task.objects.get(id=task_id)
         target_language = task.job.target_language
         source_language = task.job.source_language
+        source_code = source_language.locale_code ## only for checking the adaptive machine translation
         pr = task.job.project
         authorize(request, resource=task, actor=request.user, action="read")
     user = request.user.team.owner if request.user.team else request.user
@@ -652,8 +652,8 @@ def glossary_search(request):
               filter(tl_term__isnull=False).exclude(tl_term='')
     
      
-
-    matching_exact_queryset = matching_word(user_input)
+    logger.info("source_code from gloss search",source_code)
+    matching_exact_queryset = matching_word(user_input,source_code)
     all_sorted_query = queryset.filter(matching_exact_queryset)
      
     queryset_final = queryset1.union(all_sorted_query)
@@ -1133,7 +1133,7 @@ class MyGlossaryView(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-def term_pos_identify(segment_obj,task_obj,text):
+def term_pos_identify(segment_obj,task_obj,text,lang_code=None):
     pos_dict = {'VERB':'Verb','NOUN':'Noun','ADJ':'Adjective','ADV':'Adverb','PROPN':'Noun'}
     pos_list = ['VERB','NOUN','ADJ','ADV','PROPN']
     # if sl_code in ['en']:
@@ -1144,7 +1144,7 @@ def term_pos_identify(segment_obj,task_obj,text):
     else:
         segment_text = remove_tags(segment_obj.source)
     
-    pos_tag_res = segment_term_pos_identify(segment_text,text)
+    pos_tag_res = segment_term_pos_identify(segment_text,text,language=lang_code)
     if pos_tag_res and pos_tag_res['tag']:
         if pos_tag_res['tag'] in pos_list:
             tag = pos_tag_res['tag']
@@ -1204,8 +1204,9 @@ def get_word_mt(request):
         source_new = translation if target else source
         target_new = translation if source else target
 
-        if (sl_code in ['en'] or tl_code in ['en']) and segment_id:
-            lemma_word = nltk_lemma(source_new)
+        if (sl_code in ['en','it'] or tl_code in ['en']) and segment_id:
+            logging.info("sl_code--->",sl_code)
+            lemma_word = nltk_lemma(word=source_new,language=sl_code)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
             segment_obj = get_object_or_404(Segment.objects.all(), id=segment_id)
@@ -1312,9 +1313,10 @@ def term_extraction_ner_and_terms(text):
 
 ### finding pos tag
 
-def segment_term_pos_identify(sentence,word):
+def segment_term_pos_identify(sentence,word,lang_code=None):
+    logging.info("lang_code from pos",lang_code)
     IDENTIFY_POS_URL = settings.IDENTIFY_POS
-    payload = {'sentence': sentence,'word':word}
+    payload = {'sentence': sentence,'word':word,'language':lang_code}
     response = requests.request("POST", IDENTIFY_POS_URL, headers={}, data=payload, files=[])
     if response.status_code == 200:
         return response.json()
@@ -1323,9 +1325,10 @@ def segment_term_pos_identify(sentence,word):
 
 ### finding lemma
 
-def identify_lemma(word):
+def identify_lemma(word,language=None):
+    logging.info("lang_code from identify_lemma",language)
     IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
-    payload = {'word':word}
+    payload = {'word':word,'language':language}
     response = requests.request("POST", IDENTIFY_LEMMA_URL, headers={}, data=payload, files=[])
     if response.status_code == 200:
         return response.json()['lemma']
