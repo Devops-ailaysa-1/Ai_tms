@@ -2956,6 +2956,12 @@ def matching_word(user_input,lang_code):
     query = Q()
     if lang_code == "it":
         word_lemma_user_input = identify_lemma_it(user_input)
+        for word in word_lemma_user_input:
+            query |= (
+                            Q(root_word__exact=word) |
+                             
+                            Q(sl_term__exact=word) 
+                        )
     for word in user_words:
         word_lower = word.lower()
 
