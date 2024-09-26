@@ -2998,7 +2998,7 @@ def check_source_words(user_input, task):
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
-    matching_exact_queryset = matching_word(user_input)
+    matching_exact_queryset = matching_word(user_input,lang_code=source_language.locale_code)
 
     all_sorted_query = queryset.filter(matching_exact_queryset)
     all_sorted_query = all_sorted_query.distinct()

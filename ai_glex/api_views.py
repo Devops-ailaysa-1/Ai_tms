@@ -632,12 +632,12 @@ def glossary_search(request):
         task = Task.objects.get(id=task_id)
         target_language = task.job.target_language
         source_language = task.job.source_language
-        source_code = source_language.locale_code ## only for checking the adaptive machine translation
+        
         pr = task.job.project
         authorize(request, resource=task, actor=request.user, action="read")
     user = request.user.team.owner if request.user.team else request.user
     glossary_selected = GlossarySelected.objects.filter(project = pr,glossary__project__project_type__id=3).values('glossary_id') ### only for gloss list
-    
+    source_code = source_language.locale_code ## only for checking the adaptive machine translation
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
