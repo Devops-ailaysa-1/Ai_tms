@@ -746,7 +746,7 @@ def nltk_lemma(word,pos="v",language=None):
     if language and word:
         result = identify_lemma(word,language=language)
         return result
-    if word:
+    elif word:
         return lemmatizer.lemmatize(word.strip(), pos=pos)
     else:
         return None
