@@ -1205,7 +1205,6 @@ def get_word_mt(request):
         target_new = translation if source else target
 
         if (sl_code in ['en','it'] or tl_code in ['en']) and segment_id:
-            logging.info("sl_code--->",sl_code)
             lemma_word = nltk_lemma(word=source_new,language=sl_code)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
@@ -1314,7 +1313,6 @@ def term_extraction_ner_and_terms(text):
 ### finding pos tag
 
 def segment_term_pos_identify(sentence,word,lang_code=None):
-    logging.info("lang_code from pos",lang_code)
     IDENTIFY_POS_URL = settings.IDENTIFY_POS
     payload = {'sentence': sentence,'word':word,'language':lang_code}
     response = requests.request("POST", IDENTIFY_POS_URL, headers={}, data=payload, files=[])
@@ -1326,7 +1324,6 @@ def segment_term_pos_identify(sentence,word,lang_code=None):
 ### finding lemma
 
 def identify_lemma(word,language=None):
-    logging.info("lang_code from identify_lemma",language)
     IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
     payload = {'word':word,'language':language}
     response = requests.request("POST", IDENTIFY_LEMMA_URL, headers={}, data=payload, files=[])
@@ -1334,6 +1331,17 @@ def identify_lemma(word,language=None):
         return response.json()['lemma']
     else:
         return None
+
+### finding lemma tag for it
+
+def identify_lemma_it(sentence):
+    payload = {'sentence': sentence}  
+    response = requests.request("POST", settings.IDENTIFY_LEMMA_IT , headers={}, data=payload, files=[]) 
+    if response.status_code == 200:
+        return response.json()['lemma']
+    else:
+        return None
+
 
 ### finding NER  
     
