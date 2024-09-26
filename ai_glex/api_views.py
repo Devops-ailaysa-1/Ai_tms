@@ -1144,7 +1144,7 @@ def term_pos_identify(segment_obj,task_obj,text,lang_code=None):
     else:
         segment_text = remove_tags(segment_obj.source)
     
-    pos_tag_res = segment_term_pos_identify(segment_text,text,language=lang_code)
+    pos_tag_res = segment_term_pos_identify(segment_text,text,lang_code=lang_code)
     if pos_tag_res and pos_tag_res['tag']:
         if pos_tag_res['tag'] in pos_list:
             tag = pos_tag_res['tag']
