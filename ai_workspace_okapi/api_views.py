@@ -2964,7 +2964,7 @@ def matching_word(user_input,lang_code):
             query |= (
                             Q(root_word__exact=word_lemma_v) |
                             Q(root_word__exact=word_lemma_n) |
-                            Q(sl_term__exact=word_lower)
+                            Q(sl_term__exact=word_lower) | Q(sl_term__icontains=word_lower)
                         )
         else:
             query |= (
