@@ -1203,8 +1203,9 @@ def get_word_mt(request):
         translation = get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
-
+        print("sl_code",sl_code)
         if (sl_code in ['en','it'] or tl_code in ['en']) and segment_id:
+            logging.info("inside the lemma part")
             lemma_word = nltk_lemma(word=source_new,language=sl_code)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
