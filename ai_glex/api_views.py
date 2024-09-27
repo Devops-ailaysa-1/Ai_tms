@@ -648,15 +648,14 @@ def glossary_search(request):
                       params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
     
 
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
-              filter(tl_term__isnull=False).exclude(tl_term='')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language)#.\
+              #filter(tl_term__isnull=False) #.exclude(tl_term='')
     
      
     matching_exact_queryset = matching_word(user_input,source_code)
     all_sorted_query = queryset.filter(matching_exact_queryset)
      
     queryset_final = queryset1.union(all_sorted_query)
-    #queryset_final = queryset
     if queryset_final:
         res=[]
         for data in queryset_final:
@@ -1374,6 +1373,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     source_language_code = gloss_task_ins.job.source_language.locale_code
     logging.info(source_language_code)
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
     with open(doc_json_path,'rb') as fp:
         file_json = json.load(fp)
     file_json = json.loads(file_json)
@@ -1383,6 +1383,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
         for j in file_json['text'][i]:
             if j['source']:
                 text_unit.append(j['source']) ### all the paragraph stored in this list 
+
     full_text_unit_merge = split_list(text_unit)
     if full_text_unit_merge and source_language_code not in lang_code_list:
         for text in full_text_unit_merge:
@@ -1404,7 +1405,6 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
             logger.info(source_language_code,"inside lemma",i,lemma_word)
         termsmodel_instances = [TermsModel(sl_term=term[0],root_word=term[1],job=gloss_job_ins,glossary=gloss_model_inst) for term in it_terms_with_lemma]
     else:
-
         termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
     file_extraction_instance.save()
