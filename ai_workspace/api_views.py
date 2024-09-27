@@ -3725,16 +3725,21 @@ class MyDocumentsView(viewsets.ModelViewSet):
         return Response(ser.errors)
         
     def update(self, request, pk, format=None):
-        ins = MyDocuments.objects.get(id=pk)
-        file = request.FILES.get('file')
-        if file:
-            ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
+        user_document_queryset = self.get_queryset()
+        ins = user_document_queryset.filter(id=pk)
+        if ins:
+            file = request.FILES.get('file')
+            if file:
+                ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
+            else:
+                ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
+            if ser.is_valid(raise_exception=True):
+                ser.save()
+                return Response(ser.data, status=200)
+            return Response(ser.errors)
         else:
-            ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
-        if ser.is_valid(raise_exception=True):
-            ser.save()
-            return Response(ser.data, status=200)
-        return Response(ser.errors)
+            return Response({'msg':'detail not found'},status=400)
+
 
     def destroy(self, request, pk):
         # it is to delete the document instance and its related blog_creation and blog_articles and its files if any
@@ -3752,7 +3757,6 @@ class MyDocumentsView(viewsets.ModelViewSet):
         else:
             return Response({'msg':'detail not found'},status=400)
         
-from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
