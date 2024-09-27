@@ -1395,6 +1395,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     file_extraction_instance.status = "FINISHED"
     file_extraction_instance.done_extraction =True
     terms =  list(set(terms))
+    
     termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
     file_extraction_instance.save()
