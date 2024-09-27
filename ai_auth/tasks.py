@@ -884,7 +884,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
-    from ai_openai.utils import gemini_model_generative , antropic_generative_model
+    from ai_openai.utils import gemini_model_generative 
     from ai_staff.models import ExtraReplacePrompt
     #try:
     src_lang = source_language.language
@@ -892,10 +892,11 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
 
     internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
     prompt_phrase = internal_flow_instance.prompt_phrase
-    gloss_list = gloss_prompt(gloss)
 
+    gloss_list = gloss_prompt(gloss)
+    print("gloss_prompt----->",gloss_list)
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
-    
+    print("replace_prompt",replace_prompt)
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
     if extra_prompt:
