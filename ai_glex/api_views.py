@@ -1401,7 +1401,8 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
         for i in terms:
             lemma_word = nltk_lemma(i,language=source_language_code)
             it_terms_with_lemma.append([i,lemma_word])
-            termsmodel_instances = [TermsModel(sl_term=term[0],root_word=term[1],job=gloss_job_ins,glossary=gloss_model_inst) for term in it_terms_with_lemma]
+            logger.info(source_language_code,"inside lemma",i,lemma_word)
+        termsmodel_instances = [TermsModel(sl_term=term[0],root_word=term[1],job=gloss_job_ins,glossary=gloss_model_inst) for term in it_terms_with_lemma]
     else:
 
         termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
