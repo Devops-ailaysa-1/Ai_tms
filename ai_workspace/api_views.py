@@ -3738,13 +3738,19 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def destroy(self, request, pk):
         # it is to delete the document instance and its related blog_creation and blog_articles and its files if any
-        ins = MyDocuments.objects.get(id=pk)
-        ins.blog_doc.all().delete()
-        ins.ai_doc_blog.all().delete()
-        if ins.file:
-            os.remove(ins.file.path)
-        ins.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        user_document_queryset = self.get_queryset()
+        ins = user_document_queryset.filter(id=pk)
+        if ins:
+            ins = ins.last()
+            ins = MyDocuments.objects.get(id=pk)
+            ins.blog_doc.all().delete()
+            ins.ai_doc_blog.all().delete()
+            if ins.file:
+                os.remove(ins.file.path)
+            ins.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'msg':'detail not found'},status=400)
         
 from django.db.models import Subquery
 @api_view(['GET'])
