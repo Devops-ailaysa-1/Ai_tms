@@ -210,5 +210,4 @@ def user_tbx_write(job_id,project_id):
         return out_fileName
 
     except Exception as e:
-        print("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})

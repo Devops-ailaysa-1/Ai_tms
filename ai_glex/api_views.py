@@ -276,13 +276,13 @@ class TermUploadView(viewsets.ModelViewSet):
     def update_task_assign(self,job,user):
         from ai_workspace.models import Task,TaskAssignInfo
         task_obj = Task.objects.get(job_id = job.id) ### for more than 2 task
-        try:
-            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
-            if obj.status != 2:
-                obj.status = 2
-                obj.save()
-        except Exception as e:
-            logging.error("Exception1-->", e)
+        #try:
+        obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+        if obj.status != 2:
+            obj.status = 2
+            obj.save()
+        # except Exception as e:
+        #     logging.error("Exception1-->", e)
 
     def list(self, request):
         
@@ -501,7 +501,6 @@ def tbx_write(request,task_id):
         return response
 
     except Exception as e:
-        logging.error("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})
 
 
