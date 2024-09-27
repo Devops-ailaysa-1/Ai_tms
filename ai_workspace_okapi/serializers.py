@@ -72,7 +72,6 @@ class SegmentSerializer(serializers.ModelSerializer):
         return representation
 
 from ai_workspace.models import Task,TaskAssignInfo
-import difflib
 class SegmentSerializerV2(SegmentSerializer):
 
     temp_target = serializers.CharField(trim_whitespace=False, allow_null=True)

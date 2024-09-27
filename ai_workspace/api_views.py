@@ -3728,6 +3728,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         user_document_queryset = self.get_queryset()
         ins = user_document_queryset.filter(id=pk)
         if ins:
+            ins = ins.last()
             file = request.FILES.get('file')
             if file:
                 ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
