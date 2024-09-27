@@ -1363,6 +1363,7 @@ def split_list(lst, chunk_size=50):
 @task(queue='default')
 def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
     from ai_openai.utils import gemini_model_term_extract
+    from ai_workspace_okapi.utils import nltk_lemma
     lang_code_list = ['it']
     file_extraction_instance = FileTermExtracted.objects.get(id=file_extraction_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
@@ -1395,8 +1396,15 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     file_extraction_instance.status = "FINISHED"
     file_extraction_instance.done_extraction =True
     terms =  list(set(terms))
-    
-    termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
+    if source_language_code in lang_code_list: ### this is only for italian words
+        it_terms_with_lemma = []
+        for i in terms:
+            lemma_word = nltk_lemma(i,language=source_language_code)
+            it_terms_with_lemma.append([i,lemma_word])
+            termsmodel_instances = [TermsModel(sl_term=term[0],root_word=term[1],job=gloss_job_ins,glossary=gloss_model_inst) for term in it_terms_with_lemma]
+    else:
+
+        termsmodel_instances = [TermsModel(sl_term=term,job=gloss_job_ins,glossary=gloss_model_inst) for term in terms]
     TermsModel.objects.bulk_create(termsmodel_instances)
     file_extraction_instance.save()
 

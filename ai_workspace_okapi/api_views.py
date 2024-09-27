@@ -2954,24 +2954,27 @@ def matching_word(user_input,lang_code):
     if lang_code == "it":
         word_lemma_user_input = identify_lemma_it(user_input)
         for word in word_lemma_user_input:
-            query |= (Q(root_word__exact=word) |Q(sl_term__exact=word))
+            if word:
+                word = word.lower()
+                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word))
 
     for word in user_words:
-        word_lower = word.lower()
-        word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  
-        if lang_code == "it":
-            query |= (
-                            Q(root_word__exact=word_lemma_v) |
-                            Q(sl_term__exact=word_lemma_v) )
-        else:
-            query |= (
-                Q(root_word__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lower) |
-                #Q(root_word__exact=word_lemma_n) |
-                Q(sl_term__icontains=word_lemma_v) |
-                Q(sl_term__icontains=word_lower)
-            )
+        if word:
+            word_lower = word.lower()
+            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  
+            if lang_code == "it":
+                query |= (
+                                Q(root_word__exact=word_lemma_v) |
+                                Q(sl_term__exact=word_lemma_v) )
+            else:
+                query |= (
+                    Q(root_word__exact=word_lemma_v) |
+                    Q(sl_term__exact=word_lemma_v) |
+                    Q(sl_term__exact=word_lower) |
+                    #Q(root_word__exact=word_lemma_n) |
+                    Q(sl_term__icontains=word_lemma_v) |
+                    Q(sl_term__icontains=word_lower)
+                )
     return query
 
     
