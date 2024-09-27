@@ -45,7 +45,8 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
                                                
                 value.glossary_id = glossary_obj.id
                 value.file_id = instance_id
-                value.job_id = instance_job_id 
+                value.job_id = instance_job_id
+                logging.info("called from signal")
                 value.root_word = nltk_lemma(word=value.sl_term.lower(),language=lang_code)
                 value.save()
                 instance.status  = "PENDING"

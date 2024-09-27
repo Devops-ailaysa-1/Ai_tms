@@ -652,7 +652,6 @@ def glossary_search(request):
               filter(tl_term__isnull=False).exclude(tl_term='')
     
      
-    logger.info("source_code from gloss search",source_code)
     matching_exact_queryset = matching_word(user_input,source_code)
     all_sorted_query = queryset.filter(matching_exact_queryset)
      
@@ -1203,15 +1202,15 @@ def get_word_mt(request):
         translation = get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
         source_new = translation if target else source
         target_new = translation if source else target
-        print("sl_code",sl_code)
-        if (sl_code in ['en','it'] or tl_code in ['en']) and segment_id:
-            logging.info("inside the lemma part")
+        if (sl_code in ['en','it'] or tl_code in ['en']):
+            logging.info("inside the lemma")
             lemma_word = nltk_lemma(word=source_new,language=sl_code)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
-            segment_obj = get_object_or_404(Segment.objects.all(), id=segment_id)
-            pos_tag = term_pos_identify(segment_obj,task_obj,text)
-            data['pos_tag'] = pos_tag
+            if segment_id: ### if we want to find the pos tag for the given segment and this is ony used in transeditor
+                segment_obj = get_object_or_404(Segment.objects.all(), id=segment_id)
+                pos_tag = term_pos_identify(segment_obj,task_obj,text)
+                data['pos_tag'] = pos_tag
             data['root_word'] = lemma_word
         else:
             tt = GlossaryMt.objects.create(source=source_new, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
