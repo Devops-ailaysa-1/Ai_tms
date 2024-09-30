@@ -1240,7 +1240,7 @@ class WordChoiceListView(viewsets.ViewSet):
 
 
 def arrange_gloss_terms_for_download(gloss_list,pos=False):
-    gloss_data_frame = pd.DataFrame(gloss_list).dropna()
+    gloss_data_frame = pd.DataFrame(gloss_list)#.dropna()
     if pos:
         gloss_data_frame.columns=['Source term','Target term','POS']
     else:
