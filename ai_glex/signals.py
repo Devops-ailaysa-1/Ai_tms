@@ -19,6 +19,7 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
     from ai_workspace_okapi.utils import nltk_lemma
     instance = GlossaryFiles.objects.get(id=instance_id)
     glossary_obj = instance.project.glossary_project
+    print("glossary_obj--->",glossary_obj)
     dataset = Dataset()
     instance_job_id = instance.job_id
     instance_id = instance.id
@@ -46,6 +47,8 @@ def update_words_from_template(instance_id): #update_words_from_template(sender,
                 value.glossary_id = glossary_obj.id
                 value.file_id = instance_id
                 value.job_id = instance_job_id
+                print("instance_job_id",instance_job_id,instance_id)
+                print("value.sl_term.lower()",value.sl_term.lower())
                 value.root_word = nltk_lemma(word=value.sl_term.lower(),language=lang_code)
                 value.save()
                 instance.status  = "PENDING"
