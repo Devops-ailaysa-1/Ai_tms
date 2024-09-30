@@ -1242,10 +1242,10 @@ class WordChoiceListView(viewsets.ViewSet):
 def arrange_gloss_terms_for_download(gloss_list,pos=False):
     gloss_data_frame = pd.DataFrame(gloss_list)#.dropna()
     if pos:
-        gloss_data_frame.columns=['Source term','Target term','POS']
+        gloss_data_frame.columns=['Source language term','Target language term','POS']
     else:
-        gloss_data_frame.columns=['Source term','Target term']
-    gloss_data_frame = gloss_data_frame.sort_values(by='Source term', key=lambda x: x.str.lower())
+        gloss_data_frame.columns=['Source language term','Target language term']
+    gloss_data_frame = gloss_data_frame.sort_values(by='Source language term', key=lambda x: x.str.lower())
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     gloss_data_frame.to_excel(writer, index=False, sheet_name='Sheet1')
