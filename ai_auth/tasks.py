@@ -841,40 +841,55 @@ def tamil_correction(tar_seg,terms_trans_dict):
     messages=[{"role": "system", "content": """Your task is to modify a provided Tamil sentence based on specific guidelines. Here's the necessary information you'll need to execute the task:
     Please remember to focus on splitting the original word into its root and morphological parts. Once that is done, replace the original word in the sentence with the modified root of the original word while keeping the morphological structure intact.
     output:  provide only the modified sentence.
-    do not generate anything else. no feedback or intermediate steps.
-                """},
+    do not generate anything else. no feedback or intermediate steps."""},
                 {"role": "user", "content":tar_seg+"\n\n"+",".join(terms_trans_dict) }]
     print("messages",messages)
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
     res = completion["choices"][0]["message"]["content"]
     return res
 
-def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
+def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang):   # 
+    from ai_openai.utils import gemini_model_generative 
 
     terms_trans_dict = {}
 
     gloss_list_sl_term = tamil_gloss(gloss_list)
     content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
-    messages=[{"role": "system", "content": """i will provide you the source english text, its relative translation and word list
+    if lang_code == "it":
+        print("inside italian-->",lang_code)
+        content_prompt = """You're a highly skilled translator and linguist specializing in translations between the source and target languages. You have a knack for accurately mapping words between them while adhering strictly to grammatical forms, ensuring precision without any abbreviations or short forms.
+                            Your task is to process the given source text along with its translation and a provided word list.
+                            Here are the details you'll need to consider:
+                            Source {} text: {}
+                            {} translation: {}
+                            Word list: {}
+                            For each listed word, fetch the exact corresponding term from the translation, maintaining the same tense and form. If no matching terms are present, leave the response empty or "".
+                            Output format: source word: target word (if present next term pair separate with a comma), otherwise, leave empty.don't give any acknowledgment give only the result.""".format(src_lang , src_seg ,tar_lang,tar_seg,gloss_list_sl_term)
+        print(content_prompt)
+        res = gemini_model_generative(content_prompt)
+        print("res",res)
+    else:
+        content_prompt = """i will provide you the source english text, its relative translation and word list
             fetch out the relative translated word from the translation for the english word in the list.
             output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
             output format: english word : tamil word in comma seperated
-                """},
-                {"role": "user", "content":content }]
-    
-    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
-    res = completion["choices"][0]["message"]["content"]
+                """
+        messages=[{"role": "system", "content":content_prompt },
+                    {"role": "user", "content":content }]
+        
+        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+        res = completion["choices"][0]["message"]["content"]
     for i in res.split(","):
         terms_trans = i.strip().split(":")
  
         if terms_trans[0].strip():
             sl_term = terms_trans[0].strip()
-            #if sl_term in gloss_list:
+ 
             term_instance = gloss_list.filter(sl_term=sl_term).last()
             if term_instance:
-                #terms_trans_dict[terms_trans[0].strip()] = [terms_trans[1].strip(),term_instance.tl_term]\
+ 
                 terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
-    
+    print("terms_trans_dict---->",terms_trans_dict)
     return terms_trans_dict
 
 
@@ -894,6 +909,9 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     prompt_phrase = internal_flow_instance.prompt_phrase
 
     gloss_list = gloss_prompt(gloss)
+    if tar_lang in ['Italian']:
+        gloss_list = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
+        print("gloss_list",gloss_list)
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
@@ -910,10 +928,12 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     if lang_gram_prompt:
         tamil_morph_result = ""
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
-        if tar_lang == "Tamil":
-            tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss)
-        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,
-                                                                     str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
+        print(tar_lang)
+        if tar_lang in ["Tamil"]:
+            lang_code = source_language.locale_code
+            print("lang_code",lang_code)
+            tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
+        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
 
         
         # Credit calculation
