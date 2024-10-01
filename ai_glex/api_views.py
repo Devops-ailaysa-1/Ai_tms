@@ -655,6 +655,13 @@ def glossary_search(request):
     all_sorted_query = queryset.filter(matching_exact_queryset)
      
     queryset_final = queryset1.union(all_sorted_query)
+    if source_code == "it":
+ 
+        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
+        print("terms_extrac_using_param",terms_extrac_using_param)
+        queryset_final = queryset_final.union(terms_extrac_using_param) ## Removing duplicates using union  
+
+    print("queryset_final",queryset_final)
     if queryset_final:
         res=[]
         for data in queryset_final:
