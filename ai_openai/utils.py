@@ -426,10 +426,8 @@ def gemini_model_generative(prompt):
 
 def gemini_model_term_extract(text):
     model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,generation_config=generation_config,
-                        system_instruction="""Given the following Italian document, identify and extract the most genre-specific Italian keywords which has to be either noun or verb. Return the extracted keywords as a list, prioritizing those that are most representative of the genre.
-Response result: The result should be in the comma-separated of Italian Term and don't give any acknowledge
-Note: Don't repeat the terms
-do not procure foreign terms.""")
+                        system_instruction="""I need you to extract all specialized terminology, including historical, archaeological, and architectural terms, from the following Italian text. Please focus on terms that are unique or domain-specific, and ensure that you include named entities (such as proper nouns, place names, or historical figures). Format the extracted terms as a list. The extraction must be thorough, capturing even subtle or less common terms.
+Note: need only the result in comma-separated and don't give any acknowledgement only give the result \n Italian Text:""")
     chat_session = model_term.start_chat(history=[])
     response = chat_session.send_message(text)
     gemini_res = response.text.split(",")
