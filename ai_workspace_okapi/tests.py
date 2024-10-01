@@ -26,13 +26,10 @@ client = APIClient()
 def user_token():
     user=client.post("/auth/dj-rest-auth/registration/",{'email':'azar52@gmail.com', 'password':'test@1000','fullname':'azar','country':101})
     email=AiUser.objects.get(email='azar52@gmail.com')
-    print(email,email.id)
     em=EmailAddress.objects.get(email ='azar52@gmail.com', user =email)
     em.verified=True
     em.save()
-    print(em,'============')
     log=client.post("/auth/dj-rest-auth/login/",{'email':'azar52@gmail.com', 'password':'test@1000'})
-    print(log.json())
     response=log.json()
     # response = client.post("/workspace_okapi/selflearn/",HTTP_AUTHORIZATION=f"Token {user_token}")
     # assert log.status_code == 200

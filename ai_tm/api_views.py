@@ -497,7 +497,6 @@ def get_weighted_char_count(task):
             analysis([task.id],task.job.project.id)
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
-    print("status------------------>",ins.status)
     if not ins or ins.status == 1:
         analysis([task.id],task.job.project.id)
 
