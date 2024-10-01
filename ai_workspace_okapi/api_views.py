@@ -3011,7 +3011,7 @@ def check_source_words(user_input, task):
     all_sorted_query = all_sorted_query.distinct()
 
     if lang_code == "it":
-        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct().values('sl_term','tl_term')
+        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
         print("terms_extrac_using_param",terms_extrac_using_param)
         all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
     
