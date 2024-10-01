@@ -2956,7 +2956,7 @@ def matching_word(user_input,lang_code):
         for word in word_lemma_user_input:
             if word:
                 word = word.lower()
-                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)  |Q(sl_term__icontains=word) )
+                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
 
     for word in user_words:
         if word:
