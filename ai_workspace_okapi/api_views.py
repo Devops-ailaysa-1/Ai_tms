@@ -2987,13 +2987,15 @@ def check_source_words(user_input, task):
 
     from ai_glex.models import TermsModel, GlossarySelected
     from ai_qa.api_views import remove_tags
-     
+    print("inside,check_source_words")
     proj = task.job.project
     user = proj.ai_user
     target_language = task.job.target_language
     source_language = task.job.source_language
     user_input = remove_tags(user_input)
     lang_code = source_language.locale_code
+    print("lang_code---------->>>",lang_code)
+    print("user_input--->",user_input)
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
@@ -3010,7 +3012,9 @@ def check_source_words(user_input, task):
 
     if lang_code == "it":
         terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct().values('sl_term','tl_term')
+        print("terms_extrac_using_param",terms_extrac_using_param)
         all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
+    
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
     print("selected_gloss_term_instances---->",selected_gloss_term_instances)
 
