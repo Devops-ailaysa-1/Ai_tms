@@ -2987,7 +2987,6 @@ def check_source_words(user_input, task):
 
     from ai_glex.models import TermsModel, GlossarySelected
     from ai_qa.api_views import remove_tags
-    print("inside,check_source_words")
     proj = task.job.project
     user = proj.ai_user
     target_language = task.job.target_language
