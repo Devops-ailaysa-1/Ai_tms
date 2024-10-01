@@ -2993,8 +2993,8 @@ def check_source_words(user_input, task):
     source_language = task.job.source_language
     user_input = remove_tags(user_input)
     lang_code = source_language.locale_code
-    print("lang_code---------->>>",lang_code)
-    print("user_input--->",user_input)
+    # print("lang_code---------->>>",lang_code)
+    # print("user_input--->",user_input)
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
