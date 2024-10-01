@@ -166,7 +166,6 @@ def customize_response(customize ,user_text,tone,used_tokens,style_instance):
     '''
     user_text = user_text.strip()+"\n\nNote: don't give the result in markdown should be in plain text"
     if style_instance:
-        print()
         prompt = style_instance.brand_voice_result_prompt+"Rewrite the sentence based on the given content \n sentence:"+user_text 
         response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
         tokens = response['usage']['total_tokens']

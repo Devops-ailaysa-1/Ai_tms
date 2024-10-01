@@ -20,8 +20,6 @@ def create_segment_controller(sender, instance, created, *args, **kwargs):
         obj = model(base_segment_id=instance.id)
         obj.save()
 
-        print("new segment controller created successfully!!!")
-
 
 def translate_segments(sender, instance, created, *args, **kwargs):
     from ai_workspace.models import TaskAssign

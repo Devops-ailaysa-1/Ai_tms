@@ -23,7 +23,6 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         from ai_glex.signals import update_words_from_template
         instance = GlossaryFiles.objects.create(**validated_data)
-        print("create function")
         celery_id = update_words_from_template.apply_async(args=(instance.id,))
         instance.celery_id = celery_id
         instance.status  = "PENDING"
