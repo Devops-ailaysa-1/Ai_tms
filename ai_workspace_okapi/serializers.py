@@ -485,6 +485,7 @@ class DocumentSerializerV3(DocumentSerializerV2):
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
+
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
     class Meta:
@@ -496,7 +497,6 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {
             "mt_raw": {"required": False},
-            # "mt_llm_glossary": {"required": False},
             "mt_only": {"required": False},
         }
 
@@ -519,7 +519,6 @@ class MT_RawSerializer(serializers.ModelSerializer):
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
 
         return super().to_internal_value(data=data)
-
 
 
     def create(self, validated_data):
@@ -548,31 +547,34 @@ class MT_RawSerializer(serializers.ModelSerializer):
                 validated_data["mt_raw"] = seg_obj.first().target
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
-            else:
-                
-                # Previous else block
+            else:                
+                # Checking if the translation is adaptive or normal MT
+                if not doc.job.project.isAdaptiveTranslation:
 
-                # validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
-                # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
-                # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+                    # If translation is not adaptive
+                    validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
+                    validated_data["mt_only"] = validated_data["mt_raw"]
+                    # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                    # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
 
-
-                # New else block
-
-                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
-
-                validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
-                validated_data["mt_only"] = translation_original
-                # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
+                else:
+                    # If translation is adaptive
+                    translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
+                    validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
+                    validated_data["mt_only"] = translation_original
 
         else:
             
-            translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
-
-            validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
-            validated_data["mt_only"] = translation_original
-            # validated_data["mt_llm_glossary"] = "MT + LLM + Glossary"
-
+            # If translation is normal, not adaptive
+            if not doc.job.project.isAdaptiveTranslation:
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
+                validated_data["mt_only"] = validated_data["mt_raw"]
+            
+            else:                
+                # If translation is adaptive
+                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
+                validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)        
+                validated_data["mt_only"] = translation_original
 
         instance = MT_RawTranslation.objects.create(**validated_data)
 
