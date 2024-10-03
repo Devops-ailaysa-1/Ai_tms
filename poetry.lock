@@ -1534,6 +1534,23 @@ files = [
 ]
 
 [[package]]
+name = "deepl"
+version = "1.19.1"
+description = "Python library for the DeepL API."
+optional = false
+python-versions = "<4,>=3.6.2"
+files = [
+    {file = "deepl-1.19.1-py3-none-any.whl", hash = "sha256:870bb9edca00ba0b014e57160deb1fe97accf8d67eafa2a2402c6b765811a602"},
+    {file = "deepl-1.19.1.tar.gz", hash = "sha256:b9fb2291681c42c73f7b1fcb3f93f97d537722f7c00fd64e3dab7018cf9bb2a6"},
+]
+
+[package.dependencies]
+requests = ">=2,<3"
+
+[package.extras]
+keyring = ["keyring (>=23.4.1,<24.0.0)"]
+
+[[package]]
 name = "defusedxml"
 version = "0.7.1"
 description = "XML bomb protection for Python stdlib modules"
@@ -9364,4 +9381,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "41f6d5f2dbc87f7d2727897f45700a94ba40228a0214b0f2d481116c96a20974"
+content-hash = "d2958b0b47b943caa0e59c2c94af1b037975bfc217d7edaa7c47e64a25797f5f"

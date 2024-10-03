@@ -22,13 +22,18 @@ import requests, os
 import subprocess
 import io
 import logging
+import deepl
 from rest_framework import serializers
 logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
 GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
+## deepl cred
+DEEPL_API_KEY = settings.DEEPL_API_KEY
+DEEPL_USER_LIST = settings.DEEPL_USER_LIST
 
+deepl_translator = deepl.Translator(DEEPL_API_KEY)
 
 client = translate.Client()
 lemmatizer = WordNetLemmatizer()
@@ -297,6 +302,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
 
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
+    deepl_tar_code_list = ["it","es"]
 
     mt_called = True
 
@@ -325,12 +331,14 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     elif user and not from_open_ai and initial_credit < cc:
             translate = ''
-    
+    elif user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
+        print("inside deepl for italian lang")
+        translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
+ 
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-        translate = client.translate(source_string,
-                                target_language=target_lang_code,
+        translate = client.translate(source_string,target_language=target_lang_code,
                                 format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
