@@ -887,11 +887,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang)
     return terms_trans_dict
 
 
-<<<<<<< HEAD
-def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
-=======
 def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
->>>>>>> origin/staging
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative 
     from ai_staff.models import ExtraReplacePrompt
