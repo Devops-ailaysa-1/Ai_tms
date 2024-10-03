@@ -855,8 +855,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang)
 
     gloss_list_sl_term = tamil_gloss(gloss_list)
     content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
-    if lang_code == "it":
-        print("inside italian-->",lang_code)
+    if lang_code == 38: # for italian language
         content_prompt = """You're a highly skilled translator and linguist specializing in translations between the source and target languages. You have a knack for accurately mapping words between them while adhering strictly to grammatical forms, ensuring precision without any abbreviations or short forms.
                             Your task is to process the given source text along with its translation and a provided word list.
                             Here are the details you'll need to consider:
@@ -865,17 +864,14 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang)
                             Word list: {}
                             For each listed word, fetch the exact corresponding term from the translation, maintaining the same tense and form. If no matching terms are present, leave the response empty or "".
                             Output format: source word: target word (if present next term pair separate with a comma), otherwise, leave empty.don't give any acknowledgment give only the result.""".format(src_lang , src_seg ,tar_lang,tar_seg,gloss_list_sl_term)
-        print(content_prompt)
         res = gemini_model_generative(content_prompt)
-        print("res",res)
     else:
         content_prompt = """i will provide you the source english text, its relative translation and word list
             fetch out the relative translated word from the translation for the english word in the list.
             output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
             output format: english word : tamil word in comma seperated
                 """
-        messages=[{"role": "system", "content":content_prompt },
-                    {"role": "user", "content":content }]
+        messages=[{"role": "system", "content":content_prompt },{"role": "user", "content":content }]
         
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
         res = completion["choices"][0]["message"]["content"]
@@ -887,31 +883,26 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang)
  
             term_instance = gloss_list.filter(sl_term=sl_term).last()
             if term_instance:
- 
                 terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
-    print("terms_trans_dict---->",terms_trans_dict)
     return terms_trans_dict
-
-
-
-
 
 
 def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative 
     from ai_staff.models import ExtraReplacePrompt
-    #try:
+    tar_lang_id = [38,77]
     src_lang = source_language.language
     tar_lang = target_language.language
-
+    tar_lang_id_to_check = target_language.id
     internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
     prompt_phrase = internal_flow_instance.prompt_phrase
 
     gloss_list = gloss_prompt(gloss)
-    if tar_lang in ['Italian']:
-        gloss_list = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
-        print("gloss_list",gloss_list)
+
+    if tar_lang_id_to_check in tar_lang_id:
+        gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
+
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
@@ -928,10 +919,8 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     if lang_gram_prompt:
         tamil_morph_result = ""
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
-        print(tar_lang)
-        if tar_lang in ["Tamil"]:
+        if tar_lang_id_to_check  == 77: # tamil id 
             lang_code = source_language.locale_code
-            print("lang_code",lang_code)
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
         res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
 
