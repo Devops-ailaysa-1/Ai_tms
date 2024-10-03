@@ -878,11 +878,7 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list):
     return terms_trans_dict
 
 
-
-
-
-
-def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language ):
+def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative 
     from ai_staff.models import ExtraReplacePrompt
@@ -894,21 +890,19 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
     prompt_phrase = internal_flow_instance.prompt_phrase
 
     gloss_list = gloss_prompt(gloss)
-    print("gloss_prompt----->",gloss_list)
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
-    print("replace_prompt",replace_prompt)
+   
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
     if extra_prompt:
         replace_prompt = replace_prompt + extra_prompt.last().prompt
     
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
-                                                                                            "content": replace_prompt}])
+                                                                                            "content": replace_prompt}])    
     res = completion["choices"][0]["message"]["content"]
 
     lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
 
-    
     if lang_gram_prompt:
         tamil_morph_result = ""
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
@@ -925,7 +919,6 @@ def replace_mt_with_gloss(src,raw_mt,gloss , source_language , target_language )
         # consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
 
-
     # except:
     #     logger.error("error in process ing adaptive prompt")
     #     res = raw_mt
@@ -937,12 +930,11 @@ def replace_with_gloss(src, raw_mt, task):
     
     from ai_glex.models import GlossarySelected, Glossary
     from ai_workspace_okapi.api_views import check_source_words
-    
+
     final_mt = raw_mt
     proj = task.job.project
 
     # if GlossarySelected.objects.filter(project=proj, glossary__project__project_type_id=10).exists():
-    
     
     # Checking if a glossary is added from Assets or
     # or if a glossary is created on the fly
@@ -950,11 +942,10 @@ def replace_with_gloss(src, raw_mt, task):
     if GlossarySelected.objects.filter(project=proj).exists() or \
         (Glossary.objects.filter(file_translate_glossary=proj).exists()):
 
-        gloss ,source_language , target_language  = check_source_words(src, task)
+        gloss, source_language, target_language = check_source_words(src, task)
 
         if gloss:
-            final_mt = replace_mt_with_gloss(src, raw_mt, gloss,source_language , target_language  )
-
+            final_mt = replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language)
     return final_mt
       
 
@@ -978,6 +969,7 @@ def mt_raw_update(task_id,segments):
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
+    isAdaptiveTranslation = task.job.project.isAdaptiveTranslation
     if segments == None:
         segments = task.document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
@@ -1009,16 +1001,19 @@ def mt_raw_update(task_id,segments):
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-
-                        # Adapting glossary
-                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
-                                                 user_id=task.owner_pk, cc=consumable_credits)
-                        mt = replace_with_gloss(seg.source,raw_mt,task)
-
-                        # Without adapting glossary
-                        # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        
+                        if isAdaptiveTranslation:
+                            # Adapting glossary
+                            raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                    user_id=task.owner_pk, cc=consumable_credits)
+                            mt = replace_with_gloss(seg.source,raw_mt,task)
+                        else:
+                            # Without adapting glossary
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                            raw_mt = mt
 
                         tags = get_tags(seg)
+
                         if tags:
                             seg.target = mt + tags
                             seg.temp_target = mt + tags
@@ -1050,14 +1045,16 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-
-                    # Adapting glossary
-                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
-                                             user_id=task.owner_pk, cc=consumable_credits)
-                    mt = replace_with_gloss(seg.source,raw_mt,task)
-
-                    # Without adapting glossary
-                    # mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    
+                    if isAdaptiveTranslation:
+                        # Adapting glossary
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                user_id=task.owner_pk, cc=consumable_credits)
+                        mt = replace_with_gloss(seg.source,raw_mt,task)
+                    else:
+                        # Without adapting glossary
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        raw_mt = mt
 
                     if type(seg) is SplitSegment:
                         mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})

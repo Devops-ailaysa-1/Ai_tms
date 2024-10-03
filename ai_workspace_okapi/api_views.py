@@ -516,6 +516,7 @@ class DocumentViewByDocumentId(views.APIView):
         else:
             given_step = None
         document = self.get_object(document_id)
+        is_adaptive = document.job.project.isAdaptiveTranslation
         mt_enable = document.job.project.mt_enable
         task = Task.objects.get(document=document)
         edit_allowed = self.edit_allow_check(task,given_step)
@@ -531,11 +532,16 @@ class DocumentViewByDocumentId(views.APIView):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
         dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) or (request.user in assigned_users) else {'updated_download':'disable'}
         dict_2 = {'mt_enable':mt_enable,'task_id':task.id,'assign_enable':assign_enable,'edit_allowed':edit_allowed}
+
+        # Key to check if Adaptive translation or Normal MTPE
+        dict_3 = {'is_adaptive':is_adaptive}
+
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
         data.update(dict_1)
         data.update(dict_2)
+        data.update(dict_3)
         return Response(data, status=200)
 
 
@@ -965,7 +971,6 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        #task = Task.objects.get(job=doc.job)
         task = seg.task_obj
 
         #
@@ -978,23 +983,26 @@ class MT_RawAndTM_View(views.APIView):
         if initial_credit > consumable_credits :
             
             if mt_raw:
-
+                
                 # If MT raw is already present, but user has changed the MT engine,
                 # In that case, the MT Raw needs to be updated using the new MT Engine.
                 
-                # Without adapting glossary
-                # translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                #                               doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk,cc=consumable_credits)
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
 
-                # Adapting glossary
-                translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk,cc=consumable_credits)
-                
-                translation = replace_with_gloss(seg.source,translation_original,task)
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                else:
+
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                    
+                    translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
-                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
-                
+                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)                
 
                 obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
                 return MT_RawSerializer(obj).data, 200, "available"
@@ -1002,7 +1010,6 @@ class MT_RawAndTM_View(views.APIView):
             else:
 
                 # If there is not MT Raw, a new translation needs to be done
-
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
@@ -1010,9 +1017,7 @@ class MT_RawAndTM_View(views.APIView):
                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
-            return {}, 424, "unavailable"
-        
-    
+            return {}, 424, "unavailable"    
 
     @staticmethod
     def get_split_data(request, segment_id, mt_params):
@@ -1035,13 +1040,16 @@ class MT_RawAndTM_View(views.APIView):
 
             if proj_mt_engine == task_assign_mt_engine:
 
-                # Adapting glossary
-                mt_raw_split.mt_only = mt_raw_split.mt_raw
-                mt_raw_split.mt_raw = replace_with_gloss(split_seg.source, mt_raw_split.mt_raw, task)
-                mt_raw_split.save()
+                # Checking for adaptive or normal translation
+                if not doc.job.project.isAdaptiveTranslation:
+                  return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"  
 
-                # Without adapting glossary
-                # return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+                else:
+                    # Adapting glossary
+                    mt_raw_split.mt_only = mt_raw_split.mt_raw
+                    mt_raw_split.mt_raw = replace_with_gloss(split_seg.source, mt_raw_split.mt_raw, task)
+                    mt_raw_split.save()
+                    return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
@@ -1056,35 +1064,38 @@ class MT_RawAndTM_View(views.APIView):
 
             # Updating raw translation of split segments
             if mt_raw_split:
-
-                # Without adapting glossary
-                # translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                #                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation_original = translation
+                else:
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                    translation = replace_with_gloss(split_seg.source, translation_original,task)
                 
-                # Adapting glossary
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
-                translation = replace_with_gloss(split_seg.source, translation_original,task)
-                
-                # Previous return statement
-                # MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
-                # return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
-            
+                # Updating existing record of MtRawSplitSegment with new Task MT engine
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation, mt_only=translation_original)
-                return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, segment: split_seg.id}, 200, "available"
+                return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, "segment": split_seg.id}, 200, "available"
 
             # Creating new MT raw for split segment
             else:
-                # # Without adapting glossary
-                # translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                #                               doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                
-                # Adapting glossary
-                translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                translation = replace_with_gloss(split_seg.source, translation_original, task)
 
-                MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "mt_only":translation_original, "split_segment_id" : segment_id})
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation_original = translation
+                else:
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation = replace_with_gloss(split_seg.source, translation_original, task)
+
+                MtRawSplitSegment.objects.create(**{"mt_raw":translation, "mt_only":translation_original, "split_segment_id" : segment_id})
 
                 return {"mt_raw": translation, "mt_only":translation_original, "segment": split_seg.id}, 200, "available"
 
@@ -2383,11 +2394,13 @@ def paraphrasing_for_non_english(request):
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document=doc_obj)
+        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
 
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
         user = task_obj.job.project.ai_user
+        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
 
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
@@ -2408,12 +2421,14 @@ def paraphrasing_for_non_english(request):
         consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence, source_lang='en', target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
 
-            # Without adapting glossary
-            # rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+            if not isAdaptiveTranslation:
+                # Without adapting glossary
+                rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
             
-            # Adapting glossary
-            rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
-            replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
+            else:
+                # Adapting glossary
+                rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
+                replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
 
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
@@ -2444,9 +2459,11 @@ def paraphrasing(request):
         doc_obj = Document.objects.get(id=doc_id)
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document = doc_obj)
+        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         user = task_obj.job.project.ai_user
+        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
     
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -2461,19 +2478,21 @@ def paraphrasing(request):
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         if segment_id:
 
-            # Without adapting glossary
-            # seg = Segment.objects.get(id=segment_id)
-
-            # Adapting glossary
             seg = Segment.objects.get(id=segment_id)
-            replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+
+            if not isAdaptiveTranslation:
+                # Without adapting glossary
+                replaced = para_sentence
+            else:
+                # Adapting glossary
+                replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
         else:
             replaced = para_sentence
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        return Response({'result':para_sentence ,'tag':tags})
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -3003,7 +3022,7 @@ def check_source_words(user_input, task):
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
-    matching_exact_queryset = matching_word(user_input,lang_code=source_language.locale_code)
+    matching_exact_queryset = matching_word(user_input, lang_code=source_language.locale_code)
 
     all_sorted_query = queryset.filter(matching_exact_queryset)
     all_sorted_query = all_sorted_query.distinct()

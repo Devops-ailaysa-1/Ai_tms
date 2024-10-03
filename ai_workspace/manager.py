@@ -302,7 +302,6 @@ class TaskAssignManager(models.Manager):
         data = [i[0].id for i in task_assign if i[1]==False]
         # data = list(map(lambda i: i[0].id, filter(lambda i: not i[1], task_assign)))
         self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
-        print("task is assigned for the project",tasks)
         return task_assign
  
 

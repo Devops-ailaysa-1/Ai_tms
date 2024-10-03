@@ -429,11 +429,12 @@ class Files_Jobs_List(APIView):
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
+        isAdaptive = project.isAdaptiveTranslation
         return Response({"files":file_data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, \
-                            "glossary_selected":glossary_selected, "id":project.id}, status=200)
+                            "glossary_selected":glossary_selected, "id":project.id, "isAdaptive":isAdaptive}, status=200)
 
 
 
@@ -893,7 +894,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             else:file_obj = get_file_from_pdf(None,pdf_task_id)
             serlzr = ser(instance, data=\
                 {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
-            
+
+        
+
         else:
 
             serlzr = ser(instance, data=\

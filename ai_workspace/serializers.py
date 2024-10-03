@@ -388,22 +388,22 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
-	voice_proj_detail = VoiceProjectDetailSerializer(required=False,allow_null=True)
-	project_name = serializers.CharField(required=False,allow_null=True)
-	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
+	voice_proj_detail = VoiceProjectDetailSerializer(required=False, allow_null=True)
+	project_name = serializers.CharField(required=False, allow_null=True)
+	team_exist = serializers.BooleanField(required=False, allow_null=True, write_only=True)
 	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),\
 												  required=False,allow_null=True, write_only=True)
 	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),\
-												   required=False,allow_null=True,write_only=True)
+												   required=False, allow_null=True, write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	progress = serializers.SerializerMethodField()
-	subjects = ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
-	contents = ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
-	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
-	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
-	mt_enable = serializers.BooleanField(required=False,allow_null=True)
-	get_mt_by_page = serializers.BooleanField(required=False,allow_null=True)
+	subjects = ProjectSubjectSerializer(many=True, source="proj_subject", required=False, write_only=True)
+	contents = ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False, write_only=True)
+	steps = ProjectStepsSerializer(many=True,source="proj_steps", required=False)#,write_only=True)
+	project_deadline = serializers.DateTimeField(required=False, allow_null=True, write_only=True)
+	mt_enable = serializers.BooleanField(required=False, allow_null=True)
+	get_mt_by_page = serializers.BooleanField(required=False, allow_null=True)
 	book_project_id = serializers.ReadOnlyField(source='book_create_project.id')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),\
 													  required=False,write_only=True)
@@ -413,8 +413,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	get_project_type = serializers.ReadOnlyField(source='project_type.id')
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
-	file_translate = serializers.BooleanField(required=False,allow_null=True)
+	file_translate = serializers.BooleanField(required=False, allow_null=True)
 	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
+	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
 
 	class Meta:
 		model = Project
@@ -423,9 +424,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate')#'glossary_id')
+					'file_translate', 'isAdaptiveTranslation')
 
 	def run_validation(self, data):
+
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
 			# Setting the project type as Standard project
 			pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
@@ -475,12 +477,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
-		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
+		if self.context.get("request")!= None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 			data['pre_translate'] = data.get('pre_translate',['false'])[0]
 			data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 			data['from_text'] =  data.get('from_text',[0])[0]
+			
+			# This field is True will apply Adaptive translation else normal MT
+			data['isAdaptiveTranslation'] = data.get('isAdaptiveTranslation',['false'])[0]
 
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -489,6 +494,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				data['pre_translate'] = data.get('pre_translate')[0]
 			if data.get('get_mt_by_page'):
 				data['get_mt_by_page'] = data.get('get_mt_by_page')[0]
+			
+			# This field is True will apply Adaptive translation else normal MT
+			if data.get('isAdaptiveTranslation'):
+				data['isAdaptiveTranslation'] = data.get('isAdaptiveTranslation')[0]
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
@@ -764,6 +773,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if 'pre_translate' in validated_data:##################Need to check this mt-only edit option#######
 			instance.pre_translate = validated_data.get("pre_translate",\
 									instance.pre_translate)
+			instance.save()
+		
+		# This field is True will apply Adaptive translation else normal MT
+		if 'isAdaptiveTranslation' in validated_data:
+			instance.isAdaptiveTranslation = validated_data.get("isAdaptiveTranslation",\
+									instance.isAdaptiveTranslation)
 			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
