@@ -426,7 +426,7 @@ def gemini_model_generative(prompt):
 
 def gemini_model_term_extract(text):
     model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,generation_config=generation_config,
-                        system_instruction="""I need you to extract all specialized terminology, including historical, archaeological, architectural terms and 30 italian repetitive verbs from the following Italian text. Please focus on terms that are unique or domain-specific, and ensure that you include named entities (such as proper nouns, place names, or historical figures). Format the extracted terms as a list. The extraction must be thorough, capturing even subtle or less common terms. Do not give any foreign terms.
+                        system_instruction="""I need you to extract all specialized terminology, including historical, archaeological, architectural terms. given 30 italian verbs 20 NER and 30 Terminology from the following Italian text. Please focus on terms that are unique or domain-specific, and ensure that you include named entities (such as proper nouns, place names, or historical figures). Format the extracted terms as a list. The extraction must be thorough, capturing even subtle or less common terms. Do not give any foreign terms.
 Note: need only the result in comma-separated and don't give any acknowledgement only give the result \n Italian Text:""")
     chat_session = model_term.start_chat(history=[])
     response = chat_session.send_message(text)
