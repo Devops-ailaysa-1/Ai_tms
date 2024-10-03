@@ -15,7 +15,7 @@ import backoff
 from ai_staff.models import InternalFlowPrompts
 from nltk.stem import WordNetLemmatizer
 from rest_framework import serializers
-
+from django.conf import settings as django_settin
 from google.cloud import translate_v3beta1 as translate_file
 from django import core
 import requests, os
@@ -30,8 +30,8 @@ GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID'
 GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
 ## deepl cred
-DEEPL_API_KEY = settings.DEEPL_API_KEY
-DEEPL_USER_LIST = settings.DEEPL_USER_LIST
+DEEPL_API_KEY = django_settin.DEEPL_API_KEY
+DEEPL_USER_LIST = django_settin.DEEPL_USER_LIST
 
 deepl_translator = deepl.Translator(DEEPL_API_KEY)
 
