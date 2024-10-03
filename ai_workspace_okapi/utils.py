@@ -331,8 +331,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     elif user and not from_open_ai and initial_credit < cc:
             translate = ''
-    elif user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
-        print("inside deepl for italian lang")
+    elif user and user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
+        print("inside deepl for italian lang") ##elif user check for gloss transltion
         translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
  
     # FOR GOOGLE TRANSLATE
