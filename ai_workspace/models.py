@@ -219,6 +219,7 @@ class Project(models.Model):
     copy_paste_enable = models.BooleanField(default=True)
     get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
     file_translate = models.BooleanField(default=False) # Use for default glossary
+    isAdaptiveTranslation = models.BooleanField(default=False) # Used to have adaptive translation or not
 
 
     class Meta:

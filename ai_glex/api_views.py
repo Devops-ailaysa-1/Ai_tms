@@ -254,7 +254,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
     def edit_allowed_check(self,job):
         #Not using now. not working correctly.
-        from ai_workspace.models import Task,TaskAssignInfo
+        from ai_workspace.models import Task,TaskAssignInfo 
         user = self.request.user
         try:
             task_obj = Task.objects.get(job_id=job.id)
