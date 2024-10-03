@@ -2869,8 +2869,8 @@ from ai_workspace_okapi.utils import do_compare_sentence
 # Not used anywhere
 def prev_seg_his(instance):
     seg_his_ins = SegmentHistory.objects.filter(segment_id=instance.segment_id)
-    for i in seg_his_ins:
-        print(i.segment_difference.all())
+    # for i in seg_his_ins:
+    #     print(i.segment_difference.all())
 
     seg_diff=segment_difference(sender=None, instance=instance)
 
@@ -2975,7 +2975,7 @@ def matching_word(user_input,lang_code):
         for word in word_lemma_user_input:
             if word:
                 word = word.lower()
-                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)  |Q(sl_term__icontains=word) )
+                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
 
     for word in user_words:
         if word:
@@ -3006,13 +3006,14 @@ def check_source_words(user_input, task):
 
     from ai_glex.models import TermsModel, GlossarySelected
     from ai_qa.api_views import remove_tags
-     
     proj = task.job.project
     user = proj.ai_user
     target_language = task.job.target_language
     source_language = task.job.source_language
     user_input = remove_tags(user_input)
-
+    lang_code = source_language.locale_code
+    # print("lang_code---------->>>",lang_code)
+    # print("user_input--->",user_input)
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
@@ -3022,12 +3023,18 @@ def check_source_words(user_input, task):
     if user_input[-1] == ".":
         user_input = user_input[:-1]
     
-    matching_exact_queryset = matching_word(user_input, lang_code=source_language.locale_code)
+    matching_exact_queryset = matching_word(user_input,lang_code=lang_code)
 
     all_sorted_query = queryset.filter(matching_exact_queryset)
     all_sorted_query = all_sorted_query.distinct()
-    selected_gloss_term_instances = term_model_source_translate(all_sorted_query, source_language.locale_code,
-                                                                target_language.locale_code, user) 
+
+    if lang_code == "it":
+        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
+        print("terms_extrac_using_param",terms_extrac_using_param)
+        all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
+    
+    selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
+    print("selected_gloss_term_instances---->",selected_gloss_term_instances)
 
     return selected_gloss_term_instances, source_language, target_language
 
