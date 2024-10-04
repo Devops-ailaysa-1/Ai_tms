@@ -799,7 +799,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		subjects_data = validated_data.pop("proj_subject",[])
 		steps_data = validated_data.pop("proj_steps",[])
 
-		project,contents,subjects,steps = Project.objects.create_content_and_subject_and_steps_for_project(instance,\
+		project, contents, subjects, steps = Project.objects.create_content_and_subject_and_steps_for_project(instance,\
 							contents_data, subjects_data, steps_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 

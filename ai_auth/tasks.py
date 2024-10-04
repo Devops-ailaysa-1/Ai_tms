@@ -573,9 +573,11 @@ def translate_file_task_cel(task_id):
 
 @task(queue='high-priority')
 def pre_translate_update(task_id):
+
     '''
     This celery task is called when pre-translate option is updated after project creation
     '''
+
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -585,7 +587,7 @@ def pre_translate_update(task_id):
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='pre_translate_update', status=1, celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
@@ -599,18 +601,29 @@ def pre_translate_update(task_id):
 
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
+
+    is_adaptive = task.job.project.isAdaptiveTranslation
     
     for seg in final_segments:
 
-        if seg.target == '' or seg.target==None:
+        if seg.target == '' or seg.target == None:
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
                 try:
                     if task.job.project.project_type_id == 8:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits,format_='html')
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                             user_id=task.owner_pk,cc=consumable_credits,format_='html')
                     else:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        # If it is normal translation
+                        if not is_adaptive:
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                                 user_id=task.owner_pk,cc=consumable_credits)
+                        # If the translation is Adaptive
+                        else:
+                            mt_original = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                                 user_id=task.owner_pk,cc=consumable_credits)
+                            mt = replace_with_gloss(seg.source, mt_original, task)
                     tags = get_tags(seg)
                     if tags:
                         seg.target = mt + tags
@@ -628,7 +641,8 @@ def pre_translate_update(task_id):
                     seg.temp_target = ''
                     seg.status_id=None
             else:
-                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
+                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,\
+                                                      error_type="Insufficient Credits")
                 break
             if type(seg) is Segment:
                 update_list.append(seg)
@@ -644,6 +658,7 @@ def pre_translate_update(task_id):
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i.target),
+                mt_only = re.sub(r'<[^>]+>', "", i.target),
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i.id,
@@ -656,6 +671,7 @@ def pre_translate_update(task_id):
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i.target),
+                mt_only= re.sub(r'<[^>]+>', "", i.target),
                 split_segment_id= i.id,
             )
             for i in mt_split_segments

@@ -1106,7 +1106,7 @@ class BookBodySerializer(serializers.ModelSerializer):
         extra_kwargs = {'select_group':{'required' : False},'order_list':{'required':False}}
          
     def create(self, validated_data):
-        blog_available_langs =[17]
+        blog_available_langs =[17] # English
         book_title_inst = validated_data.get('book_title')
         book_creation = validated_data.get('book_creation')
         generated_content = validated_data.get('generated_content',None)
