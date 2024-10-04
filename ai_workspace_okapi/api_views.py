@@ -3030,7 +3030,6 @@ def check_source_words(user_input, task):
 
     if lang_code == "it":
         terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
-        print("terms_extrac_using_param",terms_extrac_using_param)
         all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
     
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
