@@ -3033,6 +3033,7 @@ def check_source_words(user_input, task):
         all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
     
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
+ 
 
     return selected_gloss_term_instances, source_language, target_language
 

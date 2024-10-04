@@ -106,6 +106,7 @@ pypdf = "^4.1.0"
 pillow = "10.3.0"
 mkepub = "^1.2"
 google-generativeai = "0.7.2"
+deepl = "1.19.1"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]

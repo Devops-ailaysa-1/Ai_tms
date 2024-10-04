@@ -1368,14 +1368,14 @@ def split_list(lst, chunk_size=50):
 def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
     from ai_openai.utils import gemini_model_term_extract
     from ai_workspace_okapi.utils import nltk_lemma
-    lang_code_list = ['it']
+    lang_code_list = [38] ## italian lang id 
     file_extraction_instance = FileTermExtracted.objects.get(id=file_extraction_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
     file_path = file_extraction_instance.file.get_source_file_path ## get the file path from the file instance(relate)
     path_list = re.split("source/", file_path)
     gloss_task_ins = Task.objects.get(id=gloss_task_id)
     gloss_job_ins = gloss_task_ins.job
-    source_language_code = gloss_task_ins.job.source_language.locale_code
+    source_language_code = gloss_task_ins.job.source_language.id
     logging.info(source_language_code)
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
