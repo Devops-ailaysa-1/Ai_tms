@@ -855,26 +855,26 @@ def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang)
 
     gloss_list_sl_term = tamil_gloss(gloss_list)
     content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
-    if lang_code == 38: # for italian language
-        content_prompt = """You're a highly skilled translator and linguist specializing in translations between the source and target languages. You have a knack for accurately mapping words between them while adhering strictly to grammatical forms, ensuring precision without any abbreviations or short forms.
-                            Your task is to process the given source text along with its translation and a provided word list.
-                            Here are the details you'll need to consider:
-                            Source {} text: {}
-                            {} translation: {}
-                            Word list: {}
-                            For each listed word, fetch the exact corresponding term from the translation, maintaining the same tense and form. If no matching terms are present, leave the response empty or "".
-                            Output format: source word: target word (if present next term pair separate with a comma), otherwise, leave empty.don't give any acknowledgment give only the result.""".format(src_lang , src_seg ,tar_lang,tar_seg,gloss_list_sl_term)
-        res = gemini_model_generative(content_prompt)
-    else:
-        content_prompt = """i will provide you the source english text, its relative translation and word list
-            fetch out the relative translated word from the translation for the english word in the list.
-            output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
-            output format: english word : tamil word in comma seperated
-                """
-        messages=[{"role": "system", "content":content_prompt },{"role": "user", "content":content }]
-        
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
-        res = completion["choices"][0]["message"]["content"]
+    # if lang_code == 38: # for italian language
+    #     content_prompt = """You're a highly skilled translator and linguist specializing in translations between the source and target languages. You have a knack for accurately mapping words between them while adhering strictly to grammatical forms, ensuring precision without any abbreviations or short forms.
+    #                         Your task is to process the given source text along with its translation and a provided word list.
+    #                         Here are the details you'll need to consider:
+    #                         Source {} text: {}
+    #                         {} translation: {}
+    #                         Word list: {}
+    #                         For each listed word, fetch the exact corresponding term from the translation, maintaining the same tense and form. If no matching terms are present, leave the response empty or "".
+    #                         Output format: source word: target word (if present next term pair separate with a comma), otherwise, leave empty.don't give any acknowledgment give only the result.""".format(src_lang , src_seg ,tar_lang,tar_seg,gloss_list_sl_term)
+    #     res = gemini_model_generative(content_prompt)
+    #else:
+    content_prompt = """i will provide you the source english text, its relative translation and word list
+        fetch out the relative translated word from the translation for the english word in the list.
+        output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
+        output format: english word : tamil word in comma seperated
+            """
+    messages=[{"role": "system", "content":content_prompt },{"role": "user", "content":content }]
+    
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+    res = completion["choices"][0]["message"]["content"]
     for i in res.split(","):
         terms_trans = i.strip().split(":")
  
@@ -891,7 +891,7 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     from ai_staff.models import LanguageGrammarPrompt
     from ai_openai.utils import gemini_model_generative 
     from ai_staff.models import ExtraReplacePrompt
-    tar_lang_id = [38,77]
+    tar_lang_id = [77] #38,
     src_lang = source_language.language
     tar_lang = target_language.language
     tar_lang_id_to_check = target_language.id
