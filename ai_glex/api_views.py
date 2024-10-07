@@ -547,8 +547,8 @@ def glossaries_list(request,project_id):
         queryset = queryset.filter(glossary_project__isnull=False)
         queryset = queryset.filter(project_jobs_set__source_language_id=project.project_jobs_set.first().source_language.id)
         queryset = queryset.filter(project_jobs_set__target_language_id=target_languages.id) 
-        queryset = queryset.filter(glossary_project__term__isnull=False).order_by('-id')
-        #queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
+        queryset = queryset.filter(glossary_project__term__isnull=False)
+        queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
 
     else:
         target_languages = project.get_target_languages ### with list of targets 
