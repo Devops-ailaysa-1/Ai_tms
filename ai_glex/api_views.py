@@ -547,8 +547,8 @@ def glossaries_list(request,project_id):
         queryset = queryset.filter(glossary_project__isnull=False)
         queryset = queryset.filter(project_jobs_set__source_language_id=project.project_jobs_set.first().source_language.id)
         queryset = queryset.filter(project_jobs_set__target_language_id=target_languages.id) 
-        queryset = queryset.filter(glossary_project__term__isnull=False).order_by('-id')
-        #queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
+        queryset = queryset.filter(glossary_project__term__isnull=False)
+        queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
 
     else:
         target_languages = project.get_target_languages ### with list of targets 
@@ -655,12 +655,12 @@ def glossary_search(request):
     all_sorted_query = queryset.filter(matching_exact_queryset)
      
     queryset_final = queryset1.union(all_sorted_query)
-    if source_code == "it":
+    # if source_code == "it":
  
-        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
-        queryset_final = queryset_final.union(terms_extrac_using_param) ## Removing duplicates using union  
+    #     terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
+    #     queryset_final = queryset_final.union(terms_extrac_using_param) ## Removing duplicates using union  
 
-    print("queryset_final",queryset_final)
+
     if queryset_final:
         res=[]
         for data in queryset_final:
