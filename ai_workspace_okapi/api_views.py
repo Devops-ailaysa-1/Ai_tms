@@ -2382,7 +2382,6 @@ def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
-
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
@@ -2424,7 +2423,7 @@ def paraphrasing_for_non_english(request):
             if not isAdaptiveTranslation:
                 # Without adapting glossary
                 rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
-            
+                         
             else:
                 # Adapting glossary
                 rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)

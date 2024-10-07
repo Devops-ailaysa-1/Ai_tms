@@ -1207,7 +1207,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
             "is_internal_member":user.is_internal_member,
             "first_login":user.first_login,
             "currency_based_on_country":user.currency_based_on_country.currency if user.currency_based_on_country!=None else None,
-            "signup_age":abs(diff_month(user.date_joined,timezone.now()))
+            "signup_age":abs(diff_month(user.date_joined,timezone.now())),
+            "from_campaign":None if user.user_campaign.last()==None else user.user_campaign.last().campaign_name.campaign_name
             }
         sub = rep.get_user_subscription(user)
         if sub!=None:
