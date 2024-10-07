@@ -276,7 +276,7 @@ def search_wiktionary(search_term,lang): ################ search wiki
     word = parser.fetch([user_input])
     if word:
         if word[0].get('definitions')==[]:
-            word=parser.fetch(user_input.lower())
+            word=parser.fetch([user_input.lower()])
     res=[]
     for i in word:
         defin=i.get("definitions")
