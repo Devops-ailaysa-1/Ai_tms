@@ -1591,7 +1591,6 @@ def docx_merger(request):
         return Response({"error": "Invalid file type specified. Use 'docx' or 'epub'."}, status=400)
     
 
-
 def customize_refer(customize,search_term,lang):
     '''
     This function is for refer function in customize section. 

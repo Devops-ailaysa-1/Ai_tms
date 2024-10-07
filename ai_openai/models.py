@@ -259,7 +259,7 @@ class BookTitle(models.Model):
     html_data = models.TextField(null=True,blank=True)
     book_title = models.TextField(null=True,blank=True) 
     book_title_mt =  models.TextField(null=True,blank=True)  
-    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='booktitle_used_tokens',null=True, blank=True)
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE, related_name='booktitle_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField(null=True,blank=True)
     response_copies = models.IntegerField(null=True, blank=True,default=3) 
 
