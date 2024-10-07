@@ -2423,7 +2423,7 @@ def paraphrasing_for_non_english(request):
 
             if not isAdaptiveTranslation:
                 # Without adapting glossary
-                rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+                replaced =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
             
             else:
                 # Adapting glossary
