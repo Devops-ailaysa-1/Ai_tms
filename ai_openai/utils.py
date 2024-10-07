@@ -265,7 +265,7 @@ def search_wikipedia(search_term,lang):
         return {}
 
 
-def search_wiktionary(search_term,lang):
+def search_wiktionary(search_term,lang): ################ search wiki
     try:
         language = LanguagesLocale.objects.filter(locale_code = lang).first().language.language
     except:
@@ -273,7 +273,7 @@ def search_wiktionary(search_term,lang):
     user_input=search_term.strip()
     parser = WiktionaryParser()
     parser.set_default_language(language)
-    word = parser.fetch(user_input)
+    word = parser.fetch([user_input])
     if word:
         if word[0].get('definitions')==[]:
             word=parser.fetch(user_input.lower())
