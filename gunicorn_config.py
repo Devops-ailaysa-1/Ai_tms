@@ -10,13 +10,13 @@ bind = "0.0.0.0:8000"
 
 # workers = multiprocessing.cpu_count()
 # Number of worker processes (adjust as needed)
-workers = 1
-worker_connections = 10
+workers = 2
+worker_connections = 500
  
 # threads = 3
 # Set the maximum number of requests a worker will process before restarting
-max_requests = 1000
-max_requests_jitter = 50
+max_requests = 10000
+max_requests_jitter = 500
 
 # workerconnections = 10
 
@@ -29,7 +29,7 @@ timeout = 200  # 30 seconds
 # Log settings
 accesslog = "-"  # Log to stdout
 errorlog = "-"   # Log to stderr
-loglevel="debug"
+loglevel="info"
 
 # Preload the application before forking worker processes
 preload = True

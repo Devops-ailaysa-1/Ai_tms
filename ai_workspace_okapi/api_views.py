@@ -2382,7 +2382,6 @@ def paraphrasing_for_non_english(request):
     from ai_staff.models import Languages
     from ai_workspace.api_views import get_consumable_credits_for_text
     from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
-
     sentence = request.POST.get('source_sent')
     target_lang_id = request.POST.get('target_lang_id')
     doc_id = request.POST.get('doc_id')
@@ -2970,29 +2969,32 @@ def matching_word(user_input,lang_code):
     from ai_glex.api_views import identify_lemma_it
     user_words = user_input.split()
     query = Q()
-    if lang_code == "it":
-        word_lemma_user_input = identify_lemma_it(user_input)
-        for word in word_lemma_user_input:
-            if word:
-                word = word.lower()
-                query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
+    # if lang_code == "it":
+    #     word_lemma_user_input = identify_lemma_it(user_input)
+    #     for word in word_lemma_user_input:
+    #         if word:
+    #             word = word.lower()
+    #             query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
 
     for word in user_words:
         if word:
             word_lower = word.lower()
-            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  
-            if lang_code == "it":
-                query |= (
-                                Q(root_word__exact=word_lemma_v) |
-                                Q(sl_term__exact=word_lemma_v) )
-            else:
-                query |= (
-                    Q(root_word__exact=word_lemma_v) |
-                    Q(sl_term__exact=word_lemma_v) |
-                    Q(sl_term__exact=word_lower) |
-                    Q(sl_term__icontains=word_lemma_v) |
-                    Q(sl_term__icontains=word_lower)
-                )
+            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
+            word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
+            # if lang_code == "it":
+            #     query |= (
+            #                     Q(root_word__exact=word_lemma_v) |
+            #                     Q(sl_term__exact=word_lemma_v) )
+            # else:
+                 # Combine multiple conditions with one query operation using OR
+            query |= (
+                Q(root_word__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lower) |
+                Q(root_word__exact=word_lemma_n) |
+                Q(sl_term__icontains=word_lemma_v) |
+                Q(sl_term__icontains=word_lower)
+            )
     return query
 
     
@@ -3012,8 +3014,6 @@ def check_source_words(user_input, task):
     source_language = task.job.source_language
     user_input = remove_tags(user_input)
     lang_code = source_language.locale_code
-    # print("lang_code---------->>>",lang_code)
-    # print("user_input--->",user_input)
     glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
 
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
@@ -3028,9 +3028,9 @@ def check_source_words(user_input, task):
     all_sorted_query = queryset.filter(matching_exact_queryset)
     all_sorted_query = all_sorted_query.distinct()
 
-    if lang_code == "it":
-        terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
-        all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
+    # if lang_code == "it":
+    #     terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
+    #     all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
     
     selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
  

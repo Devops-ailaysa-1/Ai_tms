@@ -547,8 +547,8 @@ def glossaries_list(request,project_id):
         queryset = queryset.filter(glossary_project__isnull=False)
         queryset = queryset.filter(project_jobs_set__source_language_id=project.project_jobs_set.first().source_language.id)
         queryset = queryset.filter(project_jobs_set__target_language_id=target_languages.id) 
-        queryset = queryset.filter(glossary_project__term__isnull=False)
-        queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
+        queryset = queryset.filter(glossary_project__term__isnull=False).order_by('-id')
+        #queryset = queryset.exclude(id=project.id).distinct().order_by('-id')
 
     else:
         target_languages = project.get_target_languages ### with list of targets 
@@ -1368,7 +1368,7 @@ def split_list(lst, chunk_size=50):
 def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id):
     from ai_openai.utils import gemini_model_term_extract
     from ai_workspace_okapi.utils import nltk_lemma
-    lang_code_list = [38] ## italian lang id 
+    lang_code_list = [] ## italian lang id  #38
     file_extraction_instance = FileTermExtracted.objects.get(id=file_extraction_id)
     gloss_model_inst = Glossary.objects.get(id=gloss_model_id)
     file_path = file_extraction_instance.file.get_source_file_path ## get the file path from the file instance(relate)
@@ -1382,6 +1382,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     with open(doc_json_path,'rb') as fp:
         file_json = json.load(fp)
     file_json = json.loads(file_json)
+
     terms = []
     text_unit = []
     for i in  file_json['text']:
