@@ -74,7 +74,7 @@ from cacheops import cached
 from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
                     ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+from .serializers import (ProjectContentTypeSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSubjectSerializer, TempProjectSetupSerializer, \
                           TaskSerializer, FileSerializerv2, TmxFileSerializer, \
@@ -86,7 +86,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,\
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew) #ProjectCreationSerializer
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
@@ -303,8 +303,7 @@ class FileView(viewsets.ModelViewSet):
     def get_queryset(self):
         return File.objects.filter(project__ai_user=self.request.user)
 
-    def create(self, request):
-        print(request.data)
+    def create(self, request):        
         serializer = FileSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -334,7 +333,7 @@ def integrity_error(func):
         try:
             return func(*args, **kwargs)
         except IntegrityError as e:
-            print("error---->", e)
+            logging.error("error---->", e)
             return Response({'message': "integrirty error"}, 409)
 
     return decorator
@@ -409,20 +408,33 @@ class Files_Jobs_List(APIView):
         return jobs, files, contents, subjects, steps, project, gloss, glossary_files
 
     def get(self, request, project_id):
-        jobs, files, contents, subjects, steps, project, gloss, glossary_files = self.get_queryset(project_id)
+        task = request.GET.get("task",None)    
+        jobs, files, contents, subjects, steps, project, gloss, glossary_files = self.get_queryset(project_id)        
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
-        files = FileSerializer(files, many=True)
-        wc_selected = True if project.project.filter(glossary__project__project_type_id =10).exists() else False 
+        files_ser = FileSerializer(files, many=True)
+        file_data = files_ser.data        
+        if task:
+            task = Task.objects.get(id=task)            
+            from ai_workspace.models import FileTermExtracted
+            for file_ins_dict in file_data:
+                file_extracted_term_ins = FileTermExtracted.objects.filter(task=task,file_id=file_ins_dict.get('id'))                
+                if file_extracted_term_ins:
+                    file_ins_dict['done_extraction']= True
+                else:
+                    file_ins_dict['done_extraction']= False        
+        glossary_selected = True if project.project.filter(glossary__project__project_type_id = 3).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
-        return Response({"files":files.data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
+        isAdaptive = project.isAdaptiveTranslation
+        return Response({"files":file_data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
-                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, "wc_selected":wc_selected}, status=200)
+                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, \
+                            "glossary_selected":glossary_selected, "id":project.id, "isAdaptive":isAdaptive}, status=200)
 
 
 
@@ -471,7 +483,7 @@ class TmxFilesOfProject(APIView):
 #             **data,
 #             **dict(batches=batches_data)
 #         }
-#         print("data---->", data)
+ 
 #         res = requests.post(
 #             f"http://{spring_host}:8080/project/report-analysis",
 #             data = {"report_params": json.dumps(data)}
@@ -650,7 +662,6 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(project_type_id=8) 
         elif value == "word_choices":
             queryset = queryset.filter(project_type_id=10)
-        print("QRF-->",queryset)
         return queryset
 
 
@@ -676,7 +687,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if project_type == 3 or project_type == 10:
         # if project_type == 3:
             return GlossarySetupSerializer
-        print("project")
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -696,9 +706,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         from ai_auth.models import InternalMember
         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and \
+            self.request.user in pr_managers else self.request.user
 
-        #checking for team access and indivual user access
+        # Checking for team access and indivual user access
         
         queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
                     |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
@@ -750,8 +761,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         #  context={'request': request,'user_1':user_1})     
         # else:
         ## the above code is commanded for standard project for din
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,\
-                         context={'request': request,'user_1':user_1})
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(serializer.data)
         return  response
 
@@ -759,8 +769,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def retrieve(self, request, pk):
         query = Project.objects.get(id=pk)
         user_1 = self.get_user()
-        serializer = ProjectQuickSetupSerializer(query, many=False,\
-                     context={'request': request,'user_1':user_1})
+        serializer = ProjectQuickSetupSerializer(query, many=False,context={'request': request,'user_1':user_1})
         return Response(serializer.data)
 
     def create(self, request):
@@ -785,9 +794,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if urlparse(text_data).scheme:
                 return Response({"msg": "Url not Accepted"}, status=406)
 
-            name = text_data.split()[0].strip(punctuation) + ".txt" if len(text_data.split()[0]) <= 15 else text_data[
-                                                                                                            :5].strip(
-                punctuation) + ".txt"
+            name = text_data.split()[0].strip(punctuation) + ".txt" if len(text_data.split()[0]) <= 15 else text_data[:5].strip(punctuation) + ".txt"
             im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent=text_data.encode(), file_name=name)
             serlzr = ser(data={**request.data, "files": [im_file], "from_text": ['true']}, context={"request": request})
 
@@ -815,9 +822,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(serlzr.errors, status=409)
 
     def update(self, request, pk, format=None):
+
         instance = self.get_object()
         ser = self.get_serializer_class()
-        task_id=request.POST.get('task_id',None)
+        task_id = request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
@@ -886,8 +894,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             else:file_obj = get_file_from_pdf(None,pdf_task_id)
             serlzr = ser(instance, data=\
                 {**request.data, "files":[file_obj],"team":[team]},context={"request": request,'user_1':user_1}, partial=True)
-            
+
+        
+
         else:
+
             serlzr = ser(instance, data=\
                 {**request.data, "files": request.FILES.getlist("files"),"team":[team]},
                 context={"request": request,'user_1':user_1}, partial=True)
@@ -905,7 +916,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return Response(serlzr.errors, status=409)
 
     def destroy(self, request, *args, **kwargs):
-        project = self.get_object()
+
+        # Previously used Project object fetching logic
+        # project = self.get_object()
+
+        pk = kwargs.get("pk", 0)
+        # If the Request user has a team, then Account Owner is the ai_user of the project
+        user = request.user.team.owner if request.user.team else request.user
+
+        project = Project.objects.filter(id=pk, ai_user=user).last()
+
+        # If any of the tasks in the project is assigned,
+        # it needs to be unassigned before deleting the project
         if project.assigned == True:
             return Response({'msg':'some tasks are assigned in this project. Unassign and delete'},status=400)
         else:
@@ -1317,6 +1339,18 @@ def dashboard_credit_status(request):
     return Response({"credits_left": user.credit_balance}, status=200)
 
 ######### Tasks Assign to vendor #################
+from ai_workspace.serializers import TaskViewSerializer
+class TaskViewDetail(APIView):
+    def get(self, request, pk):
+        try:
+            item = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TaskViewSerializer(item)
+        return Response(serializer.data)
+
+
 class TaskView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
@@ -1338,7 +1372,6 @@ class TaskView(APIView):
         return obj
 
     def post(self, request):
-        print(self.request.POST.dict())
         obj = self.get_object({**request.POST.dict()})
         if obj:
             task_ser = TaskSerializer(obj)
@@ -1352,25 +1385,82 @@ class TaskView(APIView):
 
         else:
             return Response({"msg": task_serlzr.errors}, status=400)
-
+    
     def delete(self, request, id):
-        task = Task.objects.get(id = id)
-        authorize(request,resource=task,action="delete",actor=self.request.user)
-        # it will check for task is assigned to any editor or not. if so, it will return error message
-        if task.task_info.filter(task_assign_info__isnull=False):
-            return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+        try:
+            task = Task.objects.get(id=id)
+        except Task.DoesNotExist:
+            return Response(data={"Message": "Task not found"}, status=404)
+
+        authorize(request, resource=task, action="delete", actor=self.request.user)
+
+        if task.task_info.filter(task_assign_info__isnull=False).exists():
+            return Response(data={"Message": "Task is assigned. Unassign and Delete"}, status=400)
+
+        # For deleting Projects with only one task        
+        if len(task.job.project.get_tasks) == 1:
+            task.job.project.delete()
         else:
-            # if it is the single task in the project, then it will internally delete the project
-            if len(task.job.project.get_tasks) == 1:
-                task.job.project.delete()
-            elif task.file:
+            if task.file:
                 if os.path.splitext(task.file.filename)[1] == ".pdf":
                     task.file.delete()
-                if task.document:
-                    task.document.delete()
-                task.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if task.document:
+                task.document.delete()
+            
+            # Checking if the task is a task of a Glossary
+            from ai_glex.models import Glossary
+            if Glossary.objects.filter(project=task.job.project).exists():
 
+                # Checking if the glossary is a default glossary
+                if Glossary.objects.filter(project=task.job.project).first().is_default_project_glossary == True:
+                    # As Default glossary will not have multiple jobs.
+                    # Deleting the job will also delete the terms in TermsModel
+                    task.job.delete()
+        try:
+            task.delete()
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return Response(data={"Message": "An error occurred while deleting the task"}, status=500)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # def delete(self, request, id):
+    #     task = Task.objects.get(id = id)
+    #     authorize(request,resource=task,action="delete",actor=self.request.user)
+    #     # it will check for task is assigned to any editor or not. if so, it will return error message
+    #     if task.task_info.filter(task_assign_info__isnull=False): ### checking if the task instance is assigned to anyone
+    #         return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+    #     else:
+    #         # if it is the single task in the project, then it will internally delete the project
+    #         if len(task.job.project.get_tasks) == 1:
+    #             #check_delete_default_gloss_task(task,is_single_task=True)
+    #             task.job.project.delete()
+    #         elif task.file:
+    #             if os.path.splitext(task.file.filename)[1] == ".pdf":
+    #                 task.file.delete()
+    #             if task.document:
+    #                 task.document.delete()
+    #             #check_delete_default_gloss_task(task,is_single_task=False)
+    #         else:
+    #             task.delete()
+    #         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# def check_delete_default_gloss_task(task,is_single_task=False):
+#     from ai_glex.models import TermsModel
+#     from ai_workspace.serializers import ProjectQuickSetupSerializer
+#     job = task.job
+
+#     if task.is_default_glossary_task:  
+#         if is_single_task:
+#             project = job.project
+#             ProjectQuickSetupSerializer().create_default_gloss(project=project,jobs=[job],ai_user=project.ai_user)
+#             print("project with Task created for individual gloss project --> default gloss")
+#         else:        
+#             TermsModel.objects.filter(job=job).delete()
+#             Task.objects.create_glossary_tasks_of_jobs(jobs=[job], klass=Task)
+#             print("Task created for individual gloss project --> default gloss")
+#     else:
+#         print("Task is not --> default gloss")
 
 ################# Create Project from Temp project ################
 @api_view(['POST',])
@@ -1524,19 +1614,18 @@ class ProjectAnalysisProperty(APIView):
                         if task_detail_serializer.is_valid(raise_exception=True):
                             task_detail_serializer.save()
                         else:
-                            print("error-->", task_detail_serializer.errors)
+                            logging.error("error-->", task_detail_serializer.errors)
                     else:
                         # if file is having any issue in  processing in spring
                         logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
-                    print("No entry")
+                    logging.error("No entry")
                 # to update processed file_ids
                 file_ids.append(task.file_id)
 
             else:
                 # If the file is processed already, then it will just duplicate the existing details for new job.
-                print("*************  File taken only once  **************")
                 tasks = [i for i in Task.objects.filter(file_id=task.file_id)]
                 task_details = TaskDetails.objects.filter(task__in = tasks).first()
                 task_details.pk = None
@@ -1662,8 +1751,9 @@ def bulk_task_accept(request):
             if serializer.is_valid():
                 serializer.save()
             else:
-                print("Error--------->",serializer.errors)
+                logging.error("Error--------->",serializer.errors)
         except:
+            logging.warning("passing bulk task")
             pass
     return Response({'msg':'Task Accept Succeded'})
 
@@ -1701,7 +1791,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
         if user.is_agency == True:
             for i in tasks:
-                print(i)
                 if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
                     return "There is no assign. you can't reassign" 
             return None
@@ -1721,7 +1810,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
         step = request.POST.get('step')
         task_assign_detail = request.POST.get('task_assign_detail')
-        files=request.FILES.getlist('instruction_file')
+        files = request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         reassign = request.POST.get('reassigned') 
@@ -1744,7 +1833,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = data.pop('task_assign_detail')
         task_assign_detail = json.loads(task_assign_detail)    #
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
-       
+
         # For authorization
         tsks = Task.objects.filter(id__in=tasks)
         for tsk in tsks:
@@ -1755,10 +1844,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             if msg:
                 return Response({'Error':msg},status=400)
 
-        for i in task_assign_detail:
-            i.update(data)
+        for i in task_assign_detail: 
+            i.update(data) 
             i.update(extra)
             final.append(i)
+        
+
         with transaction.atomic():
             serializer = TaskAssignInfoSerializer(data=final,context={'request':request},many=True)
             if serializer.is_valid():
@@ -2571,6 +2662,7 @@ def convert_and_download_text_to_speech_source(request):
 
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
+
     '''
     it will call text_to_speech_celery_task and returns TaskTranscriptDetailSerializer data
     '''
@@ -2581,8 +2673,8 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     
     # Take the filepath and get the extention.
     
-    file,ext = os.path.splitext(obj.file.file.path)
-    dir,name_ = os.path.split(os.path.abspath(file))
+    file, ext = os.path.splitext(obj.file.file.path)
+    dir, name_ = os.path.split(os.path.abspath(file))
 
     # If ext is docx, it will convert it to txt and read the content and store it in data variable
 
@@ -2598,7 +2690,8 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file.close()
 
     # calculate the word_count of data by calling spring API, it returns word count.
-    # update word_count and char_count in TaskDetails database
+    # update word_count and char_count in TaskDetails model
+    
     seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
                  "processor_name":"plain-text-processor", "extension":".txt"}
     res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
@@ -2668,6 +2761,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
+    
     '''
     This function is to call text_to_speech_task of source_only_tasks. 
     it will get input either as task or project
@@ -2678,23 +2772,26 @@ def convert_text_to_speech_source(request):
         it will get source_only_tasks within project and repeat above and returns 
         TaskTranscriptDetailSerializer data
     '''
+
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender')
     voice_name = request.GET.get('voice_name')
     user = request.user
+
     if task:
-        obj = Task.objects.get(id = task)
+        obj = Task.objects.get(id=task)
         # authorize(request,resource=obj,action="read",actor=request.user)
         tt = text_to_speech_task(obj,language,gender,user,voice_name)
-        if tt!=None and tt.status_code == 400:
+        if tt != None and tt.status_code == 400:
             return tt
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
+        
     if project:
-        tasks =[]
+        tasks = []
         task_list = []
         pr = Project.objects.get(id=project)
         for _task in pr.get_source_only_tasks:
@@ -2761,7 +2858,7 @@ def download_task_target_file(request):
         output_file =  obj.task_file_detail.first().target_file
         return download_file(output_file.path)
     except BaseException as e:
-        print(f"Error : {str(e)}")
+        logging.error(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
 
@@ -3153,7 +3250,6 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
-        print(i.src_segment)
         tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__iexact = i.src_segment)
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
@@ -3584,7 +3680,10 @@ class MyDocumentsView(viewsets.ModelViewSet):
         owner = user.team.owner if (user.team and user in project_managers) else user
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
-        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField()),doc_name=F('user_title')).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner))\
+            .distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),\
+            document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField()),doc_name=F('user_title'))\
+                .values('id','created_at','doc_name','word_count','open_as','document_type__type')
         q3 = list(chain(q1, q2))
         return q3
 
@@ -3629,28 +3728,39 @@ class MyDocumentsView(viewsets.ModelViewSet):
         return Response(ser.errors)
         
     def update(self, request, pk, format=None):
-        ins = MyDocuments.objects.get(id=pk)
-        file = request.FILES.get('file')
-        if file:
-            ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
+        user_document_queryset = self.get_queryset()
+        ins = user_document_queryset.filter(id=pk)
+        if ins:
+            ins = ins.last()
+            file = request.FILES.get('file')
+            if file:
+                ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
+            else:
+                ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
+            if ser.is_valid(raise_exception=True):
+                ser.save()
+                return Response(ser.data, status=200)
+            return Response(ser.errors)
         else:
-            ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
-        if ser.is_valid(raise_exception=True):
-            ser.save()
-            return Response(ser.data, status=200)
-        return Response(ser.errors)
+            return Response({'msg':'detail not found'},status=400)
+
 
     def destroy(self, request, pk):
         # it is to delete the document instance and its related blog_creation and blog_articles and its files if any
-        ins = MyDocuments.objects.get(id=pk)
-        ins.blog_doc.all().delete()
-        ins.ai_doc_blog.all().delete()
-        if ins.file:
-            os.remove(ins.file.path)
-        ins.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        user_document_queryset = self.get_queryset()
+        ins = user_document_queryset.filter(id=pk)
+        if ins:
+            ins = ins.last()
+            ins = MyDocuments.objects.get(id=pk)
+            ins.blog_doc.all().delete()
+            ins.ai_doc_blog.all().delete()
+            if ins.file:
+                os.remove(ins.file.path)
+            ins.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'msg':'detail not found'},status=400)
         
-from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
@@ -3757,8 +3867,6 @@ def instant_translation_custom(request):
     if change detected, then it calls for the customize option again in the function express_custom(), 
     else it will return the already stored one from the model ExpressProjectAIMT.
     '''
-    from ai_openai.serializers import AiPromptSerializer
-    from ai_openai.api_views import customize_response
     task = request.POST.get('task')
     output_list = []
     option = request.POST.get('option')#Shorten#Simplify#Rewrite
@@ -3855,7 +3963,7 @@ class DocumentImageView(viewsets.ViewSet):
             if i.image.url == image_url:
                 i.delete()
             else:
-                print("No match")
+                logging.error("No match")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -3993,8 +4101,6 @@ def doc2docx(request):
                         '--headless',
                         '--convert-to', 'docx',
                         "output.docx"], check=True)
-
-    print("path_data", path_data)
       
  
     res = download_file_doc(temp_docx_path_full) #download_file_doc
@@ -4172,7 +4278,7 @@ def translate_file(request):
     else:
         return Response({'msg':'task_id or project_id must'})    
 
-from ai_exportpdf.utils import pdf_char_check
+
 def translate_file_process(task_id):
     '''
     This function is to call google file translate and store the translated file in the
@@ -4183,7 +4289,8 @@ def translate_file_process(task_id):
     ser = TaskTranslatedFileSerializer(data={"target_file":file,"task":tsk.id})
     if ser.is_valid():
         ser.save()
-    print(ser.errors)
+    else:
+        logging.error(ser.errors)
 
 
 
@@ -4235,6 +4342,7 @@ from .serializers import CombinedSerializer
 
 
 class CombinedProjectListView(viewsets.ModelViewSet):
+    
     permission_classes = [IsAuthenticated]
     serializer_class = CombinedSerializer
     paginator = PageNumberPagination()
@@ -4266,9 +4374,9 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         project_managers = request.user.team.get_project_manager if request.user.team else []
         owner = request.user.team.owner if (request.user.team and request.user in project_managers) else request.user
         queryset3 = Ai_PdfUpload.objects.filter(Q(user = request.user) |Q(created_by=request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
-                            .filter(task_id=None).order_by('-id')
-         
+                            .filter(task_id=None).order_by('-id')         
         search_query = request.GET.get('search')
+
         if search_query:
             queryset1 = queryset1.filter(project_name__icontains=search_query)
             queryset2 = [item for item in queryset2 if search_query.lower() in item.get('doc_name', '').lower()]
@@ -4287,7 +4395,7 @@ class CombinedProjectListView(viewsets.ModelViewSet):
         ordered_queryset = sorted(merged_queryset, key=lambda obj: obj[field_name] if isinstance(obj, dict) else getattr(obj, field_name), reverse=reverse_order)
 
         pagin_tc = self.paginator.paginate_queryset(ordered_queryset, request , view=self)
-        ser = CombinedSerializer(pagin_tc,many=True,context={'request': request,'user_1':user_1})
+        ser = CombinedSerializer(pagin_tc, many=True, context={'request': request,'user_1':user_1})
         response = self.get_paginated_response(ser.data)
         return response
 
@@ -4295,8 +4403,6 @@ from django.db.models import F, Value, Case, When
 from django.db.models.functions import Coalesce
 
 # Annotate the queryset to get the task_word_count for each task, defaulting to 0 if task_details is None
-
-
 # Convert the queryset to a dictionary
 
 
@@ -4341,9 +4447,6 @@ def analysed_true(pr,tasks):
                         "task_words":task_words}
 
 
-
-
-
 from .serializers import AssertSerializer
 from ai_workspace_okapi.models import ChoiceLists
 class AssertList(viewsets.ModelViewSet):
@@ -4355,6 +4458,7 @@ class AssertList(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     paginator = PageNumberPagination()
     paginator.page_size = 20
+
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
@@ -5129,3 +5233,70 @@ def get_ner(request):
     ner_new = list(set(ner))
     return JsonResponse({"ner": ner_new}, safe=False)
 
+
+
+############# function for segment choice #######################
+import re
+
+def contains_valid_words(sentence):
+    # Define a regular expression pattern to match valid words
+    word_pattern = re.compile(r'\b\w+\b')
+    
+    # Find all words in the sentence
+    words = word_pattern.findall(sentence)
+    
+    # Check if there are any valid words
+    if not words:
+        return False
+    
+    # Check if there is only one word and it is alphabetic
+    if len(words) == 1 and words[0].isalpha():
+        return False
+    
+    # Check if there are multiple valid words and at least one is alphabetic
+    return any(word.isalpha() for word in words)
+    
+
+#### to get the number of insert and delete in a list of segments using task id
+
+def seg_diff_ins_del_calculation(task_ins):
+    from ai_workspace.utils import number_of_words_delete,number_of_words_insert
+    from tqdm import tqdm
+    no_of_insert = 0
+    no_of_delete = 0
+    if getattr(task_ins.document,'get_segments',None):
+        for segment in tqdm(task_ins.document.get_segments()):
+            for segment_history in segment.segment_history.all():
+                for segment_diff in segment_history.segment_difference.all():
+                    if segment_diff:
+                        insertion_result = number_of_words_insert(segment_diff.sentense_diff_result)
+                        deletion_result =  number_of_words_delete(segment_diff.sentense_diff_result)
+                        if insertion_result:
+                            no_of_insert = no_of_insert+insertion_result
+                        if deletion_result:
+                            no_of_delete = no_of_delete+deletion_result
+    
+        return {'no_of_insert':no_of_insert,'no_of_delete':no_of_delete,'task_id':task_ins.id,'lang_pair':task_ins.job.source_target_pair}
+    else:
+        return Response({'msg':'No segment is created'})
+
+
+@api_view(['GET',])
+def get_task_segment_diff(request):
+    task = request.GET.get('task',None)
+    project = request.GET.get('project',None)
+    result_cal = []
+    if task:
+        task_ins = Task.objects.filter(id=task)
+        if not task_ins:
+            return Response({'msg':'need required task id or wrong task id'})
+        for task_in in task_ins:
+            result_cal.append(seg_diff_ins_del_calculation(task_in))
+    elif project:
+        project = Project.objects.get(id=project)
+        task_ins = project.get_tasks
+        for task_in in task_ins:
+            result_cal.append(seg_diff_ins_del_calculation(task_in))
+    else:
+        return Response({'msg':'need task or proj id'})
+    return Response(result_cal,status=200)

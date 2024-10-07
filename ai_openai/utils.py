@@ -10,19 +10,38 @@ from django.conf import settings
 from docx import Document
 from ai_openai.html2docx_custom import HtmlToDocx
 import re
-
+#import anthropic
 model_edit = settings.OPENAI_EDIT_MODEL
-OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL   
+OPEN_AI_GPT_MODEL =  settings.OPEN_AI_GPT_MODEL
 
+GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
+GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
+GOOGLE_TERM_EXTRACTION = settings.GOOGLE_TERM_EXTRACTION
+#ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 #from mistralai.client import MistralClient
 #from mistralai.models.chat_completion import ChatMessage
 
 logger = logging.getLogger('django')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold 
+
+genai.configure(api_key=GOOGLE_GEMINI_API)
+generation_config = {
+  "temperature": 1,
+  "top_p": 0.95,
+  "top_k": 64,
+  "max_output_tokens": 8192,
+  "response_mime_type": "text/plain",
+}
+
+#anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+model = genai.GenerativeModel(GOOGLE_GEMINI_MODEL,generation_config=generation_config)
+
 
 MISTRAL_AI_API_KEY = os.getenv('MISTRAL_AI_API_KEY')
-# print("MISTRAL_AI_API_KEY",MISTRAL_AI_API_KEY)
 mistral_client =  ""  #MistralClient(api_key=MISTRAL_AI_API_KEY)
 
 
@@ -193,7 +212,7 @@ def get_chapters(pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        print("JSON decoding error:", e)
+        logging.error("JSON decoding error:", e)
     chapters = []
     for title in data:
         chapters.append(title)
@@ -206,7 +225,7 @@ def get_sub_headings(title, pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        print("JSON decoding error:", e)
+        logging.error("JSON decoding error:", e)
 
     if title in data:
         value = data.get(title)
@@ -242,11 +261,11 @@ def search_wikipedia(search_term,lang):
         content = page_data['query']['pages'][page_id]['extract']
         return {"Title": title, "Content": content, "URL": URL}
     else:
-        print("No search results found.")
+        logging.info("No search results found.")
         return {}
 
 
-def search_wiktionary(search_term,lang):
+def search_wiktionary(search_term,lang): ################ search wiki
     try:
         language = LanguagesLocale.objects.filter(locale_code = lang).first().language.language
     except:
@@ -254,10 +273,10 @@ def search_wiktionary(search_term,lang):
     user_input=search_term.strip()
     parser = WiktionaryParser()
     parser.set_default_language(language)
-    word = parser.fetch(user_input)
+    word = parser.fetch([user_input])
     if word:
         if word[0].get('definitions')==[]:
-            word=parser.fetch(user_input.lower())
+            word=parser.fetch([user_input.lower()])
     res=[]
     for i in word:
         defin=i.get("definitions")
@@ -289,9 +308,9 @@ def google_custom_search(query):
                 dt = {'title':title,'link':link,'description':description}
                 res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res
 
 
@@ -301,7 +320,6 @@ def bing_search(query):
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
     params = {"q": query, "count": 10, "textDecorations": True, "textFormat": "HTML"}
     response = requests.get(search_url, headers=headers, params=params)
-    print(response.status_code)
     res = []
     if response.status_code == 200:
         if response.json().get('webPages'):
@@ -314,9 +332,9 @@ def bing_search(query):
                     dt = {'title':name,'link':url,'description':description}
                     res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res   
 
 
@@ -340,9 +358,9 @@ def bing_news_search(query):
                 dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
                 res.append(dt)
         else:
-            print("No Results Found")
+            logging.info("No Results Found")
     else:
-        print("Error:", response.status_code, response.text)
+        logging.error("Error:", response.status_code, response.text)
     return res
 
 
@@ -385,3 +403,49 @@ def tamil_spelling_check(text):
     payload = {'text': text,'lang_code': 'ta'}
     response = requests.request("POST", settings.TAMIL_SPELLCHECKER_URL, headers={}, data=payload, files=[])
     return response.json()
+
+
+############### mistral #####
+
+
+
+
+
+####### google gemini #############
+
+def gemini_model_generative(prompt):
+    response = model.generate_content(prompt,
+                                    safety_settings={HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                                                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                                                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT:HarmBlockThreshold.BLOCK_NONE,
+                                                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT:HarmBlockThreshold.BLOCK_NONE,})
+    return response.text
+
+
+
+
+def gemini_model_term_extract(text):
+    model_term = genai.GenerativeModel(GOOGLE_TERM_EXTRACTION,generation_config=generation_config,
+                        system_instruction="""I need you to extract all specialized terminology, including historical, archaeological, architectural terms. given 30 italian verbs 20 NER and 30 Terminology from the following Italian text. Please focus on terms that are unique or domain-specific, and ensure that you include named entities (such as proper nouns, place names, or historical figures). Format the extracted terms as a list. The extraction must be thorough, capturing even subtle or less common terms. Do not give any foreign terms.
+Note: need only the result in comma-separated and don't give any acknowledgement only give the result \n Italian Text:""")
+    chat_session = model_term.start_chat(history=[])
+    response = chat_session.send_message(text)
+    gemini_res = response.text.split(",")
+    return [i.strip() for i in gemini_res if i]
+
+
+### antropic #### 
+## ANTHROPIC_API_KEY
+
+def antropic_generative_model(prompt):
+    pass
+    # message = anthropic_client.messages.create(model="claude-3-5-sonnet-20240620",max_tokens=1024,
+    #     messages=[
+    #         {"role": "user", "content": prompt}
+    #     ]
+    # )
+    # return message.content[0].text
+
+
+def brand_voice():
+    pass

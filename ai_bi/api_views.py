@@ -48,7 +48,6 @@ def reports_dashboard(request):
     data["total_languages"]=len(repo.total_languages_used())
     data["total_coutries"] =len(countries)
     data["paid_users"]=paid_users.count()
-    print(subs_info)
     for sub in subs_info[0]:
         data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
         # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
@@ -170,8 +169,7 @@ class VendorListview(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_queryset(self,days):
-        queryset=get_users(is_vendor=True)
-        print(queryset)
+        queryset=get_users(is_vendor=True)        
         if days:
             date= timezone.now() - timezone.timedelta(days=int(days))
             queryset = queryset.filter(date_joined__gte=date)
@@ -195,11 +193,11 @@ from django.contrib.auth.hashers import make_password
 from allauth.account.models import EmailAddress
 from django.db import IntegrityError,transaction
 from ai_bi.forms import bi_user_invite_mail
-
+import logging
+logger = logging.getLogger(__name__)
 
 def create_user(name,email,country,password):
-    hashed = make_password(password)
-    print("randowm pass",password)
+    hashed = make_password(password)    
     try:
         user = AiUser.objects.create(fullname =name,email=email,country_id=country,password=hashed)
         UserAttribute.objects.create(user=user)
@@ -207,7 +205,7 @@ def create_user(name,email,country,password):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         return {"email":email,"user":user,"password":password}
     except IntegrityError as e:
-        print("Intergrity error",str(e))
+        logging.error("Intergrity error",str(e))
         return None
     
 
@@ -227,8 +225,7 @@ class BiuserManagement(viewsets.ModelViewSet):
         return queryset
     
     def get_object(self):
-        pk = self.kwargs.get("pk", 0)
-        print(pk)
+        pk = self.kwargs.get("pk", 0)        
         try:
             return BiUser.objects.get(pk=pk)
         except BiUser.DoesNotExist:
@@ -261,12 +258,11 @@ class BiuserManagement(viewsets.ModelViewSet):
                 else:
                     return Response( {"msg":"Email already exists"},status=400)
             except IntegrityError as e:
-                print("Intergrity error",str(e))
+                logging.error("Intergrity error",str(e))
                 return Response(status=400)
 
     def retrieve(self, request, pk):
-        user=self.get_object()
-        print(user)
+        user=self.get_object()        
         userser=BiUserSerializer(user,many=False)
         return Response(userser.data,status=200)
     

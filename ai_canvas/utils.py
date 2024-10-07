@@ -180,8 +180,7 @@ import copy
 from ai_canvas.cmyk_conversion import convertImage
 def export_download(json_str,format,multipliervalue,base_image=False):
     dpi = (96,96)
-    json_ = json.dumps(json_str)
-    print("format__form_export_download",format)
+    json_ = json.dumps(json_str)    
     format = 'pdf' if format=='pdf-standard' else format
 
     if format in ["png","jpeg","pdf",'jpeg-print']:
@@ -246,18 +245,16 @@ def install_font(font_path):
     destination_file_path=os.path.join(destination_path, font_filename)
     shutil.copy(font_path,destination_file_path)
     os.system("fc-cache -f -v")
-    # print(f"Font '{family_name}' installed successfully!")
+ 
     return family_name
 
 def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",transparent=True):
     
     if no_pil_object:
         im = Image.open(io.BytesIO(requests.get(image_url, stream=True).content))
-        # im=Image.open(requests.get(image_url, stream=True).raw)
-        print(im)
+        # im=Image.open(requests.get(image_url, stream=True).raw)        
         im=im.convert("RGB")
-        name=image_url.split('/')[-1]
-        print("name",name)
+        name=image_url.split('/')[-1]        
         # im.save(img_io, format='PNG')
         # img_byte_arr = img_io.getvalue()
         # return core.files.File(core.files.base.ContentFile(img_byte_arr),)
@@ -267,8 +264,7 @@ def convert_image_url_to_file(image_url,no_pil_object=True,name="thumbnail.png",
             im=im.convert("RGB")
     img_io = io.BytesIO()
     im.save(img_io, format='PNG')
-    img_byte_arr = img_io.getvalue()
-    print("im_by_crted")
+    img_byte_arr = img_io.getvalue()    
     return core.files.File(core.files.base.ContentFile(img_byte_arr),name)
 
 
@@ -276,7 +272,7 @@ def json_sr_url_change(json,instance):
     for i in json['objects']:
         if ('type' in i.keys()) and (i['type'] =='image') and ('src' in i.keys()) and ("ailaysa" not in  i['src']):
             third_party_url=i['src']
-            print(third_party_url)
+ 
             image=convert_image_url_to_file(third_party_url)
             src_img_assets_can = SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance,img=image)
             i['src']=HOST_NAME+src_img_assets_can.img.url
@@ -301,8 +297,7 @@ def download_font(url):
     response = requests.get(url)
     if response.status_code == 200:
         return response.content
-    else:
-        print(f"Failed to download font from {url}")
+    else:        
         return None
 
 def convert_to_base64(font_url):
@@ -393,7 +388,7 @@ def replace_url_with_base64(input_string):
 # from ai_staff.models import FontFamily,FontData
 
 # def genarate_image(instance,image_grid,template):
-#     print(instance)
+ 
 #     temp_height =int(template.height)
 #     temp_width = int(template.width)
 #     x=temp_width*3/4
@@ -404,7 +399,7 @@ def replace_url_with_base64(input_string):
 #     pos= image_grid.pop(random.randint(0,(len(image_grid)-1)))
 #     img=copy.deepcopy(image)
 #     img["src"]=HOST_NAME+instance.image.url
-#     print("img---->", img["src"])
+ 
 #     # img["src"]="https://aicanvas.ailaysa.com/media/stable-diffusion-image/0-e084f77d-fb66-4f66-b874-fa5786c70b0d.png"
 #     # bg_remove=backgroundremo
 #     img["name"]="Image"+str(pos[0])+str(pos[1])

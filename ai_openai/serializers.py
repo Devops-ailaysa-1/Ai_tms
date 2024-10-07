@@ -4,7 +4,7 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
                     ImageGeneratorResolution,TranslateCustomizeDetails, CustomizationSettings,
                     BlogArticle,BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle,BlogOutlineSession,
-                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle,NewsPromptDetails)
+                    BookCreation,BookBackMatter,BookBodyDetails,BookBody,BookFrontMatter,BookTitle,NewsPromptDetails,MyStyle)
 import re 
 from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
                             PromptStartPhrases ,PromptTones ,Languages,Levels,Genre,BackMatter,FrontMatter)
@@ -13,7 +13,7 @@ from .utils import get_consumable_credits_for_openai_text_generator,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen,\
                     get_prompt_chatgpt_turbo,get_sub_headings,get_chapters
 from ai_workspace_okapi.utils import get_translation
-from ai_tms.settings import  OPENAI_MODEL
+
 from django.db.models import Q
 from ai_openai.utils import outline_gen
 from googletrans import Translator
@@ -24,12 +24,13 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
 from ai_openai.utils import get_prompt_gpt_turbo_1106
-from django.db.models import Case, IntegerField, When, Value
-from django.db.models.functions import Coalesce
-from django.db.models import Case, ExpressionWrapper, F
+# from django.db.models import Case, IntegerField, When, Value
+# from django.db.models.functions import Coalesce
+# from django.db.models import Case, ExpressionWrapper, F
 from django import core
 from ai_workspace.models import Project,ProjectType,ProjectSteps,Steps
-
+import logging
+logger = logging.getLogger("django")
 def replace_punctuation(text):
     for punctuation_mark in string.punctuation:
         text = text.replace(punctuation_mark, "")
@@ -90,7 +91,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
     def run_validation(self,data):
         if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
-            print("data__sub__cat",data.get('sub_catagories'))
+            logging.info("data__sub__cat",data.get('sub_catagories'))
         return super().run_validation(data)
  
 
@@ -136,7 +137,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
             consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
 
-        print("consumable_credit",consumable_credit)
+ 
 
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
@@ -374,7 +375,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
                 ImageGeneratorPrompt.objects.filter(id=inst.id).update(prompt_mt=eng_prompt)
-                print("Translated Prompt--------->",eng_prompt)
+ 
                 image_res = get_prompt_image_generations(eng_prompt,image_reso.image_resolution,inst.no_of_image)
             else:
                 image_res = get_prompt_image_generations(inst.prompt,image_reso.image_resolution,inst.no_of_image)
@@ -754,7 +755,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
             blog_keyword = re.sub(r'\d+.','',blog_keyword)
             blog_keyword = blog_keyword.strip()
             if special_character_check(blog_keyword):
-                print("punc")
+                logging.info("punc")
             else:
                 blog_keyword = replace_punctuation(blog_keyword)
                 if trans == True:
@@ -1105,7 +1106,7 @@ class BookBodySerializer(serializers.ModelSerializer):
         extra_kwargs = {'select_group':{'required' : False},'order_list':{'required':False}}
          
     def create(self, validated_data):
-        blog_available_langs =[17]
+        blog_available_langs =[17] # English
         book_title_inst = validated_data.get('book_title')
         book_creation = validated_data.get('book_creation')
         generated_content = validated_data.get('generated_content',None)
@@ -1285,9 +1286,6 @@ class BookBodySerializer(serializers.ModelSerializer):
                 BookBody.objects.filter(temp_order=order).filter(book_creation=instance.book_creation).filter(group=group).update(custom_order=index)
 
         return instance
-
-
-
 
 class BookFrontMatterSerializer(serializers.ModelSerializer):
     order_list = serializers.CharField(required=False)
@@ -1535,7 +1533,7 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
                 if res.get('msg') == None:
                     consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
             else:
-                print("not_short")
+                logging.error("not_short")
         else:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         return instance
@@ -1573,7 +1571,6 @@ class LangscapeOcrPRSerializer(serializers.ModelSerializer):
 
         if ocr_result_path.endswith(('.doc', '.docx')):
             extracted_text = docx2txt.process(ocr_result_path)
-            print("extracted_text",extracted_text)
             if instance.document:
                 instance.document.html_data = extracted_text
                 instance.document.save()
@@ -1627,5 +1624,36 @@ class MyDocumentOCRSerializer(serializers.ModelSerializer):
         if validated_data.get('html_data',None):
             instance.html_data = validated_data.get('html_data')
             instance.save()
-        print("instance",instance)
+        return instance
+    
+
+
+class MyStyleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyStyle
+        fields = ("id","user","brand_voice_result_prompt")
+
+    
+    def create(self,validated_data):
+        user = self.context.get('request').user
+        brand_voice_result_prompt = validated_data.get('brand_voice_result_prompt',None)
+        if not brand_voice_result_prompt:
+            raise serializers.ValidationError({'msg':'Need brand voice for rewrite with your style'}, code=400)
+
+        brnd_voic = MyStyle.objects.filter(user=user)
+        
+        if not brnd_voic:
+            instance = MyStyle.objects.create(brand_voice_result_prompt=brand_voice_result_prompt,user=user)
+            return instance
+        
+        else:
+            raise serializers.ValidationError({'msg':'already brand voice created'}, code=400)
+
+    def update(self, instance, validated_data):
+ 
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+ 
+        instance.save()
         return instance

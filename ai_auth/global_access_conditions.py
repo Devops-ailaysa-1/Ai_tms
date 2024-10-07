@@ -1,23 +1,19 @@
 from ai_auth.models import Team,InternalMember
-
+import logging
+logger = logging.getLogger('django')
 
 def is_project_owner(self, request, view, action: str) -> bool:
     team = request.POST.get('team')
     managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
-    print("view",view)
-    #print("action",action)
+ 
     return request.user in managers 
 
 
 def is_team_owner(request, view, action: str) -> bool:
     team = request.POST.get('team')
-    print(repr(request))
-    print(request.user)
-    print("inside team")
-    print(team)
+
     if not team:
         team = request.user.team_owner.id
-    print(request.user.team_owner.id)
     return request.user.team_owner.id == int(team)
 
 def is_internalmember(request, view, action: str) -> bool:
@@ -35,7 +31,7 @@ def is_added(request, view, action) -> bool:
         pk = request.kwargs['pk']
         in_mem=InternalMember.objects.get(id=int(pk))
     except:
-        print("In except")
+        logger.debug("In except")
     return request.user == in_mem.added_by
 
 def is_admin(self,request, view, action) -> bool:

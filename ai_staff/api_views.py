@@ -16,7 +16,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,
                     FontLanguage,SocialMediaSize,ImageGeneratorResolution,DesignShape,SuggestionType,Suggestion,
-                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
+                    FontCatagoryList,DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -28,7 +28,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
                          SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer,DesignShapeSerializer,DesignerOrientationSerializer,
                          ImageCategoriesSerializer,SuggestionTypeSerializer,SuggestionSerializer,FontCatagoryListSerializer,
-                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer)
+                         FrontMatterSerializer,BackMatterSerializer,BodyMatterSerializer,LevelSerializer,GenreSerializer,)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -214,9 +214,9 @@ class SubjectFieldsView(APIView):
     def post(self, request):
         permission_classes = [IsAuthenticated]
         data = request.data
-        print(data)
+ 
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = SubjectFieldsSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -264,9 +264,9 @@ class ContentTypesView(APIView):
 
     def post(self, request):
         data = request.data
-        print(data)
+ 
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = ContentTypesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -315,7 +315,7 @@ class MtpeEnginesView(APIView):
     def post(self, request):
         data = request.data
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = MtpeEnginesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -366,7 +366,7 @@ class SupportFilesView(APIView):
         data = request.data
 
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = SupportFilesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -418,7 +418,7 @@ class TimezonesView(APIView):
         data = request.data
 
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = TimezonesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -465,7 +465,7 @@ class LanguagesView(APIView):
     def post(self, request):
         data = request.data
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = LanguagesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -511,7 +511,7 @@ class LanguagesLocaleView(APIView):
     def post(self, request):
         data = request.data
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = LocaleSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -557,7 +557,7 @@ class BillingunitsView(APIView):
     def post(self, request):
         data = request.data
         #data['user'] = self.request.user.id
-        #print(">>>>>>>AFTER",data)
+ 
         serializer = BillingunitsSerializer(data=data, context={'request':request})
         if serializer.is_valid():
             serializer.save()
@@ -649,7 +649,7 @@ class SubscriptionPricingCreateView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = SubscriptionPricingSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -688,7 +688,7 @@ class SubscriptionFeaturesCreateView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = SubscriptionFeatureSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -774,7 +774,7 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = CreditsAddonSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -836,7 +836,7 @@ class SupportTopicsView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = SupportTopicSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -877,7 +877,7 @@ class SuggestionTypeView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = SuggestionTypeSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -916,7 +916,7 @@ class SuggestionView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = SuggestionSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -955,7 +955,7 @@ class JobPositionsView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = JobPositionSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
+ 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1394,5 +1394,3 @@ class LevelView(viewsets.ViewSet):
         queryset = self.get_queryset()
         serializer = LevelSerializer(queryset,many=True)
         return Response(serializer.data)
-    
-

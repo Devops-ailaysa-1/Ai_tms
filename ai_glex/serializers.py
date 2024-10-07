@@ -1,11 +1,10 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
-from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,\
-                        GlossaryTasks,GlossarySelected,MyGlossary,GlossaryMt\
-                    )
+from .models import ( Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryTasks,GlossarySelected,
+                     MyGlossary,GlossaryMt)  
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
-from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps
+from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps 
 import json
 
 
@@ -20,6 +19,15 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlossaryFiles
         fields = "__all__"
+
+    def create(self, validated_data):
+        from ai_glex.signals import update_words_from_template
+        instance = GlossaryFiles.objects.create(**validated_data)
+        celery_id = update_words_from_template.apply_async(args=(instance.id,))
+        instance.celery_id = celery_id
+        instance.status  = "PENDING"
+        instance.save()
+        return instance
 
 
 class MyGlossarySerializer(serializers.ModelSerializer):
@@ -37,17 +45,26 @@ class TermsSerializer(serializers.ModelSerializer):
         #           'sl_source', 'tl_source', 'gender', 'termtype', 'geographical_usage', 'usage_status', 
         #           'term_location', 'created_date', 'modified_date', 'glossary', 'file', 'job', 'edit_allowed', )
     
-
+    def create(self,validated_data):
+        from ai_workspace_okapi.utils import nltk_lemma
+        instance = TermsModel.objects.create(**validated_data)
+        if instance.sl_term: 
+            lang_code = instance.job.source_language.locale_code
+            instance.root_word =  nltk_lemma(word=instance.sl_term.lower(),language=lang_code)
+            instance.save()
+        return instance
+       
 class GlossarySelectedSerializer(serializers.ModelSerializer):
     glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
     class Meta:
         model = GlossarySelected
-        fields = ('id','project','glossary','glossary_name',)
+        fields = ('id','project','glossary','glossary_name')
 
 class GlossaryMtSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlossaryMt
         fields = "__all__"
+
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)
@@ -65,13 +82,12 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        original_validated_data = validated_data.copy()
+        original_validated_data = validated_data.copy() ### for project create with project_type 3
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
         jobs = project.get_jobs
         glossary = Glossary.objects.create(**glossary_data,project=project)
-        tasks = Task.objects.create_glossary_tasks_of_jobs(
-                jobs=jobs,klass=Task)
+        tasks = Task.objects.create_glossary_tasks_of_jobs(jobs=jobs,klass=Task)
         task_assign = TaskAssign.objects.assign_task(project=project)
         return project
 
@@ -92,16 +108,17 @@ class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_id = serializers.CharField(source = 'glossary_project.id')
     source_lang = serializers.SerializerMethodField()
     target_lang = serializers.SerializerMethodField()
+    project_id = serializers.CharField(source = 'individual_gloss_project.id')
     
     class Meta:
         model = Glossary
-        fields = ("glossary_id", "glossary_name","source_lang", "target_lang",)
+        fields = ("glossary_id", "glossary_name","source_lang", "target_lang","project_id")
 
     def get_source_lang(self,obj):
         return obj.project_jobs_set.first().source_language.language
 
     def get_target_lang(self,obj):
-         return [job.target_language.language for job in obj.project_jobs_set.all()]
+         return [job.target_language.language for job in obj.project_jobs_set.all() if job.job_tasks_set.all()] 
 
 class WholeGlossaryTermSerializer(serializers.ModelSerializer):
     term_id = serializers.ReadOnlyField(source = 'id')
@@ -114,3 +131,13 @@ class WholeGlossaryTermSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)
+
+from ai_workspace.models import FileTermExtracted
+
+class CeleryStatusForTermExtractionSerializer(serializers.ModelSerializer):
+    file_name = serializers.ReadOnlyField(source='file.filename')
+    term_model_file = serializers.ReadOnlyField(source='file.id')
+
+    class Meta:
+        model = FileTermExtracted
+        fields = ("id",'status','celery_id','done_extraction','term_model_file','file_name','task')

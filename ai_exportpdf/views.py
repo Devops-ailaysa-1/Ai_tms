@@ -129,8 +129,7 @@ class ConversionPortableDoc(APIView):
             #pdf consuming credits
                 consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
                 if initial_credit > consumable_credits:
-                    task_id = pdf_conversion(int(id))
-                    print("TaskId---------->",task_id)
+                    task_id = pdf_conversion(int(id))                    
                     celery_task[int(id)] = task_id  
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 else:
@@ -208,7 +207,7 @@ def celery_revoke(request):
     app = Celery()
     task_id=request.POST.get('task_id')
     # result = AsyncResult(task_id)
-    # print(result.result)
+ 
     # if result:
     # ai_export_pdf.AsyncResult(task_id).revoke()
     app.control.revoke(task_id, terminate=True)
@@ -225,7 +224,7 @@ def celery_revoke(request):
 # def stop_task(request):
 #     task_id = request.GET.get('task_id')
 #     task = AsyncResult(task_id)
-#     print("TT---------->",task.state)
+ 
 #     if task.state == 'STARTED':
 #         app.control.revoke(task_id, terminated=True, signal='SIGKILL')
 #         return JsonResponse({'status':'Task has been stopped.'}) 

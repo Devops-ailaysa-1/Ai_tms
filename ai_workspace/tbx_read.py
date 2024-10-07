@@ -11,13 +11,13 @@ import xml.etree.ElementTree as ET
 from django.http import QueryDict
 from rest_framework.decorators import api_view
 import nltk
-import json
+import json,logging
 from nltk import word_tokenize
 from nltk.util import ngrams
 from django.db.models import F, Q
 from tablib import Dataset
 from django_oso.auth import authorize
-
+logger = logging.getLogger(__name__)
 def remove_namespace(doc, namespace):
     """Remove namespace in the passed document in place."""
     ns = u'{%s}' % namespace
@@ -166,7 +166,7 @@ def upload_template_data_to_db(file_id, job_id):
                     value.save()
             return True
         except Exception as e:
-            print("Exception in uploading terms ----> ", e)
+            logging.error("Exception in uploading terms ----> ", e)
             return False
 
 def user_tbx_write(job_id,project_id):
@@ -210,5 +210,4 @@ def user_tbx_write(job_id,project_id):
         return out_fileName
 
     except Exception as e:
-        print("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})

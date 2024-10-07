@@ -1,11 +1,10 @@
-from django.core.mail import send_mail
-import smtplib
 from ai_pay.api_views import po_modify_weigted_count
 from celery.utils.log import get_task_logger
 import celery,re,pickle, copy
 import djstripe
-logger = get_task_logger(__name__)
+logger = get_task_logger('django')
 from celery.decorators import task
+from ai_openai.utils import get_consumable_credits_for_openai_text_generator
 from celery import shared_task
 from datetime import date
 from django.utils import timezone
@@ -29,7 +28,6 @@ import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
 #from translate.storage.tmx import tmxfile
-from celery_progress.backend import ProgressRecorder
 from time import sleep
 from django.core.management import call_command
 import calendar
@@ -130,17 +128,14 @@ def renewal_list_daily_renewal():
         cycle_dates = [x for x in range(today.day,32)]
     else:
         cycle_dates = [today.day]
-    # print("cycle dates",cycle_dates)
     # subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
     #                 current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
     pu_list =PurchasedUnits.objects.filter(~Q(expiry__year=today.year,
                     expiry__month=today.month,expiry__day__in=cycle_dates)).filter(purchase_pack__recurring='daily')
-    # print("pu_list",pu_list)  
     logger.info(f"renewal list count {pu_list.count}")
     for pu in pu_list:
         created_at_time =  pu.buyed_at.time()
         execute_at = datetime.combine(today.date(), created_at_time, tzinfo=pu.buyed_at.tzinfo)
-        # print("new_datetime",new_datetime)
         renew_purchase_units.apply_async((pu.id,),eta=execute_at)
 
 
@@ -180,8 +175,7 @@ def delete_hired_editors():
     '''
     This is to delete hired editors invite if he didn't accept for more than 7 days.
     '''
-    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()
-    print("deleted")
+    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = timezone.now())).delete()    
     logger.info("Delete Hired Editor")
 
 
@@ -269,9 +263,9 @@ def send_bootcamp_mail(obj_id):
     auth_forms.bootcamp_marketing_response_mail(user_name=instance.name,
                                                 user_email=instance.email)
     if sent:
-        print("Mail sent")
+        logger.info("Mail sent")
     else:
-        print('Mail Not sent')
+        logger.info('Mail Not sent')
 
 
 @task(queue='low-priority')
@@ -344,8 +338,7 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
         lang_pair = lang_pair.union(query)
     res={}
     for obj in lang_pair:
-        tt = obj.source_lang.language if obj.source_lang_id == obj.target_lang_id else obj.target_lang.language
-        print(obj.user.fullname)
+        tt = obj.source_lang.language if obj.source_lang_id == obj.target_lang_id else obj.target_lang.language        
         if obj.user_id in res:
             res[obj.user_id].get('lang').append({'source':obj.source_lang.language,'target':tt})
         else:
@@ -353,15 +346,17 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):# needs to include ag
             'project_deadline':instance.proj_deadline.date().strftime("%d-%m-%Y"),'bid_deadline':instance.bid_deadline.date().strftime('%d-%m-%Y'),\
             'proj_post_title':instance.proj_name,'posted_by':instance.customer.fullname,'services':services}
     auth_forms.vendor_notify_post_jobs(res)
-    print("mailsent")
+    logger.info("mailsent")
 
 
 
 @task(queue='high-priority')
 def write_segments_to_db(validated_str_data, document_id): #validated_data
+
     '''
     To write segments from Json file(okapi) to segments database.
     '''
+
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
     validated_data = decoder.decode(validated_str_data)
 
@@ -565,7 +560,7 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
 
-@task(queue='high-priority')
+@task(queue='high-priority', max_retries=2, default_retry_delay=60)
 def translate_file_task_cel(task_id):
     '''
     This celery task is for processing file as by calling 'Document translate API of google'
@@ -578,9 +573,11 @@ def translate_file_task_cel(task_id):
 
 @task(queue='high-priority')
 def pre_translate_update(task_id):
+
     '''
     This celery task is called when pre-translate option is updated after project creation
     '''
+
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -590,7 +587,7 @@ def pre_translate_update(task_id):
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='pre_translate_update', status=1, celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
@@ -604,18 +601,29 @@ def pre_translate_update(task_id):
 
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
+
+    is_adaptive = task.job.project.isAdaptiveTranslation
     
     for seg in final_segments:
 
-        if seg.target == '' or seg.target==None:
+        if seg.target == '' or seg.target == None:
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
                 try:
                     if task.job.project.project_type_id == 8:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits,format_='html')
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                             user_id=task.owner_pk,cc=consumable_credits,format_='html')
                     else:
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        # If it is normal translation
+                        if not is_adaptive:
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                                 user_id=task.owner_pk,cc=consumable_credits)
+                        # If the translation is Adaptive
+                        else:
+                            mt_original = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,\
+                                                 user_id=task.owner_pk,cc=consumable_credits)
+                            mt = replace_with_gloss(seg.source, mt_original, task)
                     tags = get_tags(seg)
                     if tags:
                         seg.target = mt + tags
@@ -633,7 +641,8 @@ def pre_translate_update(task_id):
                     seg.temp_target = ''
                     seg.status_id=None
             else:
-                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
+                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,\
+                                                      error_type="Insufficient Credits")
                 break
             if type(seg) is Segment:
                 update_list.append(seg)
@@ -649,6 +658,7 @@ def pre_translate_update(task_id):
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i.target),
+                mt_only = re.sub(r'<[^>]+>', "", i.target),
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i.id,
@@ -661,6 +671,7 @@ def pre_translate_update(task_id):
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i.target),
+                mt_only= re.sub(r'<[^>]+>', "", i.target),
                 split_segment_id= i.id,
             )
             for i in mt_split_segments
@@ -701,7 +712,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
         ProjectAnalysisProperty.get(project_id)
         logger.info("analysis property called")
     except Exception as e:
-        print(f'Error in task: {e}')
+        logger.error(f'Error in task: {e}')
         retries += 1
         if retries > max_retries:
             logger.info("retries exceeded")
@@ -808,7 +819,7 @@ def weighted_count_update(receiver,sender,assignment_id):
                         if existing_cc != char_count:
                             notify_word_count(assigns,word_count,char_count)
         except Exception as e:
-            print(f'Error in notify: {e}')
+            logger.error(f'Error in notify: {e}')
             pass
     logger.info('billable count updated and mail sent')
 
@@ -819,47 +830,161 @@ def weighted_count_update(receiver,sender,assignment_id):
 ############################ For wordchoice ############################################
 
 OPEN_AI_GPT_MODEL_REPLACE = settings.OPEN_AI_GPT_MODEL_REPLACE  
+
 from ai_staff.models import InternalFlowPrompts
 import openai
-def replace_mt_with_gloss(src,raw_mt,gloss):
-    try:
-        prompt_phrase = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss').prompt_phrase
-        pr = prompt_phrase.format(src,raw_mt,gloss)
-        completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", "content": pr}])
-        res = completion["choices"][0]["message"]["content"]
-    except:
-        res = raw_mt
-    return res  
+
+def gloss_prompt(gloss_list):
+    prompt_list= []
+    for count,term in enumerate(gloss_list):
+        gloss_prompt_concat = "{}. {} (source: {}) → {}".format(count+1, term.sl_term.strip(), 
+                                                                term.sl_term_translate.strip(),
+                                                                term.tl_term.strip())
+        if term.pos:
+            pos_prompt = " and POS tag is {}".format(term.pos)
+            gloss_prompt_concat = gloss_prompt_concat+pos_prompt
+        prompt_list.append(gloss_prompt_concat)
+    return "\n".join(prompt_list)
+
+def tamil_gloss(gloss_list):
+    prompt_list = []
+    for term in gloss_list:
+        prompt_list.append(term.sl_term.strip())
+    return ",".join(prompt_list)
+
+def tamil_correction(tar_seg,terms_trans_dict):
+     
+    messages=[{"role": "system", "content": """Your task is to modify a provided Tamil sentence based on specific guidelines. Here's the necessary information you'll need to execute the task:
+    Please remember to focus on splitting the original word into its root and morphological parts. Once that is done, replace the original word in the sentence with the modified root of the original word while keeping the morphological structure intact.
+    output:  provide only the modified sentence.
+    do not generate anything else. no feedback or intermediate steps."""},
+                {"role": "user", "content":tar_seg+"\n\n"+",".join(terms_trans_dict) }]
+    print("messages",messages)
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+    res = completion["choices"][0]["message"]["content"]
+    return res
+
+def tamil_morph_prompt(src_seg ,tar_seg, gloss_list,lang_code,src_lang,tar_lang):   # 
+    from ai_openai.utils import gemini_model_generative 
+
+    terms_trans_dict = {}
+
+    gloss_list_sl_term = tamil_gloss(gloss_list)
+    content = src_seg+"\n\n"+tar_seg+"\nword list: "+gloss_list_sl_term
+    # if lang_code == 38: # for italian language
+    #     content_prompt = """You're a highly skilled translator and linguist specializing in translations between the source and target languages. You have a knack for accurately mapping words between them while adhering strictly to grammatical forms, ensuring precision without any abbreviations or short forms.
+    #                         Your task is to process the given source text along with its translation and a provided word list.
+    #                         Here are the details you'll need to consider:
+    #                         Source {} text: {}
+    #                         {} translation: {}
+    #                         Word list: {}
+    #                         For each listed word, fetch the exact corresponding term from the translation, maintaining the same tense and form. If no matching terms are present, leave the response empty or "".
+    #                         Output format: source word: target word (if present next term pair separate with a comma), otherwise, leave empty.don't give any acknowledgment give only the result.""".format(src_lang , src_seg ,tar_lang,tar_seg,gloss_list_sl_term)
+    #     res = gemini_model_generative(content_prompt)
+    #else:
+    content_prompt = """i will provide you the source english text, its relative translation and word list
+        fetch out the relative translated word from the translation for the english word in the list.
+        output: generate the source english word and the fetched tamil word. do not generate feedback or anything else.
+        output format: english word : tamil word in comma seperated
+            """
+    messages=[{"role": "system", "content":content_prompt },{"role": "user", "content":content }]
+    
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=messages)
+    res = completion["choices"][0]["message"]["content"]
+    for i in res.split(","):
+        terms_trans = i.strip().split(":")
+ 
+        if terms_trans[0].strip():
+            sl_term = terms_trans[0].strip()
+ 
+            term_instance = gloss_list.filter(sl_term=sl_term).last()
+            if term_instance:
+                terms_trans_dict[terms_trans[1].strip()] = term_instance.tl_term
+    return terms_trans_dict
+
+
+def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
+    from ai_staff.models import LanguageGrammarPrompt
+    from ai_openai.utils import gemini_model_generative 
+    from ai_staff.models import ExtraReplacePrompt
+    tar_lang_id = [77] #38,
+    src_lang = source_language.language
+    tar_lang = target_language.language
+    tar_lang_id_to_check = target_language.id
+    internal_flow_instance = InternalFlowPrompts.objects.get(name='replace_mt_with_gloss')
+    prompt_phrase = internal_flow_instance.prompt_phrase
+
+    gloss_list = gloss_prompt(gloss)
+
+    if tar_lang_id_to_check in tar_lang_id:
+        gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
+
+    replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
+    extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
+
+    if extra_prompt:
+        replace_prompt = replace_prompt + extra_prompt.last().prompt
+    
+    completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
+                                                                                            "content": replace_prompt}])    
+    res = completion["choices"][0]["message"]["content"]
+
+    lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
+
+    if lang_gram_prompt:
+        tamil_morph_result = ""
+        lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
+        if tar_lang_id_to_check  == 77: # tamil id 
+            lang_code = source_language.locale_code
+            tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
+        res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
+
+        
+        # Credit calculation
+
+        # prompt_usage = completion['usage']
+        # total_token = prompt_usage['total_tokens']
+        # consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
+        # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
+
+    # except:
+    #     logger.error("error in process ing adaptive prompt")
+    #     res = raw_mt
+    return res 
 
 
 
-def replace_with_gloss(src,raw_mt,task):
-    from ai_glex.models import GlossarySelected
-    from ai_workspace_okapi.api_views import check_source_words, target_source_words
+def replace_with_gloss(src, raw_mt, task):
+    
+    from ai_glex.models import GlossarySelected, Glossary
+    from ai_workspace_okapi.api_views import check_source_words
+
     final_mt = raw_mt
     proj = task.job.project
-    word_choice = False
-    if GlossarySelected.objects.filter(project = proj, glossary__project__project_type_id=10).exists():
-        word_choice = True
-    # if word_choice:
-        source_words,gloss = check_source_words(src,task)
-        if source_words:
-            # all_target_replaced,gloss = target_source_words(raw_mt,task)
-            # print("All---------->",all_target_replaced)
-            # if not all_target_replaced:
-            #     print("Inside----------")
-            final_mt = replace_mt_with_gloss(src,raw_mt,gloss)
-    print("FinalMT------------>",final_mt)
+
+    # if GlossarySelected.objects.filter(project=proj, glossary__project__project_type_id=10).exists():
+    
+    # Checking if a glossary is added from Assets or
+    # or if a glossary is created on the fly
+
+    if GlossarySelected.objects.filter(project=proj).exists() or \
+        (Glossary.objects.filter(file_translate_glossary=proj).exists()):
+
+        gloss, source_language, target_language = check_source_words(src, task)
+
+        if gloss:
+            final_mt = replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language)
     return final_mt
       
-##################################################################################################################
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
+
     '''
     This task is mainly used for get_mt (mt-only download) for the source files.
     This is called for page-wise translation.
     '''
+
     from ai_workspace.models import Task, TaskAssign
     from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -868,10 +993,11 @@ def mt_raw_update(task_id,segments):
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='mt_raw_update', status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
+    isAdaptiveTranslation = task.job.project.isAdaptiveTranslation
     if segments == None:
         segments = task.document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
@@ -880,7 +1006,7 @@ def mt_raw_update(task_id,segments):
     else:
         final_segments = segments
 
-    update_list, update_list_for_merged,update_list_for_split = [],[],[]
+    update_list, update_list_for_merged, update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
     
     for seg in final_segments:###############Need to revise####################
@@ -898,15 +1024,24 @@ def mt_raw_update(task_id,segments):
             mt_raw = None
     
         if mt_raw == None:
-            if seg.target == '' or seg.target==None:
+            if seg.target == '' or seg.target == None:
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
-                        # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                        # mt = replace_with_gloss(seg.source,raw_mt,task)
-                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        
+                        if isAdaptiveTranslation:
+                            # Adapting glossary
+                            raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                    user_id=task.owner_pk, cc=consumable_credits)
+                            mt = replace_with_gloss(seg.source,raw_mt,task)
+                        else:
+                            # Without adapting glossary
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                            raw_mt = mt
+
                         tags = get_tags(seg)
+
                         if tags:
                             seg.target = mt + tags
                             seg.temp_target = mt + tags
@@ -915,14 +1050,18 @@ def mt_raw_update(task_id,segments):
                             seg.temp_target = mt
                         seg.status_id = TranslationStatus.objects.get(status_id=103).id
                         if type(seg) is SplitSegment:
-                            mt_split_segments.append({'seg':seg,'mt':mt})
-                        else:mt_segments.append({'seg':seg,'mt':mt})
+                            mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                        
+                        # Previous else block    
+                        # else:mt_segments.append({'seg':seg,'mt':mt})
+                        else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                     except:
                         seg.target = ''
                         seg.temp_target = ''
                         seg.status_id=None
                 else:
-                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,error_type="Insufficient Credits")
+                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,\
+                                                          error_type="Insufficient Credits")
                     break
                 if type(seg) is Segment:
                     update_list.append(seg)
@@ -934,14 +1073,22 @@ def mt_raw_update(task_id,segments):
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
-                    # raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
-                    # mt = replace_with_gloss(seg.source,raw_mt,task)
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    
+                    if isAdaptiveTranslation:
+                        # Adapting glossary
+                        raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                user_id=task.owner_pk, cc=consumable_credits)
+                        mt = replace_with_gloss(seg.source,raw_mt,task)
+                    else:
+                        # Without adapting glossary
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        raw_mt = mt
+
                     if type(seg) is SplitSegment:
-                        mt_split_segments.append({'seg':seg,'mt':mt})
-                    else:mt_segments.append({'seg':seg,'mt':mt})
+                        mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                    else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                 else:
-                    print("Insufficient credits")
+                    logger.info("Insufficient credits")
                 
     
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
@@ -951,6 +1098,7 @@ def mt_raw_update(task_id,segments):
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
                 mt_engine_id = mt_engine,
                 task_mt_engine_id = mt_engine,
                 segment_id= i['seg'].id,
@@ -963,6 +1111,7 @@ def mt_raw_update(task_id,segments):
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
                 split_segment_id= i['seg'].id,
             )
             for i in mt_split_segments
@@ -996,54 +1145,52 @@ def record_api_usage(provider,service,uid,email,usage):
     from ai_auth.utils import record_usage
     record_usage(provider,service,uid,email,usage)
 
-from ai_glex import models as glex_model
-from tablib import Dataset
-@task(queue='high-priority')
-def update_words_from_template_task(file_ids):
+# @task(queue='high-priority')
+# def update_words_from_template_task(file_ids):
     
-    for i in file_ids:
-        instance = glex_model.GlossaryFiles.objects.get(id=i)
-        glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
-        dataset = Dataset()
-        imported_data = dataset.load(instance.file.read(), format='xlsx')
-        if instance.source_only == False and instance.job.source_language != instance.job.target_language:
-            for data in imported_data:
-                if data[2]:
-                    try:
-                        value = glex_model.TermsModel(
-                                # data[0],          #Blank column
-                                data[1],            #Autoincremented in the model
-                                data[2].strip(),    #SL term column
-                                data[3].strip() if data[3] else data[3],    #TL term column
-                                data[4], data[5], data[6], data[7], data[8], data[9],
-                                data[10], data[11], data[12], data[13], data[14], data[15]
-                        )
-                    except:
-                        value = glex_model.TermsModel(
-                                # data[0],          #Blank column
-                                data[1],            #Autoincremented in the model
-                                data[2].strip(),    #SL term column
-                                data[3].strip() if data[3] else data[3], )
-                    value.glossary_id = glossary_obj.id
-                    value.file_id = instance.id
-                    value.job_id = instance.job_id
-                    value.save()
-                    #print("ID----------->",value.id)
-        else:
-            for data in imported_data:
+#     for i in file_ids:
+#         instance = glex_model.GlossaryFiles.objects.get(id=i)
+#         glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
+#         dataset = Dataset()
+#         imported_data = dataset.load(instance.file.read(), format='xlsx')
+#         if instance.source_only == False and instance.job.source_language != instance.job.target_language:
+#             for data in imported_data:
+#                 if data[2]:
+#                     try:
+#                         value = glex_model.TermsModel(
+#                                 # data[0],          #Blank column
+#                                 data[1],            #Autoincremented in the model
+#                                 data[2].strip(),    #SL term column
+#                                 data[3].strip() if data[3] else data[3],    #TL term column
+#                                 data[4], data[5], data[6], data[7], data[8], data[9],
+#                                 data[10], data[11], data[12], data[13], data[14], data[15]
+#                         )
+#                     except:
+#                         value = glex_model.TermsModel(
+#                                 # data[0],          #Blank column
+#                                 data[1],            #Autoincremented in the model
+#                                 data[2].strip(),    #SL term column
+#                                 data[3].strip() if data[3] else data[3], )
+#                     value.glossary_id = glossary_obj.id
+#                     value.file_id = instance.id
+#                     value.job_id = instance.job_id
+#                     value.save()
+#                     #print("ID----------->",value.id)
+#         else:
+#             for data in imported_data:
             
-                if data[2]:
-                        value = glex_model.TermsModel(
-                                # data[0],          #Blank column
-                                data[1],            #Autoincremented in the model
-                                data[2].strip()
-                                )
-                value.glossary_id = glossary_obj.id
-                value.file_id = instance.id
-                value.job_id = instance.job_id
-                value.save()
-                #print("ID----------->",value.id)
-        print("Terms Uploaded")
+#                 if data[2]:
+#                         value = glex_model.TermsModel(
+#                                 # data[0],          #Blank column
+#                                 data[1],            #Autoincremented in the model
+#                                 data[2].strip()
+#                                 )
+#                 value.glossary_id = glossary_obj.id
+#                 value.file_id = instance.id
+#                 value.job_id = instance.job_id
+#                 value.save()
+#                 #print("ID----------->",value.id)
+#         print("Terms Uploaded")
 
 
 def diff_month(d1, d2):
@@ -1076,7 +1223,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
             "is_internal_member":user.is_internal_member,
             "first_login":user.first_login,
             "currency_based_on_country":user.currency_based_on_country.currency if user.currency_based_on_country!=None else None,
-            "signup_age":abs(diff_month(user.date_joined,timezone.now()))
+            "signup_age":abs(diff_month(user.date_joined,timezone.now())),
+            "from_campaign":None if user.user_campaign.last()==None else user.user_campaign.last().campaign_name.campaign_name
             }
         sub = rep.get_user_subscription(user)
         if sub!=None:
@@ -1124,6 +1272,8 @@ def sync_user_details_bi(test=False,is_vendor=False):
 
 
 def proz_list_send_email(projectpost_id):
+    from ai_marketplace.api_views import get_proz_lang_pair
+    from rest_framework.response import Response
     '''
     This task is to notify proz users about available projectpost. In this we are calling proz-API
     by sending the custom message. Person from proz approves and forward it.(Is the flow)

@@ -13,8 +13,8 @@ from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags,
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 from django.core.cache import cache
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
-
-
+import logging
+logger = logging.getLogger("django")
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -94,8 +94,8 @@ class BaseSegment(models.Model):
     tagged_source = models.TextField(null=True, blank=True)
     coded_brace_pattern = models.TextField(null=True, blank=True)
     coded_ids_sequence = models.TextField(null=True, blank=True)
-    random_tag_ids = models.TextField(null=True, blank=True)
-    target_tags = models.TextField(null=True, blank=True)
+    random_tag_ids = models.TextField(null=True, blank=True) # Tag IDs of only Random tags
+    target_tags = models.TextField(null=True, blank=True) # This also includes Random tags
     okapi_ref_segment_id = models.CharField(max_length=50)
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
@@ -159,7 +159,6 @@ class BaseSegment(models.Model):
         return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
-        print("Inside Base")
         return super(BaseSegment, self).save(*args, **kwargs)
 
 
@@ -170,9 +169,8 @@ class Segment(BaseSegment):
     is_merged = models.BooleanField(default=False, null=True,)
     is_merge_start = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=False, null=True)
-
-
-
+    
+    
     def generate_cache_keys(self):
         cache_keys = [
             f'seg_progress_{self.text_unit.document.pk}',
@@ -232,6 +230,10 @@ class Segment(BaseSegment):
     @property
     def get_parent_seg_id(self):
         return self.id
+    
+    @property
+    def get_job(self):
+        return self.text_unit.task_obj.job
 
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
@@ -305,7 +307,7 @@ class MergeSegment(BaseSegment):
         # Resetting the raw MT once a merged segment is restored
         first_seg_in_merge = self.segments.all().first()
         try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
-        except: print("No translation done for merged segment yet !!!")
+        except: logging.error("No translation done for merged segment yet !!!")
 
         # Clearing the relations between MergeSegment and Segment
         self.segments.clear()
@@ -382,8 +384,9 @@ class MT_RawTranslation(models.Model):
 
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
-    mt_raw = models.TextField()
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
+    mt_raw = models.TextField() # MT + Glossary - This is the option that will be shown in the target segment
+    mt_only = models.TextField() # Only Raw Machine Translation
 
     @property
     def target_language(self):
@@ -400,7 +403,12 @@ class MT_RawTranslation(models.Model):
 class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
-    mt_raw = models.TextField(null=True, blank=True)
+    mt_raw = models.TextField(null=True, blank=True) # Translation that will be shown in the target segment
+    mt_only = models.TextField(null=True, blank=True) # Raw Machine translation (no glossary applied)
+    # mt_llm_glossary = models.TextField() # Machine Translation + Rewrite + Glossary
+
+    def __str__(self) -> str:
+        return self.mt_raw
 
 
 class Comment(models.Model):
@@ -739,10 +747,13 @@ class ChoiceListSelected(models.Model):
 
 
 class SegmentDiff(models.Model):
+
     seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
-    sentense_diff_result=models.TextField(null=True,blank=True)
+    sentense_diff_result = models.TextField(null=True, blank=True)
+    diff_corrected = models.TextField(null=True, blank=True) # Corrected content of the segment based on insertion/deletion/Replacement
     created_at=models.DateTimeField(auto_now_add=True)
     save_type=models.CharField(max_length=100,blank=True,null=True)
+    target_tags = models.TextField(null=True, blank=True) # Tags to be shown in the target when restored
 
     def __str__(self) -> str:
         return self.sentense_diff_result

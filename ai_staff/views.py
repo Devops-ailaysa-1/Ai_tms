@@ -21,15 +21,12 @@ from ai_auth.models import AiUser
 def Bulk_insert(request):
     if request.method== 'POST':
         try:
-            print("*******")
-            print(request.FILES)
+ 
             #form = UploadFileForm(request.POST, request.FILES)
             dataset = Dataset()
             filedata = request.FILES.get('insertfile')
-
-            print("&&&&&&&&")
             imported_data = dataset.load(filedata.read(), format='xlsx')
-            # print(imported_data)
+ 
             for data in imported_data:
                 value = ProzLanguagesCode(
                             language_id = data[1],
@@ -48,12 +45,12 @@ def Bulk_insert(request):
                             # from_mysql = data[10],
 
                         )
-                # print(value)
+ 
                 value.save()
-            # print("$$$ END  $$$")
+ 
             return JsonResponse({'message':'success'})
         except Exception as E:
-                print(E)
+                (E)
                 return JsonResponse({'message':'Failed'})
     else:
         form =UploadFileForm()

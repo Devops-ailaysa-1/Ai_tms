@@ -11,23 +11,17 @@ from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from ai_auth.tasks import record_api_usage
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
-import json
-import logging
-import os
-import re
 import requests , bleach
-import urllib.parse
 import urllib.parse
 import xlsxwriter
 import rapidfuzz
-from json import JSONDecodeError
 from django.db.models.signals import post_save ,pre_save
 from os.path import exists
 from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
 from django.contrib.auth import settings
 from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
-from django.db.models import Q
+from django.db.models import Q,F
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django_celery_results.models import TaskResult
@@ -44,8 +38,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from spellchecker import SpellChecker
 from django.http import  FileResponse
+from django.db.models.functions import Lower
 from rest_framework.views import APIView
-from django.db.models import Q
 import urllib.parse
 import nltk
 import json, time
@@ -76,7 +70,6 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
 from django.urls import reverse
-from json import JSONDecodeError
 from .utils import SpacesService
 from google.cloud import translate_v2 as translate
 import os, io, requests, time
@@ -90,14 +83,12 @@ from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, 
 from django.db import transaction
 from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
-from django.db import transaction
 from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
 from ai_auth.utils import filter_authorize,authorize_list
-from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 from ai_workspace_okapi.models import SegmentDiff
@@ -115,8 +106,6 @@ logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 
 END_POINT= settings.END_POINT
-
-
 
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
@@ -142,6 +131,7 @@ def get_empty_segments(doc):
 
 
 class DocumentViewByTask(views.APIView, PageNumberPagination):
+    
     permission_classes = [IsAuthenticated]
     PAGE_SIZE = page_size =  20
 
@@ -249,14 +239,20 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
-            serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                     "file": task.file.id, "job": task.job.id,
-                                                     }, ))
-            if serializer.is_valid(raise_exception=True):
-                document = serializer.save()
+            try:
+ 
+                document = Document.objects.get(file = task.file , job = task.job)
                 task.document = document
                 task.save()
-            end_time_v2 = time.time()
+                 
+            except: 
+                serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+                if serializer.is_valid(raise_exception=True):
+                    document = serializer.save()
+                    task.document = document
+                    task.save()
         
         return document
     
@@ -520,6 +516,7 @@ class DocumentViewByDocumentId(views.APIView):
         else:
             given_step = None
         document = self.get_object(document_id)
+        is_adaptive = document.job.project.isAdaptiveTranslation
         mt_enable = document.job.project.mt_enable
         task = Task.objects.get(document=document)
         edit_allowed = self.edit_allow_check(task,given_step)
@@ -535,11 +532,16 @@ class DocumentViewByDocumentId(views.APIView):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
         dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) or (request.user in assigned_users) else {'updated_download':'disable'}
         dict_2 = {'mt_enable':mt_enable,'task_id':task.id,'assign_enable':assign_enable,'edit_allowed':edit_allowed}
+
+        # Key to check if Adaptive translation or Normal MTPE
+        dict_3 = {'is_adaptive':is_adaptive}
+
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
         data.update(dict_1)
         data.update(dict_2)
+        data.update(dict_3)
         return Response(data, status=200)
 
 
@@ -557,6 +559,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
 
     def get(self, request, document_id):
+
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
         segments = document.segments_for_find_and_replace
@@ -568,7 +571,8 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
         
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
-            mt_raw_update(task.id,page_segments) # to pretranslate segments in that page
+            mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
+        
         segments_ser = SegmentSerializer(page_segments, many=True)
 
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
@@ -710,18 +714,23 @@ class SourceTMXFilesCreate(views.APIView):
 
 from rest_framework import serializers
 class SegmentsUpdateView(viewsets.ViewSet):
+
     def get_object(self, segment_id):
+
         qs = Segment.objects.all()
         #qs = filter_authorize(self.request, qs,self.request.user,"read")
 
+        # For normal and merge segments
         if split_check(segment_id):
             segment = get_object_or_404(qs, id=segment_id)
             return segment.get_active_object()
         else:
+            # For split segment
             return SplitSegment.objects.filter(id=segment_id).first()
 
     @staticmethod
     def get_update(segment, data, request):
+
         segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True, \
                                              context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
@@ -762,6 +771,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def split_update(self, request_data, segment):
+
         # To update split segments
         org_segment = SplitSegment.objects.get(id=segment.id).segment_id
         status = request_data.get("status",None)
@@ -773,25 +783,29 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else: 
             step = None
             status_obj = segment.status
+
         content = request_data['target'] if "target" in request_data else request_data['temp_target']
         existing_step = 1 if segment.status_id not in [109,110] else 2 
         seg_his_create = True if segment.temp_target!=content or existing_step != step else False
+
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
         else:segment.temp_target = request_data["temp_target"]
         segment.save()
+
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         return Response(SegmentSerializerV2(segment).data, status=201)
 
     def partial_update(self, request, *args, **kwargs):
+
         # Get a list of PKs to update
-        data={}
+        data = {}
         confirm_list = request.data.get('confirm_list', [])
         confirm_list = json.loads(confirm_list)
-        msg=None
-        success_list=[]
+        msg = None
+        success_list = []
         
         for item in confirm_list:
             try:
@@ -840,6 +854,7 @@ class MergeSegmentDeleteView(viewsets.ModelViewSet):
         return  MergeSegment.objects.all()
 
 class MT_RawAndTM_View(views.APIView):
+
     '''
     This view is to create MT of segment
     first, it will check for tmxfiles and for TM options if it is then it will return TM Results 
@@ -909,6 +924,10 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_user_and_doc(segment_id):
+
+        # Returns the Ai_User from which credits has to be debited and \
+        # the Document of the segment
+
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
@@ -916,6 +935,9 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def is_account_holder(request, doc, user):
+        
+        # Checking if request.user is a Project Manager or Account Holder.
+        # The second condition is true only for Account Holder
 
         if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
@@ -928,12 +950,14 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment_id, mt_params):
 
-        
+        # Getting the user from which credits to be debited &
+        # The Document object of the segment
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        #task = Task.objects.get(document=doc)
         seg  = Segment.objects.get(id=segment_id)
 
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+
+        # Getting the MT engine for the Task of the segment
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
         # If raw translation is already available and Proj & Task MT engines are same
@@ -942,14 +966,14 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
-
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
-        task = Task.objects.get(job=doc.job)
+        task = seg.task_obj
 
+        #
         MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
@@ -957,21 +981,35 @@ class MT_RawAndTM_View(views.APIView):
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
         
         if initial_credit > consumable_credits :
+            
             if mt_raw:
-                #############   Update   ############
-                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                # translation = replace_with_gloss(seg.source,translation_original,task)
+                
+                # If MT raw is already present, but user has changed the MT engine,
+                # In that case, the MT Raw needs to be updated using the new MT Engine.
+                
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
+
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                else:
+
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                    
+                    translation = replace_with_gloss(seg.source,translation_original,task)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
-                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
+                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)                
+
                 obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
                 return MT_RawSerializer(obj).data, 200, "available"
+            
             else:
 
-                #########   Create   #######
-
+                # If there is not MT Raw, a new translation needs to be done
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
@@ -979,19 +1017,14 @@ class MT_RawAndTM_View(views.APIView):
                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
-            return {}, 424, "unavailable"
-        
-    
+            return {}, 424, "unavailable"    
 
     @staticmethod
     def get_split_data(request, segment_id, mt_params):
 
         mt_raw_split = MtRawSplitSegment.objects.filter(split_segment_id=segment_id).first()
-
         split_seg = SplitSegment.objects.filter(id=segment_id).first()
-
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
-
         task = Task.objects.get(document=doc)
 
         # Getting the task MT engine
@@ -1006,10 +1039,17 @@ class MT_RawAndTM_View(views.APIView):
                     =split_seg.segment_id).first().mt_engine
 
             if proj_mt_engine == task_assign_mt_engine:
-                # replaced = replace_with_gloss(split_seg.source,mt_raw_split.mt_raw,task)
-                # mt_raw_split.mt_raw = replaced
-                # mt_raw_split.save()
-                return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+
+                # Checking for adaptive or normal translation
+                if not doc.job.project.isAdaptiveTranslation:
+                  return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"  
+
+                else:
+                    # Adapting glossary
+                    mt_raw_split.mt_only = mt_raw_split.mt_raw
+                    mt_raw_split.mt_raw = replace_with_gloss(split_seg.source, mt_raw_split.mt_raw, task)
+                    mt_raw_split.save()
+                    return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, "segment": split_seg.id}, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
@@ -1017,32 +1057,47 @@ class MT_RawAndTM_View(views.APIView):
 
 
         MT_RawAndTM_View.is_account_holder(request, doc, user)
-
         initial_credit = user.credit_balance.get("total_left")
-
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
-
 
         if initial_credit > consumable_credits:
 
             # Updating raw translation of split segments
             if mt_raw_split:
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                # translation = replace_with_gloss(split_seg.source,translation_original,task)
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation_original = translation
+                else:
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                    translation = replace_with_gloss(split_seg.source, translation_original,task)
                 
-                MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
-                return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+                # Updating existing record of MtRawSplitSegment with new Task MT engine
+                MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation, mt_only=translation_original)
+                return {"mt_raw": mt_raw_split.mt_raw, "mt_only": mt_raw_split.mt_only, "segment": split_seg.id}, 200, "available"
 
             # Creating new MT raw for split segment
             else:
-                print("Creating new MT raw for split segment")
-                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
-                # translation = replace_with_gloss(split_seg.source,translation_original,task)
-                MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
 
-                return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
+                # Checking if the project has Adaptive translaton setting ON or OFF
+                if not doc.job.project.isAdaptiveTranslation:
+                    # Without adapting glossary
+                    translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation_original = translation
+                else:
+                    # Adapting glossary
+                    translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                    translation = replace_with_gloss(split_seg.source, translation_original, task)
+
+                MtRawSplitSegment.objects.create(**{"mt_raw":translation, "mt_only":translation_original, "split_segment_id" : segment_id})
+
+                return {"mt_raw": translation, "mt_only":translation_original, "segment": split_seg.id}, 200, "available"
 
         else:
             return {}, 424, "unavailable"
@@ -1134,24 +1189,8 @@ class MT_RawAndTM_View(views.APIView):
         project=Project.objects.filter(project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_split_segment_set=segment_id).first()
         return project
 
-    # @staticmethod
-    # def get_words_list(sent):
-    #     punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-    #     tokens=word_tokenize(sent)
-    #     target = [word for word in tokens if word not in punctuation]
-    #     words=[]
-    #     tg_word = [word for word in target] 
-    #     unigram = ngrams(tg_word , 1)
-    #     words.extend(list(" ".join(i) for i in unigram))
-    #     bigrams = ngrams(tg_word , 2)
-    #     words.extend(list(" ".join(i) for i in bigrams))
-    #     trigrams = ngrams(tg_word , 3)
-    #     words.extend(list(" ".join(i) for i in trigrams))
-    #     return words
-
-
-
     def get(self, request, segment_id):
+            
             tm_only = {
                         "segment": segment_id,
                         "mt_raw": "",
@@ -1161,9 +1200,14 @@ class MT_RawAndTM_View(views.APIView):
 
             mt_uc = request.GET.get("mt_uc", 'false')
 
-            # Getting MT params
-            mt_params = self.get_segment_MT_params(segment_id)
+            # Getting MT params from TaskAssign model
+            mt_params = self.get_segment_MT_params(segment_id) 
             
+            # split_check is a Utility function which returns
+            # True - if the segment is a normal segment i.e. instance of Segment or MergeSegment
+            # False - if the segment is an instance of SplitSegment
+
+
             if split_check(segment_id):
                 seg = Segment.objects.get(id=segment_id)
                 authorize(request, resource=seg, actor=request.user, action="read")
@@ -1175,36 +1219,41 @@ class MT_RawAndTM_View(views.APIView):
 
             # For normal and merged segments
             if split_check(segment_id):
+                
+                # Fetching translation from Translation memory
                 tm_data = self.get_tm_data(request, segment_id)
             
                 if tm_data and (mt_uc == 'false'):
-                    return Response({**tm_only, "tm":tm_data}, status = 200 )
+                    return Response({**tm_only, "mt_only": "", "tm":tm_data}, status = 200 )
+                
+                # For MT / LLM translation
                 data, status_code, can_team = self.get_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                project=MT_RawAndTM_View.get_project_by_segment(request,segment_id)
+                # project = MT_RawAndTM_View.get_project_by_segment(request,segment_id)
                 
-                seg_obj = Segment.objects.get(id=segment_id)
-                target_lang = seg_obj.text_unit.document.job.target_language_id
+                # seg_obj = Segment.objects.get(id=segment_id)
+                # target_lang = seg_obj.text_unit.document.job.target_language_id
 
                 return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
                     "alert_msg":alert_msg}, status=status_code)
 
             # For split segment
             else:
+                # Fetching translation from Translation memory
                 tm_data = self.get_tm_data(request, segment_id)
-
                 if tm_data and (mt_uc == False):
-                    return Response({**tm_only, "tm": tm_data}, status=200)
+                    return Response({**tm_only, "mt_only": "", "tm": tm_data}, status=200)
 
+                # For MT / LLM translation
                 data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
                 mt_alert = True if status_code == 424 else False
                 alert_msg = self.get_alert_msg(status_code, can_team)
                 
-                project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
-                seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
-                target_lang = seg_obj.text_unit.document.job.target_language_id
+                # project=MT_RawAndTM_View.get_project_by_split_segment(request,segment_id)
+                # seg_obj = SplitSegment.objects.filter(id=segment_id).first().segment
+                # target_lang = seg_obj.text_unit.document.job.target_language_id
 
                 return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
                                  "alert_msg": alert_msg}, status=status_code)
@@ -1271,9 +1320,11 @@ def pre_process(data):
     return data
 
 def mt_raw_pre_process(data):
+
     '''
     This is to replace target key with mt_raw before going to okapi
     '''
+
     for key in data['text'].keys():
         for d in data['text'][key]:
             if d.get('mt_raw_target') != None:
@@ -1345,10 +1396,10 @@ class DocumentToFile(views.APIView):
             return {'status':True}
 
     #For Downloading Audio File################only for voice project###########Need to work
-    def download_audio_file(self,document_user,document_id,voice_gender,language_locale,voice_name):
-        res_1 = process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
+    def download_audio_file(self, document_user, document_id, voice_gender, language_locale, voice_name):
+        res_1 = process_audio_file(document_user, document_id, voice_gender, language_locale, voice_name)
         if res_1:
-            return Response(res_1,status=401)
+            return Response(res_1, status=401)
         else:
             doc = DocumentToFile.get_object(document_id)
             task = doc.task_set.first()
@@ -1460,21 +1511,26 @@ class DocumentToFile(views.APIView):
         #authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
+
+        # This is checked, when the user tries to immediately download output file
+        # after opening the document, as segments will be only written by celery one by one.
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
             return JsonResponse({"msg": "File under process. Please wait a little while. \
                     Hit refresh and try again"}, status=400)
 
         output_type = request.GET.get("output_type", "")
+
+        # Getting query params required for voice download
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         voice_name = request.GET.get("voice_name",None)
         language_locale = request.GET.get("locale", None)
 
         document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
-        try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
-        except:managers = []
+        try: managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
+        except: managers = []
 
-        user=self.request.user.team.owner if self.request.user.team  else self.request.user
-        assign_objs=TaskAssign.objects.filter(task_id=doc.task_obj.id,assign_to=user)
+        user = self.request.user.team.owner if self.request.user.team  else self.request.user
+        assign_objs = TaskAssign.objects.filter(task_id=doc.task_obj.id, assign_to=user)
 
         agency = []
         if assign_objs.filter(assign_to__isnull=False):
@@ -1485,7 +1541,8 @@ class DocumentToFile(views.APIView):
                 if assign_to.team:
                     agency.append(assign_to.team.get_project_manager)
 
-        if (request.user ==  document_user) or (request.user in managers) or (request.user in agency) :
+        if (request.user ==  document_user) or (request.user in managers) or (request.user in agency):
+
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":
                 return self.download_source_file(document_id)
@@ -1521,9 +1578,8 @@ class DocumentToFile(views.APIView):
 
             
             else:
-                logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
-                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
-                            status=409)
+                logger.info(f">>>>>>>> Error in output for document_id -><<<<<<<<<")
+                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."}, status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
@@ -1550,7 +1606,6 @@ class DocumentToFile(views.APIView):
         task = document.task_set.prefetch_related('file','job__source_language','job__target_language').first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("task_data---->>>",task_data)
         DocumentViewByTask.correct_fields(task_data)
         
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
@@ -1914,7 +1969,7 @@ class CommentView(viewsets.ViewSet):
                 return split_segment.split_segment_comments_set.order_by('id')
 
 
-        if by=="document":
+        if by == "document":
             document = get_object_or_404(Document.objects.all(), id=id)
             comments_list=[]
             for segment in document.segments.all():
@@ -2056,10 +2111,10 @@ def WiktionaryParse(request):
     parser = WiktionaryParser()
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
-    word = parser.fetch(user_input)
+    word = parser.fetch([user_input])
     if word:
         if word[0].get('definitions')==[]:
-            word=parser.fetch(user_input.lower())
+            word=parser.fetch([user_input.lower()])
     res=[]
     tar=""
     for i in word:
@@ -2276,9 +2331,15 @@ def spellcheck(request):
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
 
 
-############################segment history#############################################
 @api_view(['GET',])
 def get_segment_history(request):
+
+    '''
+    To list the history of changes in a target segment
+    The changes can be insertion, deletion or replacement
+
+    '''
+
     seg_id = request.GET.get('segment')
     try:
         if split_check(seg_id):
@@ -2288,10 +2349,13 @@ def get_segment_history(request):
             obj = SplitSegment.objects.filter(id=seg_id).first()
             history = obj.split_segment_history.all().order_by('-id') 
 
-        ser = SegmentHistorySerializer(history,many=True)
-        data_ser=ser.data
-        data=[i for i in data_ser if dict(i)['segment_difference']]
+        ser = SegmentHistorySerializer(history, many=True)
+        data_ser = ser.data
+
+        # Only for Segment History which has differences/changes
+        data = [i for i in data_ser if dict(i)['segment_difference']]
         return Response(data)
+    
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
 
@@ -2323,43 +2387,58 @@ def paraphrasing_for_non_english(request):
     doc_id = request.POST.get('doc_id')
     task_id = request.POST.get('task_id')
     option = request.POST.get('option')  #simplify,shorten,rewrite
+
     if doc_id:
         doc_obj = Document.objects.get(id=doc_id)
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document=doc_obj)
+        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
+
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
         user = task_obj.job.project.ai_user
+        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
 
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
-        return  Response({'msg':'Insufficient Credits'},status=400)
+        return  Response({'msg':'Insufficient Credits'}, status=400)
     
     tags = get_src_tags(sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
-    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+    consumable_credits_user_text = get_consumable_credits_for_text(clean_sentence, source_lang='en', target_lang=None)
+    
     if initial_credit >= consumable_credits_user_text:
-        prompt = get_prompt_sent(option,clean_sentence) 
-        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
+        prompt = get_prompt_sent(option, clean_sentence) # Getting the right prompt from System values
+        result_prompt = get_prompt_chatgpt_turbo(prompt,n=1) # Getting the "completion" from OpenAI GPT
         
         para_sentence = result_prompt["choices"][0]["message"]["content"]
       
-        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence,source_lang='en',target_lang=target_lang)
+        consumable_credits_to_translate = get_consumable_credits_for_text(para_sentence, source_lang='en', target_lang=target_lang)
         if initial_credit >= consumable_credits_to_translate:
-            rewrited =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
-            # replaced =  replace_with_gloss(clean_sentence,rewrited,task_obj)       
+
+            if not isAdaptiveTranslation:
+                # Without adapting glossary
+                replaced =  get_translation(1, para_sentence, 'en',target_lang,user_id=user.id,cc=consumable_credits_to_translate)
+            
+            else:
+                # Adapting glossary
+                rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
+                replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
+
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
+        
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['total_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
 
-        return Response({'result':rewrited ,'tag':tags})
+        # return Response({'result':rewrited ,'tag':tags}) # Without adapting glossary
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2379,9 +2458,11 @@ def paraphrasing(request):
         doc_obj = Document.objects.get(id=doc_id)
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document = doc_obj)
+        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         user = task_obj.job.project.ai_user
+        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
     
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
@@ -2389,21 +2470,28 @@ def paraphrasing(request):
     tags = get_src_tags(sentence)
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
+
     if initial_credit >= consumable_credits_user_text:
         prompt = get_general_prompt(option,clean_sentence)
         result_prompt = get_prompt_chatgpt_turbo(prompt,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         if segment_id:
+
             seg = Segment.objects.get(id=segment_id)
-            print("Seg--------->",seg)
-            # replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
+
+            if not isAdaptiveTranslation:
+                # Without adapting glossary
+                replaced = para_sentence
+            else:
+                # Adapting glossary
+                replaced = replace_with_gloss(seg.source,para_sentence,task_obj)
         else:
             replaced = para_sentence
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        return Response({'result':para_sentence ,'tag':tags})
+        return Response({'result':replaced ,'tag':tags})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2449,7 +2537,7 @@ def get_word_api(request):
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'})
 
-from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+from ai_workspace_okapi.models import SelflearningAsset, SegmentHistory, SegmentDiff
 
 
 @api_view(['GET',])
@@ -2520,7 +2608,7 @@ def download_mt_file(request):
             except Exception as e:
                 print("Exception during file output------> ", e)
         else:
-            logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+            logger.info(f">>>>>>>> Error in output for document_id -> <<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
     elif state == 'FAILURE' or state == 'REVOKED':
@@ -2561,9 +2649,11 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_federal(request):
+
     '''
     This is for Federal Task download. 
     '''
+
     from ai_workspace.utils import html_to_docx, add_additional_content_to_docx ,split_dict
     from ai_workspace_okapi.api_views import DocumentToFile
     from ai_workspace.serializers import TaskNewsDetailsSerializer
@@ -2635,7 +2725,8 @@ def download_converted_audio_file(request):
 
 #########################################Voice Task Download###################################################
 
-def process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name):
+def process_audio_file(document_user, document_id, voice_gender, language_locale, voice_name):
+
     '''
     This function is internally used in document download with voice as output type.
     this will get all the target segments in that document and write in a file. 
@@ -2644,6 +2735,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     or else it will call for google_long_text_file_process_cel celery task .
     stores the result in TaskTranscriptDetails table and return TaskTranscriptDetailSerializer data
     '''
+
     from ai_workspace.models import MTonlytaskCeleryStatus
     temp_name = segments_with_target(document_id)
     doc = Document.objects.get(id = document_id)
@@ -2655,9 +2747,11 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     task_data = ser.data
     target_language = language_locale if language_locale else task_data["target_language"]
     source_lang = task_data['source_language']
+
     text_file = open(temp_name, "r")
     data = text_file.read()
     text_file.close()
+    
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
     if initial_credit > consumable_credits:
@@ -2669,7 +2763,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
         else:
             filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
-            res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            res1,f2 = text_to_speech(file_path, target_language, filename_,voice_gender,voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             os.remove(filename_)
             os.remove(temp_name)
@@ -2694,7 +2788,7 @@ def segments_with_target(document_id):
     '''
     This function is internally called in process_audio_file() to write the target segments in file to send to google text_to_speech.
     For this we are first filtering non-empty targets.
-    and then write in temperory file and return it
+    and then write in temporary file and return it
     '''
 
     document = Document.objects.get(id=document_id)
@@ -2770,45 +2864,64 @@ class SegmentDiffViewset(viewsets.ViewSet):
 
 
 from ai_workspace_okapi.utils import do_compare_sentence
+
+# Not used anywhere
 def prev_seg_his(instance):
-    seg_his_ins=SegmentHistory.objects.filter(segment_id=instance.segment_id)
-    for i in seg_his_ins:
-        print(i.segment_difference.all())
+    seg_his_ins = SegmentHistory.objects.filter(segment_id=instance.segment_id)
+    # for i in seg_his_ins:
+    #     print(i.segment_difference.all())
 
     seg_diff=segment_difference(sender=None, instance=instance)
 
 
+# Django signal to create the Segment difference
+# when a segment history is created
+
 def segment_difference(sender, instance, *args, **kwargs):
-    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+
+    seg_his = SegmentHistory.objects.filter(segment=instance.segment)
     #from current segment
-    edited_segment=''
-    target_segment=''
-    if len(seg_his)>=2:
-        edited_segment=seg_his.last().target
-        target_segment=seg_his[len(seg_his)-2].target
-    elif len(seg_his)==1:
+    
+    edited_segment = ''
+    target_segment = ''
+
+    if len(seg_his) >= 2:
+        edited_segment = seg_his.last().target
+        target_segment = seg_his[len(seg_his)-2].target
+
+    # If Segment history checked for the first time
+    elif len(seg_his) == 1:
+        
+        edited_segment = instance.target
+
         if hasattr(instance.segment,'seg_mt_raw'):
-            target_segment =instance.segment.seg_mt_raw.mt_raw  
+            
+            # Previous logic without Adaptive MT
+            # target_segment = instance.segment.seg_mt_raw.mt_raw
+
+            # New logic as per Adaptive MT
+            target_segment = instance.segment.seg_mt_raw.mt_only  
+
         elif instance.segment.temp_target:
-            target_segment=instance.segment.temp_target
-        else:target_segment = None
-        edited_segment=instance.target
- 
-         
+            target_segment = instance.segment.temp_target
+        else: target_segment = None
+    
+    # To show tags in target segment when a history is restored via frontend
+    tags = get_src_tags(edited_segment)
 
     if (edited_segment and target_segment) :
-        edited_segment=remove_tags(edited_segment)
-        target_segment=remove_tags(target_segment)
+        edited_segment = remove_tags(edited_segment)
+        target_segment = remove_tags(target_segment)
+
         if edited_segment != target_segment: 
-            diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+            diff_sentense = do_compare_sentence(target_segment, edited_segment, sentense_diff=True)
             if diff_sentense:
-                result_sen,save_type=diff_sentense
-                if result_sen.strip()!=edited_segment.strip():
-                    SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                result_sen, save_type, content = diff_sentense
+                if result_sen.strip() != edited_segment.strip():
+                    SegmentDiff.objects.create(seg_history=instance, sentense_diff_result=result_sen, save_type=save_type, \
+                                               diff_corrected=content, target_tags=tags)
 
 post_save.connect(segment_difference, sender=SegmentHistory)
-
-
 
 
 @api_view(['POST'])
@@ -2841,36 +2954,102 @@ def symspellcheck(request):
     
 ######################################For WORDCHOICES Feature########################################
 
-def check_source_words(user_input,task):
+def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user):
+    for terms in selected_term_model_list:
+        if not terms.sl_term_translate:
+            terms.sl_term_translate = get_translation(mt_engine_id = 1,source_string = terms.sl_term,
+                                                     source_lang_code=src_lang,target_lang_code=tar_lang)
+            terms.save()
+    return selected_term_model_list
+
+
+
+def matching_word(user_input,lang_code):
+    from ai_workspace_okapi.utils import nltk_lemma
+    from ai_glex.api_views import identify_lemma_it
+    user_words = user_input.split()
+    query = Q()
+    # if lang_code == "it":
+    #     word_lemma_user_input = identify_lemma_it(user_input)
+    #     for word in word_lemma_user_input:
+    #         if word:
+    #             word = word.lower()
+    #             query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
+
+    for word in user_words:
+        if word:
+            word_lower = word.lower()
+            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
+            word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
+            # if lang_code == "it":
+            #     query |= (
+            #                     Q(root_word__exact=word_lemma_v) |
+            #                     Q(sl_term__exact=word_lemma_v) )
+            # else:
+                 # Combine multiple conditions with one query operation using OR
+            query |= (
+                Q(root_word__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lemma_v) |
+                Q(sl_term__exact=word_lower) |
+                Q(root_word__exact=word_lemma_n) |
+                Q(sl_term__icontains=word_lemma_v) |
+                Q(sl_term__icontains=word_lower)
+            )
+    return query
+
+    
+def check_source_words(user_input, task):
+
     '''
-    This is to check whether glossary(type 10- wordchoice) is selected for this task. 
-    if it is selected then search all the terms in the wordchoicelist is present in user_input(source segment)
+    This is to check whether Glossary is selected for this task. 
+    if it is selected then search all the terms in the Glossary is present in user_input(source segment)
     if the terms are present then it will return source list and values list(sl_term,tl_term) 
     '''
-    from ai_glex.models import TermsModel,GlossarySelected
-    proj = task.job.project
-    target_language = task.job.target_language
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
-                .filter(job__target_language=target_language).filter(tl_term__isnull=False).exclude(tl_term='')\
-                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},\
-                      params=[user_input]).values('sl_term','tl_term').order_by('sl_term','-created_date').distinct('sl_term')
 
-    gloss = [i for i in queryset]
-    words = [i.get('sl_term') for i in queryset]
-    return words,gloss
+    from ai_glex.models import TermsModel, GlossarySelected
+    from ai_qa.api_views import remove_tags
+    proj = task.job.project
+    user = proj.ai_user
+    target_language = task.job.target_language
+    source_language = task.job.source_language
+    user_input = remove_tags(user_input)
+    lang_code = source_language.locale_code
+    glossary_selected = GlossarySelected.objects.filter(project = proj).values('glossary')
+
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job__target_language=target_language).\
+              filter(tl_term__isnull=False).exclude(tl_term='') ### all the glossary words has been listed here for this task
+    
+
+    if user_input[-1] == ".":
+        user_input = user_input[:-1]
+    
+    matching_exact_queryset = matching_word(user_input,lang_code=lang_code)
+
+    all_sorted_query = queryset.filter(matching_exact_queryset)
+    all_sorted_query = all_sorted_query.distinct()
+
+    # if lang_code == "it":
+    #     terms_extrac_using_param = queryset.extra(where={"%s ilike ('%%' || sl_term  || '%%')"},params=[user_input]).distinct()#.values('sl_term','tl_term')
+    #     all_sorted_query = all_sorted_query.union(terms_extrac_using_param) ## Removing duplicates using union
+    
+    selected_gloss_term_instances = term_model_source_translate(all_sorted_query, lang_code,target_language.locale_code, user) 
+ 
+
+    return selected_gloss_term_instances, source_language, target_language
 
 def target_source_words(target_mt,task):
+
     '''
     This is to check whether the tl_term is already present in target or not.
     if it is present, then it is translated already with correct term so no need to send it to LLM is the basic idea. 
     but it is not using bcoz of morphological issue.
     '''
+
     from ai_glex.models import TermsModel,GlossarySelected
     proj = task.job.project
     target_language = task.job.target_language
-    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 10).values('glossary')
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 10)\
+    glossary_selected = GlossarySelected.objects.filter(project = proj).filter(glossary__project__project_type_id = 3).values('glossary')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(glossary__project__project_type_id = 3)\
                 .filter(job__target_language=target_language)\
                 .extra(where={"%s ilike ('%%' || tl_term  || '%%')"},
                       params=[target_mt]).distinct().values('sl_term','tl_term')

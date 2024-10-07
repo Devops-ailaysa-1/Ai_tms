@@ -19,7 +19,7 @@ logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def check_referred(user):
     try:
@@ -143,7 +143,6 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     }
 
     us = models.UserCredits.objects.create(**kwarg)
-    print(us)
     return 'created'
 
 def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=True):
@@ -174,14 +173,12 @@ def update_purchaseunits(user,cust,price,quants,invoice,payment,pack,purchased=T
 
     PC = models.PurchasedUnits.objects.create(**kwarg)
     logger.info(f"user:{user.uid}, buyed:{buyed_units}, credits_pack:{pack.credits}, quantity :{quants}, carry:{0}")
-    print(PC)
     # if pack.secondary_unit_type =! None:
 
 
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
-    print(event)
     data =event.data
     invoice=data.get('object').get('invoice',None)
     if invoice == None:
@@ -203,7 +200,6 @@ def my_handler(event, **kwargs):
         meta = data['object']['metadata']
         price_obj= Price.objects.get(id=meta['price'],djstripe_owner_account=default_djstripe_owner)
         cp = models.CreditPack.objects.get(product=price_obj.product)
-        print(data['object']['metadata'])
         quants= int(meta.get('quantity',1))
         update_user_credits(user=user,cust=cust_obj,price=price_obj,
                         quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp)
@@ -218,8 +214,7 @@ def my_handler(event, **kwargs):
         #     'invoice':invoice_obj.id
         #     }
         # us = models.UserCredits.objects.create(**kwarg)
-        # print(us)
-        # print(event.data.object)
+ 
 
 
 # @webhooks.handler("customer.subscription.created")
@@ -249,7 +244,6 @@ def remove_pro_v_sub(customer,subscription):
 
 @webhooks.handler("invoice.paid")
 def my_handler(event, **kwargs):
-    print(event.data)
     data =event.data
     paymentintent=data.get('object').get('payment_intent',None)
     if paymentintent:
@@ -271,7 +265,6 @@ def my_handler(event, **kwargs):
     user=cust_obj.subscriber
     if user == None:
         raise ValueError("No user Found")
-    print("----user-------",user)
     invoice=data.get('object').get('id') 
     invoice_obj=Invoice.objects.get(id=invoice,djstripe_owner_account=default_djstripe_owner)
     sub=data['object']['lines']['data'][0]['subscription']
@@ -285,7 +278,7 @@ def my_handler(event, **kwargs):
     #meta = data['object']['metadata']
     price_obj= Price.objects.get(id=price,djstripe_owner_account=default_djstripe_owner)
     if price_obj.id != subscription.plan.id:
-        print("Subscription not updated yet")
+        logger.info("Subscription not updated yet")
     #sub_type=data['object']['lines']['data'][0]['metadata']['type']
     if subscription.status == 'trialing':
         trial = True
@@ -293,7 +286,7 @@ def my_handler(event, **kwargs):
     else:
         cp = models.CreditPack.objects.get(product=price_obj.product,type='Subscription')
         trial=False
-    #print(data['object']['metadata'])
+ 
     #quants= int(meta.get('quantity'))
     update_user_credits(user=user,cust=cust_obj,price=price_obj,
                         quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp,subscription=subscription,trial=trial)
@@ -449,10 +442,7 @@ def modify_subscription_data(subscription):
 
 @webhooks.handler("customer.subscription.trial_will_end")
 def my_handler(event, **kwargs):
-    print("**** customer trial_end *****")
     data = event.data
-    print(event.data)
-    print("**** customer trial_end   End *****")
     sub = Subscription.objects.get(id=data.get('object').get('id'),djstripe_owner_account=default_djstripe_owner)
     user = sub.customer.subscriber
     auth_forms.user_trial_end(user=user,sub=sub)
@@ -472,10 +462,7 @@ def subscription_delete(sub):
 
 @webhooks.handler("customer.updated")
 def my_handler(event, **kwargs):
-    print("**** customer updated start *****")
-    print(event.data)
     data=event.data
-    print("**** customer updated end *****")
     custid=data['object']['id']
     address = data['object']['address']
     name = data['object']['name']
@@ -493,8 +480,6 @@ def update_aiuser_billing(custid,address,name=None):
         if addr== None:
             addr=models.BillingAddress(user=customer.subscriber)
         
-        print('addr>>>>',addr)
-
         if settings.STRIPE_LIVE_MODE == True :
             api_key = settings.STRIPE_LIVE_SECRET_KEY
         else:
@@ -540,10 +525,8 @@ def update_aiuser_billing(custid,address,name=None):
 
 @webhooks.handler("customer.subscription.deleted")
 def my_handler(event, **kwargs):
-    print("**** customer deleted start *****")
-    print(event.data)
+
     data=event.data
-    print("**** customer deleted end *****")
     custid=data.get('object').get('customer')
     cust_obj = Customer.objects.get(id=custid,djstripe_owner_account=default_djstripe_owner)
     user=cust_obj.subscriber
@@ -562,9 +545,8 @@ def expiry_yearly_sub(sub):
     start=sub.billing_cycle_anchor
     end=timezone.now()
     if start.day != end.day:
-        print("This is Not bill date")
+        logger.info("This is Not bill date")
 
-    print("no of months",abs(((start.year - end.year)*12)+start.month-end.month)+1)
     expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry
 

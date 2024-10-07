@@ -48,7 +48,6 @@ def test_create_project(api_client):
     payload,
     )
     assert response.status_code == 201
-    print(response.content)
-    print(response.json())
+ 
     # assert response.json()['Res'][0]['task_id'] != None
     # pytest.task_id = response.json()['Res'][0]['task_id']

@@ -40,7 +40,7 @@ def change_po_status(sender, instance, created, *args, **kwargs):
             po_generate_pdf(po)
             # print("po status",po.po_status)      
     else:
-        print(f"instance po is null {instance.id}")
+        logging.info(f"instance po is null {instance.id}")
 
 
 # change_po_file= Signal()

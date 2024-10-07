@@ -9,7 +9,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
                     PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize,
                     ImageGeneratorResolution,DesignShape,ImageCategories,Suggestion,SuggestionType,FontCatagoryList,DesignShapeCategory,
-                    DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre)
+                    DesignerOrientation,FrontMatter,BackMatter,BodyMatter,Levels,Genre,)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -162,8 +162,6 @@ class LocaleSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        print(request.data.get("language_id"))
-        print("validated DAT>>>",validated_data)
         lang = LanguagesLocale.objects.create(**validated_data,language_id=request.data.get("language_id"))
         return lang
 
@@ -270,16 +268,16 @@ class  SubscriptionPricingPageSerializer(serializers.Serializer):
 
     def get_subscription_feature(self, obj):
         features = obj.subscription_feature.all().order_by('sequence_id')
-        print('features',features)
+ 
         features_grouped_by_set = groupby(features.iterator(), lambda m: m.set_id)
         dict_val = {}
-        print("dict_value",dict_val)
+ 
         for set_id, group_of_features in features_grouped_by_set:
             dict_key = 'set_'+str(set_id)
-            print("dict_key",dict_key)
+ 
             #dict_val[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
             dict_val.setdefault(dict_key,[]).extend(SubscriptionFeatureSerializer(group_of_features,many=True).data)
-        #print("final==",dict_val)
+ 
         return dict_val
 
 
@@ -463,7 +461,6 @@ class SocialMediaSizeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data=super().to_representation(instance)
         if 'src' in data.keys() and instance.src:
-            print()
             if instance.src:
                 data['src']=settings.STATIC_URL+"social_media/"+data['social_media_name']+".png"
                 # data['src'] = instance.src.url
@@ -554,7 +551,6 @@ class BodyMatterSerializer(serializers.ModelSerializer):
     class Meta:
         model = BodyMatter
         fields = "__all__"
-
 
 
 # class BookCategorySerializer(serializers.ModelSerializer):

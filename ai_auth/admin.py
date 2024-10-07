@@ -184,7 +184,7 @@ class ExistingVendorEmailAdmin(admin.ModelAdmin):
 
 @admin.register(UserCredits)
 class UserCreditsAdmin(admin.ModelAdmin):
-    list_display = ("id","user","stripe_cust_id","buyed_credits","credits_left","expiry","ended_at")
+    list_display = ("id","user","stripe_cust_id","buyed_credits","credits_left","created_at","expiry","ended_at")
     list_filter = ('user__email',)
 
 @admin.register(ApiUsage)

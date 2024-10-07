@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, \
-    MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
+from .models import (Document, Segment, TextUnit, MT_RawTranslation,MT_Engine, 
+                     TranslationStatus, FontSize, Comment)#, MergeSegment
 import json
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
@@ -16,26 +16,9 @@ import re
 from .utils import split_check
 from django.db.models import Func, F, CharField
 from ai_auth.tasks import replace_with_gloss
+from ai_auth.models import Professionalidentity
 
 client = translate.Client()
-
-class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `fields` argument that
-    controls which fields should be displayed.
-    """
-
-    def __init__(self, *args, **kwargs):
-        fields = kwargs.pop("exclude_fields", None)
-        # Instantiate the superclass normally
-        super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
-
-        if fields:
-            # fields = fields.split(',')
-            # Drop any fields that are not specified in the `fields` argument.
-            excluded = set(fields)
-            for field_name in excluded:
-                self.fields.pop(field_name)
 
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
@@ -89,8 +72,8 @@ class SegmentSerializer(serializers.ModelSerializer):
         return representation
 
 from ai_workspace.models import Task,TaskAssignInfo
-import difflib
 class SegmentSerializerV2(SegmentSerializer):
+
     temp_target = serializers.CharField(trim_whitespace=False, allow_null=True)
     target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
@@ -102,14 +85,16 @@ class SegmentSerializerV2(SegmentSerializer):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def target_check(self, obj, target):
+
+        # Need to know the use case of this logic
+
         if obj.source[0].isspace():
             if target[0].isspace(): 
                 return target
             else:
-                return ' ' + target
+                return ' ' + target # Need to know the logic
         else:
             return target
-
 
     def update_task_assign(self,task_obj,user,status_id):
         try:
@@ -130,7 +115,6 @@ class SegmentSerializerV2(SegmentSerializer):
             if task_assign_obj.task_assign.reassigned == True:
                 assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__step=obj.step).filter(task_assign__reassigned=False)
                 for i in assigns:
-                    print(i.task_assign)
                     if i.task_assign.status != 2:
                         i.task_assign.status = 2
                         i.task_assign.client_response = None
@@ -139,45 +123,62 @@ class SegmentSerializerV2(SegmentSerializer):
 
 
     def update(self, instance, validated_data):
+
         status = validated_data.get('status',None)
+
         if validated_data.get('target'):
-            validated_data['target'] = self.target_check(instance,validated_data.get('target'))
+            validated_data['target'] = self.target_check(instance, validated_data.get('target'))
+
         if validated_data.get('temp_target'):
-            validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
+            validated_data['temp_target'] = self.target_check(instance, validated_data.get('temp_target'))
+
         status_id = status.id if status else None 
+
         if status_id:
-            if status_id not in [109,110]:step = 1
-            else:step=2
+            # if status_id not in [109,110]:step = 1
+            # else:step=2
+
+            # Step 1 -> Post-Editing
+            # Step 2 -> Review
+            # Status 109, 110 -> Reviewing & Reviewed
+            step = 1 if status_id not in [109, 110] else 2
         else: step = None
+
         existing_step = 1 if instance.status_id not in [109,110] else 2 
+
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
-        else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
+        else: seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
+        
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False
 
-        if instance.target == '' and instance.temp_target == '':
-            if (instance.text_unit.document.job.project.mt_enable == False)\
-            or status_id in [101,102,105,106,109,110]:
-                user = instance.text_unit.document.doc_credit_debit_user
-                initial_credit = user.credit_balance.get("total_left")
-                consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                consumable = max(round(consumable_credits/3),1) 
-                if initial_credit < consumable:
-                    raise serializers.ValidationError("Insufficient Credits")
-                else:
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+
+        # Need to know the logic for deducting credtis for TM, Manual and Review steps
+        
+        # if instance.target == '' and instance.temp_target == '':
+        #     if (instance.text_unit.document.job.project.mt_enable == False)\
+        #     or status_id in [101,102,105,106,109,110]:
+        #         user = instance.text_unit.document.doc_credit_debit_user
+        #         initial_credit = user.credit_balance.get("total_left")
+        #         consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+        #         consumable = max(round(consumable_credits/3),1) 
+        #         if initial_credit < consumable:
+        #             raise serializers.ValidationError("Insufficient Credits")
+        #         else:
+        #             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
 
         res = super().update(instance, validated_data)
+
         if instance.target != '':
             instance.temp_target = instance.target 
             instance.save()
 
         if seg_his_create:
-            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
-        self.update_task_assign(task_obj,user_1,status_id)
+            SegmentHistory.objects.create(segment_id=seg_id, user=self.context.get('request').user, target=content, status=status if status else instance.status)
+        self.update_task_assign(task_obj, user_1, status_id)
 
         return super().update(instance, validated_data)
 
@@ -484,17 +485,19 @@ class DocumentSerializerV3(DocumentSerializerV2):
 
 
 class MT_RawSerializer(serializers.ModelSerializer):
+
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
     class Meta:
         model = MT_RawTranslation
         fields = (
             "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
-            "target_language"
+            "target_language", "mt_only",  #"mt_llm_glossary",
         )
 
         extra_kwargs = {
             "mt_raw": {"required": False},
+            "mt_only": {"required": False},
         }
 
     def to_internal_value(self, data):
@@ -514,42 +517,65 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         data["mt_engine"] = proj_mt_engine_id
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
+
         return super().to_internal_value(data=data)
 
 
-
     def create(self, validated_data):
-
+        
         segment = validated_data["segment"]
         active_segment = segment.get_active_object()
         mt_engine= validated_data["mt_engine"]
-        task_mt_engine = validated_data["task_mt_engine"]
+        # task_mt_engine = validated_data["task_mt_engine"]
 
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         
-        task = Task.objects.get(job=doc.job)
+        task = Task.objects.get(job=doc.job, file=doc.file)
+        task = active_segment.task_obj
         
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField())).filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
+        # Checking if target or temp_target is already present 
+        # due to functionalities like Pretranslation
+        seg_obj = Segment.objects.filter(text_unit__document=doc).annotate(striped_seg=Func(F('source'), function='TRIM', output_field=CharField()))\
+            .filter(striped_seg=segment.source.strip()).exclude(id=segment.id)
 
         if seg_obj:
             if seg_obj.first().target:
                 validated_data["mt_raw"] = seg_obj.first().target
             elif seg_obj.first().temp_target:
                 validated_data["mt_raw"] = seg_obj.first().temp_target
-            else:
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
-                # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
-                # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+            else:                
+                # Checking if the translation is adaptive or normal MT
+                if not doc.job.project.isAdaptiveTranslation:
+
+                    # If translation is not adaptive
+                    validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
+                    validated_data["mt_only"] = validated_data["mt_raw"]
+                    # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
+                    # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
+
+                else:
+                    # If translation is adaptive
+                    translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
+                    validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
+                    validated_data["mt_only"] = translation_original
+
         else:
-            validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
-            # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
-            # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
-                
- 
+            
+            # If translation is normal, not adaptive
+            if not doc.job.project.isAdaptiveTranslation:
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)    
+                validated_data["mt_only"] = validated_data["mt_raw"]
+            
+            else:                
+                # If translation is adaptive
+                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk)
+                validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)        
+                validated_data["mt_only"] = translation_original
+
         instance = MT_RawTranslation.objects.create(**validated_data)
 
         return instance
@@ -587,11 +613,27 @@ class SegmentPageSizeSerializer(serializers.ModelSerializer):
         model = SegmentPageSize
         fields = "__all__"
 
+# class CommentSerializer(serializers.ModelSerializer):
+#     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
+#     class Meta:
+#         model = Comment
+#         fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
+
+
 class CommentSerializer(serializers.ModelSerializer):
+
+    avatar = serializers.SerializerMethodField()    
     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
+
     class Meta:
         model = Comment
-        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at',)
+        fields = ('id','comment','segment','split_segment','commented_by','commented_by_user','created_at','updated_at','avatar')
+        
+    def get_avatar(self, obj):
+        professional_identity = Professionalidentity.objects.filter(user=obj.commented_by).first()
+        if professional_identity and professional_identity.avatar:
+            return professional_identity.avatar.url
+        return None
 
 class FilterSerializer(serializers.Serializer):
     status_list = serializers.JSONField(
@@ -710,13 +752,15 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=SegmentDiff
-        fields=('id','sentense_diff_result','save_type')
+        fields=('id','sentense_diff_result','save_type', 'diff_corrected', 'target_tags')
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
-    segment_difference=SegmentDiffSerializer(many=True)
-    step_name=serializers.SerializerMethodField()
-    status_id=serializers.ReadOnlyField(source='status.status_id')
-    user_name=serializers.ReadOnlyField(source='user.fullname')
+
+    segment_difference = SegmentDiffSerializer(many=True)
+    step_name = serializers.SerializerMethodField()
+    status_id = serializers.ReadOnlyField(source='status.status_id')
+    user_name = serializers.ReadOnlyField(source='user.fullname')
+
     class Meta:
         model = SegmentHistory
         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')

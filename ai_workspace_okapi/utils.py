@@ -13,14 +13,30 @@ from pptx import Presentation
 import string
 import backoff
 from ai_staff.models import InternalFlowPrompts
-
-
+from nltk.stem import WordNetLemmatizer
+from rest_framework import serializers
+from django.conf import settings as django_settin
+from google.cloud import translate_v3beta1 as translate_file
+from django import core
+import requests, os
+import subprocess
+import io
+import logging
+import deepl
+from rest_framework import serializers
+logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
+GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
+GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
 
+## deepl cred
+DEEPL_API_KEY = django_settin.DEEPL_API_KEY
+DEEPL_USER_LIST = django_settin.DEEPL_USER_LIST
+
+deepl_translator = deepl.Translator(DEEPL_API_KEY)
 
 client = translate.Client()
-
-
+lemmatizer = WordNetLemmatizer()
 
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
@@ -279,19 +295,24 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai = None,format_='text'):
+                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text'):
+    
+    # get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
+
+
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
+    deepl_tar_code_list = ["it","es"]
 
     mt_called = True
 
     if user_id==None:
-        user,uid,email,initial_credit = None,None,None,None
+        user, uid, email, initial_credit = None, None, None, None
 
     else:
         user = AiUser.objects.get(id=user_id)
         uid = user.uid
-        email= user.email
+        email = user.email
         initial_credit = user.credit_balance.get("total_left")
 
 
@@ -309,14 +330,15 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         translate = source_string
     
     elif user and not from_open_ai and initial_credit < cc:
-            print("Insufficient")
             translate = ''
-    
+    elif user and user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
+        print("inside deepl for italian lang") ##elif user check for gloss transltion
+        translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
+ 
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-        translate = client.translate(source_string,
-                                target_language=target_lang_code,
+        translate = client.translate(source_string,target_language=target_lang_code,
                                 format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
@@ -453,11 +475,13 @@ def split_check(segment_id):
 
 import difflib
 
-def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
+def do_compare_sentence(source_segment, edited_segment, sentense_diff=False):
+    
     diff_words=[]
     pair_words=[]
+
     if sentense_diff:
-        diff=seq_match_seg_diff(source_segment,edited_segment)
+        diff = seq_match_seg_diff(source_segment, edited_segment)
         return diff 
     else:
         difftool = difflib.Differ()
@@ -469,31 +493,40 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
                 elif line.startswith("+"):
                     diff_words.append(line)
             for i in range(len(diff_words)-1):
-                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
+                if diff_words[i][0] == '-' and diff_words[i+1][0] == '+':
                     pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
         return pair_words
 
-def seq_match_seg_diff(words1,words2):
-    s1=words1.split()
-    s2=words2.split()
-    matcher=difflib.SequenceMatcher(None,s1,s2 )
-    save_type=[]
-    data=[]
+def seq_match_seg_diff(words1, words2):
+
+    s1 = words1.split()
+    s2 = words2.split()
+
+    matcher = difflib.SequenceMatcher(None, s1, s2)
+    save_type = []
+    data = []
+    content = []
+
     for tag,i1,i2,j1,j2 in matcher.get_opcodes():
-        if tag=='equal':
+
+        if tag == 'equal':
             data.append(" ".join(s2[j1:j2]))
-        elif tag=='replace':
-            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>'+'<del>'+" ".join(s1[i1:i2])+'</del>')
-            save_type.append('insert')
-        elif tag=='insert':
-            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
-            save_type.append('insert')
-        elif tag=='delete':
-            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
-            save_type.append('delete')
+            content.append(" ".join(s2[j1:j2]))
+        elif tag == 'replace':
+            data.append('<ins class="changed-word">' + " ".join(s2[j1:j2]) + '</ins>' + '<del>' + " ".join(s1[i1:i2]) + '</del>')
+            content.append(" ".join(s2[j1:j2]))
+            save_type.append('Replacement')
+        elif tag == 'insert':
+            data.append('<ins class="changed-word">' + " ".join(s2[j1:j2]) +'</ins>')
+            content.append(" ".join(s2[j1:j2]))
+            save_type.append('Insertion')
+        elif tag == 'delete':
+            data.append('<del class="removed-word">' + " ".join(s1[i1:i2]) +'</del>')
+            save_type.append('Deletion')
     if save_type:
-        save_type=list(set(save_type))
-    return (" ".join(data)," ".join(save_type))
+        save_type = list(set(save_type))
+
+    return (" ".join(data), " ".join(save_type), " ".join(content))
 
 def get_general_prompt(opt,sent):
 
@@ -542,8 +575,7 @@ def get_prompt_sent(opt,sent):
     return prompt
 
 
-GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
-GOOGLE_LOCATION =  os.getenv('GOOGLE_LOCATION')
+
 
 google_mime_type = {'doc':'application/msword',	 
                     'docx':	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -555,9 +587,7 @@ google_mime_type = {'doc':'application/msword',
                     'txt':  'application/msword' }
 
 
-from google.cloud import translate_v3beta1 as translate
-from django import core
-import requests, os
+
 
 def file_translate(task,file_path,target_language_code):
     from ai_auth.tasks import record_api_usage
@@ -566,9 +596,9 @@ def file_translate(task,file_path,target_language_code):
     file_type = file_path.split("/")[-1].split(".")
     file_format=file_type[-1]   
     file_name = file_type[0]
-    client = translate.TranslationServiceClient()
+    client = translate_file.TranslationServiceClient()
     if file_format not in google_mime_type.keys():
-        print("file not support")
+        logger.info(f"file not support {user}")
     mime_type = google_mime_type.get(file_format,None)
     with open(file_path, "rb") as document:
         document_content = document.read()
@@ -576,22 +606,20 @@ def file_translate(task,file_path,target_language_code):
 
     usage = get_consumption_of_file_translate(task)
 
-    record_api_usage.apply_async(("GCP","Document Translation",user.uid,user.email,usage), queue='low-priority')
+    try:
+        record_api_usage.apply_async(("GCP","Document Translation",user.uid,user.email,usage), queue='low-priority')
+    except Exception as e:
+        logger.error(f"Error during file translation: {e}")
 
-    response = client.translate_document(request={
-            "parent": parent,
-            "target_language_code": target_language_code,
-            "document_input_config": document_input_config,
-            "is_translate_native_pdf_only":True})  #is_translate_native_pdf_only isTranslateNativePdfOnly
+    response = client.translate_document(request={"parent": parent,"target_language_code": target_language_code,"document_input_config": document_input_config,
+            "is_translate_native_pdf_only":True})  
     file_name = file_name+"_"+target_language_code+"."+file_format
     byte_text = response.document_translation.byte_stream_outputs[0]
     file_obj = core.files.File(core.files.base.ContentFile(byte_text),file_name)
     return file_obj,file_name
 
 
-import subprocess
-import io
-from rest_framework import serializers
+
 def count_pdf_pages(pdf_file):
     # Count the pages in the PDF using pdfinfo
     try:
@@ -605,7 +633,6 @@ def count_pdf_pages(pdf_file):
             if line.startswith("Pages:"):
                 return int(line.split(':')[1])
     except:
-        print("count_pdf_pages function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process' }, code=400)
 
 
@@ -674,7 +701,7 @@ def get_word_count(task):
 def consumption_of_credits_for_page(page_count):
     return page_count * 250
 
-from rest_framework import serializers
+
 
 def pdf_char_check_for_document_trans(file_path):
     tot_str=''
@@ -690,7 +717,6 @@ def pdf_char_check_for_document_trans(file_path):
                 return ["text" , len(pdfdoc.pages)]
         return ["ocr" , len(pdfdoc.pages)]
     except FileNotDecryptedError:
-        print("pdf_char_check_for_document_trans function")
         raise serializers.ValidationError({'msg':'File has been encrypted unable to process'}, code=400)
 
 
@@ -722,3 +748,15 @@ def get_consumption_of_file_translate(task):
 
 
 
+
+def nltk_lemma(word,pos="v",language=None):
+    from ai_glex.api_views import identify_lemma
+    if language and word:
+        result = identify_lemma(word,language=language)
+        return result
+    elif word:
+        return lemmatizer.lemmatize(word.strip(), pos=pos)
+    else:
+        return None
+
+    

@@ -58,7 +58,6 @@ class RegisterView(CreateAPIView):
                 'access_token': self.access_token,
                 'refresh_token': self.refresh_token,
             }
-            print("context--->", self.get_serializer_context())
             return JWTSerializer(data, context=self.get_serializer_context()).data
         else:
             return TokenSerializer(user.auth_token, context=self.get_serializer_context()).data

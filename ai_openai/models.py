@@ -6,7 +6,7 @@ from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,Aila
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution,
                               BackMatter,FrontMatter,BodyMatter,Levels,Genre,)
 
-from django.contrib.postgres.fields import ArrayField
+
 from ai_staff.models import Levels
 
 class TokenUsage(models.Model):
@@ -190,14 +190,20 @@ class TextgeneratedCreditDeduction(models.Model):
     credit_to_deduce = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+class MyStyle(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    brand_voice_name = models.CharField(max_length = 150, null=True, blank=True)
+    text = models.TextField(null=True,blank=True)
+    brand_voice_result_prompt = models.TextField(null=True,blank=True)
+
 class AiPromptCustomize(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     book = models.ForeignKey(BookCreation,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_book')
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
     task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_task')
     pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_pdf')
-    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust',blank=True,null=True)
     user_text = models.TextField(null=True, blank=True)
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='customize_tone',blank=True,null=True,default=1)
     user_text_mt = models.TextField(null=True, blank=True)
@@ -208,6 +214,7 @@ class AiPromptCustomize(models.Model):
     prompt_result = models.TextField(null=True, blank=True) 
     created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL , related_name='customize_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
+    my_style = models.ForeignKey(MyStyle, on_delete=models.CASCADE, null=True, blank=True,related_name = 'my_style')
 
 class TranslateCustomizeDetails(models.Model):
     customization = models.ForeignKey(AiPromptCustomize, on_delete=models.CASCADE, null=True, blank=True,related_name = 'customization')
@@ -252,7 +259,7 @@ class BookTitle(models.Model):
     html_data = models.TextField(null=True,blank=True)
     book_title = models.TextField(null=True,blank=True) 
     book_title_mt =  models.TextField(null=True,blank=True)  
-    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='booktitle_used_tokens',null=True, blank=True)
+    token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE, related_name='booktitle_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField(null=True,blank=True)
     response_copies = models.IntegerField(null=True, blank=True,default=3) 
 
@@ -367,4 +374,3 @@ class LangscapeOcrPR(models.Model):
     main_document = models.FileField(upload_to=user_directory_langscape_ocr_document,null=True,blank=True)
     ocr_result = models.FileField(upload_to=user_directory_langscape_ocr_PR_document,null=True,blank=True)
     document = models.ForeignKey(MyDocuments, on_delete=models.CASCADE, blank=True, null=True,related_name='doc_for_ocr')
-    

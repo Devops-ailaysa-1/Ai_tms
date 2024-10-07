@@ -1,8 +1,10 @@
 from ai_glex import models as glex_model
 from tablib import Dataset
 import pandas as pd
-from ai_auth.tasks import update_words_from_template_task
-
+from celery.decorators import task
+#from ai_auth.tasks import update_words_from_template_task
+import logging
+logger = logging.getLogger(__name__)
 
 def count_entries(file_path):
     df = pd.read_excel(file_path) 
@@ -10,17 +12,17 @@ def count_entries(file_path):
     return num_entries
 
 
-def update_words_from_template(sender, instance, *args, **kwargs):
-    #glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
-    #print("File--------->",instance.file)
-    # entries = count_entries(instance.file)
-    # print("Entries------------>",entries)
-    # if entries > 50000:
-    #     update_words_from_template_task.apply_async(([instance.id],))
-    #     print("Celery Called")
-    # else:
+
+@task(queue='high-priority')
+def update_words_from_template(instance_id): #update_words_from_template(sender, instance, *args, **kwargs)
+    from ai_glex.models import GlossaryFiles
+    from ai_workspace_okapi.utils import nltk_lemma
+    instance = GlossaryFiles.objects.get(id=instance_id)
     glossary_obj = instance.project.glossary_project
     dataset = Dataset()
+    instance_job_id = instance.job_id
+    instance_id = instance.id
+    lang_code = instance.job.source_language.locale_code
     imported_data = dataset.load(instance.file.read(), format='xlsx')
     if instance.source_only == False and instance.job.source_language != instance.job.target_language:
         for data in imported_data:
@@ -36,27 +38,38 @@ def update_words_from_template(sender, instance, *args, **kwargs):
                     )
                 except:
                     value = glex_model.TermsModel(
-                            # data[0],          #Blank column
-                            data[1],            #Autoincremented in the model
-                            data[2].strip(),    #SL term column
-                            data[3].strip() if data[3] else data[3],)
-                            # data[4].strip() if data[4] else data[4] ) for word choice 
+                                data[1] if len(data) > 1 else None,  # Autoincremented in the model
+                                data[2].strip() if len(data) > 2 and data[2] else None,  # SL term column
+                                data[3].strip() if len(data) > 3 and data[3] else None,
+                                data[4].strip() if len(data) > 4 and data[4] else None)  # For word choice
+                                               
                 value.glossary_id = glossary_obj.id
-                value.file_id = instance.id
-                value.job_id = instance.job_id
+                value.file_id = instance_id
+                value.job_id = instance_job_id
+                value.root_word = nltk_lemma(word=value.sl_term.lower(),language=lang_code)
                 value.save()
+                instance.status  = "PENDING"
+                instance.save()
+        instance.status = "FINISHED"
+        instance.is_extract = True
+        instance.done_extraction = True
+        instance.save()
     else:
         for data in imported_data:
             if data[2]:
+                    instance.status  = "PENDING"
+                    instance.save()
                     value = glex_model.TermsModel(
                             # data[0],          #Blank column
                             data[1],            #Autoincremented in the model
-                            data[2].strip()
-                            )
+                            data[2].strip())
             value.glossary_id = glossary_obj.id
             value.file_id = instance.id
             value.job_id = instance.job_id
             value.save()
+        instance.status  = "FINISHED"
+        instance.save()
+        
 
 def delete_words_from_term_model(sender, instance, *args, **kwargs):
     try:
@@ -67,8 +80,8 @@ def delete_words_from_term_model(sender, instance, *args, **kwargs):
 
 
 def update_proj_settings(sender, instance, *args, **kwargs):
-    if instance.glossary.project.project_type_id == 10 and instance.project.get_mt_by_page == True:
+    if instance.glossary.project.project_type_id in [3,10] and instance.project.get_mt_by_page == True:
         instance.project.get_mt_by_page = False
         instance.project.save()
     else: 
-        print("Nothing to change")
+        logging.info("Nothing to change on  update_proj_settings function")

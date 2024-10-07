@@ -30,7 +30,7 @@ class ProzProvider(OAuth2Provider):
         ret = super(ProzProvider, self).get_auth_params(request, action)
         # if action == AuthAction.REAUTHENTICATE:
         #     ret["prompt"] = "select_account consent"
-        print("ret",ret)
+ 
         return ret
 
     

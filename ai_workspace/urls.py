@@ -36,6 +36,7 @@ urlpatterns = router.urls
 
 # api_views urls
 urlpatterns += [
+    # path("get_task/<int:pk>/",api_views.TaskViewDetail.as_view(),name="get_task_ins"),
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("tasks/<int:id>/",api_views.TaskView.as_view(),name="delete_tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(),\
@@ -103,7 +104,8 @@ urlpatterns += [
     path('translate_segment/',api_views.federal_segment_translate),
 	path('task_report/',api_views.get_task_count_report),
 	path('ner/',api_views.get_ner),
-    path('doc2docx/',api_views.doc2docx,name="doc-2-docx")
+    path('doc2docx/',api_views.doc2docx,name="doc-2-docx"),
+    path('task_segment_diff',api_views.get_task_segment_diff,name='task-seg-diff')
 ]
 # views urls adding for local testing
 urlpatterns += [

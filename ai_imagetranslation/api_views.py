@@ -104,14 +104,12 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
                     | Q(project__project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
                     |Q(project__ai_user = self.request.user)|Q(project__team__owner = self.request.user)\
                     |Q(project__team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        print("QS----------------->",queryset)
         return queryset
 
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
         #project_managers.append(user)
-        print("Pms----------->",project_managers)
         return user,project_managers
 
     def get_object(self, pk):
@@ -140,7 +138,6 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
         pagin_tc = self.paginate_queryset(queryset, request , view=self) #ImageTranslateListSerializer ImageTranslateSerializer
         serializer =ImageTranslateListSerializer(pagin_tc ,many =True,context={'request':request,'user':user,'pr_managers':pr_managers}) #  ImageTranslateListSerializer
         response = self.get_paginated_response(serializer.data)
-        print("resss",response)
         return response
 
     def retrieve(self,request,pk):
@@ -190,7 +187,7 @@ class ImageTranslateViewset(viewsets.ViewSet,PageNumberPagination):
             # response=
             # response.status_code = 200
             # response["Custom-Header"] = "Value"
-            # print(response)
+ 
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
@@ -481,7 +478,6 @@ def ImageTranslatewordcount(request):
         image_inpaint_creation_instance = ImageInpaintCreation.objects.get(job__id=job_id) #source_image__user=request.user,
         source_json = image_inpaint_creation_instance.source_image.source_canvas_json
         total_sent=dict_rec_json(source_json) 
-        print(total_sent)
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=image_inpaint_creation_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,_=TaskDetails.objects.get_or_create(task = image_inpaint_creation_instance.job.job_tasks_set.last(),
@@ -497,19 +493,19 @@ def ImageTranslatewordcount(request):
 def call_back_rasie(instance_id):
     instance = ImageTranslate.objects.get(id=instance_id)
     serializer = ImageTranslateSerializer(instance)
-    print(serializer.data)
+ 
  
     
 
 # def image_download__page(pages_list,file_format,export_size,lang,projecct_file_name ):
 #     if len(pages_list)==1:
-#         print("single___page",pages_list[0].json)
+ 
 #         img_res,file_name=create_image(pages_list[0].json,file_format,export_size,pages_list[0].page_no,lang)
 #         export_src=core.files.File(core.files.base.ContentFile(img_res),file_name)
 #         response=download_file_canvas(export_src,mime_type[file_format.lower()],file_name)
         
 #     else:
-#         print("multiple___page")
+ 
 #         buffer=io.BytesIO()
 #         with ZipFile(buffer, mode="a") as archive:
 #             for src_json in pages_list:
@@ -539,7 +535,7 @@ def call_back_rasie(instance_id):
 
 
     #     # serializer = ImageGenCustomizationSerializers(queryset, many=True)
-    #     # print(serializer.data)
+ 
     #     return Response(x)
 
 

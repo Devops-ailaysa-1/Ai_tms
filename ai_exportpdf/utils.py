@@ -108,7 +108,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
 
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
-        print({"result":"Error during input file fetching: couldn't connect to host"})
+        
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         try:
@@ -127,10 +127,9 @@ def convertiopdf2docx(id ,language,ocr = None ):
             txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
             txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
             txt_field_obj.save()
-            print({"result":"finished_task" })
+            
         except:
-            if "error" in requests.get(url = get_url).json():
-                print("OCR Calling")
+            if "error" in requests.get(url = get_url).json():                
                 response_result = ai_export_pdf.apply_async((id, ),)
             # end = time.time()
             else:
@@ -141,8 +140,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
                 # file_format,page_length = pdf_text_check(fp)
                 consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
                 user_credit.credits_left = user_credit.credits_left + consum_cred
-                user_credit.save()
-                print("pdf_conversion_something went wrong")
+                user_credit.save()                
 
 
 import tempfile
@@ -153,17 +151,14 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
-    start = time.time()
-    print(start)
+    start = time.time()    
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
-    pdf_len = pdf.getNumPages()
-    print("pdf_len")
+    pdf_len = pdf.getNumPages()    
     try:
         no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page=int(pdf_len)
         doc=docx.Document()
-        progress_recorder=ProgressRecorder(ai_export_pdf)
-        print("inst try")
+        progress_recorder=ProgressRecorder(ai_export_pdf)        
         for i in range(1,pdf_len+1):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
@@ -181,14 +176,13 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-        print("outside try")
+        
         progress_recorder.set_progress(pdf_len+1, pdf_len+1, "pdf_convert_completed")
  
         logger.info('finished ocr and saved as docx ,file_name:')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
-        doc.save(docx_file_path)
-        print("DocxFilePath------------->",docx_file_path)
+        doc.save(docx_file_path)        
         html_str = docx_to_html(docx_file_path)
         txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
@@ -206,7 +200,6 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         # consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
         # user_credit.credits_left=user_credit.credits_left + consum_cred
         # user_credit.save()
-        print("pdf_conversion_something went wrong")
  
 def google_ocr_pdf():
     pass
@@ -250,7 +243,6 @@ def pdf_char_check(file_path):
         else:
             pdf_check_list.append(0)
     end = time.time()
-    print("char_count_check",end-start)
     return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
 
 
@@ -381,8 +373,7 @@ def ceil_round_off(token_len):
     return math.ceil(len(token_len)/4)
     
 import pypandoc
-def docx_to_html(docx_file_path):
-    print("DocxFilePath------------->",docx_file_path)
+def docx_to_html(docx_file_path):    
     #extra_args = ["--metadata","title= " , "--self-contained","-s"]#,"--standalone"]#,"--css","pandoc.css"]
     output = pypandoc.convert_file(source_file=docx_file_path,
                                    to="html",format='docx')#,
@@ -394,8 +385,7 @@ def docx_to_html(docx_file_path):
 
 
 import pypandoc
-def docx_to_html_with_css(docx_file_path):
-    print("DocxFilePath------------->",docx_file_path)
+def docx_to_html_with_css(docx_file_path):    
     extra_args = ["--metadata","title= " , "--self-contained","--standalone","--css","pandoc.css"]
     output = pypandoc.convert_file(source_file=docx_file_path,
                                    to="html",format='docx',extra_args=extra_args)

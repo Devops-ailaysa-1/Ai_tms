@@ -18,7 +18,7 @@ import calendar
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 max_iter = ((10**6)/3)
 

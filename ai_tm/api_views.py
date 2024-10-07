@@ -32,9 +32,7 @@ def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data.get("source_file_path")
     path_list = re.split("source/", source_file_path)
     path = path_list[0] + "doc_json/" + path_list[1] + ".json"
-    print("Exists")
     if not os.path.exists(path):
-        print("Not Exists")
         write_json_data(task)
     return path
 
@@ -206,10 +204,8 @@ def check(uploaded_file,job):
 
 def get_tm_analysis(doc_data,job):
         #[list(result) for key, result  in groupby(tasks, key=lambda item: item.job)]
-        #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
-        #print("Doc data in Analysis---------------->",doc_data)
         sources = []
         sources_ = []
         tm_lists = []
@@ -227,7 +223,6 @@ def get_tm_analysis(doc_data,job):
         files=[]
         files_ = TmxFileNew.objects.filter(job_id=job.id).all()
         for file in files_:
-            print(check(file,job))
             if check(file,job):
                 files.append(file)
         unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
@@ -252,7 +247,7 @@ def get_word_count(tm_analysis,project,task):
     tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition,raw_total =0,0,0,0,0,0,0,0,0,0
     char_tm_100,char_tm_95_99,char_tm_85_94,char_tm_75_84,char_tm_50_74,char_tm_101,char_tm_102,char_new,char_repetition,char_raw_total =0,0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
-        #print("J-------------->",j)
+
         if i>0:
             previous = tm_analysis[i-1]
             pre_ratio = previous.get('ratio')*100
@@ -290,14 +285,12 @@ def get_word_count(tm_analysis,project,task):
         if j.get('repeat'):
             repetition+=j.get('word_count')*j.get('repeat')
             char_repetition+=len(j.get('sent'))*j.get('repeat')
-            #print("Repetition-------------->",repetition)
         raw_total+=j.get('word_count')
         char_raw_total+=len(j.get('sent'))
     raw_total_final = raw_total + repetition
     char_raw_total_final = char_raw_total + char_repetition
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
     cc = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
-    #print("CCCCC-------------------------->",cc)
     if cc:
         obj1 = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
         obj1.update(tm_100 = char_tm_100,tm_95_99 = char_tm_95_99,tm_85_94 = char_tm_85_94,tm_75_84 = char_tm_75_84,\
@@ -377,9 +370,7 @@ def get_project_analysis(request,project_id):
             task_ids = [i.id for i in tasks]
             for i in tasks:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
-                print("Ins-------------->",ins)
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                #print("STate------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
@@ -387,12 +378,10 @@ def get_project_analysis(request,project_id):
                     except TaskResult.DoesNotExist:
                         cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
-                    #print("stst",ins.status)
                 elif (not ins) or state == 'FAILURE' or state == 'REVOKED':
                     cel_task = analysis.apply_async((task_ids,proj.id,), queue='medium-priority')
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 elif state == 'SUCCESS':
-                    print("Ins Status---------->",ins.status)
                     if ins.status == 1:
                         cel_task = analysis.apply_async((task_ids,proj.id,),queue='medium-priority' )
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
@@ -452,10 +441,8 @@ def get_project_analysis(request,project_id):
                 proj_char_raw_total += char_count.raw_total
 
             ser = WordCountGeneralSerializer(word_count,context={'weighted':round(WWC),'char_weighted':round(WCC)})
-            print("WccC----------->",ser.data)
 
             res.append(ser.data)
-        print("project wwc------------>",proj_wwc)
         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':proj_wwc,'new':proj_new,'repetition':proj_repetition,\
                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total,\
@@ -483,7 +470,6 @@ def get_weighted_word_count(task):
         rates = UserDefinedRate.objects.filter(is_default = True).first()
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
-    print("status------------------>",ins)
     if not ins or ins.status == 1:
         analysis([task.id],task.job.project.id)
 
@@ -493,7 +479,6 @@ def get_weighted_word_count(task):
           word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
           word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
           word_count.repetition * rates.tm_repetition_percentage)/100
-    print("WWC-------------->",WWC)
     return round(WWC)
 
 def get_weighted_char_count(task):
@@ -512,7 +497,6 @@ def get_weighted_char_count(task):
             analysis([task.id],task.job.project.id)
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
-    print("status------------------>",ins.status)
     if not ins or ins.status == 1:
         analysis([task.id],task.job.project.id)
 
@@ -781,14 +765,11 @@ def download_tmx_file(request,file_id):
 def notify_word_count(task_assign,word_count,char_count):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
-    print("$$$$$$$$$$$")
     receiver = task_assign.assign_to
     receivers = []
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
     receivers.append(receiver)
-    print("Rece",receivers)
     sender =  task_assign.task_assign_info.assigned_by
-    print("send",sender)
     unit = task_assign.task_assign_info.mtpe_count_unit.id
     obj = task_assign.task
     proj = obj.job.project.project_name
@@ -818,8 +799,6 @@ def notify_word_count(task_assign,word_count,char_count):
         #     message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
         # if unit == 2:
         #     message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
-        print("MSG---------->",message)
         if thread_id:
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-            print("Chat--------->",msg)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))

@@ -59,4 +59,4 @@ from django.contrib import admin
 #             except AttributeError:
 #                 print("No owner",mod)
 #         else:
-#             print("Table empty",mod)
+#             "Table empty",mod)

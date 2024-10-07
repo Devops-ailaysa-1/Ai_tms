@@ -8,13 +8,16 @@ from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
 from django.core.cache import cache
 from django.contrib.auth import settings
+from ai_workspace.models import Document,File
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete, pre_delete
 from ai_glex.signals import update_words_from_template,delete_words_from_term_model,update_proj_settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
-class Glossary(models.Model): ########Glossary projecct################
+
+class Glossary(models.Model):
+
     class GlossaryObjects(models.Manager):
         def get_queryset(self):
             return super().get_queryset().filter(usage_permission='Public')
@@ -22,6 +25,7 @@ class Glossary(models.Model): ########Glossary projecct################
         ('Public', 'Public'),
         ('Private', 'Private'),
     )
+
     project = models.OneToOneField(Project, null=False, blank=False, on_delete=models.CASCADE, related_name="glossary_project")
     primary_glossary_source_name = models.CharField(max_length=20, null=True, blank=True)
     details_of_PGS          = models.TextField(null=True, blank=True)
@@ -31,8 +35,14 @@ class Glossary(models.Model): ########Glossary projecct################
     public_license          = models.CharField(max_length=30, verbose_name = "Public License", null=True, blank=True)
     created_date            = models.DateTimeField(auto_now_add=True)
     modified_date           = models.DateTimeField(auto_now=True)
+    
+    file_translate_glossary = models.OneToOneField(Project, null=True, blank=True, on_delete=models.SET_NULL,
+                                                   related_name="individual_gloss_project")
+    is_default_project_glossary = models.BooleanField(default=False)
+
     objects = models.Manager() # default built-in manager
     glossaryobjects = GlossaryObjects() # object manager for Glossary model
+    
     def __str__(self):
         return self.project.project_name
     
@@ -42,17 +52,13 @@ class Glossary(models.Model): ########Glossary projecct################
 
 
 def get_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
-            instance.usage_type.type_path)
-    print("Upload file path ----> ", file_path)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path)
     instance.filename = filename
     return os.path.join(file_path, filename)
 
 use_spaces = os.environ.get("USE_SPACES")
 
 
-
-######### GLOSSARY & FILES MODEL ###############
 class GlossaryFiles(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="glossary_project_usage_type")
@@ -67,17 +73,22 @@ class GlossaryFiles(models.Model):
     deleted_at = models.BooleanField(default=False)
     upload_date = models.DateTimeField(auto_now_add=True)
 
-    # def __str__(self):
-    #     return self.file_name
+    status = models.CharField(max_length=200, null=True, blank=False)
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
+    done_extraction = models.BooleanField(default=False)
+    is_extract = models.BooleanField(default=False)
 
-post_save.connect(update_words_from_template, sender=GlossaryFiles)
+#post_save.connect(update_words_from_template, sender=GlossaryFiles)
 post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
-###############################################################################
+
+
 
 class TermsModel(models.Model):
     sl_term         = models.CharField(max_length=200, null=False, blank=False)
     tl_term         = models.CharField(max_length=200, null=True, blank=True)
     pos             = models.CharField(max_length=200, null=True, blank=True)
+    sl_term_translate = models.CharField(max_length=200, null=True, blank=True)
+    root_word = models.CharField(max_length=200, null=True, blank=True)
     sl_definition   = models.TextField(max_length=1000, blank=True, null=True)
     tl_definition   = models.TextField(max_length=1000, blank=True, null=True)
     context         = models.TextField(max_length=1000, blank=True, null=True)
@@ -94,6 +105,7 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    
     #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
@@ -125,14 +137,11 @@ class GlossaryMt(models.Model):
     mt_engine   = models.ForeignKey(AilaysaSupportedMtpeEngines,on_delete=models.CASCADE,related_name='term_mt_engine',null=True, blank=True)
 
 
-
-##############Glossary Tasks Model###################
 class GlossaryTasks(models.Model):
     glossary = models.ForeignKey(Glossary, on_delete=models.CASCADE, related_name='task')
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='job_task')
     # terms = models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=True, related_name='job_terms')
     objects = GlossaryTasksManager()
-#####################################################################################
 
 class Tbx_Download(models.Model):
     user                    = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True)
@@ -180,3 +189,4 @@ class Terminologyextract(models.Model):
     file = models.FileField(upload_to="pdf_file",null=True,blank=True) 
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+

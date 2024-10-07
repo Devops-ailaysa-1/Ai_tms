@@ -506,7 +506,7 @@ class DocumentType(models.Model):
 class AiCustomize(models.Model):
     # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     customize = models.CharField(max_length =200, null=True, blank=True)  
-    prompt =   models.CharField(max_length =200, null=True, blank=True)
+    prompt =  models.TextField(null=True,blank=True)   
     instruct = models.CharField(max_length =300, null=True, blank=True)
     grouping = models.CharField(max_length =200, null=True, blank=True)  
     # category = models.ForeignKey(AiCustomCategory , related_name='custom_category_name', on_delete=models.CASCADE,null=True, blank=True)
@@ -673,7 +673,6 @@ class SocialMediaSize(models.Model):
     src=models.FileField(upload_to='socialmediasize',blank=True ,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    
 
     def __str__(self) -> str:
         return self.social_media_name
@@ -742,15 +741,29 @@ class Genre(models.Model):
     genre = models.CharField(max_length = 250,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True) 
-
-class InternalFlowPrompts(models.Model):
+ 
+class InternalFlowPrompts(models.Model): 
     name = models.CharField(max_length =300, null=True, blank=True)  
     prompt_phrase = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
-# class BookCategory(models.Model):
-#     category_name =  models.CharField(max_length=100,null=True,blank=True)
+    def __str__(self) -> str:
+        return self.name
 
-#     def __str__(self) -> str:
-#         return self.category_name+'----'
+class ExtraReplacePrompt(models.Model):
+    internal_prompt = models.OneToOneField(InternalFlowPrompts, related_name='replace_internal_prmpt', on_delete=models.CASCADE)
+    language = models.ForeignKey(Languages, related_name='gextra_prmpt_lang', on_delete=models.CASCADE)
+    prompt = models.TextField(null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.prompt
+
+class LanguageGrammarPrompt(models.Model):
+    language = models.ForeignKey(Languages, related_name='gram_prmpt_lang', on_delete=models.CASCADE)
+    prompt_name = models.CharField(max_length =300, null=True, blank=True)  
+    prompt = models.TextField(null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.prompt_name
+    

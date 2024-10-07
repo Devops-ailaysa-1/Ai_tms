@@ -55,7 +55,8 @@ import base64
 from ai_staff.serializer import DesignShapeSerializer
 from ai_staff.models import DesignShape
 # HOST_NAME="http://0.0.0.0:8091"
-
+import logging
+logger = logging.getLogger('django')
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
@@ -227,12 +228,11 @@ def page_no_update(can_page,is_update,page_len):
             src_json=copy.deepcopy(i.json)
             if is_update:
                 updated_page_no=int(i.page_no)-1
-                print("is__update",i)
                 i.page_no = updated_page_no
                 updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
             else:
-                print("no_update")
+                logging.info("no_update")
             src_json['projectid']['pages']=page_len
             i.json=src_json
             i.save()
@@ -276,7 +276,6 @@ class CanvasDesignViewset(viewsets.ViewSet):
     def get_user(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         user = self.request.user.team.owner if self.request.user.team and self.request.user in project_managers else self.request.user
-        print("Pms----------->",project_managers)
         return user,project_managers
 
     def get_object(self, pk):
@@ -328,8 +327,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
         project = obj.project
         if src_page_no:
             can_src_del=CanvasSourceJsonFiles.objects.filter(canvas_design=obj)
-            if len(can_src_del)==1:
-                print("single page")
+            if len(can_src_del)==1:                
                 can_inst=can_src_del[0]
                 json=copy.deepcopy(can_inst.json)
                 json['objects']=[]
@@ -339,8 +337,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
                 thumbnail=CanvasDesignSerializer().thumb_create(json_str=json,formats='png',multiplierValue=1) 
                 can_inst.thumbnail=thumbnail
                 can_inst.save()
-            else:
-                print("multiple_ page")
+            else:                
                 can_src_del.get(page_no=int(src_page_no)).delete()
             can_page_last=CanvasSourceJsonFiles.objects.filter(canvas_design=obj,page_no__gt=src_page_no)
             total_page= CanvasSourceJsonFiles.objects.filter(canvas_design=obj).count()
@@ -500,8 +497,7 @@ def free_pix_api(request):
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     }
-    response = requests.get(url, params=request.GET.dict(),headers=headers)
-    print(response.json())
+    response = requests.get(url, params=request.GET.dict(),headers=headers)    
     if response.status_code == 200:
         return Response(response.json(),status=200)
     else:
@@ -573,7 +569,7 @@ class TextTemplateViewset(viewsets.ViewSet,PageNumberPagination):
                                 # 'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail },partial = True)
         if serializer.is_valid():
             serializer.save()
-            # print(serializer.data)
+ 
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
@@ -611,8 +607,7 @@ class FontFileViewset(viewsets.ViewSet):
         if str(font_file).split('.')[-1] not in ['ttf','otf','woff','woff2']:
             return Response({'msg':'only ttf ,woff,woff2, otf suppported file'},status=400)
 
-        user = request.user.team.owner if request.user.team else request.user
-        print({**request.POST.dict(),'font_family':font_file})
+        user = request.user.team.owner if request.user.team else request.user        
         serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':user.id,'created_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
@@ -880,8 +875,7 @@ def image_list(request):
 class TemplateGlobalDesignViewsetV2(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     page_size = 20
-    def create(self,request):
-        print("request.data",request.POST.dict())
+    def create(self,request):        
         serializer=TemplateGlobalDesignSerializerV2(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -1192,15 +1186,13 @@ def lang_detection(request):
 @permission_classes([IsAuthenticated])
 def Designerwordcount(request):
     # canvas_trans_json_ids=request.query_params.getlist('canvas_trans_json_id')
-    job_ids=request.query_params.getlist('job_id')
-    print("job_ids",job_ids)
+    job_ids=request.query_params.getlist('job_id')    
     for job_id in job_ids:
     
         design_instance = CanvasTranslatedJson.objects.get(job__id=job_id) #canvas_design__user=request.user, 
         total_sent=[]
         for i in design_instance.canvas_design.canvas_json_src.all():
-            total_sent.extend(dict_rec_json(i.json))
-        print(total_sent)
+            total_sent.extend(dict_rec_json(i.json))        
         wc=AiPromptSerializer().get_total_consumable_credits(source_lang=design_instance.source_language.language.language ,
                                                             prompt_string_list= total_sent)
         task_det_instance,created=TaskDetails.objects.get_or_create(task = design_instance.job.job_tasks_set.last(),
@@ -1231,7 +1223,7 @@ def Designerwordcount(request):
 #     with zipfile.ZipFile(zip_path, 'w') as zipf:
 #         can_src=can_des.canvas_json_src.all()
 #         for src_json_file in can_src:
-#             print("src_json_file---> CanvasSourceJsonFiles")
+ 
 #             src_json=can_des.canvas_translate.all()
 #             if src_json_file.json:
 #                 compressed_data_img=export_download(json_str=src_json_file.json,format=format,multipliervalue=multipliervalue)
@@ -1243,7 +1235,7 @@ def Designerwordcount(request):
 #                 zipf.write(file_path, 'source_target/' , zipfile.ZIP_DEFLATED )
 #                 for j in src_json:
 #                     form=".{}".format(format)
-#                     print("src_json",j.source_language,'---',j.target_language)
+ 
 #                     if j.canvas_json_tar.last():
 #                         tar_json_file=j.canvas_json_tar.last()
 #                         if tar_json_file:
@@ -1272,7 +1264,7 @@ def Designerwordcount(request):
 #             try:
 #                 source_path = src.thumbnail.path
 #             except:
-#                 print("no thumbnail",src.id)
+ 
 #             name = os.path.basename(src.thumbnail.name)
 #             destination = f"/source/{name}" 
 #             zipf.write(source_path, destination)
@@ -1290,7 +1282,7 @@ def Designerwordcount(request):
 #                 try:
 #                     source_path = tar.thumbnail.path
 #                 except:
-#                     print("no thumbnail",tar.id)
+ 
 #                 name = os.path.basename(tar.thumbnail.name)
 #                 destination = f"/{tar_lang_code}/{name}"
 #                 zipf.write(source_path, destination)
@@ -1316,7 +1308,7 @@ def Designerwordcount(request):
 #         src__single_inst=canvas_inst.canvas_json_src.get(id=src_id)
 #         src_lang_name=canvas_inst.canvas_translate.last().source_language.locale_code
 #         if src__single_inst.json:
-#             print("contains src__json")
+ 
 #             if file_format=='png':
  
 #                 values=export_download(src__single_inst.json,file_format,export_size)
@@ -1370,7 +1362,7 @@ def Designerwordcount(request):
 #                 TemplateGlobalDesign.objects.get(id=pk).delete()
 #             return Response({'msg':'deleted'})
 #         except:
-#             print("error in del")
+ 
 #             return Response({'msg':'template Does not exist'})
 
 
@@ -1402,7 +1394,7 @@ def Designerwordcount(request):
 
 #         # ** get image
 #         if prompt_id==None:
-#             print("SD creatin")
+ 
 #             serializer = StableDiffusionAPISerializer(data=request.POST.dict() ,context={'request':request})
 #             if serializer.is_valid():
 #                 serializer.save()
@@ -1411,25 +1403,25 @@ def Designerwordcount(request):
             
 #             id=serializer.data.get("id")
 #             wait=0 
-#             print("enter...........")
+ 
 #             while True:
 #                 ins=get_object_or_404(StableDiffusionAPI,id=id)
 #                 if ins.status=="DONE":
 #                     break
 #                 else:
 #                     wait+=1
-#             print("exiting............")
+ 
 #             # id=89
 #             instance=get_object_or_404(StableDiffusionAPI,id=id)
 #         else:
-#             print("no SD creatin")
+ 
 #             instance=PromptEngine.objects.filter(prompt_category__id=prompt_id).first()
 #         background=TemplateBackground.objects.filter(prompt_category__id=prompt_id).first()
 #         # bg_images=list(background)
 #         prompt = instance.prompt
 #         font = FontData.objects.filter(font_lang__name="Latin").values_list('font_family__font_family_name', flat=True)
 #         font_family = list(font)
-#         print("template_genarating.........................")
+ 
 #         template=genarate_template(instance,template,prompt,font_family,background)        
 #         return JsonResponse({"data":template})
     
@@ -1439,7 +1431,7 @@ def Designerwordcount(request):
 #     temp_width = int(template.width)
 #     template_data=[]
 #     for i in range(0,5):
-#         print(i)
+ 
 #         text_grid,image_grid=grid_position(temp_width,temp_height)
 #         temp={}   
 #         data=copy.deepcopy(jsonStructure) 
@@ -1450,7 +1442,7 @@ def Designerwordcount(request):
 #         backgroundImage =random_background_image(template,bg_images)
 #         data.get("objects").append(backgroundImage)
 
-#         print("j")
+ 
 #         """  Image 0 """
 #         image=genarate_image(instance,image_grid,template)
 #         data.get("objects").append(image)
@@ -1471,7 +1463,7 @@ def Designerwordcount(request):
 #         # data["backgroundImage"]["fill"]=generate_random_rgba()
 #         data["backgroundImage"]["width"]=int(temp_width)
 #         data["backgroundImage"]["height"]=int(temp_height)
-#         print(data)
+ 
 #         # thumnail creation
 #         thumbnail={}
 #         thumbnail['thumb']=create_thumbnail(data,formats='png')

@@ -9,10 +9,11 @@ from .models import Thread, ChatMessage
 from ai_auth.models import AiUser,Professionalidentity
 from django.db.models import Q
 User = get_user_model()
-
+import logging 
+logger = logging.getLogger("django")
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
-        print('connected', event)
+ 
         user = self.scope['user']
         chat_room = f'user_chatroom_{user.id}'
         self.chat_room = chat_room
@@ -26,7 +27,7 @@ class ChatConsumer(AsyncConsumer):
 
     async def websocket_receive(self, event):
         command = json.loads(event.get('text')).get('command')
-        print("command---->",command)
+ 
         if command == "get_unread_chat_notifications":
             try:
                 payload = await self.get_unread_chat_notification(self.scope["user"])
@@ -41,7 +42,7 @@ class ChatConsumer(AsyncConsumer):
                         },
                         )
             except Exception as e:
-                print("UNREAD CHAT MESSAGE COUNT EXCEPTION: " + str(e))
+                logger.error("UNREAD CHAT MESSAGE COUNT EXCEPTION: " + str(e))
                 pass
 
         elif command == "mark_messages_read":

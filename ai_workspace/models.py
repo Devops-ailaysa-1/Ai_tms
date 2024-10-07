@@ -213,12 +213,13 @@ class Project(models.Model):
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
-    pre_translate = models.BooleanField(default=False)
-    mt_enable = models.BooleanField(default=True)
+    pre_translate = models.BooleanField(default=False) # Pre-translate all the content
+    mt_enable = models.BooleanField(default=True) # Apply Machine translation or not
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
-    get_mt_by_page = models.BooleanField(default=True) 
-    file_translate = models.BooleanField(default=False)
+    get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
+    file_translate = models.BooleanField(default=False) # Use for default glossary
+    isAdaptiveTranslation = models.BooleanField(default=False) # Used to have adaptive translation or not
 
 
     class Meta:
@@ -307,7 +308,7 @@ class Project(models.Model):
   
     def pr_progress(self,tasks):
         from ai_workspace.api_views import voice_project_progress
-        if self.project_type_id in [3,10]: ### changes
+        if self.project_type_id in [3] and getattr(self,'glossary_project',None): ### changes and getattr is written because some of the glossary project does not contains glossary instance 
             terms = self.glossary_project.term.all()
             if terms.count() == 0:
                 return "Yet to start"
@@ -341,8 +342,8 @@ class Project(models.Model):
             return None
 
         else:
-            task_jobs = [i.job.id for i in tasks]
-            task_files = [i.file.id for i in tasks]
+            task_jobs = [i.job.id for i in tasks if i.job]
+            task_files = [i.file.id for i in tasks if i.file]
             docs = Document.objects.filter(job__in=task_jobs,file__in=task_files).all()
             total_segments = 0
             if not docs:
@@ -896,7 +897,10 @@ class File(models.Model):
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
-
+    done_extraction = models.BooleanField(default=False)
+    status = models.CharField(max_length=200, null=True, blank=False)
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
+    is_extract = models.BooleanField(default=False)
 
     class Meta:
         managed = True 
@@ -1049,6 +1053,15 @@ class Task(models.Model):
                 cached_value = None
             cache.set(cache_key, cached_value)
         return cached_value
+    
+    @property
+    def is_default_glossary_task(self):
+        job  = self.job
+        project = job.project
+        if project.project_type_id == 3 and project.glossary_project.is_default_project_glossary:
+            return True
+        else:
+            return False
 
 
     @property
@@ -1544,7 +1557,6 @@ class TaskAssign(models.Model):
 
     def _create_status_change_history(self, field_name, old_status):
         new_status = getattr(self, field_name)
-        print("New Status---------------->",new_status)
         if new_status:
             TaskAssignStatusChangeHistory.objects.create(
                 task_assign=self,
@@ -1717,6 +1729,7 @@ def edited_file_path(instance, filename):
     return file_path
 
 class TaskTranscriptDetails(models.Model):
+    
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField(null=True,blank=True)
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
@@ -1954,3 +1967,12 @@ class TaskNewsMT(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
+class FileTermExtracted(models.Model):
+    task =  models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_file_extract")
+    file = models.ForeignKey(File, on_delete=models.CASCADE,related_name="file_extraction")
+    done_extraction = models.BooleanField(default=False)
+    status = models.CharField(max_length=200, null=True, blank=False)
+    celery_id = models.CharField(max_length=200, null=True, blank=False)
+
+    class Meta:
+        unique_together = ("task", "file")

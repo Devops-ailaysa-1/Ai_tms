@@ -91,10 +91,11 @@ from ai_auth.reports import AilaysaReport
 from django.db.models.query import QuerySet
 logger = logging.getLogger('django')
 AILAYSA_EMAILS = settings.AILAYSA_EMAILS.split(",")
+
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    print(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def get_stripe_api_key():
     if settings.STRIPE_LIVE_MODE == True :
@@ -373,13 +374,12 @@ def get_payment_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
-        print(user_invoice_details)
+ 
     except Exception as error:
-        print(error)
+        logger.error(error)
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
-            print("trial exists--->",i.subscription.trial_start)
             if i.subscription.trial_start ==None:
                 output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
                         "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
@@ -397,9 +397,8 @@ def get_addon_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         add_on_list = PaymentIntent.objects.filter(Q(customer_id=user)&Q(metadata__contains={"type":"Addon"})).all()
-        print(add_on_list)
     except Exception as error:
-        print(error)
+        logger.error(error)
     if add_on_list:
         out=[]
         for i in add_on_list:
@@ -429,7 +428,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
     # if trial == True :
     #     date_time = timezone.now()
     #     trial_end = int(time.mktime(date_time.timetuple()))
-    #     print("trial_end>>>",trial_end)
+ 
     # else:
     #     trial_end = None
 
@@ -437,7 +436,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     # if user.country.sortname == 'IN':
     #     addr=BillingAddress.objects.get(user=user)
-    #     print(addr.state)
+ 
     #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
     #     if state.exists() and state.first().state_code == 'TN':
     #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
@@ -493,7 +492,6 @@ def find_taxrate(user,trial=False):
     else:
         if user.country.sortname == 'IN':
             addr=BillingAddress.objects.get(user=user)
-            print(addr.state)
             state = IndianStates.objects.filter(Q(state_name__icontains=addr.state)|Q(state_code__contains=addr.state))
             if state.exists() and state.first().state_code == 'TN':
                 tax_rate=[TaxRate.objects.filter(display_name = 'CGST').last().id,TaxRate.objects.filter(display_name = 'SGST').last().id]
@@ -507,7 +505,7 @@ def find_taxrate(user,trial=False):
 
 def subscribe_trial(price,customer=None):
     product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
-    print("product_name>>",product_name)
+ 
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -670,7 +668,7 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,coupon,quantity=1):
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
-    print(tax_rate)
+    logger.info(tax_rate)
     stripe.api_key = api_key
     data1=stripe.InvoiceItem.create(
                 customer=Aicustomer.id,
@@ -955,16 +953,14 @@ def campaign_subscribe(user,camp):
             # )
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
-            print("error in creating subscription ",user.uid)
+            logger.error("error in creating subscription ",user.uid)
 
     price_addon = Price.objects.get(product__name=camp.campaign_name.Addon_name,
                         currency=currency,
                         djstripe_owner_account=default_djstripe_owner,livemode=livemode)
-    print(price_addon)
     try:
         coupon = Coupon.objects.get(name=settings.CAMPAIGN)
     except:
-        print("coupon not found")
         return None
     #invo = create_invoice_one_time(price_addon,cust,None,coupon.id)
     # plan = get_plan_name(user)
@@ -1014,7 +1010,6 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
         livemode = settings.STRIPE_LIVE_MODE
         #price_id = self.kwargs.get('price_id')
         price_id =request.query_params.get('price_id', None)
-        print("price---id",price_id)
         user=request.user
         is_active = is_active_subscription(user=request.user)
         if is_active[0] == False:
@@ -1056,7 +1051,6 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
 
                 camp = check_campaign(user)
                 if camp:
-                    print("campaign",camp)
                     return Response({'msg':'User Successfully created'}, status=201)
                 if price_id:
                     price = Plan.objects.get(id=price_id)
@@ -1065,14 +1059,12 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
 
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
-                print('price>>',price)
                 
                 if price.product.name == os.environ.get("PLAN_PAYG"):
                     response=subscribe(price,customer)
                 else:
                     response=subscribe_trial(price,customer)
 
-                print(response)
                 #customer.subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
         elif is_active == (True,True):
@@ -1098,7 +1090,6 @@ class BillingInfoView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = BillingInfoSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1118,7 +1109,6 @@ class BillingAddressView(viewsets.ViewSet):
 
     def create(self,request):
         serializer = BillingAddressSerializer(data={**request.POST.dict()},context={'request':request})
-        print(serializer.is_valid())
         if serializer.is_valid():
             try:
                 serializer.save(user=self.request.user)
@@ -1134,7 +1124,6 @@ class BillingAddressView(viewsets.ViewSet):
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
         serializer = BillingAddressSerializer(queryset,data={**request.POST.dict()},partial=True,context={'request':request})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1185,7 +1174,6 @@ class UserTaxInfoView(viewsets.ViewSet):
     def create(self,request):
         request.POST.get('tax_id') == request.POST.get('tax_id').upper()
         serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
-        print(serializer.is_valid())
         if serializer.is_valid():
             try:
                 serializer.save(user=self.request.user)
@@ -1199,7 +1187,6 @@ class UserTaxInfoView(viewsets.ViewSet):
     def update(self, request, pk=None):
         try:
             queryset = UserTaxInfo.objects.get(user=request.user,id=pk)
-            print("1",queryset)
             if request.POST.get('stripe_tax_id') == None and request.POST.get('tax_id') == None:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
                 if taxid == None:
@@ -1211,7 +1198,6 @@ class UserTaxInfoView(viewsets.ViewSet):
                 return Response({'msg':'Successfully Updated'}, status=200)
             else:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
-                print("2",taxid)
                 if taxid == None:
                     return Response({'msg':"Taxid not exist"}, status=404)
                 user_taxid_delete(taxid)
@@ -1222,7 +1208,6 @@ class UserTaxInfoView(viewsets.ViewSet):
         #if queryset
         request.POST.get('tax_id') == request.POST.get('tax_id').upper()
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1250,9 +1235,7 @@ def TransactionSessionInfo(request):
     response = stripe.checkout.Session.retrieve(
                  session_id
                     )
-    # print("Bank Details")
-    # print()
-    # print(response)
+ 
     try:
         amount = response.get("total_details").get("amount_discount")
 
@@ -1311,7 +1294,6 @@ class AiUserProfileView(viewsets.ViewSet):
     @integrity_error
     def create(self,request):
         serializer = AiUserProfileSerializer(data={**request.POST.dict()},context={'request':request})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1348,7 +1330,6 @@ class CarrierSupportCreateView(viewsets.ViewSet):
             job_name = JobPositions.objects.get(id=job_position).job_name
         except:
             job_name = None
-        print(job_name)
         email = request.POST.get("email")
         message = request.POST.get("message")
         phonenumber = request.POST.get('phonenumber')
@@ -1385,7 +1366,6 @@ class GeneralSupportCreateView(viewsets.ViewSet):
             topic_name = SupportTopics.objects.get(id=topic).topic
         except:
             topic_name = None
-        print(topic_name)
         email = request.POST.get("email")
         message = request.POST.get("message")
         phonenumber = request.POST.get('phonenumber')
@@ -1576,7 +1556,6 @@ class TeamCreateView(viewsets.ViewSet):
 
 
 def send_email_user(subject,template,context,email):
-    print(email)
     content = render_to_string(template, context)
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])
     msg.content_subtype = 'html'
@@ -1584,7 +1563,6 @@ def send_email_user(subject,template,context,email):
 
 class TokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
-        print("USER-------->",user)
         return (
             six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.status)
         )
@@ -1655,7 +1633,6 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         and returns user and created random password.  
         '''
         password = AiUser.objects.make_random_password()
-        print("randowm pass",password)
         hashed = make_password(password)
         user = AiUser.objects.create(fullname =name,email = email,password = hashed,is_internal_member=True)
         user_attribute = UserAttribute.objects.create(user=user)
@@ -1666,7 +1643,6 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         '''
         This function is to create the thread between all the team members.
         '''
-        print("data--->",user,team)
         team_obj = Team.objects.get(id=team)
         from ai_marketplace.serializers import ThreadSerializer
         # data = [{'first_person':user.id,'second_person':i.internal_member_id} for i in team_obj.internal_member_team_info.all()]
@@ -1675,7 +1651,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             if thread_ser.is_valid():
                 thread_ser.save()
             else:
-                print("Errors--->",thread_ser.errors)
+                logger.error("Errors--->",thread_ser.errors)
 
 
     @integrity_error
@@ -1748,7 +1724,6 @@ def msg_send(user,vendor):
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
-    print("Thread--->",thread_id)
     message = "You are invited as an editor by " + user.fullname + ".\n" + "An invitation has been sent to your registered email." + "\n" + "Click <b>Accept</b> to accept the invitation." + "\n" + "<i>Please note that the invitation is valid only for one week</i>"
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
@@ -1863,7 +1838,6 @@ def invite_accept_notify_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
     receivers =  user.team.get_project_manager_only if user.team else []
     receivers.append(user)
-    print("Receivers------------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':i.id,'second_person':vendor.id})
         if thread_ser.is_valid():
@@ -1871,11 +1845,9 @@ def invite_accept_notify_send(user,vendor):
             thread_id = thread_ser.data.get('id')
         else:
             thread_id = thread_ser.errors.get('thread_id')
-        print("Thread--->",thread_id)
         if thread_id:
             message = "I am excited to accept your invitation, "+ vendor.fullname +". I eagerly anticipate our collaboration."
             msg = ChatMessage.objects.create(message=message,user=vendor,thread_id=thread_id)
-            print("Msg obj-------------->",msg)
             notify.send(vendor, recipient=user, verb='Message', description=message,thread_id=int(thread_id))
 
 @api_view(['POST'])
@@ -1893,7 +1865,6 @@ def invite_accept(request):#,uid,token):
         obj.save()
         try:invite_accept_notify_send(obj.user,obj.hired_editor)
         except:pass
-        print("success & updated")
         return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
@@ -1910,13 +1881,12 @@ def teams_list(request):
     except:
         print('No self team')
     ext =HiredEditors.objects.filter(Q(hired_editor = request.user.id)&Q(status=2))#.distinct('user_id')
-    print(ext)
     for j in ext:
         try:
             team = Team.objects.get(owner_id = j.user_id)
             teams.append(({'team_id':team.id,'team':team.name,'role':j.role.name}))
         except:
-            print("No team")
+            logger.error("No team")
     return JsonResponse({'team_list':teams})
 
 
@@ -1934,9 +1904,7 @@ def teams_list(request):
 #     response = stripe.checkout.Session.retrieve(
 #                  session_id
 #                     )
-#     # print("Bank Details")
-#     # print()
-#     # print(response)
+ 
 #     if response.mode == "subscription":
 #         try:
 #             invoice =Invoice.objects.get(subscription=response.subscription)
@@ -2056,7 +2024,6 @@ vendor_renewal_accept_token = VendorRenewalTokenGenerator()
 @api_view(['POST',])
 def vendor_renewal(request):
     email = request.POST.get('email')
-    print(email)
     user = AiUser.objects.get(email=email)
     uid = urlsafe_base64_encode(force_bytes(user.id))
     token = vendor_renewal_accept_token.make_token(user)
@@ -2077,7 +2044,6 @@ def vendor_renewal_invite_accept(request):
         user.save()
         sub = subscribe_vendor(user)
         auth_forms.vendor_accepted_freelancer_mail(user)
-        print("success & updated")
         return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
@@ -2140,7 +2106,6 @@ def get_user(request):
     '''
     email = request.POST.get('email')
     email_str = email.split('@')[0]
-    print("RR------------->",email_str)
     if email_str.split('+')[0] not in company_members_list:
         if "+" in email_str:
             return Response({"msg":"Invalid"})
@@ -2153,14 +2118,12 @@ def get_user(request):
             quickemailverification = client.quickemailverification()
             try:
                 response = quickemailverification.verify(email)
-                print(response.body)
                 if response.code == 200:
                     if response.body.get('result') == "invalid" or response.body.get('disposable') == 'true':
                         return Response({'msg':'Invalid'})
                     else:
                         return Response({'user_exist':False})
                 else:
-                    print(response.code)
                     return Response({'user_exist':False})
             except:
                 return Response({'user_exist':False})
@@ -2205,7 +2168,7 @@ def ai_social_login(request):
     process = request.POST.get('process',None)
 
     # base_url="http://127.0.0.1:8089"
-    # print(reverse(provider_id +'_login'))
+ 
     # url=base_url+reverse(provider_id +'_login')
 
     # req = RequestFactory().get(
@@ -2228,20 +2191,13 @@ def ai_social_login(request):
 
     # adapter = GoogleOAuth2Adapter(request)
 
-    print("adapter",adapter)
-    print("request",request)
     # adapter(request)
     provider=adapter(request).get_provider()
-
-    print('provider>>',provider)
-    print('requests>>',request)
 
     oauth2_login = OAuth2LoginView.adapter_view(adapter)
 
     # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
     rs=oauth2_login(request)
-    print(rs.url)
-    print(rs)
     url =rs.url
     parsed = urlsplit(url)
     query_dict = parse_qs(parsed.query)
@@ -2297,8 +2253,7 @@ def ai_social_callback(request):
     #     return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
 
-    # print(session.get_decoded())
-    # print(session.get_decoded().get('socialaccount_user_state',None))
+ 
     user_state=load_state(state)
     if user_state == None:
         logger.error(f"on social login state none {state}")
@@ -2571,13 +2526,12 @@ def resync_instances(queryset):
             else:
                 stripe_data = instance.api_retrieve()
             instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
-            print(f"Successfully Synced: {instance}")
         except stripe.error.PermissionError as error:
-            print(error)
+            logger.error(error)
         except stripe.error.InvalidRequestError as error:
-            print(f"Sync failed: {instance} error :{error}")
+            logger.error(f"Sync failed: {instance} error :{error}")
         except stripe.error.StripeErrorWithParamCode:
-            print(f"Sync failed: {instance}")
+            logger.error(f"Sync failed: {instance}")
 
 def stripe_resync_instance(instance):
 ## cloned from djstripe.admin.views removed queryset
@@ -2591,13 +2545,13 @@ def stripe_resync_instance(instance):
         else:
             stripe_data = instance.api_retrieve()
         instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
-        print(f"Successfully Synced: {instance}")
+        logging.info(f"Successfully Synced:")
     except stripe.error.PermissionError as error:
-        print(error)
+        logger.error(error)
     except stripe.error.InvalidRequestError as error:
-        print(f"Sync failed: {instance} error :{error}")
+        logger.error(f"Sync failed: error :{error}")
     except stripe.error.StripeErrorWithParamCode:
-        print(f"Sync failed: {instance}")
+        logger.error(f"Sync failed:")
 
 
 @api_view(['GET'])
@@ -2628,8 +2582,6 @@ def oso_test_querys(request):
     repo_filter = authorize_model(request, Project, action="read")
     # fil = Document.objects.authorize(request, actor=request.user, action="read")
     pros =  Project.objects.filter(repo_filter)
-    print("pros",pros)
-    print("test")
     #Document.objects.authorize(request, actor=request.user, action="read")
     # print(fil)
     return JsonResponse({"msg":"sucess"},status=200)
@@ -2648,7 +2600,6 @@ class CampaignRegistrationView(viewsets.ViewSet):
             serializer = CampaignRegisterSerializer(data={**request.POST.dict()})
             if serializer.is_valid():
                 serializer.save()
-            print("serializer",serializer.data)
             user = AiUser.objects.get(id=serializer.data["user_id"])
             ser = AiUserDetailsSerializer(user)
             access_token, refresh_token = jwt_encode(user)
@@ -2705,7 +2656,6 @@ def reports_dashboard(request):
     data["total_languages"]=len(repo.total_languages_used())
     data["total_countries"] =len(countries)
     data["paid_users"]=paid_users.count()
-    print(subs_info)
     for sub in subs_info[0]:
         data_sub[sub.get('plan__product__name')]=sub.get('plan__product__name__count')
         # data_sub[f"{sub[1].get('plan__product__name')} Trial" ]=sub[1].get('plan__product__name__count')
@@ -2844,8 +2794,6 @@ class AilaysaPurchasedUnits:
         if to_deduct_units > self.get_units(service_name)['total_units_left']:
              raise ValueError ('deducting more than available credits')
         carry_units = 0
-        print("objs" , units_objs)
-        print("to_deduct_units-->out" , to_deduct_units)
         with transaction.atomic():
             for i in units_objs:
                 if to_deduct_units <= i.units_left:
@@ -2853,16 +2801,14 @@ class AilaysaPurchasedUnits:
                     i.units_left = units
                     i.save()
                     to_deduct_units = 0
-                    print("inside detect")
+ 
                 elif to_deduct_units > i.units_left:
                     carry_units = to_deduct_units - i.units_left
                     i.units_left = 0
                     i.save()
-                    print("carry units",carry_units)
-                    print("inside non detect")
+ 
                 if carry_units == 0:
-                    print("inside carry")
-                    print("to_de",to_deduct_units)
+ 
                     to_deduct_units = 0
                     break
                 else:
