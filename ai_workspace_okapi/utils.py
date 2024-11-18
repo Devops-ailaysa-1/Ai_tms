@@ -302,7 +302,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
 
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
-    deepl_tar_code_list = ["it","es"]
+    deepl_tar_code_list = ["es","de","fr"]
+    deepl_src_code_list = ["en"]
 
     mt_called = True
 
