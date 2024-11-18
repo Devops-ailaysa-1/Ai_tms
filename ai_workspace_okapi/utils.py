@@ -334,7 +334,15 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
             translate = ''
     elif user and user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
         ##elif user check for gloss transltion
-        translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
+        try:
+            translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
+            logging.info("deepl for tar")
+            translate = str(translate.text)
+        except:
+            logging.error("deepl error")
+            translate = client.translate(source_string,target_language=target_lang_code,
+                                format_=format_).get("translatedText")
+
  
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
