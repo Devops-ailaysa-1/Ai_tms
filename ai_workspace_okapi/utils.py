@@ -302,7 +302,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
 
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
-    deepl_tar_code_list = ["it","es"]
+    deepl_tar_code_list = ["es","de","fr"]
+    deepl_src_code_list = ["en"]
 
     mt_called = True
 
@@ -332,7 +333,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     elif user and not from_open_ai and initial_credit < cc:
             translate = ''
     elif user and user.email in DEEPL_USER_LIST and target_lang_code in deepl_tar_code_list:
-        print("inside deepl for italian lang") ##elif user check for gloss transltion
+        ##elif user check for gloss transltion
         translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
  
     # FOR GOOGLE TRANSLATE
