@@ -307,7 +307,7 @@ class MergeSegment(BaseSegment):
         # Resetting the raw MT once a merged segment is restored
         first_seg_in_merge = self.segments.all().first()
         try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
-        except: logging.error("No translation done for merged segment yet !!!")
+        except: logger.error("No translation done for merged segment yet !!!")
 
         # Clearing the relations between MergeSegment and Segment
         self.segments.clear()

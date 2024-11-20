@@ -3,7 +3,6 @@ from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGenerato
                      ImageGenerationPromptResponse, BookBackMatter,BookFrontMatter,BookBodyDetails,MyStyle)
 import logging ,os         
 from django.core import serializers
-import logging ,os ,json
 from rest_framework import status
  
 from rest_framework import viewsets,generics
@@ -216,7 +215,7 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
                 out = {'target_lang':i,'translation':ser.data}
                 res.append(out)
             else:
-                logging.error(ser.errors)
+                logger.error(ser.errors)
         else:
             out = {'target_lang':i,'translation':"insufficient credits"}
             res.append(out)

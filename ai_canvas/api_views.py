@@ -232,7 +232,7 @@ def page_no_update(can_page,is_update,page_len):
                 updated_page_no = 1 if updated_page_no < 1 else updated_page_no
                 src_json['projectid']['page']=updated_page_no
             else:
-                logging.info("no_update")
+                logger.info("no_update")
             src_json['projectid']['pages']=page_len
             i.json=src_json
             i.save()

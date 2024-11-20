@@ -205,7 +205,7 @@ def create_user(name,email,country,password):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         return {"email":email,"user":user,"password":password}
     except IntegrityError as e:
-        logging.error("Intergrity error",str(e))
+        logger.error("Intergrity error",str(e))
         return None
     
 
@@ -258,7 +258,7 @@ class BiuserManagement(viewsets.ModelViewSet):
                 else:
                     return Response( {"msg":"Email already exists"},status=400)
             except IntegrityError as e:
-                logging.error("Intergrity error",str(e))
+                logger.error("Intergrity error",str(e))
                 return Response(status=400)
 
     def retrieve(self, request, pk):

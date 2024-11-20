@@ -1,4 +1,4 @@
-from logging import INFO
+
 from ai_auth.checks import AilaysaTroubleShoot
 from langdetect import detect
 import logging
@@ -2545,7 +2545,7 @@ def stripe_resync_instance(instance):
         else:
             stripe_data = instance.api_retrieve()
         instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
-        logging.info(f"Successfully Synced:")
+        logger.info(f"Successfully Synced:")
     except stripe.error.PermissionError as error:
         logger.error(error)
     except stripe.error.InvalidRequestError as error:

@@ -212,7 +212,7 @@ def get_chapters(pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        logging.error("JSON decoding error:", e)
+        logger.error("JSON decoding error:", e)
     chapters = []
     for title in data:
         chapters.append(title)
@@ -225,7 +225,7 @@ def get_sub_headings(title, pr_response):
     try:
         data = json.loads(data)
     except json.JSONDecodeError as e:
-        logging.error("JSON decoding error:", e)
+        logger.error("JSON decoding error:", e)
 
     if title in data:
         value = data.get(title)
@@ -261,7 +261,7 @@ def search_wikipedia(search_term,lang):
         content = page_data['query']['pages'][page_id]['extract']
         return {"Title": title, "Content": content, "URL": URL}
     else:
-        logging.info("No search results found.")
+        logger.info("No search results found.")
         return {}
 
 
@@ -308,9 +308,9 @@ def google_custom_search(query):
                 dt = {'title':title,'link':link,'description':description}
                 res.append(dt)
         else:
-            logging.info("No Results Found")
+            logger.info("No Results Found")
     else:
-        logging.error("Error:", response.status_code, response.text)
+        logger.error("Error:", response.status_code, response.text)
     return res
 
 
@@ -332,9 +332,9 @@ def bing_search(query):
                     dt = {'title':name,'link':url,'description':description}
                     res.append(dt)
         else:
-            logging.info("No Results Found")
+            logger.info("No Results Found")
     else:
-        logging.error("Error:", response.status_code, response.text)
+        logger.error("Error:", response.status_code, response.text)
     return res   
 
 
@@ -358,9 +358,9 @@ def bing_news_search(query):
                 dt = {'title':title,'link':url,'description':description,'thumbnail_url':thumbnail_url}
                 res.append(dt)
         else:
-            logging.info("No Results Found")
+            logger.info("No Results Found")
     else:
-        logging.error("Error:", response.status_code, response.text)
+        logger.error("Error:", response.status_code, response.text)
     return res
 
 

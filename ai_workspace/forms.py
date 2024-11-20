@@ -120,7 +120,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    logging.info("assign detail mailsent>>")
+    logger.info("assign detail mailsent>>")
 
 
 def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reason):
@@ -137,7 +137,7 @@ def task_assign_ven_status_mail(task_assign,task_ven_status,change_request_reaso
         emails,
         html_message=msg_html,
     )
-    logging.info("assign vendor status-->>>")
+    logger.info("assign vendor status-->>>")
 
 
 

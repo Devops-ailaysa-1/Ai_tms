@@ -41,7 +41,7 @@ logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
-    logging.error(f"Error : {str(e)}")
+    logger.error(f"Error : {str(e)}")
 
 def get_stripe_key():
     '''gets stripe api key for current environment'''
@@ -737,7 +737,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
     res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
     res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
     if user.id != pos.last().seller.id: # validate seller
-        logging.info("given user is not po owner")
+        logger.info("given user is not po owner")
     elif res&res2&res3 >1:
         logger.error("Invoice creation Failed More Than on currency or clients")
         return None

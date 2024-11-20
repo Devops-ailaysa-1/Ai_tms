@@ -333,7 +333,7 @@ def integrity_error(func):
         try:
             return func(*args, **kwargs)
         except IntegrityError as e:
-            logging.error("error---->", e)
+            logger.error("error---->", e)
             return Response({'message': "integrirty error"}, 409)
 
     return decorator
@@ -1419,7 +1419,7 @@ class TaskView(APIView):
         try:
             task.delete()
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             return Response(data={"Message": "An error occurred while deleting the task"}, status=500)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1614,13 +1614,13 @@ class ProjectAnalysisProperty(APIView):
                         if task_detail_serializer.is_valid(raise_exception=True):
                             task_detail_serializer.save()
                         else:
-                            logging.error("error-->", task_detail_serializer.errors)
+                            logger.error("error-->", task_detail_serializer.errors)
                     else:
                         # if file is having any issue in  processing in spring
                         logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
-                    logging.error("No entry")
+                    logger.error("No entry")
                 # to update processed file_ids
                 file_ids.append(task.file_id)
 
@@ -1751,9 +1751,9 @@ def bulk_task_accept(request):
             if serializer.is_valid():
                 serializer.save()
             else:
-                logging.error("Error--------->",serializer.errors)
+                logger.error("Error--------->",serializer.errors)
         except:
-            logging.warning("passing bulk task")
+            logger.warning("passing bulk task")
             pass
     return Response({'msg':'Task Accept Succeded'})
 
@@ -2858,7 +2858,7 @@ def download_task_target_file(request):
         output_file =  obj.task_file_detail.first().target_file
         return download_file(output_file.path)
     except BaseException as e:
-        logging.error(f"Error : {str(e)}")
+        logger.error(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
 
@@ -3963,7 +3963,7 @@ class DocumentImageView(viewsets.ViewSet):
             if i.image.url == image_url:
                 i.delete()
             else:
-                logging.error("No match")
+                logger.error("No match")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -4290,7 +4290,7 @@ def translate_file_process(task_id):
     if ser.is_valid():
         ser.save()
     else:
-        logging.error(ser.errors)
+        logger.error(ser.errors)
 
 
 

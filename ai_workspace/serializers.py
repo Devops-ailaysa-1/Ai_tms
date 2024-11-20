@@ -639,7 +639,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			task_assign = TaskAssign.objects.assign_task(project=project_ins_gloss)
 			GlossarySelected.objects.create(project=project,glossary=glossary)  ## for default gloss selected
 		else:
-			logging.info("Default glossary cannot be created")
+			logger.info("Default glossary cannot be created")
 
 
 	def create(self, validated_data):
@@ -1562,7 +1562,7 @@ def notify_task_status(task_assign,status,reason):
         #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
-    logging.info("assign status mailsent from vendor to customer>>")		
+    logger.info("assign status mailsent from vendor to customer>>")		
 		
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
@@ -1655,7 +1655,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			try:
 				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:
-				logging.warning("pass error for update")
+				logger.warning("pass error for update")
 				pass
 			if len(po_update)>0:
 				try:
