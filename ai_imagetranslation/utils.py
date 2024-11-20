@@ -541,7 +541,7 @@ class SDXL:
  
         response = requests.post(self.url, json=data, headers=self.headers)
         if response.status_code == 200:
-            logging.info(
+            logger.info(
                 f"Success! You have {response.headers['X-remaining-credits']} credits remaining"
             )
             return Image.open(BytesIO(response.content))
@@ -630,7 +630,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
     x=response.json()
     process=False
     while True:
-        logging.info("processing")
+        logger.info("processing")
         sd_instance.status="PENDING"
         sd_instance.save()
         res_id=response.json()['id']
@@ -650,7 +650,7 @@ def stable_diffusion_public(ins_id): #prompt,41,height,width,negative_prompt
         sd_instance.thumbnail=create_thumbnail_img_load(base_dimension=300,image=im)
         sd_instance.status="DONE"
         sd_instance.save()
-        logging.info("finished_generate")
+        logger.info("finished_generate")
         
         # return 
     else:

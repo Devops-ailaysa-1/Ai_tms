@@ -91,7 +91,7 @@ def loader(file_id) -> None:
         num = str(uuid.uuid4())
         persistent_dir=path_split[0]+"_"+str(num)+"/"
         os.makedirs(persistent_dir,mode=0o777)
-    logging.info(persistent_dir)
+    logger.info(persistent_dir)
     if instance.file.name.endswith(".docx"):
         loader = Docx2txtLoader(instance.file.path)
     elif instance.file.name.endswith(".txt"):
@@ -410,7 +410,7 @@ def ner_terminology_finder(file_paths):
         try:
             result ="" #json.loads(chat_response.choices[0].message.content)
         except Exception as e:
-            logging.error("ERROR in JSON DECODE-------->",e)
+            logger.error("ERROR in JSON DECODE-------->",e)
     if terms:
          return {'terminology':terms} 
     else:

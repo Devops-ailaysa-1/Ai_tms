@@ -91,7 +91,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
     def run_validation(self,data):
         if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
-            logging.info("data__sub__cat",data.get('sub_catagories'))
+            logger.info("data__sub__cat",data.get('sub_catagories'))
         return super().run_validation(data)
  
 
@@ -755,7 +755,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
             blog_keyword = re.sub(r'\d+.','',blog_keyword)
             blog_keyword = blog_keyword.strip()
             if special_character_check(blog_keyword):
-                logging.info("punc")
+                logger.info("punc")
             else:
                 blog_keyword = replace_punctuation(blog_keyword)
                 if trans == True:
@@ -1533,7 +1533,7 @@ class NewsTranscribeSerializer(serializers.ModelSerializer):
                 if res.get('msg') == None:
                     consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
             else:
-                logging.error("not_short")
+                logger.error("not_short")
         else:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         return instance

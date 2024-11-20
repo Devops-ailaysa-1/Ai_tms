@@ -84,4 +84,4 @@ def update_proj_settings(sender, instance, *args, **kwargs):
         instance.project.get_mt_by_page = False
         instance.project.save()
     else: 
-        logging.info("Nothing to change on  update_proj_settings function")
+        logger.info("Nothing to change on  update_proj_settings function")

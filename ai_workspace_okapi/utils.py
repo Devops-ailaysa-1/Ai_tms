@@ -336,10 +336,10 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         ##elif user check for gloss transltion
         try:
             translate = deepl_translator.translate_text(source_string, target_lang=target_lang_code.upper()) 
-            logging.info("deepl for tar")
+            logger.info("deepl for tar")
             translate = str(translate.text)
         except:
-            logging.error("deepl error")
+            logger.error("deepl error")
             translate = client.translate(source_string,target_language=target_lang_code,
                                 format_=format_).get("translatedText")
 

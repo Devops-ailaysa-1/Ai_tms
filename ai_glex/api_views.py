@@ -349,7 +349,7 @@ class TermUploadView(viewsets.ModelViewSet):
             job = get_or_create_indiv_gloss(trans_project_task=task)
             ### return the output with gloss project task
         else:
-            logging.info("the given task id is gloss trans task")
+            logger.info("the given task id is gloss trans task")
         glossary = job.project.glossary_project.id
         edit_allow = self.edit_allowed_check(job)
         
@@ -1207,7 +1207,7 @@ def get_word_mt(request):
         source_new = translation if target else source
         target_new = translation if source else target
         if (sl_code in ['en','it'] or tl_code in ['en']):
-            logging.info("inside the lemma")
+            logger.info("inside the lemma")
             lemma_word = nltk_lemma(word=source_new,language=sl_code)
             tt = GlossaryMt.objects.create(source=lemma_word, task=None, target_mt=target_new, mt_engine_id=mt_engine_id)
             data = GlossaryMtSerializer(tt).data
@@ -1376,7 +1376,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
     gloss_task_ins = Task.objects.get(id=gloss_task_id)
     gloss_job_ins = gloss_task_ins.job
     source_language_code = gloss_task_ins.job.source_language.id
-    logging.info(source_language_code)
+    logger.info(source_language_code)
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
     with open(doc_json_path,'rb') as fp:
@@ -1397,7 +1397,7 @@ def get_ner_with_textunit_merge(file_extraction_id,gloss_model_id,gloss_task_id)
             terms.extend(requesting_ner(full_text_unit_merge))
     
     elif text_unit and (source_language_code  in lang_code_list): 
-        logging.info(f"the lang is {source_language_code}")
+        logger.info(f"the lang is {source_language_code}")
         terms.extend(gemini_model_term_extract(" ".join(text_unit)))
             
     file_extraction_instance.status = "FINISHED"

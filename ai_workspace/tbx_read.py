@@ -166,7 +166,7 @@ def upload_template_data_to_db(file_id, job_id):
                     value.save()
             return True
         except Exception as e:
-            logging.error("Exception in uploading terms ----> ", e)
+            logger.error("Exception in uploading terms ----> ", e)
             return False
 
 def user_tbx_write(job_id,project_id):
