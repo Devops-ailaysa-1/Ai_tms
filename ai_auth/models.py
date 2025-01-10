@@ -877,7 +877,16 @@ class AilaysaCallCenterFile(models.Model):
 
 
     
- 
+class AilaysaEvent(models.Model):
+    name = models.CharField(max_length=300)
+    email =models.EmailField(max_length=300,unique=True)
+    country= models.ForeignKey(Countries,related_name='ai_events_country',
+        on_delete=models.CASCADE,blank=True, null=True)
+    industry = models.CharField(max_length=500)
+    code = models.CharField(max_length=75)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
+    def __str__(self) -> str:
+        return "Name:"+self.name + "  Email:" +self.email 
 
