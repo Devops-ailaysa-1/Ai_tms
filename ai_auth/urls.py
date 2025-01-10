@@ -28,6 +28,7 @@ router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basena
 router.register(r'team',api_views.TeamCreateView,basename="team")
 router.register(r'internal-member',api_views.InternalMemberCreateView,basename="internal-member")
 router.register(r'hired-editor',api_views.HiredEditorsCreateView,basename="hired-editor")
+# router.register(r'ai-event',api_views.AilaysaEventView,basename="ailaysa-event")
 #router.register(r'user-details',api_views.UserDetailView,basename="user-details")
 
 
@@ -86,5 +87,6 @@ urlpatterns+= [
     path('bootcamp-register/',api_views.MarketingBootcampViewset.as_view({'post':'create'}),name='bootcamp_register'), 
     path('career_support_ai/',api_views.CareerSupportAICreateView.as_view({'post':'create'}), name= 'ml-career-support' ),
     path('ailaysa_cc',api_views.AilaysaCallCenterView.as_view({'post':'create'}), name= 'ailaysa-call-center' ),
-    path('ailaysa_get_in_touch',api_views.AilaysaCallCenterGetInTouchView.as_view({'post':'create'}), name= 'ailaysa-call-center' )
+    path('ailaysa_get_in_touch',api_views.AilaysaCallCenterGetInTouchView.as_view({'post':'create'}), name= 'ailaysa-call-center' ),
+    path('ai-event/',api_views.AilaysaEventView.as_view({'post':'create'}), name= 'ailaysa-event' )
 ]
