@@ -179,7 +179,7 @@ def user_trial_end(user,sub):
         "start_time": time1,
         "end_date" : date2,
         "end_time":time2,
-        "name": user.fullname if user.fullname!=None else 'User'
+        "name": user.fullname if user.fullname!='' else 'User'
         }
  
     email =user.email
