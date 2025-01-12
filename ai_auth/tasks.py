@@ -1250,7 +1250,11 @@ def sync_user_details_bi(test=False,is_vendor=False):
             "pdf_conversion":proj_counts[2],
             "blogs_created":proj_counts[3],
             })
-        
+
+        project_types = ",".join(rep.get_project_type(user))
+        data.update({
+            "project_types":project_types,
+        })
         objs = AiUserDetails.objects.using("bi").filter(email=data["email"])
         if objs.count() != 0:
             objs.using("bi").update(**data)

@@ -46,7 +46,7 @@ class AiUserDetails(models.Model):
     pdf_conversion = models.IntegerField(default=0)
     blogs_created = models.IntegerField(default=0)
     signup_age = models.IntegerField(default=0)
-    project_types = models.CharField(max_length=100,null=True,blank=True)
+    project_types = models.CharField(max_length=1000,null=True,blank=True)
     from_campaign = models.CharField(max_length=100,null=True,blank=True)
 
     # class Meta:
