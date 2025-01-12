@@ -428,3 +428,20 @@ class AilaysaReport:
             for i in proj.project_jobs_set.all():
                 ls.add(i.__str__())
         return list(ls)
+
+
+    def get_project_type(self,user):
+
+        project_type = list(Project.objects.filter(ai_user=user).values_list("project_type__type",flat=True).distinct())
+        my_docs = MyDocuments.objects.filter(ai_user=user)
+        blog_creation = BlogCreation.objects.filter(user=user)
+        pdf = Ai_PdfUpload.objects.filter(user=user)
+
+        if my_docs.count()>0:
+            project_type.append('Writer')
+        if blog_creation.count()>0:
+            project_type.append('Blog Creation')
+        if pdf.count()>0:
+            project_type.append('Pdf tool')
+
+        return project_type
