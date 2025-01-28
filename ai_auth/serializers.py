@@ -649,4 +649,4 @@ class AilaysaCallCenterSerializer(serializers.ModelSerializer):
 class AilaysaEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = AilaysaEvent
-        fields = ("name","email","country","industry","code")
+        fields = ("name","email","country","industry","code","service_needed")
