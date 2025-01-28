@@ -884,6 +884,7 @@ class AilaysaEvent(models.Model):
         on_delete=models.CASCADE,blank=True, null=True)
     industry = models.CharField(max_length=500,null=True,blank=True)
     code = models.CharField(max_length=75)
+    service_needed = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
