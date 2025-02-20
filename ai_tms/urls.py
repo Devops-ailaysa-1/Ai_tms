@@ -48,7 +48,7 @@ urlpatterns = [
     path('vendor/',include('ai_vendor.urls')),
     path('', include('django.contrib.auth.urls')),
     path("workspace/", include('ai_workspace.urls')),
-    path('openai/',include('ai_openai.urls')),
+    path('writer/',include('ai_openai.urls')),
     path("workspace_okapi/", include("ai_workspace_okapi.urls")),
     path('marketplace/',include('ai_marketplace.urls')),
     path('glex/',include('ai_glex.urls')),
