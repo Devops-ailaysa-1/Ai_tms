@@ -55,7 +55,7 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-
+from ai_workspace.enums import AdaptiveFileTranslateStatus
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -1013,6 +1013,7 @@ class Task(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
+    adaptive_file_translate_status = models.CharField(max_length=20, choices=AdaptiveFileTranslateStatus.choices, default=AdaptiveFileTranslateStatus.NOT_INITIATED)
 
     class Meta:
         constraints = [
