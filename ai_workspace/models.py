@@ -1989,3 +1989,5 @@ class TrackSegmentsBatchStatus(models.Model):
     seg_start_id = models.IntegerField()
     seg_end_id = models.IntegerField()
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

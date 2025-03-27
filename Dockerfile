@@ -21,12 +21,13 @@ RUN apt-get clean \
     libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
 
 WORKDIR /ai_home
-COPY pyproject.toml poetry.lock /ai_home/
+COPY pyproject.toml /ai_home/
 
 RUN pip install "poetry==$POETRY_VERSION" && poetry --version
 
 RUN poetry config installer.max-workers 10
 # Install dependencies:
+RUN poetry lock --no-update
 RUN poetry install -vv
 RUN python -c "import nltk; nltk.download('punkt') ; nltk.download('stopwords') ; nltk.download('wordnet')"
 # RUN pip install pip-system-certs
