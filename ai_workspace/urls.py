@@ -31,7 +31,7 @@ router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
 router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
 router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
-
+router.register(r'adaptive_file_translate',api_views.AdaptiveFileTranslate,basename='adaptive_file')
 urlpatterns = router.urls
 
 # api_views urls
