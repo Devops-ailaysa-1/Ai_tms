@@ -52,7 +52,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file,record_api_usage
+from ai_auth.tasks import write_doc_json_file,record_api_usage, adaptive_segment_translation, create_doc_and_write_seg_to_db
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
@@ -62,7 +62,7 @@ from ai_workspace import forms as ws_forms
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
-from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.models import Document, Segment, TextUnit
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
 from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
@@ -106,8 +106,7 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
-
-
+from django_celery_results.models import TaskResult
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5300,3 +5299,87 @@ def get_task_segment_diff(request):
     else:
         return Response({'msg':'need task or proj id'})
     return Response(result_cal,status=200)
+
+
+
+class AdaptiveFileTranslate(viewsets.ViewSet):
+    def retrieve(self, request, pk=None):
+        from ai_workspace.models import TrackSegmentsBatchStatus
+
+        scheme = "https" if request.is_secure() else "http"
+        host = request.get_host()
+        project = get_object_or_404(Project, id=pk)
+        tasks = project.get_tasks
+
+        batch_status_summary = []
+
+        for task in tasks:
+            if not task.document:
+                continue
+
+            batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+            total_batches = batches.count()
+
+            status_counter = {
+                "completed": 0,
+                "in_progress": 0,
+                "failed": 0
+            }
+
+            for batch in batches:
+                task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
+
+                if task_result:
+                    if task_result.status == "SUCCESS":
+                        status_counter["completed"] += 1
+                    elif task_result.status == "FAILURE":
+                        status_counter["failed"] += 1
+                    else:
+                        status_counter["in_progress"] += 1
+                else:
+                    status_counter["in_progress"] += 1
+
+            batch_status = {
+                "task_id": task.id,
+                "document_id": task.document.id,
+                "total_batches": total_batches,
+                "completed_batches": status_counter["completed"],
+                "in_progress_batches": status_counter["in_progress"],
+                "failed_batches": status_counter["failed"]
+            }
+
+            if status_counter["completed"] == total_batches and total_batches > 0:
+                batch_status["download_file"] = f"{scheme}://{host}/workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+
+            batch_status_summary.append(batch_status)
+
+        return Response({
+            "project_id": project.id,
+            "batch_status": batch_status_summary
+        }, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        task_id = request.data.get('task')
+        if not task_id:
+            return Response({'msg': 'Task id required'}, status=400)
+
+        task = get_object_or_404(Task, id=task_id)
+        project = task.job.project
+        user = request.user
+
+        try:
+            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
+            scheme = "https" if request.is_secure() else "http"
+            host = request.get_host()
+            endpoint = f'{scheme}://{host}/workspace/adaptive_file_translate/{project.id}'
+
+            return Response({
+                'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
+                'endpoint': endpoint
+            }, status=200)
+
+        except Exception as e:
+            print(e)
+            return Response({'msg': 'Document Translation failed'}, status=400)
+
+            

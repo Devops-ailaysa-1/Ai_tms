@@ -2,6 +2,7 @@ import os
 import random
 import re
 import string
+import uuid
 from django.db.models import Prefetch
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
@@ -53,7 +54,8 @@ from django.db.models.functions import Cast
 from django.db.models import CharField
 from django.core.cache import cache
 import functools
-
+from django_celery_results.models import TaskResult
+from ai_workspace.enums import AdaptiveFileTranslateStatus
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -219,6 +221,7 @@ class Project(models.Model):
     copy_paste_enable = models.BooleanField(default=True)
     get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
     file_translate = models.BooleanField(default=False) # Use for default glossary
+    adaptive_file_translate = models.BooleanField(default=False)
     isAdaptiveTranslation = models.BooleanField(default=False) # Used to have adaptive translation or not
 
 
@@ -657,7 +660,8 @@ class Project(models.Model):
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
-            except:
+            except Exception as e:
+                print(e)
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]}
 
@@ -1009,6 +1013,7 @@ class Task(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
+    adaptive_file_translate_status = models.CharField(max_length=20, choices=AdaptiveFileTranslateStatus.choices, default=AdaptiveFileTranslateStatus.NOT_INITIATED)
 
     class Meta:
         constraints = [
@@ -1976,3 +1981,14 @@ class FileTermExtracted(models.Model):
 
     class Meta:
         unique_together = ("task", "file")
+
+
+class TrackSegmentsBatchStatus(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="track_batch_segment_status")
+    seg_start_id = models.IntegerField()
+    seg_end_id = models.IntegerField()
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

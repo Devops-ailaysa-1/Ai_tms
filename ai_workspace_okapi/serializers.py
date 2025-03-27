@@ -776,3 +776,9 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
+class AdaptiveSegmentSerializer(serializers.ModelSerializer):
+    segment_id = serializers.IntegerField(source='id')
+
+    class Meta:
+        model = Segment
+        fields = ["segment_id", "source", "tagged_source"]

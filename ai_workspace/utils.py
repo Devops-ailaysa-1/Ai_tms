@@ -323,3 +323,169 @@ def number_of_words_delete(segment):
 #         print(f"Function '{func.__name__}' executed in {execution_time:.6f} seconds")
 #         return result
 #     return wrapper
+
+
+
+import json
+from abc import ABC, abstractmethod
+import os
+from anthropic import Anthropic
+
+# Handles API interaction
+class AnthropicAPI:
+    def __init__(self, api_key, model_name):
+        self.client = Anthropic(api_key=api_key)
+        self.model_name = model_name
+        self.tag_prompt = """
+            Tag Translation Guidelines: 
+            - Preserve Tags: Keep all tags (<n>, </n>) exactly as in the original sentence.  
+            - Correct Placement: Place tags in the translated sentence where they correspond naturally based on the target language's structure.  
+            - No Changes:** Do not add, remove, or modify tags.  
+            - Match Tag Count: Ensure the same number of tags in both the source and translated sentence.  
+            - Output Format: Provide only the translated sentence with correctly placed tags, without any extra text.  
+
+            Example:  
+            Input: "Original sentence with <1>tags</1> here."  
+            Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
+        """
+
+    def send_request(self, system_prompt, messages, max_tokens=2000):
+        response = self.client.messages.create(
+            model=self.model_name,
+            system=[
+                {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"}
+                },                        
+                {"type": "text",
+                "text": self.tag_prompt,
+                },
+            ],
+            messages=messages,
+            max_tokens=max_tokens
+        )
+        return response.content[0].text.strip() if response.content else None
+
+
+class TranslationStage(ABC):
+    def __init__(self, anthropic_api, target_language, source_language):
+        self.api = anthropic_api
+        self.target_language = target_language
+        self.source_language = source_language
+
+    @abstractmethod
+    def process(self, segment, **kwargs):
+        pass
+
+
+# Style analysis (Stage 1)
+class StyleAnalysis(TranslationStage):
+    def process(self, segments):
+        system_prompt = """Analyze the following text and provide a comprehensive description of its:
+        1. Writing tone and style
+        2. Emotional conduct
+        3. Technical level
+        4. Target audience
+        5. Key contextual elements
+        
+        Format your response as a translation guidance prompt that can be used to maintain these elements. 
+        Make sure you generate only the prompt as an output. No feedback or any sort of additional information should be generated."""
+
+        combined_text = " ".join([seg['source'] for seg in segments])
+        messages = [{"role": "user", "content": combined_text}]
+        return self.api.send_request(system_prompt, messages)
+
+
+# Initial translation (Stage 2)
+class InitialTranslation(TranslationStage):
+    def process(self, segment, style_guideline):
+        system_prompt = f"""Translate the following segments of text to {self.target_language} while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
+        Style Guidelines: 
+        {style_guideline}
+        The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
+        Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
+        The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
+        Final output should only be the translated text with the relevent taggig followed as in the source. no feedback or any sort of additional information should be provided.
+        """
+
+        messages = [{"role": "user", "content": segment["tagged_source"]}]
+        return self.api.send_request(system_prompt, messages)
+
+
+# Refinement 1 (Stage 3)
+class RefinementStage1(TranslationStage):
+    def process(self, segment):
+        system_prompt = f"""For the provided tagged source sentences and translated text sentences, ensure the translation is smooth and correct. 
+        Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
+        Make necessary translation corrections if needed.
+        strictly, Result must be only the final target translation.
+        no feedbacks or any sort of additional information should be provided."""
+
+        input_text = f"Source: {segment['tagged_source']}\nInitial Translation: {segment['translated_text']}"
+        messages = [{"role": "user", "content": input_text}]
+        return self.api.send_request(system_prompt, messages)
+
+# Final refinement (Stage 4)
+class RefinementStage2(TranslationStage):
+    def process(self, segment):
+        system_prompt = f"""Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself.
+        The text should be in the modern standard {self.target_language} language. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
+        If no changes are needed, return the same {self.target_language} text without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence along with the tags as such.
+        Note: No feedback or any sort of additional information should be provided."""
+
+        input_text = f"Refined Translation: {segment['refined_translation']}"
+        messages = [{"role": "user", "content": input_text}]
+        return self.api.send_request(system_prompt, messages)
+
+
+class AdaptiveSegmentTranslator:
+    def __init__(self, source_language, target_language, api_key, model_name):
+        self.api = AnthropicAPI(api_key, model_name)
+        self.source_language = source_language
+        self.target_language = target_language
+
+        # Translation stages (New stages can be added)
+        self.style_analysis = StyleAnalysis(self.api, target_language, source_language)
+        self.initial_translation = InitialTranslation(self.api, target_language, source_language)
+        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language)
+        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language)
+
+    def process_batch(self, segments):
+        style_guideline = self.style_analysis.process(segments)
+        translated_segments = []
+
+        for segment in segments:
+            translated_text = self.initial_translation.process(segment, style_guideline)
+            translated_segments.append({
+                "segment_id": segment["segment_id"],
+                "source_text": segment["source"],
+                "tagged_source": segment["tagged_source"],
+                "translated_text": translated_text
+            })
+
+        # print("Initial Translation:")
+        # print(json.dumps(translated_segments, indent=2, ensure_ascii=False))
+
+        refined_segments = []
+        for segment in translated_segments:
+            refined_text = self.refinement_stage_1.process(segment)
+            refined_segments.append({
+                **segment,
+                "refined_translation": refined_text
+            })
+
+        # print("\nRefined Translation:")
+        # print(json.dumps(refined_segments, indent=2, ensure_ascii=False))
+
+        final_segments = []
+        for segment in refined_segments:
+            final_text = self.refinement_stage_2.process(segment)
+            final_segments.append({
+                **segment,
+                "final_translation": final_text
+            })
+        return final_segments
+        # print("\nFinal Translation:")
+        # print(json.dumps(final_segments, indent=2, ensure_ascii=False))
+        
