@@ -978,6 +978,238 @@ def replace_with_gloss(src, raw_mt, task):
     return final_mt
       
 
+   
+from anthropic import Anthropic
+import json
+from abc import ABC, abstractmethod
+import os
+# from celery import task
+
+# Handles API interaction
+class AnthropicAPI:
+    def __init__(self, api_key, model_name):
+        self.client = Anthropic(api_key=api_key)
+        self.model_name = model_name
+
+    def send_request(self, system_prompt, messages, max_tokens=2000):
+        response = self.client.messages.create(
+            model=self.model_name,
+            system=system_prompt,
+            messages=messages,
+            max_tokens=max_tokens
+        )
+        return response.content[0].text.strip() if response.content else None
+
+
+class TranslationStage(ABC):
+    def __init__(self, anthropic_api, target_language, source_language):
+        self.api = anthropic_api
+        self.target_language = target_language
+        self.source_language = source_language
+
+    @abstractmethod
+    def process(self, segment, **kwargs):
+        pass
+
+class StyleAnalysis(TranslationStage):
+    def process(self, segments):
+
+        system_prompt = """Analyze the following text and provide a comprehensive description of its:
+        1. Writing tone and style
+        2. Emotional conduct
+        3. Technical level
+        4. Target audience
+        5. Key contextual elements
+        Format your response as a translation guidance prompt that can be used to maintain these elements."""
+
+        combined_text = " ".join([seg['source'] for seg in segments[:min(15, len(segments))]])
+        messages = [{"role": "user", "content": combined_text}]
+
+        return self.api.send_request(system_prompt, messages)
+
+
+# Initial translation (Stage 2)
+class InitialTranslation(TranslationStage):
+    def process(self, segment, style_guideline):
+        # system_prompt = f"""Translate the following text to {self.target_language}, preserving its tone and meaning.
+        # Follow these style guidelines:
+        # {style_guideline}
+        # Ensure natural, idiomatic {self.target_language} expressions."""
+        
+        system_prompt = f'''Translate the following text while adhering to the provided style guidelines. 
+        Ensure the translation closely resembles the source sentence in meaning, tone, and structure. 
+        \n    \nStyle Guidelines: \n{style_guideline}\n\nEnsure both accuracy and natural fluency while translating.\nThe translation should read as if it were originally written in
+        {self.target_language}, maintaining authentic {self.target_language} syntax and style.\nChoose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.\nThe translation should preserve the original meaning while using natural, 
+        idiomatic {self.target_language} expressions. \nfinal output should only be the translated text. no feedbacks or any sort of additional information should be provided.
+        \n        \nNote: Only translate from the give target language \nText to translate:"'''
+
+        messages = [{"role": "user", "content": segment["source"]}]
+        return self.api.send_request(system_prompt, messages)
+
+
+# Refinement 1 (Stage 3)
+class RefinementStage1(TranslationStage):
+    def process(self, segment):
+        # system_prompt = f"""Ensure the translated text is smooth, grammatically correct, and preserves the source style.
+        # Only return the refined translation."""
+        system_prompt = f"""For the provided source and target sentence ensure \nthe translation is smooth and correct. Make sure the tone, style of the\nsource sentence is followed in the target sentence. \nensure grammar and punctuation are correct. Ensure the translated
+        {self.target_language} text is perfect resembling the source text\nMake necessary translation corrections if needed.\nstrictly, 
+        Result must be only the final target translation.\nno feedbacks or any sort of additional information should be provided."""
+        
+        input_text = f"Source: {segment['source']}\nInitial Translation: {segment['translated_text']}"
+        messages = [{"role": "user", "content": input_text}]
+        return self.api.send_request(system_prompt, messages)
+
+
+# Final refinement (Stage 4)
+class RefinementStage2(TranslationStage):
+    def process(self, segment):
+        # system_prompt = f"""Refine the text to ensure it sounds like a native {self.target_language} composition.
+        # Maintain all key terminologies and meanings."""
+        system_prompt = f'''Don't refer the source text which is in {self.source_language}, only rewrite the translated text in such way that it reflects the original {self.target_language} writing style. The change must be in syntax, but core words, meaning, sense and emphasis shouldn't be changed.\n\nIf no changes are needed, return the same 
+        {self.target_language} without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence.'''
+        
+        input_text = f"Refined Translation: {segment['refined_translation']}"
+        messages = [{"role": "user", "content": input_text}]
+        return self.api.send_request(system_prompt, messages)
+
+
+class SegmentTranslator:
+    def __init__(self, source_language, target_language, api_key, model_name):
+        self.api = AnthropicAPI(api_key, model_name)
+        self.source_language = source_language
+        self.target_language = target_language
+
+        self.style_analysis = StyleAnalysis(self.api, target_language, source_language)
+        self.initial_translation = InitialTranslation(self.api, target_language, source_language)
+        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language)
+        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language)
+
+ 
+
+
+@task(queue='high-priority')
+def adaptive_translate(task_id,segments):
+    '''
+    This task is mainly used for get_mt (mt-only download) for the source files.
+    This is called for page-wise translation.
+    '''
+
+    from ai_workspace.models import Task, TaskAssign
+    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
+    from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    from itertools import chain
+
+    task = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='adaptive_translate', status=1,celery_task_id=adaptive_translate.request.id)
+    user = task.job.project.ai_user
+    # mt_engine = task.job.project.mt_engine_id
+    # task_mt_engine_id = TaskAssign.objects.filter(Q(task=task) & Q(step_id=1)).first().mt_engine.id
+    adaptive_file = task.job.project.adaptive_file_translate
+    if segments == None:
+        segments = task.document.segments_for_find_and_replace
+        # merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
+        # split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+        final_segments =segments #list(chain(segments, merge_segments, split_segments))
+    else:
+        final_segments = segments
+
+    update_list, update_list_for_merged, update_list_for_split = [],[],[]
+    mt_segments, mt_split_segments = [],[]
+    translator = SegmentTranslator(
+        task.document.source_language_code, 
+        task.document.target_language_code, 
+        settings.ANTHROPIC_API_KEY,
+        settings.ANTHROPIC_MODEL_NAME
+    )
+
+    segments_needing_translation = [seg for seg in final_segments if seg.target in ('', None)]
+    
+    if segments_needing_translation:  
+        source_texts = [{"source": seg.source} for seg in segments_needing_translation]
+        print('source_texts', source_texts)
+
+        style_guideline = translator.style_analysis.process(source_texts)
+        print('style_guideline', style_guideline)
+    else:
+        style_guideline = None
+    
+    for seg in final_segments:###############Need to revise####################
+        
+        if adaptive_file == True:
+            if seg.target == '' or seg.target == None:
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
+                if initial_credit > consumable_credits:
+                    try:
+                        segment_data = {
+                            "source": seg.source,
+                            "tagged_source": seg.tagged_source if seg.tagged_source else seg.source
+                        }
+                        # Step 3: Use the precomputed style guideline
+                        translated_text = translator.initial_translation.process(segment_data, style_guideline)
+                        print('translated_text', translated_text)
+                        print("*" * 100)
+
+                        refined_text = translator.refinement_stage_1.process({**segment_data, "translated_text": translated_text})
+                        print('refined_text', refined_text)
+                        print("*" * 100)
+
+                        final_text = translator.refinement_stage_2.process({**segment_data, "refined_translation": refined_text})
+                        print('final_text', final_text)
+                        print("*" * 100)
+
+                        if final_text:
+                            seg.target = final_text
+                            seg.temp_target = final_text
+                            seg.status_id = TranslationStatus.objects.get(status_id=103).id
+                    
+                    except:
+                        seg.target = ''
+                        seg.temp_target = ''
+                        seg.status_id=None
+                else:
+                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='adaptive_translate',status=1,celery_task_id=adaptive_translate.request.id,\
+                                                          error_type="Insufficient Credits")
+                    break
+                if type(seg) is Segment:
+                    update_list.append(seg)
+                elif type(seg) is SplitSegment:
+                    update_list_for_split.append(seg)
+                elif type(seg) is MergeSegment:
+                    update_list_for_merged.append(seg)
+            else:
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
+                if initial_credit > consumable_credits:
+                    print('not need translate')
+                    pass
+                    
+                    # if adaptive_file:
+                    #     # Adapting glossary
+                    #     raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                    #                             user_id=task.owner_pk, cc=consumable_credits)
+                    #     mt = replace_with_gloss(seg.source,raw_mt,task)
+                    # else:
+                    #     # Without adapting glossary
+                    #     mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    #     raw_mt = mt
+
+                    # if type(seg) is SplitSegment:
+                    #     mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                    # else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                else:
+                    logger.info("Insufficient credits")
+                
+    
+    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+    MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
+    SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
+    
+    logger.info("mt_raw_update")
+
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
 

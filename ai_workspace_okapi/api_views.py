@@ -7,7 +7,7 @@ import json, logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update,adaptive_translate
 from ai_auth.tasks import record_api_usage
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
@@ -572,6 +572,8 @@ class SegmentsView(views.APIView, PageNumberPagination):
         
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
+        elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
+            adaptive_translate(task.id, page_segments)
         
         segments_ser = SegmentSerializer(page_segments, many=True)
 
