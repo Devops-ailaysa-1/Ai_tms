@@ -6,4 +6,9 @@ class AdaptiveFileTranslateStatus(models.TextChoices):
     COMPLETED = "COMPLETED", "Translation Completed"
     FAILED = "FAILED", "Translation Failed"
 
-    
+
+class BatchStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"  
+    ONGOING = "ONGOING", "Ongoing"
+    COMPLETED = "COMPLETED", "Completed"
+    FAILED = "FAILED", "Failed"
