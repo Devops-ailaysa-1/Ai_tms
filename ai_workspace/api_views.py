@@ -5339,13 +5339,16 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 else:
                     status_counter["in_progress"] += 1
 
+            completed_percentage = (
+                (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+            )
             batch_status = {
                 "task_id": task.id,
                 "document_id": task.document.id,
                 "total_batches": total_batches,
                 "completed_batches": status_counter["completed"],
-                "in_progress_batches": status_counter["in_progress"],
-                "failed_batches": status_counter["failed"]
+                "completed_percentage": str(completed_percentage) + '%',
+                "status": "completed" if status_counter["completed"] == total_batches else "in_progress"
             }
 
             if status_counter["completed"] == total_batches and total_batches > 0:
