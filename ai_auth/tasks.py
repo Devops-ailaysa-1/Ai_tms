@@ -1188,7 +1188,6 @@ def adaptive_translate(task_id,segments):
         final_segments = segments
 
     update_list, update_list_for_merged, update_list_for_split = [],[],[]
-    mt_segments, mt_split_segments = [],[]
     translator = SegmentTranslator(
         task.document.source_language_code, 
         task.document.target_language_code, 
@@ -1200,10 +1199,8 @@ def adaptive_translate(task_id,segments):
     
     if segments_needing_translation:  
         source_texts = [{"source": seg.source} for seg in segments_needing_translation]
-        print('source_texts', source_texts)
 
         style_guideline = translator.style_analysis.process(source_texts)
-        print('style_guideline', style_guideline)
     else:
         style_guideline = None
     
@@ -1221,16 +1218,10 @@ def adaptive_translate(task_id,segments):
                         }
                         # Step 3: Use the precomputed style guideline
                         translated_text = translator.initial_translation.process(segment_data, style_guideline)
-                        print('translated_text', translated_text)
-                        print("*" * 100)
-
+                        
                         refined_text = translator.refinement_stage_1.process({**segment_data, "translated_text": translated_text})
-                        print('refined_text', refined_text)
-                        print("*" * 100)
 
                         final_text = translator.refinement_stage_2.process({**segment_data, "refined_translation": refined_text})
-                        print('final_text', final_text)
-                        print("*" * 100)
 
                         if final_text:
                             seg.target = final_text
@@ -1244,6 +1235,7 @@ def adaptive_translate(task_id,segments):
                 else:
                     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='adaptive_translate',status=1,celery_task_id=adaptive_translate.request.id,\
                                                           error_type="Insufficient Credits")
+                    logger.info("Insufficient credits")
                     break
                 if type(seg) is Segment:
                     update_list.append(seg)
@@ -1252,11 +1244,12 @@ def adaptive_translate(task_id,segments):
                 elif type(seg) is MergeSegment:
                     update_list_for_merged.append(seg)
             else:
-                initial_credit = user.credit_balance.get("total_left")
-                consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
-                if initial_credit > consumable_credits:
-                    print('not need translate')
-                    pass
+                # initial_credit = user.credit_balance.get("total_left")
+                # consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
+                # if initial_credit > consumable_credits:
+                #     print('not need translate')
+                logger.info('Already translated source text')
+                pass
                     
                     # if adaptive_file:
                     #     # Adapting glossary
@@ -1271,15 +1264,15 @@ def adaptive_translate(task_id,segments):
                     # if type(seg) is SplitSegment:
                     #     mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
                     # else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
-                else:
-                    logger.info("Insufficient credits")
+                # else:
+                #     logger.info("Insufficient credits")
                 
     
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
     MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
     SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
     
-    logger.info("mt_raw_update")
+    logger.info("adaptive_translate")
 
 @task(queue='high-priority')
 def mt_raw_update(task_id,segments):
