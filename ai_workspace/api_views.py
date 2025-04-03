@@ -5378,11 +5378,12 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
             return Response({
                 'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
-                'endpoint': endpoint
+                'endpoint': endpoint,
+                'status': 'success',
             }, status=200)
 
         except Exception as e:
             print(e)
-            return Response({'msg': 'Document Translation failed'}, status=400)
+            return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
 
             
