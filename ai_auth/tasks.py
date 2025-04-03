@@ -1002,16 +1002,6 @@ class AnthropicAPI:
             Input: "Original sentence with <1>tags</1> here."  
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
-
-    # def send_request(self, system_prompt, messages, max_tokens=2000):
-    #     response = self.client.messages.create(
-    #         model=self.model_name,
-    #         system=system_prompt,
-    #         messages=messages,
-    #         max_tokens=max_tokens
-    #     )
-    #     return response.content[0].text.strip() if response.content else None
-    
     def send_request(self, system_prompt, messages, max_tokens=2000):
         response = self.client.messages.create(
             model=self.model_name,
@@ -1043,19 +1033,6 @@ class TranslationStage(ABC):
 
 class StyleAnalysis(TranslationStage):
     def process(self, segments):
-
-        # system_prompt = """Analyze the following text and provide a comprehensive description of its:
-        # 1. Writing tone and style
-        # 2. Emotional conduct
-        # 3. Technical level
-        # 4. Target audience
-        # 5. Key contextual elements
-        # Format your response as a translation guidance prompt that can be used to maintain these elements."""
-
-        # combined_text = " ".join([seg['source'] for seg in segments[:min(15, len(segments))]])
-        # messages = [{"role": "user", "content": combined_text}]
-
-        # return self.api.send_request(system_prompt, messages)
         system_prompt = """Analyze the following text and provide a comprehensive description of its:
         1. Writing tone and style
         2. Emotional conduct
@@ -1074,20 +1051,6 @@ class StyleAnalysis(TranslationStage):
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
     def process(self, segment, style_guideline):
-        # # system_prompt = f"""Translate the following text to {self.target_language}, preserving its tone and meaning.
-        # # Follow these style guidelines:
-        # # {style_guideline}
-        # # Ensure natural, idiomatic {self.target_language} expressions."""
-        
-        # system_prompt = f'''Translate the following text while adhering to the provided style guidelines. 
-        # Ensure the translation closely resembles the source sentence in meaning, tone, and structure. 
-        # \n    \nStyle Guidelines: \n{style_guideline}\n\nEnsure both accuracy and natural fluency while translating.\nThe translation should read as if it were originally written in
-        # {self.target_language}, maintaining authentic {self.target_language} syntax and style.\nChoose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.\nThe translation should preserve the original meaning while using natural, 
-        # idiomatic {self.target_language} expressions. \nfinal output should only be the translated text. no feedbacks or any sort of additional information should be provided.
-        # \n        \nNote: Only translate from the give target language \nText to translate:"'''
-
-        # messages = [{"role": "user", "content": segment["source"]}]
-        # return self.api.send_request(system_prompt, messages)
         system_prompt = f"""Translate the following segments of text to {self.target_language} while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
         Style Guidelines: 
         {style_guideline}
@@ -1104,15 +1067,6 @@ class InitialTranslation(TranslationStage):
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
     def process(self, segment):
-        # # system_prompt = f"""Ensure the translated text is smooth, grammatically correct, and preserves the source style.
-        # # Only return the refined translation."""
-        # system_prompt = f"""For the provided source and target sentence ensure \nthe translation is smooth and correct. Make sure the tone, style of the\nsource sentence is followed in the target sentence. \nensure grammar and punctuation are correct. Ensure the translated
-        # {self.target_language} text is perfect resembling the source text\nMake necessary translation corrections if needed.\nstrictly, 
-        # Result must be only the final target translation.\nno feedbacks or any sort of additional information should be provided."""
-        
-        # input_text = f"Source: {segment['source']}\nInitial Translation: {segment['translated_text']}"
-        # messages = [{"role": "user", "content": input_text}]
-        # return self.api.send_request(system_prompt, messages)
         system_prompt = f"""For the provided tagged source sentences and translated text sentences, ensure the translation is smooth and correct. 
         Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
         Make necessary translation corrections if needed.
@@ -1127,14 +1081,6 @@ class RefinementStage1(TranslationStage):
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
     def process(self, segment):
-        # system_prompt = f"""Refine the text to ensure it sounds like a native {self.target_language} composition.
-        # Maintain all key terminologies and meanings."""
-        # system_prompt = f'''Don't refer the source text which is in {self.source_language}, only rewrite the translated text in such way that it reflects the original {self.target_language} writing style. The change must be in syntax, but core words, meaning, sense and emphasis shouldn't be changed.\n\nIf no changes are needed, return the same 
-        # {self.target_language} without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence.'''
-        
-        # input_text = f"Refined Translation: {segment['refined_translation']}"
-        # messages = [{"role": "user", "content": input_text}]
-        # return self.api.send_request(system_prompt, messages)
         system_prompt = f"""Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself.
         The text should be in the modern standard {self.target_language} language. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
         If no changes are needed, return the same {self.target_language} text without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence along with the tags as such.
