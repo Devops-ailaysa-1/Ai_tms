@@ -56,7 +56,8 @@ from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File
 from ai_workspace.models import Project
-from ai_workspace.models import Task, TaskAssign
+from ai_workspace.enums import BatchStatus
+from ai_workspace.models import Task, TaskAssign,TrackSegmentsBatchStatus
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from ai_workspace.serializers import TaskTranscriptDetailSerializer
 from ai_workspace.utils import get_consumable_credits_for_text_to_speech
@@ -569,32 +570,32 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
-        segments_ser = SegmentSerializer(page_segments, many=True)
-        segments_ser = segments_ser.data
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
         elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
-            if all(seg["is_adaptive_translation_complete"] == 'Success' for seg in segments_ser):
-                pass    
-            elif any(seg["is_adaptive_translation_complete"] == 'Ongoing' for seg in segments_ser):
-                # return Response({"response": "Adaptive translation is already in progress. Please wait."})
-                pass
+            
+            track_seg = TrackSegmentsBatchStatus.objects.filter(
+                    document=task.document,
+                    seg_start_id=page_segments[0].id,
+                    seg_end_id=page_segments[-1].id,
+                    project=task.job.project 
+                ).first() 
+            if track_seg:
+                if track_seg.status == BatchStatus.COMPLETED:
+                    pass  # No need to trigger translation, it's already done
+                elif track_seg.status == BatchStatus.ONGOING:
+                    return Response({"response": "Adaptive translation is already in progress. Please wait."})
+                elif track_seg.status == BatchStatus.FAILED:
+                    return Response({"response": "Oops! Something went wrong. Please reach out to support for help."})
             else:
-                page_segments_serialized = [
-                    {"id": seg.id}
-                for seg in page_segments
-                ]
+                # No record found, so initiate a new translation task
+                page_segments_serialized = [{"id": seg.id} for seg in page_segments]
 
-                adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
-                # return Response({"response": "Adaptive translation has started."})                
+                adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority")  
                 
-
-            # adaptive_translate.apply_async((task.id, page_segments), queue='high-priority')
-            # mt_raw_update.apply_async((task.id,None,), queue='high-priority')
-        
-        # segments_ser = SegmentSerializer(page_segments, many=True)
-        [i.update({"segment_count": j}) for i, j in zip(segments_ser, page_len)]
-        res = self.get_paginated_response(segments_ser)
+        segments_ser = SegmentSerializer(page_segments, many=True)
+        [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
+        res = self.get_paginated_response(segments_ser.data)
         return res
 
 class MergeSegmentView(viewsets.ModelViewSet):

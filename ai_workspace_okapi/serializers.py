@@ -28,13 +28,12 @@ class SegmentSerializer(serializers.ModelSerializer):
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
     parent_segment = serializers.IntegerField(read_only=True, \
                         source="get_parent_seg_id", allow_null=True,)
-    is_adaptive_translation_complete = serializers.CharField(default=None)
     class Meta:
         model = Segment
         fields = (
             "source","target","coded_source","coded_brace_pattern","coded_ids_sequence","tagged_source",\
             "target_tags","segment_id","temp_target","status","has_comment","is_merged","is_split",\
-            "text_unit","is_merge_start","random_tag_ids","parent_segment","is_adaptive_translation_complete")
+            "text_unit","is_merge_start","random_tag_ids","parent_segment",)
 
         extra_kwargs = {
             "source": {"write_only": True},
@@ -49,7 +48,6 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merge_start": {"read_only": True},
             "is_split": {"read_only": True},
             # "id",
-            "is_adaptive_translation_complete":{"write_only":True},
             "parent_segment": {"read_only": True},
         }
     # def get_is_adaptive_translation_complete(self, obj):
@@ -78,11 +76,6 @@ class SegmentSerializer(serializers.ModelSerializer):
         random_tag_id_list = json.loads(representation["random_tag_ids"])
         representation["tagged_source"] = self.remove_random_tags(representation["tagged_source"], random_tag_id_list)
         representation["target_tags"] = self.remove_random_tags(representation["target_tags"], random_tag_id_list)
-        project = Project.objects.get(id=instance.text_unit.document.project)
-        if project.adaptive_file_translate:
-            representation["is_adaptive_translation_complete"] = "Success" if instance.target != '' else "Ongoing"
-        else:
-            representation["is_adaptive_translation_complete"] = None
         return representation
 
 from ai_workspace.models import Task,TaskAssignInfo

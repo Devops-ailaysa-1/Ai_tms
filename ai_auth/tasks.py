@@ -1267,7 +1267,9 @@ def adaptive_translate(task_id, segments):
         print("source_texts",source_texts)  
     else:
         style_guideline = None
-
+    track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
+                                                        seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
+                                                        project=task.proj_obj,status=BatchStatus.ONGOING)
     for seg in final_segments:
         if adaptive_file:
             if not seg.target:
@@ -1296,8 +1298,6 @@ def adaptive_translate(task_id, segments):
                             seg.target = final_text
                             seg.temp_target = final_text
                             seg.status_id = TranslationStatus.objects.get(status_id=103).id
-                            seg.is_adaptive_translation_complete = 'Ongoing'
-                            seg.save()
                     except Exception as e:
                         logger.error(f"Translation error: {e}")
                         seg.target = ''
@@ -1309,6 +1309,7 @@ def adaptive_translate(task_id, segments):
                         celery_task_id=adaptive_translate.request.id, error_type="Insufficient Credits"
                     )
                     logger.info("Insufficient credits")
+                    track_seg.delete()
                     break
                 
                 if isinstance(seg, Segment):
@@ -1320,11 +1321,12 @@ def adaptive_translate(task_id, segments):
             else:
                 logger.info("Already translated source text")
 
-    # #Bulk update to optimize DB writes
-    # Segment.objects.bulk_update(update_list, ["target", "temp_target", "status_id"])
-    # MergeSegment.objects.bulk_update(update_list_for_merged, ["target", "temp_target", "status_id"])
-    # SplitSegment.objects.bulk_update(update_list_for_split, ["target", "temp_target", "status_id"])
-
+    #Bulk update to optimize DB writes
+    Segment.objects.bulk_update(update_list, ["target", "temp_target", "status_id"])
+    MergeSegment.objects.bulk_update(update_list_for_merged, ["target", "temp_target", "status_id"])
+    SplitSegment.objects.bulk_update(update_list_for_split, ["target", "temp_target", "status_id"])
+    track_seg.status = BatchStatus.COMPLETED
+    track_seg.save()
     logger.info("adaptive_translate completed successfully")
 
     
