@@ -5,7 +5,7 @@ import djstripe
 logger = get_task_logger('django')
 from celery.decorators import task
 from ai_openai.utils import get_consumable_credits_for_openai_text_generator
-from celery import shared_task
+from celery import shared_task, group, chord
 from datetime import date
 from django.utils import timezone
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck,PurchasedUnits,CareerSupportAI,AilaysaCallCenter
@@ -38,6 +38,8 @@ from django.conf import settings
 from django.db import transaction
 from django_celery_results.models import TaskResult
 from django.db import connection
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+import time
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -1672,66 +1674,150 @@ def proz_list_send_email(projectpost_id):
 #### -------------------- Adaptive Translation ---------------------------- ####
 from ai_workspace.utils import AdaptiveSegmentTranslator
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, source_lang, target_lang):
-    from ai_workspace_okapi.models import Segment
-    try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'))
-        translated_segments = translator.process_batch(segments)
-        for segment in translated_segments:
-            segment_obj = Segment.objects.get(id=segment['segment_id'])
-            segment_obj.temp_target = segment['final_translation']
-            segment_obj.save()
-        logger.info("Adaptive segment translation was completed and saved to db")
-    except Exception as e:
-        print(e)
+def adaptive_segment_translation(segments_data, source_lang, target_lang):
+    # from ai_workspace_okapi.models import Segment
+
+    # try:
+    #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'))
+    #     translated_segments = translator.process_batch(segments_data) 
+
+    #     for segment in translated_segments:
+    #         segment_obj = Segment.objects.get(id=segment["segment_id"])
+    #         segment_obj.temp_target = segment["final_translation"]
+    #         segment_obj.save()
+
+    #     # Update batch status
+    #     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    #     batch_status.status = BatchStatus.COMPLETED
+    #     batch_status.save()
+
+    #     logger.info("Adaptive segment translation was completed and saved to DB")
+
+    #     # Mark overall task as completed if all batches are done
+    #     task = Task.objects.get(document=batch_status.document)
+    #     if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+    #         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+    #         task.save()
+    #         logger.info("All batches completed. Task marked as COMPLETED")
+
+    # except Exception as e:
+    #     logger.error(f"Batch task failed: {e}")
+    #     batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+    #     if batch_status:
+    #         batch_status.status = BatchStatus.FAILED
+    #         batch_status.save()
+    import time
+    time.sleep(10)
 
 
-def segment_batch_translation(segments, batch_size, min_threshold, source_lang, target_lang, task_id, project):
+@task(queue='high-priority')
+def segment_batch_translation(segments_data, batch_size, min_threshold, source_lang, target_lang, task_id, project_id, total_segments):
     from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
+    from ai_workspace_okapi.models import Segment
+
     task = Task.objects.get(id=task_id)
-    total_segments = segments.count()
+    project = Project.objects.get(id=project_id)
     start_idx = 0
+
+    print("Total segment count : {}".format(total_segments))
+    print("Total segment count : {}".format(len(segments_data)))
+
 
     while start_idx < total_segments:
         end_idx = min(start_idx + batch_size, total_segments)
-        
+
         if (total_segments - end_idx) <= min_threshold:
             end_idx = total_segments
 
-        batch_segments = segments[start_idx:end_idx]
-        serializer = AdaptiveSegmentSerializer(batch_segments, many=True)
+        batch_segments_data = segments_data[start_idx:end_idx]
 
         translation_task = adaptive_segment_translation.apply_async(
-            (serializer.data, source_lang, target_lang,),
+            (batch_segments_data, source_lang, target_lang),
             queue='high-priority'
         )
 
+        seg_start_id = batch_segments_data[0]["segment_id"]
+        seg_end_id = batch_segments_data[-1]["segment_id"]
+
         TrackSegmentsBatchStatus.objects.create(
             celery_task_id=translation_task.id,
+            status=BatchStatus.ONGOING,
             document=task.document,
-            seg_start_id=batch_segments[0].id,  
-            seg_end_id=list(batch_segments)[-1].id,  
+            seg_start_id=seg_start_id,  
+            seg_end_id=seg_end_id,  
             project=project
         )
-        
+        print("Batch Created", start_idx, "to", end_idx)
         start_idx = end_idx
+
+
 
 @task(queue='high-priority')
 def create_doc_and_write_seg_to_db(task_id):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.models import TextUnit, Segment
+    from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
 
     try:
         task = Task.objects.get(id=task_id)
         project = task.job.project
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-        logger.info("Document created and segment written to DB")
-
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
         segments = Segment.objects.filter(text_unit__document__id=document.id).order_by('id')
-        segment_batch_translation(segments, 15, 7, source_lang, target_lang, task_id, project)
+        serializer = AdaptiveSegmentSerializer(segments, many=True)
+        total_segments = len(serializer.data)
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+        task.save()
+        segment_batch_translation.apply_async((serializer.data, 15, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
 
     except Exception as e:
         logger.error(f'Error in batch task: {e}')
+
+
+# def get_glossary_for_task(project, task):
+#     from ai_glex.api_views import job_lang_pair_check
+#     from ai_glex.models import GlossarySelected
+
+#     job_ins = Task.objects.get(id=task.id).job
+#     src_lang, tar_lan = job_ins.source_language, job_ins.target_language
+
+#     gloss_job_ins = [] 
+
+#     if getattr(project, 'individual_gloss_project', None):
+#         gloss_proj = project.individual_gloss_project.project
+#         gloss_job_list = gloss_proj.project_jobs_set.all()
+#         individual_result = job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id)
+#         if individual_result:
+#             gloss_job_ins.append(individual_result)
+
+#     # gloss_selected = GlossarySelected.objects.filter(project=project)
+#     # gloss_projects = [gloss.glossary.project for gloss in gloss_selected] if gloss_selected else []
+    
+#     # if gloss_projects:
+#     #     multiple_results = [
+#     #         is_pair for g in gloss_projects for gloss_job_list in g.project_jobs_set.all()
+#     #         if (is_pair := job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id))
+#     #     ]
+#     #     gloss_job_ins.extend(multiple_results)
+
+#     return gloss_job_ins if gloss_job_ins else None
+
+
+# @task(queue='high-priority')
+# def task_2():
+#     print('task_2')
+#     time.sleep(10)
+
+# @task(queue='high-priority')
+# def task_1():
+#     for i in range(100):
+#         task_2.apply_async(([]), queue='high-priority')
+#         print("called {}".format(i))
+# @task(queue='high-priority')
+# def task_3():
+#     task_1.apply_async(([]), queue='high-priority')
+
+
+

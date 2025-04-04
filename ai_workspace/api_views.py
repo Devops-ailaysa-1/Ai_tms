@@ -5339,13 +5339,16 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 else:
                     status_counter["in_progress"] += 1
 
+            completed_percentage = (
+                (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+            )
             batch_status = {
                 "task_id": task.id,
                 "document_id": task.document.id,
                 "total_batches": total_batches,
                 "completed_batches": status_counter["completed"],
-                "in_progress_batches": status_counter["in_progress"],
-                "failed_batches": status_counter["failed"]
+                "completed_percentage": int(completed_percentage),
+                "status": "completed" if status_counter["completed"] == total_batches else "in_progress"
             }
 
             if status_counter["completed"] == total_batches and total_batches > 0:
@@ -5375,11 +5378,21 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
             return Response({
                 'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
-                'endpoint': endpoint
+                'endpoint': endpoint,
+                'status': 'success',
             }, status=200)
 
         except Exception as e:
             print(e)
-            return Response({'msg': 'Document Translation failed'}, status=400)
+            return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
 
-            
+
+
+# class CheckGloss(viewsets.ViewSet):
+#     def list(self, request):
+#         from ai_auth.tasks import get_glossary_for_task
+#         p = Project.objects.get(id=114)
+#         t = p.get_tasks[0]
+#         res = get_glossary_for_task(p, t)
+#         print(res)
+#         return Response({'msg': 'success'})
