@@ -1412,25 +1412,12 @@ def create_doc_and_write_seg_to_db(task_id):
         task = Task.objects.get(id=task_id)
         project = task.job.project
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-
-
-        get_document_write_completed = MTonlytaskCeleryStatus.objects.get(task=task)
-        if get_document_write_completed:
-            print(get_document_write_completed.status, "Status")
-            print("Document already created and segment written to DB")
-        else:
-            print("Document not created and segment written to DB")
-
-        logger.info("Document created and segment written to DB")
-
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
         segments = Segment.objects.filter(text_unit__document__id=document.id).order_by('id')
-        print("Total segment count after created in db : {}".format(segments.count()))
         serializer = AdaptiveSegmentSerializer(segments, many=True)
         total_segments = len(serializer.data)
-        print("Total segment count after serialized : {}".format(total_segments))
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
         segment_batch_translation.apply_async((serializer.data, 15, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
