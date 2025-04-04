@@ -1439,6 +1439,34 @@ def create_doc_and_write_seg_to_db(task_id):
         logger.error(f'Error in batch task: {e}')
 
 
+# def get_glossary_for_task(project, task):
+#     from ai_glex.api_views import job_lang_pair_check
+#     from ai_glex.models import GlossarySelected
+
+#     job_ins = Task.objects.get(id=task.id).job
+#     src_lang, tar_lan = job_ins.source_language, job_ins.target_language
+
+#     gloss_job_ins = [] 
+
+#     if getattr(project, 'individual_gloss_project', None):
+#         gloss_proj = project.individual_gloss_project.project
+#         gloss_job_list = gloss_proj.project_jobs_set.all()
+#         individual_result = job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id)
+#         if individual_result:
+#             gloss_job_ins.append(individual_result)
+
+#     # gloss_selected = GlossarySelected.objects.filter(project=project)
+#     # gloss_projects = [gloss.glossary.project for gloss in gloss_selected] if gloss_selected else []
+    
+#     # if gloss_projects:
+#     #     multiple_results = [
+#     #         is_pair for g in gloss_projects for gloss_job_list in g.project_jobs_set.all()
+#     #         if (is_pair := job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id))
+#     #     ]
+#     #     gloss_job_ins.extend(multiple_results)
+
+#     return gloss_job_ins if gloss_job_ins else None
+
 
 # @task(queue='high-priority')
 # def task_2():
