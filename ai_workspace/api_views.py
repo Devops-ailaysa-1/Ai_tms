@@ -5385,14 +5385,3 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         except Exception as e:
             print(e)
             return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
-
-
-
-# class CheckGloss(viewsets.ViewSet):
-#     def list(self, request):
-#         from ai_auth.tasks import get_glossary_for_task
-#         p = Project.objects.get(id=114)
-#         t = p.get_tasks[0]
-#         res = get_glossary_for_task(p, t)
-#         print(res)
-#         return Response({'msg': 'success'})
