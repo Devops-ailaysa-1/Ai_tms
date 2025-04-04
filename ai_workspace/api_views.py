@@ -5347,7 +5347,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 "document_id": task.document.id,
                 "total_batches": total_batches,
                 "completed_batches": status_counter["completed"],
-                "completed_percentage": str(completed_percentage) + '%',
+                "completed_percentage": f"{completed_percentage:.2f}%",
                 "status": "completed" if status_counter["completed"] == total_batches else "in_progress"
             }
 
@@ -5386,4 +5386,13 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             print(e)
             return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
 
-            
+
+
+# class CheckGloss(viewsets.ViewSet):
+#     def list(self, request):
+#         from ai_auth.tasks import get_glossary_for_task
+#         p = Project.objects.get(id=114)
+#         t = p.get_tasks[0]
+#         res = get_glossary_for_task(p, t)
+#         print(res)
+#         return Response({'msg': 'success'})
