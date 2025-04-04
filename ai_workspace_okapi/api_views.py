@@ -569,16 +569,32 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
-        
+        segments_ser = SegmentSerializer(page_segments, many=True)
+        segments_ser = segments_ser.data
         if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
         elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
-            adaptive_translate(task.id, page_segments)
-        
-        segments_ser = SegmentSerializer(page_segments, many=True)
+            if all(seg["is_adaptive_translation_complete"] == 'Success' for seg in segments_ser):
+                pass    
+            elif any(seg["is_adaptive_translation_complete"] == 'Ongoing' for seg in segments_ser):
+                # return Response({"response": "Adaptive translation is already in progress. Please wait."})
+                pass
+            else:
+                page_segments_serialized = [
+                    {"id": seg.id}
+                for seg in page_segments
+                ]
 
-        [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
-        res = self.get_paginated_response(segments_ser.data)
+                adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
+                # return Response({"response": "Adaptive translation has started."})                
+                
+
+            # adaptive_translate.apply_async((task.id, page_segments), queue='high-priority')
+            # mt_raw_update.apply_async((task.id,None,), queue='high-priority')
+        
+        # segments_ser = SegmentSerializer(page_segments, many=True)
+        [i.update({"segment_count": j}) for i, j in zip(segments_ser, page_len)]
+        res = self.get_paginated_response(segments_ser)
         return res
 
 class MergeSegmentView(viewsets.ModelViewSet):
