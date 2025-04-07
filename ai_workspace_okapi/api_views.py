@@ -932,6 +932,25 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
                 return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+            
+    @staticmethod
+    def get_adaptive_consumable_credits(doc, segment_id, seg):
+
+        if seg:
+            return MT_RawAndTM_View.get_word_count(seg, doc)
+
+        elif segment_id:
+            if split_check(segment_id):
+                segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                segment_source = segment.source #if segment!= None else seg
+                seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
+                return seg_count
+
+            # For split segment
+            else:
+                split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+                return split_seg_count
 
     @staticmethod
     def get_task_assign_mt_engine(segment_id):
