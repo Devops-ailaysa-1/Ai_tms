@@ -50,7 +50,14 @@ class SegmentSerializer(serializers.ModelSerializer):
             # "id",
             "parent_segment": {"read_only": True},
         }
-
+    # def get_is_adaptive_translation_complete(self, obj):
+    #     project = Project.objects.get(id=obj.text_unit.document.project)
+    #     if (project.adaptive_file_translate):
+    #         if obj.target == '':
+    #             return "Ongoing" 
+    #         else:
+    #             return "Success"
+    #     return None
 
     def to_internal_value(self, data):
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
