@@ -1359,7 +1359,8 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     #         batch_status.status = BatchStatus.FAILED
     #         batch_status.save()
     if gloss_terms:
-        print(gloss_terms)
+        print(gloss_terms, "Gloss terms")
+        print(len(gloss_terms), "Length of gloss_terms")
     import time
     time.sleep(10)
 
@@ -1457,18 +1458,15 @@ def get_glossary_for_task(project, task):
                     multiple_results.append(is_pair)
             gloss_job_ins.extend(multiple_results)
 
-        print(gloss_job_ins, "job instances")
-
         if gloss_job_ins:
             latest_terms = (
                 TermsModel.objects
                 .filter(job__in=gloss_job_ins)
                 .annotate(sl_term_lower=Lower('sl_term'))
-                .order_by('sl_term_lower', '-created_date')
+                .order_by('sl_term_lower', '-modified_date')
                 .distinct('sl_term_lower')
             )
             term_map = {term.sl_term.lower(): term.tl_term for term in latest_terms if term.tl_term}
-            print(term_map)
             return term_map
         
         return None
