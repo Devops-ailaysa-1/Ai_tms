@@ -40,6 +40,8 @@ from django_celery_results.models import TaskResult
 from django.db import connection
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 import time
+from django.db.models.functions import Lower
+
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -1560,7 +1562,7 @@ def proz_list_send_email(projectpost_id):
 #### -------------------- Adaptive Translation ---------------------------- ####
 from ai_workspace.utils import AdaptiveSegmentTranslator
 @task(queue='high-priority')
-def adaptive_segment_translation(segments_data, source_lang, target_lang):
+def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms):
     # from ai_workspace_okapi.models import Segment
 
     # try:
@@ -1592,6 +1594,9 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang):
     #     if batch_status:
     #         batch_status.status = BatchStatus.FAILED
     #         batch_status.save()
+    if gloss_terms:
+        print(gloss_terms, "Gloss terms")
+        print(len(gloss_terms), "Length of gloss_terms")
     import time
     time.sleep(10)
 
@@ -1608,6 +1613,7 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
     print("Total segment count : {}".format(total_segments))
     print("Total segment count : {}".format(len(segments_data)))
 
+    get_terms_for_task = get_glossary_for_task(project, task)
 
     while start_idx < total_segments:
         end_idx = min(start_idx + batch_size, total_segments)
@@ -1618,7 +1624,7 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
         batch_segments_data = segments_data[start_idx:end_idx]
 
         translation_task = adaptive_segment_translation.apply_async(
-            (batch_segments_data, source_lang, target_lang),
+            (batch_segments_data, source_lang, target_lang, get_terms_for_task),
             queue='high-priority'
         )
 
@@ -1635,7 +1641,6 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
         )
         print("Batch Created", start_idx, "to", end_idx)
         start_idx = end_idx
-
 
 
 @task(queue='high-priority')
@@ -1662,48 +1667,45 @@ def create_doc_and_write_seg_to_db(task_id):
         logger.error(f'Error in batch task: {e}')
 
 
-# def get_glossary_for_task(project, task):
-#     from ai_glex.api_views import job_lang_pair_check
-#     from ai_glex.models import GlossarySelected
+def get_glossary_for_task(project, task):
+    from ai_glex.api_views import job_lang_pair_check
+    from ai_glex.models import GlossarySelected, TermsModel
 
-#     job_ins = Task.objects.get(id=task.id).job
-#     src_lang, tar_lan = job_ins.source_language, job_ins.target_language
+    job_ins = Task.objects.get(id=task.id).job
+    src_lang, tar_lan = job_ins.source_language, job_ins.target_language
 
-#     gloss_job_ins = [] 
+    try:
+        gloss_job_ins = [] 
+        if getattr(project, 'individual_gloss_project', None):
+            gloss_proj = project.individual_gloss_project.project
+            gloss_job_list = gloss_proj.project_jobs_set.all()
+            individual_result = job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id)
+            if individual_result:
+                gloss_job_ins.append(individual_result)
 
-#     if getattr(project, 'individual_gloss_project', None):
-#         gloss_proj = project.individual_gloss_project.project
-#         gloss_job_list = gloss_proj.project_jobs_set.all()
-#         individual_result = job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id)
-#         if individual_result:
-#             gloss_job_ins.append(individual_result)
+        gloss_selected = GlossarySelected.objects.filter(project=project)
+        gloss_projects = [gloss.glossary.project for gloss in gloss_selected] if gloss_selected else []
+        
+        if gloss_projects:
+            multiple_results = []
+            for gp in gloss_projects:
+                is_pair = job_lang_pair_check(gp.project_jobs_set.all(), src_lang.id, tar_lan.id)
+                if is_pair:
+                    multiple_results.append(is_pair)
+            gloss_job_ins.extend(multiple_results)
 
-#     # gloss_selected = GlossarySelected.objects.filter(project=project)
-#     # gloss_projects = [gloss.glossary.project for gloss in gloss_selected] if gloss_selected else []
-    
-#     # if gloss_projects:
-#     #     multiple_results = [
-#     #         is_pair for g in gloss_projects for gloss_job_list in g.project_jobs_set.all()
-#     #         if (is_pair := job_lang_pair_check(gloss_job_list, src_lang.id, tar_lan.id))
-#     #     ]
-#     #     gloss_job_ins.extend(multiple_results)
+        if gloss_job_ins:
+            latest_terms = (
+                TermsModel.objects
+                .filter(job__in=gloss_job_ins)
+                .annotate(sl_term_lower=Lower('sl_term'))
+                .order_by('sl_term_lower', '-modified_date')
+                .distinct('sl_term_lower')
+            )
+            term_map = {term.sl_term.lower(): term.tl_term for term in latest_terms if term.tl_term}
+            return term_map
+        
+        return None
 
-#     return gloss_job_ins if gloss_job_ins else None
-
-
-# @task(queue='high-priority')
-# def task_2():
-#     print('task_2')
-#     time.sleep(10)
-
-# @task(queue='high-priority')
-# def task_1():
-#     for i in range(100):
-#         task_2.apply_async(([]), queue='high-priority')
-#         print("called {}".format(i))
-# @task(queue='high-priority')
-# def task_3():
-#     task_1.apply_async(([]), queue='high-priority')
-
-
-
+    except Exception as e:
+        logger.info(f'Error in getting glossary for task: {e}')
