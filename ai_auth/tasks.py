@@ -1020,7 +1020,7 @@ def adaptive_translate(task_id,segments):
                 "source": segment.source,
                 "tagged_source": segment.tagged_source
             })
-            consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
+            consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None) if not segment.target else 0
         print('consumable_credits',consumable_credits)
         # Translate segments in batch
         translated_segments = translator.process_batch(segments_to_process)
