@@ -40,6 +40,7 @@ from celery.decorators import task
 import requests,logging
 from django.http import Http404
 from django.db import transaction
+from rest_framework.decorators import action
 
 logger = logging.getLogger('django')
 
@@ -395,6 +396,60 @@ class TermUploadView(viewsets.ModelViewSet):
         delete_list = term_delete_ids.split(',')
         TermsModel.objects.filter(id__in=delete_list).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'], url_path='bulk')
+    def bulk_upload(self, request):
+        user = request.user
+        task_id = request.data.get('task')
+
+        if not task_id:
+            return Response({'msg': 'Task id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            task = Task.objects.get(id=task_id)
+        except Task.DoesNotExist:
+            return Response({'msg': 'No Task found or task is deleted'}, status=400)
+
+        job = task.job
+        project = job.project
+        project_type_id = project.project_type_id
+        glossary = job.project.glossary_project.id
+
+        if not self.edit_allowed_check(job):
+            return Response({"msg": "Already someone is working"}, status=400)
+
+        terms_payload = request.data.get('pairs')
+        if not isinstance(terms_payload, list):
+            return Response({"msg": "Expected a list of term objects under 'pairs'"}, status=400)
+
+        created_terms = []
+        errors = []
+
+        for idx, term in enumerate(terms_payload):
+            term_data = {
+                "sl_term": term.get('sl_term'),
+                "tl_term": term.get('tl_term'),
+                "pos": term.get('pos'),
+                "job": job.id,
+                "glossary": glossary,
+            }
+            serializer = TermsSerializer(data=term_data)
+            if serializer.is_valid():
+                serializer.save()
+                created_terms.append(serializer.data)
+            else:
+                errors.append({f'item_{idx}': serializer.errors})
+
+        self.update_task_assign(job, user)
+
+        if errors:
+            return Response({
+                "msg": "Some items failed",
+                "created terms": created_terms,
+                "errors": errors
+            }, status=status.HTTP_207_MULTI_STATUS)
+
+        return Response({"terms": created_terms}, status=status.HTTP_201_CREATED)
 
 
 ########################GlossaryTemplateDownload###################################

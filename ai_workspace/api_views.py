@@ -5306,8 +5306,6 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         from ai_workspace.models import TrackSegmentsBatchStatus
 
-        scheme = "https" if request.is_secure() else "http"
-        host = request.get_host()
         project = get_object_or_404(Project, id=pk)
         tasks = project.get_tasks
 
@@ -5385,3 +5383,29 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         except Exception as e:
             print(e)
             return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def create_gloss_proj(request):
+    user_1 = request.user
+    payload = {
+        "project_name": ["Glossary"],
+        "project_type": ["3"],
+        "steps": ["1"],
+        "mt_engine": ["1"],
+        "source_language": [request.data.get("source_languages")],
+        "target_languages": [request.data.get("target_languages")],
+        "usage_permission": 'Private',
+        "mt_enable": 'true',
+        "get_mt_by_page": 'true'
+    }
+
+
+    serializer = ProjectQuickSetupSerializer(data=payload, context={"request": request, 'user_1': user_1})
+    if serializer.is_valid():
+        project = serializer.save()
+        return Response(serializer.data, status=201)
+    else:
+        return Response(serializer.errors, status=400)
+			
