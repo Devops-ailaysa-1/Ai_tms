@@ -570,7 +570,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
-        if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
+        if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True and task.job.project.adaptive_file_translate == False:
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
         elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
             
