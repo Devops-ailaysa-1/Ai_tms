@@ -831,6 +831,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         target_languages = request.POST.get('target_languages',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
+        glossary_job_update = request.POST.get('glossary_job_update',None)
 
         user_1 = self.get_user()
 
