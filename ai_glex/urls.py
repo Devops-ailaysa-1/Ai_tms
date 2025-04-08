@@ -34,4 +34,3 @@ urlpatterns += [
     path('extract_text',api_views.extraction_text , name = "term_extraction"),
     path('get_extract_text_status',api_views.term_extraction_celery_status , name = "extraction_status"),
 ]
-

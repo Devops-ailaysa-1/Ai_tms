@@ -65,7 +65,7 @@ class GlossaryFileView(viewsets.ViewSet):
         # if task_id:
         #     job_ins = Task.objects.get(id=task_id).job
         #     queryset=GlossaryFiles.objects.filter(job=job_ins)
-        # else:
+        # else:GlossaryFiles
         queryset=GlossaryFiles.objects.filter(job_id=job)
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
