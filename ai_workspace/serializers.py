@@ -384,7 +384,7 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 		read_only_fields = ("id","project",)
 
 
-
+from ai_glex.models import Glossary
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
@@ -416,6 +416,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_translate = serializers.BooleanField(required=False, allow_null=True)
 	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
+	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
+	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 
 	class Meta:
 		model = Project
@@ -424,7 +426,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation')
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id')
 
 	def run_validation(self, data):
 
@@ -449,6 +451,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
+		data["default_gloss_project_id"] = data.get("default_gloss_project_id", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
@@ -663,6 +666,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
+		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
+
 		try:
 			with transaction.atomic():
 				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
@@ -715,6 +720,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
 
 				task_assign = TaskAssign.objects.assign_task(project=project)
+				if default_gloss_project:
+					default_gloss_project.is_default_project_glossary = True
+					default_gloss_project.file_translate_glossary = project
+					default_gloss_project.save()
 
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
