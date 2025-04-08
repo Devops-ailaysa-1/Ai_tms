@@ -5352,7 +5352,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             }
 
             if status_counter["completed"] == total_batches and total_batches > 0:
-                batch_status["download_file"] = f"{scheme}://{host}/workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+                batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
 
             batch_status_summary.append(batch_status)
 
@@ -5374,7 +5374,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
             scheme = "https" if request.is_secure() else "http"
             host = request.get_host()
-            endpoint = f'{scheme}://{host}/workspace/adaptive_file_translate/{project.id}'
+            endpoint = f'workspace/adaptive_file_translate/{project.id}'
 
             return Response({
                 'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
