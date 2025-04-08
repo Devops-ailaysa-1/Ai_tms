@@ -418,6 +418,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
 	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
+	glossary_job_update = serializers.BooleanField(write_only=True,required=False,allow_null=True)
 
 	class Meta:
 		model = Project
@@ -426,7 +427,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id')
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update")
 
 	def run_validation(self, data):
 
@@ -462,6 +463,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		data['team_exist'] = data.get('team',[None])[0]
+		data["glossary_job_update"] = data.get("glossary_job_update",[False])[0]
 
 		if data.get('subjects'):
 			data["subjects"] = [{"subject":sub} for sub in data.get('subjects',[])]
@@ -795,6 +797,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project_type = instance.project_type_id
 
 		with transaction.atomic():
+
+			if validated_data.get("glossary_job_update",False):
+				jobs = instance.project_jobs_set.all()
+				tasks = Task.objects.filter(job__project=instance)
+				tasks.delete()
+				jobs.delete()
+
+
 			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
 									files_data, jobs_data, f_klass=File, j_klass=Job)
 			try:
