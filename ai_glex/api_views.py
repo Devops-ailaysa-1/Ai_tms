@@ -399,6 +399,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='bulk')
     def bulk_upload(self, request):
+        # This function is to upload multiple terms at once , using raw json data.
         user = request.user
         task_id = request.data.get('task')
 
@@ -412,7 +413,6 @@ class TermUploadView(viewsets.ModelViewSet):
 
         job = task.job
         project = job.project
-        project_type_id = project.project_type_id
         glossary = job.project.glossary_project.id
 
         if not self.edit_allowed_check(job):
