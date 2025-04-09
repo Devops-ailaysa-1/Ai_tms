@@ -1479,40 +1479,40 @@ def proz_list_send_email(projectpost_id):
 def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms):
     from ai_workspace_okapi.models import Segment
 
-    try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
-        translated_segments = translator.process_batch(segments_data) 
+    # try:
+    #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
+    #     translated_segments = translator.process_batch(segments_data) 
 
-        for segment in translated_segments:
-            segment_obj = Segment.objects.get(id=segment["segment_id"])
-            segment_obj.temp_target = segment["final_translation"]
-            segment_obj.save()
+    #     for segment in translated_segments:
+    #         segment_obj = Segment.objects.get(id=segment["segment_id"])
+    #         segment_obj.temp_target = segment["final_translation"]
+    #         segment_obj.save()
 
-        # Update batch status
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-        batch_status.status = BatchStatus.COMPLETED
-        batch_status.save()
+    #     # Update batch status
+    #     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    #     batch_status.status = BatchStatus.COMPLETED
+    #     batch_status.save()
 
-        logger.info("Adaptive segment translation was completed and saved to DB")
+    #     logger.info("Adaptive segment translation was completed and saved to DB")
 
-        # Mark overall task as completed if all batches are done
-        task = Task.objects.get(document=batch_status.document)
-        if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-            task.save()
-            logger.info("All batches completed. Task marked as COMPLETED")
+    #     # Mark overall task as completed if all batches are done
+    #     task = Task.objects.get(document=batch_status.document)
+    #     if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+    #         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+    #         task.save()
+    #         logger.info("All batches completed. Task marked as COMPLETED")
 
-    except Exception as e:
-        logger.error(f"Batch task failed: {e}")
-        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
-        if batch_status:
-            batch_status.status = BatchStatus.FAILED
-            batch_status.save()
+    # except Exception as e:
+    #     logger.error(f"Batch task failed: {e}")
+    #     batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+    #     if batch_status:
+    #         batch_status.status = BatchStatus.FAILED
+    #         batch_status.save()
     if gloss_terms:
         print(gloss_terms, "Gloss terms")
         print(len(gloss_terms), "Length of gloss_terms")
-    # import time
-    # time.sleep(10)
+    import time
+    time.sleep(10)
 
 
 @task(queue='high-priority')
