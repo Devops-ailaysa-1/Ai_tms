@@ -573,13 +573,12 @@ class SegmentsView(views.APIView, PageNumberPagination):
         if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
         elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
-            
             track_seg = TrackSegmentsBatchStatus.objects.filter(
-                    document=task.document,
-                    seg_start_id=page_segments[0].id,
-                    seg_end_id=page_segments[-1].id,
-                    project=task.job.project 
-                ).first() 
+                document=task.document,
+                project=task.job.project ,
+                seg_start_id__lte=page_segments[0].id,
+                seg_end_id__gte=page_segments[-1].id
+            ).first()
             if track_seg:
                 if track_seg.status == BatchStatus.COMPLETED:
                     pass  # No need to trigger translation, it's already done
