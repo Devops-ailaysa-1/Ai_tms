@@ -418,7 +418,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
 	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
-	glossary_job_update = serializers.BooleanField(write_only=True,required=False,allow_null=True)
+	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
 
 	class Meta:
 		model = Project
@@ -669,6 +669,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
 		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
+		glossary_job_update = validated_data.pop('glossary_job_update', None)
 
 		try:
 			with transaction.atomic():
