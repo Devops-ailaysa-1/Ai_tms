@@ -5367,12 +5367,9 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
         task = get_object_or_404(Task, id=task_id)
         project = task.job.project
-        user = request.user
 
         try:
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
-            scheme = "https" if request.is_secure() else "http"
-            host = request.get_host()
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
 
             return Response({
@@ -5388,7 +5385,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
-def create_gloss_proj(request):
+def custom_proj_create(request):
+    # This function is to create a project for glossary and returning task id, Instead of frontend calling multiple apis , we provide one api to create project and task.
     user_1 = request.user
     payload = {
         "project_name": ["Glossary"],
@@ -5397,16 +5395,19 @@ def create_gloss_proj(request):
         "mt_engine": ["1"],
         "source_language": [request.data.get("source_languages")],
         "target_languages": [request.data.get("target_languages")],
-        "usage_permission": 'Private',
+        "usage_permission": ["Private"],
         "mt_enable": 'true',
         "get_mt_by_page": 'true'
     }
-
-
-    serializer = ProjectQuickSetupSerializer(data=payload, context={"request": request, 'user_1': user_1})
+    serializer = GlossarySetupSerializer(data=payload, context={"request": request, 'user_1': user_1})
     if serializer.is_valid():
         project = serializer.save()
-        return Response(serializer.data, status=201)
+        tasks = project.get_tasks
+        return Response({
+            'id': project.id,
+            'gloss_proj_id': project.glossary_project.id,
+            'tasks': [task.id for task in tasks]
+        }, status=201)
     else:
         return Response(serializer.errors, status=400)
 			
