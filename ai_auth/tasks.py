@@ -1009,7 +1009,8 @@ def adaptive_translate(task_id,segments):
             task.document.source_language_code,
             task.document.target_language_code,
             settings.ANTHROPIC_API_KEY,
-            settings.ANTHROPIC_MODEL_NAME
+            settings.ANTHROPIC_MODEL_NAME,
+            gloss_terms=None
         )
         
         segments_to_process = []
