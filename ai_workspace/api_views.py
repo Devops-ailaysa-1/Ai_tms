@@ -107,6 +107,7 @@ from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
 from django_celery_results.models import TaskResult
+from os.path import exists
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5361,6 +5362,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         }, status=status.HTTP_200_OK)
 
     def create(self, request):
+        from ai_workspace_okapi.api_views import DocumentViewByTask
         task_id = request.data.get('task')
         if not task_id:
             return Response({'msg': 'Task id required'}, status=400)
@@ -5368,6 +5370,31 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         task = get_object_or_404(Task, id=task_id)
         project = task.job.project
 
+        data = TaskSerializer(task).data
+        DocumentViewByTask.correct_fields(data)
+        params_data = {**data, "output_type": None}
+
+        res_paths = get_res_path(params_data["source_language"])
+        json_file_path = DocumentViewByTask.get_json_file_path(task)
+
+        if exists(json_file_path):
+            with open(json_file_path, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                data = json.loads(data)
+                total_word_count = data.get('total_word_count')
+                if total_word_count == 0:
+                    return Response({'msg': 'File is Empty'}, status=400)
+            
+        else:
+            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                "doc_req_params": json.dumps(params_data),
+                "doc_req_res_params": json.dumps(res_paths)
+            })
+            if doc.status_code == 200:
+                doc_data = doc.json()
+                if doc_data.get('total_word_count') == 0:
+                    return Response({'msg': 'File is Empty'}, status=400)
+                            
         try:
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
