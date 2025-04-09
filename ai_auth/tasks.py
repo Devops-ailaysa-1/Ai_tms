@@ -1079,7 +1079,7 @@ def adaptive_translate(task_id,segments):
         # Translate segments in batch
         # translated_segments = translator.process_batch(segments_to_process)
 
-        segment_ids = [seg.segment_id for seg in final_segments]
+        segment_ids = [seg.id for seg in final_segments]
         print('segment_ids',segment_ids)
         segment_objs = Segment.objects.in_bulk(segment_ids)
         print('segment_objs',len(segment_objs))
@@ -1091,7 +1091,7 @@ def adaptive_translate(task_id,segments):
         
             for segment in final_segments:
                 import time
-                segment_id = segment.segment_id
+                segment_id = segment.id
                 # final_text = segment["final_translation"]
                 if segment_id in segment_objs:
                     seg_obj = segment_objs[segment_id]
