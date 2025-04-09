@@ -1425,7 +1425,7 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     # from ai_workspace_okapi.models import Segment
 
     # try:
-    #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'))
+    #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
     #     translated_segments = translator.process_batch(segments_data) 
 
     #     for segment in translated_segments:

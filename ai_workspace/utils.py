@@ -399,7 +399,7 @@ class StyleAnalysis(TranslationStage):
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
-    def process(self, segment, style_guideline):
+    def process(self, segment, style_guideline, gloss_terms):
         system_prompt = f"""Translate the following segments of text to {self.target_language} while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
         Style Guidelines: 
         {style_guideline}
@@ -409,13 +409,17 @@ class InitialTranslation(TranslationStage):
         Final output should only be the translated text with the relevent taggig followed as in the source. no feedback or any sort of additional information should be provided.
         """
 
+        if gloss_terms:
+            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
+            system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
+
         messages = [{"role": "user", "content": segment["tagged_source"]}]
         return self.api.send_request(system_prompt, messages)
 
 
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
-    def process(self, segment):
+    def process(self, segment, gloss_terms):
         system_prompt = f"""For the provided tagged source sentences and translated text sentences, ensure the translation is smooth and correct. 
         Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
         Make necessary translation corrections if needed.
@@ -428,7 +432,7 @@ class RefinementStage1(TranslationStage):
 
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
-    def process(self, segment):
+    def process(self, segment, gloss_terms):
         system_prompt = f"""Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself.
         The text should be in the modern standard {self.target_language} language. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
         If no changes are needed, return the same {self.target_language} text without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence along with the tags as such.
@@ -440,11 +444,11 @@ class RefinementStage2(TranslationStage):
 
 
 class AdaptiveSegmentTranslator:
-    def __init__(self, source_language, target_language, api_key, model_name):
+    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms):
         self.api = AnthropicAPI(api_key, model_name)
         self.source_language = source_language
         self.target_language = target_language
-
+        self.gloss_terms = gloss_terms
         # Translation stages (New stages can be added)
         self.style_analysis = StyleAnalysis(self.api, target_language, source_language)
         self.initial_translation = InitialTranslation(self.api, target_language, source_language)
@@ -456,7 +460,7 @@ class AdaptiveSegmentTranslator:
         translated_segments = []
 
         for segment in segments:
-            translated_text = self.initial_translation.process(segment, style_guideline)
+            translated_text = self.initial_translation.process(segment, style_guideline, self.gloss_terms)
             translated_segments.append({
                 "segment_id": segment["segment_id"],
                 "source_text": segment["source"],
@@ -469,7 +473,7 @@ class AdaptiveSegmentTranslator:
 
         refined_segments = []
         for segment in translated_segments:
-            refined_text = self.refinement_stage_1.process(segment)
+            refined_text = self.refinement_stage_1.process(segment, self.gloss_terms)
             refined_segments.append({
                 **segment,
                 "refined_translation": refined_text
@@ -480,7 +484,7 @@ class AdaptiveSegmentTranslator:
 
         final_segments = []
         for segment in refined_segments:
-            final_text = self.refinement_stage_2.process(segment)
+            final_text = self.refinement_stage_2.process(segment,self.gloss_terms)
             final_segments.append({
                 **segment,
                 "final_translation": final_text
