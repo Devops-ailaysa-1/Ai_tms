@@ -426,6 +426,10 @@ class RefinementStage1(TranslationStage):
         strictly, Result must be only the final target translation.
         no feedbacks or any sort of additional information should be provided."""
 
+        if gloss_terms:
+            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
+            system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
+
         input_text = f"Source: {segment['tagged_source']}\nInitial Translation: {segment['translated_text']}"
         messages = [{"role": "user", "content": input_text}]
         return self.api.send_request(system_prompt, messages)
@@ -438,6 +442,10 @@ class RefinementStage2(TranslationStage):
         If no changes are needed, return the same {self.target_language} text without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence along with the tags as such.
         Note: No feedback or any sort of additional information should be provided."""
 
+        if gloss_terms:
+            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
+            system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
+            
         input_text = f"Refined Translation: {segment['refined_translation']}"
         messages = [{"role": "user", "content": input_text}]
         return self.api.send_request(system_prompt, messages)
