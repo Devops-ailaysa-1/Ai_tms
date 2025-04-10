@@ -570,7 +570,9 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
+        print('step-1',page_segments,task.job.project.get_mt_by_page,task.job.project.mt_enable,task.job.project.adaptive_file_translate)
         if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
+            print('step-2')
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
         elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
             track_seg = TrackSegmentsBatchStatus.objects.filter(
@@ -590,7 +592,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
                 # No record found, so initiate a new translation task
                 page_segments_serialized = [{"id": seg.id} for seg in page_segments]
                 adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority")  
-                
+        print('step-3')
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
