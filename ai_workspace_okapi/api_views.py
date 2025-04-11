@@ -151,6 +151,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def correct_fields(data):
         check_fields = DocumentViewByTask.erfogd()
+        print(check_fields, "This is fields to check")
         remove_keys = []
         for i in data.keys():
             if i in check_fields:
@@ -238,7 +239,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
+                if task.job.project.adaptive_file_translate:
+                    write_segments_to_db(task_write_data, document.id)
+                else:
+                    write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
         else:
             try:
  
