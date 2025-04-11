@@ -28,6 +28,8 @@ router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basena
 router.register(r'team',api_views.TeamCreateView,basename="team")
 router.register(r'internal-member',api_views.InternalMemberCreateView,basename="internal-member")
 router.register(r'hired-editor',api_views.HiredEditorsCreateView,basename="hired-editor")
+router.register(r'demo-user-form',api_views.DemoUserFormSubmissionViewset,basename='demo-user-form')
+
 # router.register(r'ai-event',api_views.AilaysaEventView,basename="ailaysa-event")
 #router.register(r'user-details',api_views.UserDetailView,basename="user-details")
 
