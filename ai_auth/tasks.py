@@ -931,7 +931,8 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
 
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
-
+    print('replace_prompt0',replace_prompt)
+    print('extra_prompt',extra_prompt)
     if extra_prompt:
         replace_prompt = replace_prompt + extra_prompt.last().prompt
         print('replace_prompt1',replace_prompt)
