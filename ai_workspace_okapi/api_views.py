@@ -566,6 +566,10 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
+        user = task.job.project.ai_user
+        initial_credit = user.credit_balance.get("total_left")
+        if initial_credit == 0:
+            return  Response({'msg':'Insufficient Credits'}, status=400)
         segments = document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
@@ -2455,13 +2459,13 @@ def paraphrasing_for_non_english(request):
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document=doc_obj)
-        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
+        isAdaptiveTranslation = doc_obj.job.project.adaptive_file_translate
 
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
         user = task_obj.job.project.ai_user
-        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
+        isAdaptiveTranslation = task_obj.job.project.adaptive_file_translate
 
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
@@ -2489,6 +2493,7 @@ def paraphrasing_for_non_english(request):
             else:
                 # Adapting glossary
                 rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
+                print('rewrited',rewrited)
                 replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
 
         else:
