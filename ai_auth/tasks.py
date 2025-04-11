@@ -44,6 +44,7 @@ import time
 from django.db.models.functions import Lower
 from ai_workspace.utils import AdaptiveSegmentTranslator
 
+
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -1476,9 +1477,19 @@ def proz_list_send_email(projectpost_id):
 
 #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms):
+def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms,task_id):
     from ai_workspace_okapi.models import Segment
-
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    task = Task.objects.get(id=task_id)
+    user = task.job.project.ai_user
+    seg_ids = [segment["segment_id"] for segment in segments_data]
+    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
+    if consumable_credits < user.credit_balance.get("total_left"):
+        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    else:
+        logger.info("Insufficient credits for segment translation")
+        raise ValueError("Insufficient credits for segment translation")
     # try:
     #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
     #     translated_segments = translator.process_batch(segments_data) 
@@ -1507,6 +1518,7 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     #     batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
     #     if batch_status:
     #         batch_status.status = BatchStatus.FAILED
+    #         batch_status
     #         batch_status.save()
     if gloss_terms:
         print(gloss_terms, "Gloss terms")
@@ -1538,7 +1550,7 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
         batch_segments_data = segments_data[start_idx:end_idx]
 
         translation_task = adaptive_segment_translation.apply_async(
-            (batch_segments_data, source_lang, target_lang, get_terms_for_task),
+            (batch_segments_data, source_lang, target_lang, get_terms_for_task,task_id),
             queue='high-priority'
         )
 

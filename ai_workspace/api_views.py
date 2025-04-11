@@ -108,6 +108,7 @@ from datetime import date
 import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
+from ai_workspace_okapi.utils import get_credit_count
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5369,7 +5370,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
         task = get_object_or_404(Task, id=task_id)
         project = task.job.project
-
+        user = project.ai_user
         data = TaskSerializer(task).data
         DocumentViewByTask.correct_fields(data)
         params_data = {**data, "output_type": None}
@@ -5394,11 +5395,13 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 doc_data = doc.json()
                 if doc_data.get('total_word_count') == 0:
                     return Response({'msg': 'File is Empty'}, status=400)
+                elif get_credit_count('document_translation_adaptive',doc_data.get('total_word_count')) > user.credit_balance.get("total_left"):
+                    return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
-
+    
             return Response({
                 'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
                 'endpoint': endpoint,
