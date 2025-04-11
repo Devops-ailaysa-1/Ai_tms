@@ -5369,7 +5369,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         task = get_object_or_404(Task, id=task_id)
         project = task.job.project
         user = project.ai_user
-        data = TaskSerializer(task).data
+        data = TaskSerializer(task)
+        DocumentViewByTask.correct_fields(data)
         params_data = {**data, "output_type": None}
 
         res_paths = get_res_path(params_data["source_language"])
