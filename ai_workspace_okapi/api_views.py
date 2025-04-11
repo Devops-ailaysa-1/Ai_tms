@@ -593,7 +593,6 @@ class SegmentsView(views.APIView, PageNumberPagination):
                 # No record found, so initiate a new translation task
                 page_segments_serialized = [{"id": seg.id} for seg in page_segments]
                 adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority")  
-                
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)

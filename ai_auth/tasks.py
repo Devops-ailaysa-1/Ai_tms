@@ -1005,13 +1005,15 @@ def adaptive_translate(task_id,segments):
         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
                                                         project=task.proj_obj,status=BatchStatus.ONGOING)
+        get_terms_for_task = get_glossary_for_task(task.job.project, task)
+        print('get_terms_for_task',get_terms_for_task,task.job.project)
         # Initialize translator
         translator = AdaptiveSegmentTranslator(
             task.document.source_language_code,
             task.document.target_language_code,
             settings.ANTHROPIC_API_KEY,
             settings.ANTHROPIC_MODEL_NAME,
-            gloss_terms=None
+            gloss_terms=get_terms_for_task
         )
         
         # segments_to_process = []

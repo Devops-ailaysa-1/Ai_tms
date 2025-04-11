@@ -28,6 +28,8 @@ from ai_openai.signals import text_gen_credit_deduct
 from django.conf import settings
 from ai_workspace.signals import invalidate_cache_on_save,invalidate_cache_on_delete
 from django.core.exceptions import ValidationError
+from ai_auth.enums import SourceFromDemoUser
+import uuid
 import logging
 logger = logging.getLogger('django')
 
@@ -891,3 +893,13 @@ class AilaysaEvent(models.Model):
     def __str__(self) -> str:
         return "Name:"+self.name + "  Email:" +self.email 
 
+class DemoUserFormSubmission(models.Model):
+    uid = models.UUIDField(unique=True,default=uuid.uuid4,editable=False)
+    name = models.CharField(max_length=255)
+    email =models.EmailField(max_length=255,unique=True)
+    company_name = models.CharField(max_length=255)
+    source = models.CharField(max_length=20, choices=SourceFromDemoUser.choices, default=SourceFromDemoUser.AILAYSA)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.name
