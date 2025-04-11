@@ -151,6 +151,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def correct_fields(data):
         check_fields = DocumentViewByTask.erfogd()
+        print(check_fields, "This is fields to check")
         remove_keys = []
         for i in data.keys():
             if i in check_fields:
@@ -238,7 +239,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
+                if not task.job.project.adaptive_file_translate:
+                    write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
+                else:
+                    write_segments_to_db(task_write_data, document.id)
         else:
             try:
  
@@ -948,6 +952,30 @@ class MT_RawAndTM_View(views.APIView):
                 split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
                 split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
                 return split_seg_count
+            
+    @staticmethod
+    def get_adaptive_consumable_credits_multiple_segments(doc, segment_ids, seg):
+
+        all_segments_source = ""
+        for segment_id in segment_ids:
+            if seg:
+                all_segments_source+=seg
+
+            elif segment_id:
+                if split_check(segment_id):
+                    segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                    all_segments_source+=segment.source #if segment!= None else seg
+                    # seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
+                    # return seg_count
+
+                # For split segment
+                else:
+                    split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                    all_segments_source+=split_seg_source
+                    # split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+                    # return split_seg_count
+        seg_count = MT_RawAndTM_View.get_word_count(all_segments_source, doc)
+        return seg_count
 
     @staticmethod
     def get_task_assign_mt_engine(segment_id):

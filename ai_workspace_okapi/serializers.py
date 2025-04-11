@@ -11,7 +11,6 @@ from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
-from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
 from django.db.models import Func, F, CharField
