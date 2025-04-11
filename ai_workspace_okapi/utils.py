@@ -768,4 +768,28 @@ def nltk_lemma(word,pos="v",language=None):
     else:
         return None
 
-    
+
+
+def get_total_doc_word_count(task_id):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.api_views import get_json_file_path
+    try:
+        task = Task.objects.get(id=task_id)
+        file_path = get_json_file_path(task)
+        doc_data = json.load(open(file_path))
+        if type(doc_data) == str:
+            doc_data = json.loads(doc_data)
+        raw_total = doc_data.get('total_word_count')
+    except:
+        raise ValueError("word count not found")
+    return raw_total
+
+
+def get_credit_count(task_type,word_count):
+    #
+    if task_type == "document_translation":
+        return 1*word_count
+    elif task_type == "document_translation_ocr":
+        return 2*word_count
+    elif task_type == "document_translation_adaptive":
+        return 1.5*word_count

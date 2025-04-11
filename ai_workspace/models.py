@@ -55,7 +55,7 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -1993,3 +1993,4 @@ class TrackSegmentsBatchStatus(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     status = models.CharField(max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)

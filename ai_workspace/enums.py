@@ -12,3 +12,7 @@ class BatchStatus(models.TextChoices):
     ONGOING = "ONGOING", "Ongoing"
     COMPLETED = "COMPLETED", "Completed"
     FAILED = "FAILED", "Failed"
+
+class ErrorStatus(models.TextChoices):
+    INSUFFICIENT_CREDIT = "INSUFFICIENT_CREDIT", "INSUFFICIENT_CREDIT"
+    OTHER = "OTHER", "OTHER"
