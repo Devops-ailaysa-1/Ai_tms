@@ -2493,7 +2493,6 @@ def paraphrasing_for_non_english(request):
             else:
                 # Adapting glossary
                 rewrited =  get_translation(1, para_sentence, 'en', target_lang, user_id=user.id, cc=consumable_credits_to_translate)
-                print('rewrited',rewrited)
                 replaced =  replace_with_gloss(clean_sentence, rewrited,task_obj)
 
         else:
