@@ -1113,12 +1113,12 @@ def adaptive_translate(task_id,segments):
         #                     continue
                         
             # Bulk update all segments and debet credits
-            Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
-            UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            # Update batch status
-            track_seg.status = BatchStatus.COMPLETED
-            track_seg.save()
-            logger.info("Adaptive segment translation completed successfully.")
+            # Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
+            # # UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            # # Update batch status
+            # track_seg.status = BatchStatus.COMPLETED
+            # track_seg.save()
+            # logger.info("Adaptive segment translation completed successfully.")
             
         else:
             logger.info(f"Insufficient credits for segment {seg_obj.id}")
