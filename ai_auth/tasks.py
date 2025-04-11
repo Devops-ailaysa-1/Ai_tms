@@ -923,25 +923,19 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     prompt_phrase = internal_flow_instance.prompt_phrase
 
     gloss_list = gloss_prompt(gloss)
-    print('gloss_list',gloss_list)
 
     if tar_lang_id_to_check in tar_lang_id:
         gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
-        print('gloss_list1',gloss_list)
 
     replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
-    print('replace_prompt0',replace_prompt)
-    print('extra_prompt',extra_prompt)
+
     if extra_prompt:
         replace_prompt = replace_prompt + extra_prompt.last().prompt
-        print('replace_prompt1',replace_prompt)
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
                                                                                             "content": replace_prompt}])    
     res = completion["choices"][0]["message"]["content"]
-    print('res',res)
     lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
-    print('lang_gram_prompt',lang_gram_prompt)
     if lang_gram_prompt:
         tamil_morph_result = ""
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
