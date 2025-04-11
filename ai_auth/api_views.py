@@ -22,7 +22,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer,MarketingBootcampSerializer,
-                                CareerSupportAISerializer,AilaysaCallCenterSerializer,AilaysaEventSerializer)
+                                CareerSupportAISerializer,AilaysaCallCenterSerializer,AilaysaEventSerializer,DemoUserFormSubmissionSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -2947,6 +2947,17 @@ class AilaysaEventView(viewsets.ViewSet):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
+
+class DemoUserFormSubmissionViewset(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self, request):
+        data = request.data
+        # data['user'] = self.request.user.id
+        serializer = DemoUserFormSubmissionSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 
 

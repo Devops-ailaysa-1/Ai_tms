@@ -11,7 +11,7 @@ from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribu
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,
                             CampaignUsers,CoCreateForm,CoCreateFiles,MarketingBootcamp,CareerSupportAI,
-                            AilaysaCallCenter,AilaysaCallCenterFile,AilaysaEvent)
+                            AilaysaCallCenter,AilaysaCallCenterFile,AilaysaEvent,DemoUserFormSubmission)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -650,3 +650,11 @@ class AilaysaEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = AilaysaEvent
         fields = ("name","email","country","industry","code","service_needed")
+
+class DemoUserFormSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DemoUserFormSubmission
+        exclude = ["id"]
+        
+    def create(self, validated_data):
+        return super().create(validated_data)
