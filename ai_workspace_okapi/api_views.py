@@ -151,6 +151,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def correct_fields(data):
         check_fields = DocumentViewByTask.erfogd()
+        print(check_fields, "This is fields to check")
         remove_keys = []
         for i in data.keys():
             if i in check_fields:

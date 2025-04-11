@@ -5335,8 +5335,6 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                         status_counter["completed"] += 1
                     elif task_result.status == "FAILURE":
                         status_counter["failed"] += 1
-                    else:
-                        status_counter["in_progress"] += 1
                 else:
                     status_counter["in_progress"] += 1
 
@@ -5349,7 +5347,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 "total_batches": total_batches,
                 "completed_batches": status_counter["completed"],
                 "completed_percentage": int(completed_percentage),
-                "status": "completed" if status_counter["completed"] == total_batches else "in_progress"
+                "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
             }
 
             if status_counter["completed"] == total_batches and total_batches > 0:
