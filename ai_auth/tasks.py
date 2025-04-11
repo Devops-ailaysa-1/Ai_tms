@@ -923,6 +923,7 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     prompt_phrase = internal_flow_instance.prompt_phrase
 
     gloss_list = gloss_prompt(gloss)
+    print('gloss_list',gloss_list)
 
     if tar_lang_id_to_check in tar_lang_id:
         gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
@@ -1038,7 +1039,7 @@ def adaptive_translate(task_id,segments):
 
         update_list = []
         initial_credit = user.credit_balance.get("total_left")
-        if initial_credit > consumable_credits:
+        if initial_credit >= consumable_credits:
         
             for segment in translated_segments:
                 print('final_translation',segment["final_translation"])
