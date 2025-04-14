@@ -5316,7 +5316,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         batch_status_summary = []
 
         for task in tasks:
-            if not task.document and task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
+            if (not task.document) and (task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING):
                 batch_status_summary.append({
                 "task_id": task.id,
                 "total_batches": 0,
