@@ -5319,7 +5319,6 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             if not task.document and task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
                 batch_status_summary.append({
                 "task_id": task.id,
-                "document_id": None,
                 "total_batches": 0,
                 "completed_batches": 0,
                 "completed_percentage": 0,
@@ -5352,7 +5351,6 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             )
             batch_status = {
                 "task_id": task.id,
-                "document_id": task.document.id,
                 "total_batches": total_batches,
                 "completed_batches": status_counter["completed"],
                 "completed_percentage": int(completed_percentage),
