@@ -109,6 +109,7 @@ import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5315,7 +5316,15 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         batch_status_summary = []
 
         for task in tasks:
-            if not task.document:
+            if not task.document and task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
+                batch_status_summary.append({
+                "task_id": task.id,
+                "document_id": None,
+                "total_batches": 0,
+                "completed_batches": 0,
+                "completed_percentage": 0,
+                "status": "in_progress"
+            })
                 continue
 
             batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
@@ -5367,6 +5376,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             return Response({'msg': 'Task id required'}, status=400)
 
         task = get_object_or_404(Task, id=task_id)
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+        task.save()
         project = task.job.project
         user = project.ai_user
         data = TaskSerializer(task).data
