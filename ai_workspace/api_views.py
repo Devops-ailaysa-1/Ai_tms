@@ -5376,8 +5376,6 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             return Response({'msg': 'Task id required'}, status=400)
 
         task = get_object_or_404(Task, id=task_id)
-        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
-        task.save()
         project = task.job.project
         user = project.ai_user
         data = TaskSerializer(task).data
@@ -5408,6 +5406,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            task.save()
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
     
