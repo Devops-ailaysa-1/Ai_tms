@@ -1517,6 +1517,15 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
         print(len(gloss_terms), "Length of gloss_terms")
     import time
     time.sleep(10)
+    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    batch_status.status = BatchStatus.COMPLETED
+    batch_status.save()
+    # Mark overall task as completed if all batches are done
+    task = Task.objects.get(document=batch_status.document)
+    if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+        task.save()
+        logger.info("All batches completed. Task marked as COMPLETED")
 
 
 @task(queue='high-priority')

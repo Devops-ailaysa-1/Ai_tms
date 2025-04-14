@@ -225,7 +225,6 @@ class UserDetailsView(RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_object(self):
-        print("User_------------->",self.request.user)
         return self.request.user
 
     def get_queryset(self):
