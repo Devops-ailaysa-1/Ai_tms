@@ -5316,51 +5316,52 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         batch_status_summary = []
 
         for task in tasks:
-            if (not task.document) and (task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING):
-                batch_status_summary.append({
-                "task_id": task.id,
-                "total_batches": 0,
-                "completed_batches": 0,
-                "completed_percentage": 0,
-                "status": "in_progress"
-            })
-                continue
+            if task.adaptive_file_translate_status != AdaptiveFileTranslateStatus.NOT_INITIATED:
+                if (not task.document) and (task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING):
+                    batch_status_summary.append({
+                    "task_id": task.id,
+                    "total_batches": 0,
+                    "completed_batches": 0,
+                    "completed_percentage": 0,
+                    "status": "in_progress"
+                })
+                    continue
 
-            batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
-            total_batches = batches.count()
+                batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+                total_batches = batches.count()
 
-            status_counter = {
-                "completed": 0,
-                "in_progress": 0,
-                "failed": 0
-            }
+                status_counter = {
+                    "completed": 0,
+                    "in_progress": 0,
+                    "failed": 0
+                }
 
-            for batch in batches:
-                task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
+                for batch in batches:
+                    task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
 
-                if task_result:
-                    if task_result.status == "SUCCESS":
-                        status_counter["completed"] += 1
-                    elif task_result.status == "FAILURE":
-                        status_counter["failed"] += 1
-                else:
-                    status_counter["in_progress"] += 1
+                    if task_result:
+                        if task_result.status == "SUCCESS":
+                            status_counter["completed"] += 1
+                        elif task_result.status == "FAILURE":
+                            status_counter["failed"] += 1
+                    else:
+                        status_counter["in_progress"] += 1
 
-            completed_percentage = (
-                (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
-            )
-            batch_status = {
-                "task_id": task.id,
-                "total_batches": total_batches,
-                "completed_batches": status_counter["completed"],
-                "completed_percentage": int(completed_percentage),
-                "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
-            }
+                completed_percentage = (
+                    (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+                )
+                batch_status = {
+                    "task_id": task.id,
+                    "total_batches": total_batches,
+                    "completed_batches": status_counter["completed"],
+                    "completed_percentage": int(completed_percentage),
+                    "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
+                }
 
-            if status_counter["completed"] == total_batches and total_batches > 0:
-                batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+                if status_counter["completed"] == total_batches and total_batches > 0:
+                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
 
-            batch_status_summary.append(batch_status)
+                batch_status_summary.append(batch_status)
 
         return Response({
             "project_id": project.id,
