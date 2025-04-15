@@ -5313,6 +5313,9 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         project = get_object_or_404(Project, id=pk)
         tasks = project.get_tasks
 
+        if project.ai_user != request.user:
+            return Response({"msg": "You do not have permission to access this project."}, status=403)
+        
         batch_status_summary = []
 
         for task in tasks:
@@ -5405,9 +5408,9 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
+            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority')
             task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             task.save()
-            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
     
             return Response({
