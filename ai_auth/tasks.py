@@ -932,13 +932,10 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
 
     if extra_prompt:
         replace_prompt = replace_prompt + extra_prompt.last().prompt
-    
     completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL_REPLACE,messages=[{"role": "user", 
                                                                                             "content": replace_prompt}])    
     res = completion["choices"][0]["message"]["content"]
-
     lang_gram_prompt = LanguageGrammarPrompt.objects.filter(language=target_language)
-
     if lang_gram_prompt:
         tamil_morph_result = ""
         lang_gram_prompt = lang_gram_prompt.last() ### only for tamil language
@@ -946,7 +943,7 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
             lang_code = source_language.locale_code
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
         res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
-
+        print('res1',res)
         
         # Credit calculation
 
@@ -991,6 +988,7 @@ def adaptive_translate(task_id,segments):
     from ai_workspace.models import Task
     from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    print('Adaptive translate started')
     track_seg = None
     try:
         task = Task.objects.get(id=task_id)
@@ -999,14 +997,11 @@ def adaptive_translate(task_id,segments):
         user = task.job.project.ai_user
         # Convert JSON data back to Segment objects
         segment_ids = [segment["id"] for segment in segments]
-        print('segment_ids',segment_ids)
         final_segments = Segment.objects.filter(id__in=segment_ids)
-        print("final_segments",final_segments[0].id,final_segments[len(final_segments)-1].id)
         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
                                                         project=task.proj_obj,status=BatchStatus.ONGOING)
         get_terms_for_task = get_glossary_for_task(task.job.project, task)
-        print('get_terms_for_task',get_terms_for_task,task.job.project)
         # Initialize translator
         translator = AdaptiveSegmentTranslator(
             task.document.source_language_code,
@@ -1016,58 +1011,6 @@ def adaptive_translate(task_id,segments):
             gloss_terms=get_terms_for_task
         )
         
-        # segments_to_process = []
-        # consumable_credits = 0
-        # for segment in final_segments:
-        #     if not segment.target:
-        #         segments_to_process.append({
-        #             "segment_id": segment.id,
-        #             "source": segment.source,
-        #             "tagged_source": segment.tagged_source
-        #         })
-        #         consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
-        # print('consumable_credits',consumable_credits)
-        # # Translate segments in batch
-        # translated_segments = translator.process_batch(segments_to_process)
-
-        # segment_ids = [seg["segment_id"] for seg in translated_segments]
-        # print('segment_ids',segment_ids)
-        # segment_objs = Segment.objects.in_bulk(segment_ids)
-        # print('segment_objs',len(segment_objs))
-        
-
-        # update_list = []
-        # initial_credit = user.credit_balance.get("total_left")
-        # if initial_credit > consumable_credits:
-        
-        #     for segment in translated_segments:
-        #         print('final_translation',segment["final_translation"])
-        #         segment_id = segment["segment_id"]
-        #         final_text = segment["final_translation"]
-        #         if segment_id in segment_objs:
-        #             seg_obj = segment_objs[segment_id]
-        #             if not seg_obj.target:
-        #                 try:        
-        #                     seg_obj.temp_target = final_text
-        #                     seg_obj.target = final_text
-        #                     seg_obj.status_id = TranslationStatus.objects.get(status_id=103).id
-        #                     update_list.append(seg_obj)
-        #                 except Exception as e:
-        #                     logger.error(f"Error processing segment {seg_obj.id}: {e}")
-        #                     seg_obj.target = ''
-        #                     seg_obj.temp_target = ''
-        #                     seg_obj.status_id = None
-        #                     continue
-                        
-        #     # Bulk update all segments and debet credits
-        #     Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
-        #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-        #     # Update batch status
-        #     track_seg.status = BatchStatus.COMPLETED
-        #     track_seg.save()
-        #     logger.info("Adaptive segment translation completed successfully.")
-        
-        #mock code 
         segments_to_process = []
         consumable_credits = 0
         for segment in final_segments:
@@ -1080,29 +1023,22 @@ def adaptive_translate(task_id,segments):
                 consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
         print('consumable_credits',consumable_credits)
         # Translate segments in batch
-        # translated_segments = translator.process_batch(segments_to_process)
-
-        segment_ids = [seg.id for seg in final_segments]
-        print('segment_ids',segment_ids)
-        segment_objs = Segment.objects.in_bulk(segment_ids)
-        print('segment_objs',len(segment_objs))
-        
-
         update_list = []
         initial_credit = user.credit_balance.get("total_left")
-        if initial_credit > consumable_credits:
+        if initial_credit >= consumable_credits:
+            translated_segments = translator.process_batch(segments_to_process)
+            segment_ids = [seg["segment_id"] for seg in translated_segments]
+            segment_objs = Segment.objects.in_bulk(segment_ids)
         
-            for segment in final_segments:
-                import time
-                segment_id = segment.id
-                # final_text = segment["final_translation"]
+            for segment in translated_segments:
+                segment_id = segment["segment_id"]
+                final_text = segment["final_translation"]
                 if segment_id in segment_objs:
                     seg_obj = segment_objs[segment_id]
                     if not seg_obj.target:
                         try:        
-                            time.sleep(3)
-                            seg_obj.temp_target = "test"
-                            seg_obj.target = "test"
+                            seg_obj.temp_target = final_text
+                            seg_obj.target = final_text
                             seg_obj.status_id = TranslationStatus.objects.get(status_id=103).id
                             update_list.append(seg_obj)
                         except Exception as e:
@@ -1114,12 +1050,65 @@ def adaptive_translate(task_id,segments):
                         
             # Bulk update all segments and debet credits
             Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
-            # UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             # Update batch status
             track_seg.status = BatchStatus.COMPLETED
             track_seg.save()
             logger.info("Adaptive segment translation completed successfully.")
-            
+        
+        # #mock code 
+        # segments_to_process = []
+        # consumable_credits = 0
+        # for segment in final_segments:
+        #     if not segment.target:
+        #         segments_to_process.append({
+        #             "segment_id": segment.id,
+        #             "source": segment.source,
+        #             "tagged_source": segment.tagged_source
+        #         })
+        #         consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
+        # print('consumable_credits',consumable_credits)
+        # # Translate segments in batch
+        # # translated_segments = translator.process_batch(segments_to_process)
+
+        # segment_ids = [seg.id for seg in final_segments]
+        # print('segment_ids',segment_ids)
+        # segment_objs = Segment.objects.in_bulk(segment_ids)
+        # print('segment_objs',len(segment_objs))
+        
+
+        # update_list = []
+        # initial_credit = user.credit_balance.get("total_left")
+        # if initial_credit > consumable_credits:
+        
+        #     for segment in final_segments:
+        #         import time
+        #         segment_id = segment.id
+        #         # final_text = segment["final_translation"]
+        #         if segment_id in segment_objs:
+        #             seg_obj = segment_objs[segment_id]
+        #             if not seg_obj.target:
+        #                 try:        
+        #                     time.sleep(3)
+        #                     seg_obj.temp_target = "test"
+        #                     seg_obj.target = "test"
+        #                     seg_obj.status_id = TranslationStatus.objects.get(status_id=103).id
+        #                     update_list.append(seg_obj)
+        #                 except Exception as e:
+        #                     logger.error(f"Error processing segment {seg_obj.id}: {e}")
+        #                     seg_obj.target = ''
+        #                     seg_obj.temp_target = ''
+        #                     seg_obj.status_id = None
+        #                     continue
+                        
+            # Bulk update all segments and debet credits
+            # Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
+            # # UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            # # Update batch status
+            # track_seg.status = BatchStatus.COMPLETED
+            # track_seg.save()
+            # logger.info("Adaptive segment translation completed successfully.")
+            print('Adaptive translate completed')
         else:
             logger.info(f"Insufficient credits for segment {seg_obj.id}")
             MTonlytaskCeleryStatus.objects.create(
@@ -1133,7 +1122,8 @@ def adaptive_translate(task_id,segments):
     except Exception as e:
         logger.error(f"Batch task failed: {e}")
         if track_seg:
-            track_seg.delete()
+            track_seg.status = BatchStatus.FAILED
+            track_seg.save()
 
 
 @task(queue='high-priority')
@@ -1527,6 +1517,15 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
         print(len(gloss_terms), "Length of gloss_terms")
     import time
     time.sleep(10)
+    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    batch_status.status = BatchStatus.COMPLETED
+    batch_status.save()
+    # Mark overall task as completed if all batches are done
+    task = Task.objects.get(document=batch_status.document)
+    if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+        task.save()
+        logger.info("All batches completed. Task marked as COMPLETED")
 
 
 @task(queue='high-priority')

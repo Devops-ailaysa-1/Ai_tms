@@ -384,7 +384,7 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 		read_only_fields = ("id","project",)
 
 
-from ai_glex.models import Glossary
+from ai_glex.models import Glossary, GlossarySelected
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
@@ -727,6 +727,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					default_gloss_project.is_default_project_glossary = True
 					default_gloss_project.file_translate_glossary = project
 					default_gloss_project.save()
+					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)
 
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
