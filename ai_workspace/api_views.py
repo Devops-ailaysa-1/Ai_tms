@@ -109,6 +109,7 @@ import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5312,48 +5313,58 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         project = get_object_or_404(Project, id=pk)
         tasks = project.get_tasks
 
+        if project.ai_user != request.user:
+            return Response({"msg": "You do not have permission to access this project."}, status=403)
+        
         batch_status_summary = []
 
         for task in tasks:
-            if not task.document:
-                continue
+            if task.adaptive_file_translate_status != AdaptiveFileTranslateStatus.NOT_INITIATED:
+                if (not task.document) and (task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING):
+                    batch_status_summary.append({
+                    "task_id": task.id,
+                    "total_batches": 0,
+                    "completed_batches": 0,
+                    "completed_percentage": 0,
+                    "status": "in_progress"
+                })
+                    continue
 
-            batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
-            total_batches = batches.count()
+                batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+                total_batches = batches.count()
 
-            status_counter = {
-                "completed": 0,
-                "in_progress": 0,
-                "failed": 0
-            }
+                status_counter = {
+                    "completed": 0,
+                    "in_progress": 0,
+                    "failed": 0
+                }
 
-            for batch in batches:
-                task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
+                for batch in batches:
+                    task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
 
-                if task_result:
-                    if task_result.status == "SUCCESS":
-                        status_counter["completed"] += 1
-                    elif task_result.status == "FAILURE":
-                        status_counter["failed"] += 1
-                else:
-                    status_counter["in_progress"] += 1
+                    if task_result:
+                        if task_result.status == "SUCCESS":
+                            status_counter["completed"] += 1
+                        elif task_result.status == "FAILURE":
+                            status_counter["failed"] += 1
+                    else:
+                        status_counter["in_progress"] += 1
 
-            completed_percentage = (
-                (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
-            )
-            batch_status = {
-                "task_id": task.id,
-                "document_id": task.document.id,
-                "total_batches": total_batches,
-                "completed_batches": status_counter["completed"],
-                "completed_percentage": int(completed_percentage),
-                "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
-            }
+                completed_percentage = (
+                    (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+                )
+                batch_status = {
+                    "task_id": task.id,
+                    "total_batches": total_batches,
+                    "completed_batches": status_counter["completed"],
+                    "completed_percentage": int(completed_percentage),
+                    "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
+                }
 
-            if status_counter["completed"] == total_batches and total_batches > 0:
-                batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+                if status_counter["completed"] == total_batches and total_batches > 0:
+                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
 
-            batch_status_summary.append(batch_status)
+                batch_status_summary.append(batch_status)
 
         return Response({
             "project_id": project.id,
@@ -5397,7 +5408,9 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
-            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority') 
+            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority')
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            task.save()
             endpoint = f'workspace/adaptive_file_translate/{project.id}'
     
             return Response({

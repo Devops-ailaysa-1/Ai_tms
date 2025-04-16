@@ -1485,13 +1485,22 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     # try:
     #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
     #     translated_segments = translator.process_batch(segments_data) 
+    #     try:
+    #         segments_data = json.loads(translated_segments) 
+    #     except json.JSONDecodeError as e:
+    #         logger.error(f"Failed to parse JSON from translation output: {e}")
+    #         segments_data = []
 
-    #     for segment in translated_segments:
-    #         segment_obj = Segment.objects.get(id=segment["segment_id"])
-    #         segment_obj.temp_target = segment["final_translation"]
-    #         segment_obj.save()
+    #     for segment in segments_data:
+    #         try:
+    #             segment_obj = Segment.objects.get(id=segment["segment_id"])
+    #             segment_obj.temp_target = segment["translated_text"]
+    #             segment_obj.save()
+    #         except Segment.DoesNotExist:
+    #             logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")
+    #         except Exception as e:
+    #             logger.error(f"Error updating segment {segment['segment_id']}: {str(e)}")
 
-    #     # Update batch status
     #     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
     #     batch_status.status = BatchStatus.COMPLETED
     #     batch_status.save()
@@ -1538,7 +1547,6 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
     start_idx = 0
 
     print("Total segment count : {}".format(total_segments))
-    print("Total segment count : {}".format(len(segments_data)))
 
     get_terms_for_task = get_glossary_for_task(project, task)
 
@@ -1566,7 +1574,6 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
             seg_end_id=seg_end_id,  
             project=project
         )
-        print("Batch Created", start_idx, "to", end_idx)
         start_idx = end_idx
 
 
