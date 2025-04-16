@@ -1027,12 +1027,13 @@ def adaptive_translate(task_id,segments):
         initial_credit = user.credit_balance.get("total_left")
         if initial_credit >= consumable_credits:
             translated_segments = translator.process_batch(segments_to_process)
+            print('translated_segments',translated_segments)
             segment_ids = [seg["segment_id"] for seg in translated_segments]
             segment_objs = Segment.objects.in_bulk(segment_ids)
         
             for segment in translated_segments:
                 segment_id = segment["segment_id"]
-                final_text = segment["final_translation"]
+                final_text = segment["translated_text"]
                 if segment_id in segment_objs:
                     seg_obj = segment_objs[segment_id]
                     if not seg_obj.target:
