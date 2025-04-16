@@ -1482,59 +1482,60 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     else:
         logger.info("Insufficient credits for segment translation")
         raise ValueError("Insufficient credits for segment translation")
-    try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
-        translated_segments = translator.process_batch(segments_data) 
-        try:
-            segments_data = json.loads(translated_segments) 
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from translation output: {e}")
-            segments_data = []
+    # try:
+    #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
+    #     translated_segments = translator.process_batch(segments_data) 
+    #     try:
+    #         print("translated_segments",translated_segments, type(translated_segments))
+    #         segments_data = json.loads(translated_segments) 
+    #     except json.JSONDecodeError as e:
+    #         logger.error(f"Failed to parse JSON from translation output: {e}")
+    #         segments_data = []
 
-        for segment in segments_data:
-            try:
-                segment_obj = Segment.objects.get(id=segment["segment_id"])
-                segment_obj.temp_target = segment["final_translation"]
-                segment_obj.save()
-            except Segment.DoesNotExist:
-                logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")
-            except Exception as e:
-                logger.error(f"Error updating segment {segment['segment_id']}: {str(e)}")
+    #     for segment in segments_data:
+    #         try:
+    #             segment_obj = Segment.objects.get(id=segment["segment_id"])
+    #             segment_obj.temp_target = segment["final_translation"]
+    #             segment_obj.save()
+    #         except Segment.DoesNotExist:
+    #             logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")
+    #         except Exception as e:
+    #             logger.error(f"Error updating segment {segment['segment_id']}: {str(e)}")
 
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-        batch_status.status = BatchStatus.COMPLETED
-        batch_status.save()
+    #     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    #     batch_status.status = BatchStatus.COMPLETED
+    #     batch_status.save()
 
-        logger.info("Adaptive segment translation was completed and saved to DB")
+    #     logger.info("Adaptive segment translation was completed and saved to DB")
 
-        # Mark overall task as completed if all batches are done
-        task = Task.objects.get(document=batch_status.document)
-        if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-            task.save()
-            logger.info("All batches completed. Task marked as COMPLETED")
+    #     # Mark overall task as completed if all batches are done
+    #     task = Task.objects.get(document=batch_status.document)
+    #     if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+    #         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+    #         task.save()
+    #         logger.info("All batches completed. Task marked as COMPLETED")
 
-    except Exception as e:
-        logger.error(f"Batch task failed: {e}")
-        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
-        if batch_status:
-            batch_status.status = BatchStatus.FAILED
-            batch_status
-            batch_status.save()
-    # if gloss_terms:
-    #     print(gloss_terms, "Gloss terms")
-    #     print(len(gloss_terms), "Length of gloss_terms")
-    # import time
-    # time.sleep(10)
-    # batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-    # batch_status.status = BatchStatus.COMPLETED
-    # batch_status.save()
-    # # Mark overall task as completed if all batches are done
-    # task = Task.objects.get(document=batch_status.document)
-    # if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-    #     task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-    #     task.save()
-    #     logger.info("All batches completed. Task marked as COMPLETED")
+    # except Exception as e:
+    #     logger.error(f"Batch task failed: {e}")
+    #     batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+    #     if batch_status:
+    #         batch_status.status = BatchStatus.FAILED
+    #         batch_status
+    #         batch_status.save()
+    if gloss_terms:
+        print(gloss_terms, "Gloss terms")
+        print(len(gloss_terms), "Length of gloss_terms")
+    import time
+    time.sleep(10)
+    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    batch_status.status = BatchStatus.COMPLETED
+    batch_status.save()
+    # Mark overall task as completed if all batches are done
+    task = Task.objects.get(document=batch_status.document)
+    if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+        task.save()
+        logger.info("All batches completed. Task marked as COMPLETED")
 
 
 @task(queue='high-priority')
