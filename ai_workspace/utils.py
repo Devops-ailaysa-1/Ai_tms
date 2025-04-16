@@ -399,56 +399,88 @@ class StyleAnalysis(TranslationStage):
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
-    def process(self, segment, style_guideline, gloss_terms):
-        system_prompt = f"""Translate the following segments of text to {self.target_language} while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
-        Style Guidelines: 
-        {style_guideline}
-        The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
-        Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
-        The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
-        Final output should only be the translated text with the relevent taggig followed as in the source. no feedback or any sort of additional information should be provided.
-        """
+    def process(self, segments, style_guideline, gloss_terms):
+        system_prompt = f"""
+                You are a professional translator.
+
+                Translate the following list of segments into {self.target_language}. 
+                Each segment has:
+                - segment_id (keep it in the response),
+                - source (original sentence),
+                - tagged_source (contains inline tags like <1>...</1> which MUST be preserved in the translation).
+
+                Guidelines:
+                - Return a JSON list with "segment_id" and "translated_text".
+                - Preserve all tags in translated_text.
+                - Follow these style guidelines: {style_guideline}
+                """
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
 
-        messages = [{"role": "user", "content": segment["tagged_source"]}]
-        return self.api.send_request(system_prompt, messages)
+        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
+        messages = [{"role": "user", "content": user_message}]
+        response = self.api.send_request(system_prompt, messages)
+
+        return response
 
 
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
-    def process(self, segment, gloss_terms):
-        system_prompt = f"""For the provided tagged source sentences and translated text sentences, ensure the translation is smooth and correct. 
-        Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
-        Make necessary translation corrections if needed.
-        strictly, Result must be only the final target translation.
-        no feedbacks or any sort of additional information should be provided."""
+    def process(self, segments, gloss_terms):
+        system_prompt = f"""
+            You are a language quality expert.
 
+            For each segment provided, improve the translated text to ensure:
+            - Smoothness and fluency.
+            - Consistency in tone, punctuation, and grammar.
+            - Proper reflection of the source meaning.
+            - Strict adherence to inline tags (like <1>...</1>) — do not break or alter them.
+
+            Return a JSON list, where each item includes:
+            - segment_id
+            - refined_translation (final corrected translation)
+
+            Respond only with the final corrected translations in JSON.
+
+            """
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
 
-        input_text = f"Source: {segment['tagged_source']}\nInitial Translation: {segment['translated_text']}"
-        messages = [{"role": "user", "content": input_text}]
+
+        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
+        messages = [{"role": "user", "content": user_message}]
         return self.api.send_request(system_prompt, messages)
+
 
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
-    def process(self, segment, gloss_terms):
-        system_prompt = f"""Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself.
-        The text should be in the modern standard {self.target_language} language. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
-        If no changes are needed, return the same {self.target_language} text without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence along with the tags as such.
-        Note: No feedback or any sort of additional information should be provided."""
+    def process(self, segments, gloss_terms):
+        system_prompt = f"""
+            You are an expert native {self.target_language} editor.
 
+            For each refined translation:
+            - Rewrite it so that it feels originally written in {self.target_language}.
+            - Only make syntactic or structural changes — do not alter named entities, keywords, or meaning.
+            - Inline tags like <1>...</1> must be preserved as-is and correctly placed.
+
+            Return only the final version of each segment as a JSON list:
+            - segment_id
+            - final_translation
+
+            Do not include any explanations or feedback.
+            """
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as mentioned in the glossary pairs.\nGlossary:\n{glossary_lines}"
             
-        input_text = f"Refined Translation: {segment['refined_translation']}"
-        messages = [{"role": "user", "content": input_text}]
+
+        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
+        messages = [{"role": "user", "content": user_message}]
         return self.api.send_request(system_prompt, messages)
+
 
 
 class AdaptiveSegmentTranslator:
@@ -465,39 +497,8 @@ class AdaptiveSegmentTranslator:
 
     def process_batch(self, segments):
         style_guideline = self.style_analysis.process(segments)
-        translated_segments = []
-
-        for segment in segments:
-            translated_text = self.initial_translation.process(segment, style_guideline, self.gloss_terms)
-            translated_segments.append({
-                "segment_id": segment["segment_id"],
-                "source_text": segment["source"],
-                "tagged_source": segment["tagged_source"],
-                "translated_text": translated_text
-            })
-
-        # print("Initial Translation:")
-        # print(json.dumps(translated_segments, indent=2, ensure_ascii=False))
-
-        refined_segments = []
-        for segment in translated_segments:
-            refined_text = self.refinement_stage_1.process(segment, self.gloss_terms)
-            refined_segments.append({
-                **segment,
-                "refined_translation": refined_text
-            })
-
-        # print("\nRefined Translation:")
-        # print(json.dumps(refined_segments, indent=2, ensure_ascii=False))
-
-        final_segments = []
-        for segment in refined_segments:
-            final_text = self.refinement_stage_2.process(segment,self.gloss_terms)
-            final_segments.append({
-                **segment,
-                "final_translation": final_text
-            })
+        translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
+        refined_segments = self.refinement_stage_1.process(translated_segments, self.gloss_terms)
+        final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         return final_segments
-        # print("\nFinal Translation:")
-        # print(json.dumps(final_segments, indent=2, ensure_ascii=False))
         
