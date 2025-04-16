@@ -497,6 +497,7 @@ class AdaptiveSegmentTranslator:
                 **segment,
                 "final_translation": final_text
             })
+        print('final_segments',final_segments)
         return final_segments
         # print("\nFinal Translation:")
         # print(json.dumps(final_segments, indent=2, ensure_ascii=False))

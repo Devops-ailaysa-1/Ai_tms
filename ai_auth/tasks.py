@@ -996,8 +996,7 @@ def adaptive_translate(task_id,segments):
         MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name="adaptive_translate", status=1, celery_task_id=adaptive_translate.request.id)
         user = task.job.project.ai_user
         # Convert JSON data back to Segment objects
-        segment_ids = [int(segment["id"]) for segment in segments]
-        print('segment_ids',segment_ids)
+        segment_ids = [segment["id"] for segment in segments]
         final_segments = Segment.objects.filter(id__in=segment_ids)
         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
@@ -1026,17 +1025,14 @@ def adaptive_translate(task_id,segments):
         # Translate segments in batch
         update_list = []
         initial_credit = user.credit_balance.get("total_left")
-        print('initial_credit',initial_credit)
         if initial_credit >= consumable_credits:
             translated_segments = translator.process_batch(segments_to_process)
-            print('translated_segments',translated_segments)
-            segment_ids = [int(seg["segment_id"]) for seg in translated_segments]
-            print('segment_ids',segment_ids)
+            segment_ids = [seg["segment_id"] for seg in translated_segments]
             segment_objs = Segment.objects.in_bulk(segment_ids)
         
             for segment in translated_segments:
                 segment_id = segment["segment_id"]
-                final_text = segment["translated_text"]
+                final_text = segment["final_translation"]
                 if segment_id in segment_objs:
                     seg_obj = segment_objs[segment_id]
                     if not seg_obj.target:
