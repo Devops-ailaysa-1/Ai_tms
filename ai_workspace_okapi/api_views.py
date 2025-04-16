@@ -600,7 +600,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
                 if initial_credit < consumable_credits:
                     return  Response({'msg':'Insufficient Credits'}, status=400)
                 # No record found, so initiate a new translation task
-                if any(seg.target == '' for seg in page_segments):
+                if any(seg.target is None or seg.target == '' for seg in page_segments):
                     page_segments_serialized = [{"id": seg.id} for seg in page_segments]
                     adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority")  
         segments_ser = SegmentSerializer(page_segments, many=True)
