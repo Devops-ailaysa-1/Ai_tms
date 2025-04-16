@@ -997,6 +997,7 @@ def adaptive_translate(task_id,segments):
         user = task.job.project.ai_user
         # Convert JSON data back to Segment objects
         segment_ids = [int(segment["id"]) for segment in segments]
+        print('segment_ids',segment_ids)
         final_segments = Segment.objects.filter(id__in=segment_ids)
         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
@@ -1028,6 +1029,7 @@ def adaptive_translate(task_id,segments):
         if initial_credit >= consumable_credits:
             translated_segments = translator.process_batch(segments_to_process)
             segment_ids = [seg["segment_id"] for seg in translated_segments]
+            print('segment_ids',segment_ids)
             segment_objs = Segment.objects.in_bulk(segment_ids)
         
             for segment in translated_segments:
