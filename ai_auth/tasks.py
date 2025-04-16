@@ -996,7 +996,7 @@ def adaptive_translate(task_id,segments):
         MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name="adaptive_translate", status=1, celery_task_id=adaptive_translate.request.id)
         user = task.job.project.ai_user
         # Convert JSON data back to Segment objects
-        segment_ids = [segment["id"] for segment in segments]
+        segment_ids = [int(segment["id"]) for segment in segments]
         final_segments = Segment.objects.filter(id__in=segment_ids)
         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
