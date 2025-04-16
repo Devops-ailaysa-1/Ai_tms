@@ -1486,7 +1486,6 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
     #     translated_segments = translator.process_batch(segments_data) 
     #     try:
-    #         print("translated_segments",translated_segments, type(translated_segments))
     #         segments_data = json.loads(translated_segments) 
     #     except json.JSONDecodeError as e:
     #         logger.error(f"Failed to parse JSON from translation output: {e}")
@@ -1495,7 +1494,7 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     #     for segment in segments_data:
     #         try:
     #             segment_obj = Segment.objects.get(id=segment["segment_id"])
-    #             segment_obj.temp_target = segment["final_translation"]
+    #             segment_obj.temp_target = segment["translated_text"]
     #             segment_obj.save()
     #         except Segment.DoesNotExist:
     #             logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")

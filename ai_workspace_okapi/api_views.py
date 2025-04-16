@@ -594,14 +594,16 @@ class SegmentsView(views.APIView, PageNumberPagination):
             else:
                 consumable_credits = 0
                 for seg in page_segments:
-                    if not seg.target:
+                    if not seg.temp_target:
                         consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, seg.id, None)
                 initial_credit = user.credit_balance.get("total_left")
                 if initial_credit < consumable_credits:
                     return  Response({'msg':'Insufficient Credits'}, status=400)
                 # No record found, so initiate a new translation task
-                page_segments_serialized = [{"id": seg.id} for seg in page_segments]
-                adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority")  
+                if any(seg.temp_target is None or seg.temp_target == '' for seg in page_segments):
+                    page_segments_serialized = [{"id": seg.id} for seg in page_segments]
+                    adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
+                    return Response({"response": "Adaptive translation is already in progress. Please wait."}) 
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
