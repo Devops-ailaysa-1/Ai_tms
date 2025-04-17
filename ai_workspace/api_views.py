@@ -5404,8 +5404,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 doc_data = doc.json()
                 if doc_data.get('total_word_count') == 0:
                     return Response({'msg': 'File is Empty'}, status=400)
-                # elif get_credit_count('document_translation_adaptive',doc_data.get('total_word_count')) > user.credit_balance.get("total_left"):
-                #     return Response({'msg': 'Insufficient Credits'}, status=400)
+                elif get_credit_count('document_translation_adaptive',doc_data.get('total_word_count')) > user.credit_balance.get("total_left"):
+                    return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
             create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority')
