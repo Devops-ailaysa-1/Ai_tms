@@ -5358,7 +5358,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                         completed_percentage = 100
                     else:
                         # Simulate progress based on time since batch was created
-                        elapsed = datetime.now() - batch.created_at
+                        elapsed = timezone.now() - batch.created_at
 
                         if elapsed < timedelta(seconds=10):
                             completed_percentage = 10
