@@ -1,10 +1,10 @@
 # Django Production Settings
 from .base import *
+import os
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-import newrelic.agent
+from dotenv import load_dotenv
+load_dotenv(".env.testing")
 # from newrelic.agent import NewRelicContextFormatter
 # newrelic.agent.initialize('newrelic.ini')
 # from fluent import sender
@@ -88,16 +88,22 @@ import newrelic.agent
 #      'redirect',
 # ]
 
-CSRF_TRUSTED_ORIGINS += [
+SECRET_KEY = os.getenv("django_secret_key")
+DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
+
+
+### CORS 
+
+CORS_ORIGIN_ALLOW_ALL= False
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split()
+CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST", "").split()
+CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
+
+
+
+CSRF_TRUSTED_ORIGINS = [
  "http://localhost:3000",  "http://localhost:4200"
-]
-
-#SESSION_COOKIE_SAMESITE = None
-#CSRF_COOKIE_SAMESITE = None
-# Application definition
-
-INSTALLED_APPS += [
-    'dbbackup',
 ]
 
 
@@ -138,29 +144,178 @@ EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+
+
+### DRF settings
+
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+                'rest_framework.throttling.AnonRateThrottle',
+                'rest_framework.throttling.UserRateThrottle'
+                ]
+
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+                        'anon': '500/minute',
+                        'user': '1500/minute'}
+
+
+
+### Allauth Account settings
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
+CEO_EMAIL = os.getenv("CEO_EMAIL")
+END_POINT = os.getenv('END_POINT')
+ACCOUNT_AUTHENTICATION_METHOD = os.getenv("ACCOUNT_AUTHENTICATION_METHOD")
+ACCOUNT_USERNAME_REQUIRED = (True if os.getenv( "ACCOUNT_USERNAME_REQUIRED" ) == 'True' else False)
+ACCOUNT_EMAIL_REQUIRED = (True if os.getenv( "ACCOUNT_EMAIL_REQUIRED" ) == 'True' else False)
+ACCOUNT_UNIQUE_EMAIL = (True if os.getenv( "ACCOUNT_UNIQUE_EMAIL" ) == 'True' else False)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = os.getenv("ACCOUNT_USER_MODEL_USERNAME_FIELD" )
+ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION")
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
+
+
+### SOCIAL ACCOUNT
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+PROZ_CALLBACK_URL = os.getenv('PROZ_CALLBACK_URL')
+
+
+
+
+
+### Django Channel
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
+
+        },
+    },
+}
+
+### CACHEOPS Setting
+
 CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
 
 CACHEOPS_ENABLED = True
 
 CACHEOPS_DEGRADE_ON_FAILURE = True 
 
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
+
 CACHEOPS_DEFAULTS = {
     'timeout': 60 * 60,  # Default cache timeout (1 hour)
 }
 
 CACHEOPS = {
-   # 'ai_workspace.*': {'ops': 'all', 'timeout': 60 * 30},
+
     'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
-    #'ai_worksapce.task':{'ops':'all','timeout': 60 * 15},
-    
+
 }
 
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv("CACHE_REDIS_URL"),  
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'KEY_PREFIX': '',  
+        },
+        'TIMEOUT': 3600,  # Set the default cache timeout to 1 hour (3600 seconds)
     }
 }
+
+
+
+
+### CELERY
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
+CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
+CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_IGNORE_RESULT = False
+
+
+
+
+
+### Django Backup
+
+DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
+DBBACKUP_STORAGE_OPTIONS = {
+    'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
+    'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
+    'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
+    'endpoint_url': 'https://ams3.digitaloceanspaces.com',
+    'default_acl': 'private',
+    'location': os.getenv('MEDIA_BACKUP_LOCATION')
+
+}
+
+############
+### URLS
+############
+
+PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
+CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
+SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
+TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
+EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
+VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
+APPLICATION_URL = os.getenv("APPLICATION_URL")
+USERPORTAL_URL = os.getenv("USERPORTAL_URL")
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+
+
+
+#### Storage
+
+USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
+
+if USE_SPACES:
+    # settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_ENDPOINT_URL = 'https://ams3.digitaloceanspaces.com'
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    # static settings
+    AWS_LOCATION = 'static'
+    STATIC_URL = f'https://{AWS_S3_ENDPOINT_URL}/{AWS_LOCATION}/'
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # public media settings
+    PUBLIC_MEDIA_LOCATION = 'media'
+    MEDIA_URL = f'https://{AWS_S3_ENDPOINT_URL}/{PUBLIC_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'ai_auth.storage_backends.PrivateMediaStorage'
+else:
+    STATIC_URL = '/static/'
+    STATIC_ROOT =  os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+        # os.path.join(BASE_DIR, 'ai_canvas/static'),
+
+    ]
+    MEDIA_ROOT =  os.path.join(BASE_DIR, 'mediafiles')
+    MEDIA_URL = '/media/'
+
+
+
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+#     }
+# }
 
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -216,221 +371,4 @@ CACHES = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
 #     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),}
 #     'ROTATE_REFRESH_TOKENS': False,
-#     'BLACKLIST_AFTER_ROTATION': True,
-#     'UPDATE_LAST_LOGIN': False,
-
-    # 'ALGORITHM': 'HS256',
-    # 'SIGNING_KEY': os.getenv( "JWT_SECRET_KEY" ),
-#     'VERIFYING_KEY': None,
-#     'AUDIENCE': None,
-#     'ISSUER': None,
-
-#     'AUTH_HEADER_TYPES': ('Bearer',),
-#     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-#     'USER_ID_FIELD': 'id',
-#     'USER_ID_CLAIM': 'user_id',
-#     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-
-#     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-#     'TOKEN_TYPE_CLAIM': 'token_type',
-
-#     'JTI_CLAIM': 'jti',
-
-#     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-#     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-#     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-
-#     # new added
-#     'AUTH_COOKIE': 'access_token',  # Cookie name. Enables cookies if value is set.
-#     'AUTH_COOKIE_DOMAIN': None,     # A string like "example.com", or None for standard domain cookie.
-#     'AUTH_COOKIE_SECURE': False,    # Whether the auth cookies should be secure (https:// only).
-#     'AUTH_COOKIE_HTTP_ONLY' : True, # Http only cookie flag.It's not fetch by javascript.
-#     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
-#     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
-#                                 # This can be 'Lax', 'Strict', or None to disable the flag.
-# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0"
-# export CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# export CELERY_BACKEND_URL = 'redis://redis:6379/0'
-
-
-CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
-
-# CACHEOPS_DEFAULTS = {
-#     'timeout': 60*60
-# }
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": os.getenv("CACHEOPS_REDIS_HOST"),
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-#     }
-
-CACHEOPS = {
-
-    # Cache all queries to Permission
-    # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
-    # 'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
-
-
-    # # And since ops is empty by default you can rewrite last line as:
-    # '*.*': {'timeout': 60*60},
-
-    # # NOTE: binding signals has its overhead, like preventing fast mass deletes,
-    # #       you might want to only register whatever you cache and dependencies.
-
-    # # Finally you can explicitely forbid even manual caching with:
-    # 'some_app.*': None,
-}
-
-
-
-
-# DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-# DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
-
-# DBBACKUP_STORAGE_OPTIONS = {
-#     'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
-#     'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
-#     'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
-#     'endpoint_url': 'https://ams3.digitaloceanspaces.com',
-#     'default_acl': 'private',
-#     'location': os.getenv('MEDIA_BACKUP_LOCATION')
-
-# }
-
-
-
-LOGGING = {
-    'version' : 1,
-    'disable_existing_loggers' : False,
-
-    'formatters' : {
-        'dev_formatter' : {
-            'format' : '{levelname} {asctime} {pathname} {message}',
-            'style' : '{',
-        },
-        # 'newrelic_formatter': {
-        #    '()': NewRelicContextFormatter,
-        # },
-
-        # 'fluent_fmt':{
-        # '()': 'fluent.handler.FluentRecordFormatter',
-        # 'format':{
-        #   'level': '%(levelname)s',
-        #   'hostname': '%(hostname)s',
-        #   'where': '%(module)s.%(funcName)s',
-        # }}
-    },
-
-    'loggers' : {
-        # 'django' : {
-        #     'handlers' : ['file',],
-        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-        #     'propogate' : True,
-        # },
-
-        'django' : {
-            'handlers' : ['file_prod'],
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'propogate' : True,
-        },
-        # 'app.debug': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
-        # 'app.info': {
-        #     'handlers': ['fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': True,
-        # },
-        #'': {
-        #    'handlers': ['console' ],
-        #    'level': 'INFO',
-        #    'propagate': False,
-        #},
-        # 'django.request': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
-    },
-
-    'handlers' : {
-        #'console':{
-        #    'class' : 'logging.StreamHandler',
-        #    'level': 'INFO',
-        #    'formatter': 'dev_formatter',
-        #    'stream': 'ext://sys.stdout',
-        #},
-        'file' : {
-            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
-        },
-
-       'file_prod' : {
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
-        },
-    #    'newrelic': {
-    #        'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
-    #        'class': 'logging.StreamHandler',
-    #        'formatter' : 'newrelic_formatter',
-    #     },
-    #     'fluentinfo':{
-    #         'level':'INFO',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.info',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': False
-    #         },
-    #    'fluentdebug':{
-    #         'level':'DEBUG',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.debug',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': True
-    #     },
-
-        # 'mail_admins' : {
-        #     'level' : 'ERROR',
-        #     'class': 'django.utils.log.AdminEmailHandler',
-        #     'formatter' : 'dev_formatter',
-        # }
-    },
-
-
-}
-
-
-sentry_sdk.init(
-   dsn = os.getenv("dsn"),
-   integrations=[DjangoIntegration()],#
-
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
-   traces_sample_rate = os.getenv("traces_sample_rate"),#
-
-    # If you wish to associate users to errors (assuming you are using
-    # django.contrib.auth) you may enable sending PII data.
-   send_default_pii = os.getenv("send_default_pii")
-)
-
-
-
-DBBACKUP_CLEANUP_KEEP_MEDIA = int(os.getenv("DBBACKUP_CLEANUP_KEEP_MEDIA"))
+#     'BLACKLIST_AFTER_ROTA...
