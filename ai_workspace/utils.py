@@ -483,39 +483,9 @@ class AdaptiveSegmentTranslator:
 
     def process_batch(self, segments):
         style_guideline = self.style_analysis.process(segments)
-        translated_segments = []
-
-        for segment in segments:
-            translated_text = self.initial_translation.process(segment, style_guideline, self.gloss_terms)
-            translated_segments.append({
-                "segment_id": segment["segment_id"],
-                "source_text": segment["source"],
-                "tagged_source": segment["tagged_source"],
-                "translated_text": translated_text
-            })
-
-        # print("Initial Translation:")
-        # print(json.dumps(translated_segments, indent=2, ensure_ascii=False))
-
-        refined_segments = []
-        for segment in translated_segments:
-            refined_text = self.refinement_stage_1.process(segment, self.gloss_terms)
-            refined_segments.append({
-                **segment,
-                "refined_translation": refined_text
-            })
-
-        # print("\nRefined Translation:")
-        # print(json.dumps(refined_segments, indent=2, ensure_ascii=False))
-
-        final_segments = []
-        for segment in refined_segments:
-            final_text = self.refinement_stage_2.process(segment,self.gloss_terms)
-            final_segments.append({
-                **segment,
-                "final_translation": final_text
-            })
-        print('final_segments',final_segments)
+        translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
+        refined_segments = self.refinement_stage_1.process(translated_segments, self.gloss_terms)
+        final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         return final_segments
 
 
