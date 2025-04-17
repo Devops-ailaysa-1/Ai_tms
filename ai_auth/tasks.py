@@ -1468,12 +1468,14 @@ def proz_list_send_email(projectpost_id):
     return Response({'msg':'email sent'})
 
 
+
 #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
 def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms,task_id):
     from ai_workspace_okapi.models import Segment
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
+    
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
     seg_ids = [segment["segment_id"] for segment in segments_data]
@@ -1487,9 +1489,14 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
     #     translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
     #     translated_segments = translator.process_batch(segments_data) 
     #     try:
-    #         segments_data = json.loads(translated_segments) 
+    #         if translated_segments.startswith("```json"):
+    #             translated_segments = translated_segments.strip("```json").strip("```").strip()
+
+    #         segments_data = json.loads(translated_segments)
+
     #     except json.JSONDecodeError as e:
-    #         logger.error(f"Failed to parse JSON from translation output: {e}")
+    #         logger.error(f"Failed to parse JSON from translation output from anthropic: {e}, falling back to gemini")
+    #         # segments_data = translate_with_gemini_fallback(segments_data, source_lang, target_lang)
     #         segments_data = []
 
     #     for segment in segments_data:
