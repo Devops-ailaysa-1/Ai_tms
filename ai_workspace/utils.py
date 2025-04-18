@@ -559,3 +559,40 @@ class AdaptiveSegmentTranslator:
             language_name = ''
         
         return language_name
+
+
+# from google import genai
+
+# def translate_with_gemini_fallback(segments_data, source_lang, target_lang):
+#     try:
+#         prompt = f"""
+#             You are a professional translator.
+
+#             Input: A list of segment sentences in {source_lang}.
+#             Output: The same list rewritten in Modern Standard {target_lang}, preserving meaning, tone, and technical terms.
+
+#             **Format output strictly as JSON.**
+#             Each translated item must be formatted like:
+#             {{
+#             "segment_id": int,
+#             "translated_text": str
+#             }}
+
+#             Do NOT return any markdown or extra comments. Output must be a plain JSON array only.
+
+#             Translate and rewrite this list:
+
+#             {json.dumps(segments_data, ensure_ascii=False)}
+#         """
+
+#         client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+#         response = client.models.generate_content(
+#             model='gemini-2.0-flash',
+#             contents=prompt,
+#         )
+#         print(response.text, "Formatted by fallback gemini")
+#         return response.text
+    
+#     except Exception as e:
+#         print(e)
+#         return []
