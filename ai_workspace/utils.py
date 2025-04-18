@@ -500,57 +500,73 @@ class AdaptiveSegmentTranslator:
         return re.findall(r"</?[a-zA-Z0-9]+>", text)
 
     def handle_batch_translation_tags(self, segments, translated_segments):
+        """
+        Validate and clean up XML-like tags in translated segments based on original source segments.
+        Ensures that translated output has all required tags and removes unexpected ones.
+        """
         try:
-            json_ts = json.loads(translated_segments)
-        except json.JSONDecodeError as e:
-            logger.info(f"Failed to parse JSON from translation output from anthropic tags handle func")
-            return translated_segments
-        text_lang = self.get_first_translated_text_and_language(json_ts) 
-        if text_lang != self.target_language:
-            logger.info(f"Segment ID {translated_segments[0]['segment_id']} Translated text and target text is not same, Detect lang - {text_lang}, user target lag - {self.target_language}")
-            
-        segment_map = {seg["segment_id"]: seg for seg in segments}
-        for translated in json_ts:
-            segment_id = translated["segment_id"]
-            source_segment = segment_map.get(segment_id)
+            if isinstance(translated_segments, str):
+                try:
+                    json_ts = json.loads(translated_segments)
+                except json.JSONDecodeError as e:
+                    logger.info(f"Failed to parse JSON from translation output - {translated_segments} !")
+                    return translated_segments
+            else:
+                json_ts = translated_segments
 
-            if not source_segment:
-                logger.error(f"Segment ID {segment_id} not found in source segments.")
-                continue
+            text_lang = self.get_first_translated_text_and_language(json_ts)
+            if text_lang != self.target_language:
+                logger.info(
+                    f"Language mismatch detected. First segment language: {text_lang}, target language: {self.target_language}"
+                )
 
-            source_tags = set(self.extract_tags(source_segment["tagged_source"]))
-            translated_text = translated.get("translated_text", "")
+            segment_map = {seg["segment_id"]: seg for seg in segments}
 
-            if not translated_text:
-                logger.error(f"[Segment {segment_id}] Translated Text is Empty.")
-                continue
+            for translated in json_ts:
+                segment_id = translated.get("segment_id")
+                translated_text = translated.get("translated_text", "")
 
-            translated_tags = set(self.extract_tags(translated_text))
+                source_segment = segment_map.get(segment_id)
+                if not source_segment:
+                    logger.error(f"[Segment {segment_id}] Source segment not found.")
+                    continue
 
-            missing_tags = source_tags - translated_tags
-            extra_tags = translated_tags - source_tags
+                if not translated_text:
+                    logger.error(f"[Segment {segment_id}] Translated text is empty.")
+                    continue
 
-            if missing_tags:
-                logger.error(f"[Segment {segment_id}] - Missing tags: {missing_tags}")
+                source_tags = set(self.extract_tags(source_segment.get("tagged_source", "")))
+                translated_tags = set(self.extract_tags(translated_text))
 
-            if extra_tags:
-                logger.error(f"[Segment {segment_id}] - Unwanted tags: {extra_tags}")
+                missing_tags = source_tags - translated_tags
+                extra_tags = translated_tags - source_tags
 
-            # Clean up unwanted tags
-            cleaned_parts = []
-            for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
-                if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
-                    if part in source_tags:
-                        cleaned_parts.append(part)
+                if missing_tags:
+                    logger.error(f"[Segment {segment_id}] Missing tags: {missing_tags}")
+
+                if extra_tags:
+                    logger.error(f"[Segment {segment_id}] Unwanted tags: {extra_tags}")
+
+                # Clean translated text from unexpected tags
+                cleaned_parts = []
+                for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
+                    if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
+                        if part in source_tags:
+                            cleaned_parts.append(part)
+                        else:
+                            logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
                     else:
-                        logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
-                else:
-                    cleaned_parts.append(part)
+                        cleaned_parts.append(part)
 
-            # Update the translation
-            translated["translated_text"] = "".join(cleaned_parts).strip()
+                translated["translated_text"] = "".join(cleaned_parts).strip()
 
-        return json.dumps(json_ts)
+            return json_ts  
+
+        except Exception as e:
+            logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
+            return translated_segments
+
+        
 
 
     def get_first_translated_text_and_language(self,translated_segments):
