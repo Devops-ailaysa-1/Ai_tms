@@ -500,12 +500,17 @@ class AdaptiveSegmentTranslator:
         return re.findall(r"</?[a-zA-Z0-9]+>", text)
 
     def handle_batch_translation_tags(self, segments, translated_segments):
-        text_lang = self.get_first_translated_text_and_language(translated_segments) 
+        try:
+            json_ts = json.loads(translated_segments)
+        except json.JSONDecodeError as e:
+            logger.info(f"Failed to parse JSON from translation output from anthropic tags handle func")
+            return translated_segments
+        text_lang = self.get_first_translated_text_and_language(json_ts) 
         if text_lang != self.target_language:
             logger.info(f"Segment ID {translated_segments[0]['segment_id']} Translated text and target text is not same, Detect lang - {text_lang}, user target lag - {self.target_language}")
             
         segment_map = {seg["segment_id"]: seg for seg in segments}
-        for translated in translated_segments:
+        for translated in json_ts:
             segment_id = translated["segment_id"]
             source_segment = segment_map.get(segment_id)
 
@@ -545,7 +550,7 @@ class AdaptiveSegmentTranslator:
             # Update the translation
             translated["translated_text"] = "".join(cleaned_parts).strip()
 
-        return translated_segments
+        return json.dumps(json_ts)
 
 
     def get_first_translated_text_and_language(self,translated_segments):
