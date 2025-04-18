@@ -330,6 +330,11 @@ import json
 from abc import ABC, abstractmethod
 import os
 from anthropic import Anthropic
+import re
+import logging
+from langdetect import detect
+import langcodes
+logger = logging.getLogger('django')
 
 # Handles API interaction
 class AnthropicAPI:
@@ -484,7 +489,73 @@ class AdaptiveSegmentTranslator:
     def process_batch(self, segments):
         style_guideline = self.style_analysis.process(segments)
         translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
-        refined_segments = self.refinement_stage_1.process(translated_segments, self.gloss_terms)
+        batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
+        refined_segments = self.refinement_stage_1.process(batch_translation, self.gloss_terms)
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         return final_segments
         
+
+    def extract_tags(self, text):
+        """Extract all XML-like tags (e.g. <1>, </1>, <n>, </n>)."""
+        return re.findall(r"</?[a-zA-Z0-9]+>", text)
+
+    def handle_batch_translation_tags(self, segments, translated_segments):
+        text_lang = self.get_first_translated_text_and_language(translated_segments) 
+        if text_lang != self.target_language:
+            logger.info(f"Segment ID {translated_segments[0]['segment_id']} Translated text and target text is not same, Detect lang - {text_lang}, user target lag - {self.target_language}")
+            
+        segment_map = {seg["segment_id"]: seg for seg in segments}
+        for translated in translated_segments:
+            segment_id = translated["segment_id"]
+            source_segment = segment_map.get(segment_id)
+
+            if not source_segment:
+                logger.error(f"Segment ID {segment_id} not found in source segments.")
+                continue
+
+            source_tags = set(self.extract_tags(source_segment["tagged_source"]))
+            translated_text = translated.get("translated_text", "")
+
+            if not translated_text:
+                logger.error(f"[Segment {segment_id}] Translated Text is Empty.")
+                continue
+
+            translated_tags = set(self.extract_tags(translated_text))
+
+            missing_tags = source_tags - translated_tags
+            extra_tags = translated_tags - source_tags
+
+            if missing_tags:
+                logger.error(f"[Segment {segment_id}] - Missing tags: {missing_tags}")
+
+            if extra_tags:
+                logger.error(f"[Segment {segment_id}] - Unwanted tags: {extra_tags}")
+
+            # Clean up unwanted tags
+            cleaned_parts = []
+            for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
+                if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
+                    if part in source_tags:
+                        cleaned_parts.append(part)
+                    else:
+                        logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
+                else:
+                    cleaned_parts.append(part)
+
+            # Update the translation
+            translated["translated_text"] = "".join(cleaned_parts).strip()
+
+        return translated_segments
+
+
+    def get_first_translated_text_and_language(self,translated_segments):
+        from ai_staff.models import LanguagesLocale
+        translated_text = translated_segments[0]["translated_text"]
+        language_code = detect(translated_text)    
+        try:
+            language_name = LanguagesLocale.objects.get(locale_code=language_code)
+            language_name = language_name.language.language
+        except LanguagesLocale.DoesNotExist:
+            language_name = ''
+        
+        return language_name
