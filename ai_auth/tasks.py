@@ -1027,7 +1027,12 @@ def adaptive_translate(task_id,segments):
         initial_credit = user.credit_balance.get("total_left")
         if initial_credit >= consumable_credits:
             translated_segments = translator.process_batch(segments_to_process)
-            translated_segments = json.loads(translated_segments)
+            try:
+                translated_segments = json.loads(translated_segments)
+            except json.JSONDecodeError as e:
+                logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate")
+                raise ValueError(f"something went wrong {e}")
+                
             segment_ids = [seg["segment_id"] for seg in translated_segments]
             segment_objs = Segment.objects.in_bulk(segment_ids)
         
