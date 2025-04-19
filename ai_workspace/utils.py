@@ -330,6 +330,11 @@ import json
 from abc import ABC, abstractmethod
 import os
 from anthropic import Anthropic
+import re
+import logging
+from langdetect import detect
+import langcodes
+logger = logging.getLogger('django')
 
 # Handles API interaction
 class AnthropicAPI:
@@ -484,9 +489,97 @@ class AdaptiveSegmentTranslator:
     def process_batch(self, segments):
         style_guideline = self.style_analysis.process(segments)
         translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
-        refined_segments = self.refinement_stage_1.process(translated_segments, self.gloss_terms)
+        batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
+        refined_segments = self.refinement_stage_1.process(batch_translation, self.gloss_terms)
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         return final_segments
+        
+
+    def extract_tags(self, text):
+        """Extract all XML-like tags (e.g. <1>, </1>, <n>, </n>)."""
+        return re.findall(r"</?[a-zA-Z0-9]+>", text)
+
+    def handle_batch_translation_tags(self, segments, translated_segments):
+        """
+        Validate and clean up XML-like tags in translated segments based on original source segments.
+        Ensures that translated output has all required tags and removes unexpected ones.
+        """
+        try:
+            if isinstance(translated_segments, str):
+                try:
+                    json_ts = json.loads(translated_segments)
+                except json.JSONDecodeError as e:
+                    logger.info(f"Failed to parse JSON from translation output - {translated_segments} !")
+                    return translated_segments
+            else:
+                json_ts = translated_segments
+
+            text_lang = self.get_first_translated_text_and_language(json_ts)
+            if text_lang != self.target_language:
+                logger.info(
+                    f"Language mismatch detected. First segment language: {text_lang}, target language: {self.target_language}"
+                )
+
+            segment_map = {seg["segment_id"]: seg for seg in segments}
+
+            for translated in json_ts:
+                segment_id = translated.get("segment_id")
+                translated_text = translated.get("translated_text", "")
+
+                source_segment = segment_map.get(segment_id)
+                if not source_segment:
+                    logger.error(f"[Segment {segment_id}] Source segment not found.")
+                    continue
+
+                if not translated_text:
+                    logger.error(f"[Segment {segment_id}] Translated text is empty.")
+                    continue
+
+                source_tags = set(self.extract_tags(source_segment.get("tagged_source", "")))
+                translated_tags = set(self.extract_tags(translated_text))
+
+                missing_tags = source_tags - translated_tags
+                extra_tags = translated_tags - source_tags
+
+                if missing_tags:
+                    logger.error(f"[Segment {segment_id}] Missing tags: {missing_tags}")
+
+                if extra_tags:
+                    logger.error(f"[Segment {segment_id}] Unwanted tags: {extra_tags}")
+
+                # Clean translated text from unexpected tags
+                cleaned_parts = []
+                for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
+                    if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
+                        if part in source_tags:
+                            cleaned_parts.append(part)
+                        else:
+                            logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
+                    else:
+                        cleaned_parts.append(part)
+
+                translated["translated_text"] = "".join(cleaned_parts).strip()
+
+            return json_ts  
+
+        except Exception as e:
+            logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
+            return translated_segments
+
+        
+
+
+    def get_first_translated_text_and_language(self,translated_segments):
+        from ai_staff.models import LanguagesLocale
+        translated_text = translated_segments[0]["translated_text"]
+        language_code = detect(translated_text)    
+        try:
+            language_name = LanguagesLocale.objects.get(locale_code=language_code)
+            language_name = language_name.language.language
+        except LanguagesLocale.DoesNotExist:
+            language_name = ''
+        
+        return language_name
 
 
 # from google import genai

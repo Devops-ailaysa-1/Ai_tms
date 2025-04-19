@@ -52,7 +52,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file,record_api_usage, adaptive_segment_translation, create_doc_and_write_seg_to_db
+from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
@@ -5349,10 +5349,32 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                             status_counter["failed"] += 1
                     else:
                         status_counter["in_progress"] += 1
+                
+                if total_batches == 1:
+                    batch = batches.first()
+                    task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
 
-                completed_percentage = (
-                    (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
-                )
+                    if task_result and task_result.status == "SUCCESS":
+                        completed_percentage = 100
+                    else:
+                        # Simulate progress based on time since batch was created
+                        elapsed = timezone.now() - batch.created_at
+
+                        if elapsed < timedelta(seconds=10):
+                            completed_percentage = 10
+                        elif elapsed < timedelta(seconds=20):
+                            completed_percentage = 30
+                        elif elapsed < timedelta(seconds=30):
+                            completed_percentage = 50
+                        elif elapsed < timedelta(seconds=45):
+                            completed_percentage = 70
+                        else:
+                            completed_percentage = 90
+                else:
+                    completed_percentage = (
+                        (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+                    )
+                    
                 batch_status = {
                     "task_id": task.id,
                     "total_batches": total_batches,
