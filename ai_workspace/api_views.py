@@ -52,7 +52,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file,record_api_usage, adaptive_segment_translation, create_doc_and_write_seg_to_db
+from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
