@@ -1032,10 +1032,13 @@ def adaptive_translate(task_id,segments):
             translated_segments = translator.process_batch(segments_to_process)
             try:
                 translated_segments = json.loads(translated_segments)
-                print('translated_segments1',translated_segments)
             except json.JSONDecodeError as e:
-                translated_segments = repair_json(translated_segments,return_objects=True)
-                logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate - {e} !")
+                try:
+                    translated_segments = repair_json(translated_segments,return_objects=True)
+                    logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
+                except json.JSONDecodeError as e:
+                    translated_segments = []
+                    logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate - {e} !")
                 
             segment_ids = [seg["segment_id"] for seg in translated_segments]
             segment_objs = Segment.objects.in_bulk(segment_ids)

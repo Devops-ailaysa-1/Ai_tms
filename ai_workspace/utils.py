@@ -509,13 +509,12 @@ class AdaptiveSegmentTranslator:
             if isinstance(translated_segments, str):
                 try:
                     json_ts = json.loads(translated_segments)
-                    logger.info(f"invalid json - {translated_segments}")
                 except json.JSONDecodeError as e:
                     try:
                         json_ts = repair_json(translated_segments,return_objects=True)
-                        logger.info("Failed to parse JSON from translation output, repaired with json_repair!")
+                        logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
                     except json.JSONDecodeError as e:
-                        logger.info(f"Failed to parse JSON from translation output !")
+                        logger.info(f"Failed to parse JSON from translation output {e}!")
                         return translated_segments
             else:
                 json_ts = translated_segments
