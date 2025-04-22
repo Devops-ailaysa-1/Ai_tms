@@ -334,6 +334,7 @@ import re
 import logging
 from langdetect import detect
 import langcodes
+from json_repair import repair_json
 logger = logging.getLogger('django')
 
 # Handles API interaction
@@ -354,7 +355,7 @@ class AnthropicAPI:
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
 
-    def send_request(self, system_prompt, messages, max_tokens=2000):
+    def send_request(self, system_prompt, messages, max_tokens=10000):
         response = self.client.messages.create(
             model=self.model_name,
             system=[
@@ -509,8 +510,12 @@ class AdaptiveSegmentTranslator:
                 try:
                     json_ts = json.loads(translated_segments)
                 except json.JSONDecodeError as e:
-                    logger.info(f"Failed to parse JSON from translation output - {translated_segments} !")
-                    return translated_segments
+                    try:
+                        json_ts = repair_json(json_ts,return_objects=True)
+                        logger.info("Failed to parse JSON from translation output, repaired with json_repair!")
+                    except json.JSONDecodeError as e:
+                        logger.info(f"Failed to parse JSON from translation output !")
+                        return translated_segments
             else:
                 json_ts = translated_segments
 

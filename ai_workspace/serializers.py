@@ -793,6 +793,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.isAdaptiveTranslation = validated_data.get("isAdaptiveTranslation",\
 									instance.isAdaptiveTranslation)
 			instance.save()
+   
+		if 'adaptive_file_translate' in validated_data:
+			instance.adaptive_file_translate = validated_data.get("adaptive_file_translate",\
+									instance.adaptive_file_translate)
+			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
