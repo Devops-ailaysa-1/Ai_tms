@@ -42,7 +42,7 @@ def lang_detector(user_text):
     if isinstance(lang,list):
         lang = lang[0]
     return lang
-
+ 
 
 def news_file_read(file_path):
     if file_path.endswith("txt"):

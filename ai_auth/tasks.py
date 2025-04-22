@@ -989,6 +989,8 @@ def adaptive_translate(task_id,segments):
     from ai_workspace.models import Task
     from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from json_repair import repair_json
+
     print('Adaptive translate started')
     track_seg = None
     try:
@@ -1032,6 +1034,7 @@ def adaptive_translate(task_id,segments):
                 translated_segments = json.loads(translated_segments)
                 print('translated_segments1',translated_segments)
             except json.JSONDecodeError as e:
+                translated_segments = repair_json(translated_segments,return_objects=True)
                 logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate - {e} !")
                 
             segment_ids = [seg["segment_id"] for seg in translated_segments]
