@@ -1543,8 +1543,10 @@ def segment_batch_translation(segments_data, batch_size, min_threshold, source_l
 
         batch_segments_data = segments_data[start_idx:end_idx]
 
+        seg_ids = [segment["segment_id"] for segment in batch_segments_data]
+
         translation_task =  app.send_task('ai_processor.adaptive_segment_translation',
-            (batch_segments_data, source_lang, target_lang, get_terms_for_task,task_id)
+            (seg_ids, source_lang, target_lang, get_terms_for_task,task_id)
         )
 
         seg_start_id = batch_segments_data[0]["segment_id"]
