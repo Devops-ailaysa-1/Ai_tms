@@ -1131,7 +1131,8 @@ from ai_canvas.models import CanvasTranslatedJson
 from ai_workspace.models import TaskDetails
 from ai_workspace.serializers import TaskDetailSerializer
 from ai_openai.serializers import AiPromptSerializer
-
+from ai_workspace.utils import detect_lang
+import asyncio
 def dict_rec_json(json_copy):
     total_sent = []
     if 'template_json' in  json_copy.keys():
@@ -1150,14 +1151,12 @@ def dict_rec_json(json_copy):
                 total_sent.append(text)
     return  total_sent
 
-from googletrans import Translator
 @permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def lang_detection(request):
     from ai_staff.models import Languages
     from ai_imagetranslation.models import ImageTranslate
     from ai_auth.api_views import get_lang_code
-    detector = Translator()
     canvas_design_id=request.query_params.get('canvas_design_id',None)
     image_translation_id = request.query_params.get('image_translation_id',None)
     src_words_all = ''
@@ -1171,9 +1170,15 @@ def lang_detection(request):
         instance = ImageTranslate.objects.get(id=image_translation_id)
         tar_json=instance.source_canvas_json
         src_words_all =" ".join(dict_rec_json(tar_json))
-    lang = detector.detect(src_words_all).lang
-    if isinstance(lang,list):
-        lang = lang[0]
+    try:
+        lang = asyncio.run(detect_lang(src_words_all)).lang
+        if isinstance(lang, list):
+            lang = lang[0]
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    # lang = detector.detect(src_words_all).lang
+    # if isinstance(lang,list):
+    #     lang = lang[0]
     lang_code = get_lang_code(lang)
     try:
         lang_obj = Languages.objects.get(locale__locale_code = lang_code)

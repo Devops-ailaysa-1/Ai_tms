@@ -223,6 +223,8 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
 
 
 from ai_auth.api_views import get_lang_code
+from ai_workspace.utils import detect_lang
+import asyncio
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 
@@ -244,7 +246,7 @@ def customize_text_openai(request):
     
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine',None)    
-    detector = Translator()
+    # detector = Translator()
 
     if task != None:
         obj = Task.objects.get(id=task)
@@ -261,9 +263,15 @@ def customize_text_openai(request):
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
         detect_text = user_text[:500] if len(user_text) > 500 else user_text
-        lang = detector.detect(detect_text).lang
-        if isinstance(lang,list):
-            lang = lang[0]
+        try:
+            lang = asyncio.run(detect_lang(detect_text)).lang
+            if isinstance(lang, list):
+                lang = lang[0]
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+        # lang = detector.detect(detect_text).lang
+        # if isinstance(lang,list):
+        #     lang = lang[0]
         lang = get_lang_code(lang)
 
     if my_style:

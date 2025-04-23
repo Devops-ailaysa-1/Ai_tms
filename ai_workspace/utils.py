@@ -8,6 +8,10 @@ import re
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 import nltk
 
+async def detect_lang(text):
+    from googletrans import Translator
+    detector = Translator()
+    return await detector.detect(text)
 
 class DjRestUtils:
 
