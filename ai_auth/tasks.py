@@ -1594,7 +1594,7 @@ def create_doc_and_write_seg_to_db(task_id):
         total_segments = len(serializer.data)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        segment_batch_translation.apply_async((serializer.data, 15, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
+        segment_batch_translation.apply_async((serializer.data, 50, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
 
     except Exception as e:
         logger.error(f'Error in batch task: {e}')
