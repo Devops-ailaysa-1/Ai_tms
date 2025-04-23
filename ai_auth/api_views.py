@@ -11,6 +11,7 @@ from dj_rest_auth.registration.serializers import SocialLoginSerializer
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
+from ai_workspace.utils import detect_lang
 from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -2490,7 +2491,7 @@ def get_lang_code(lang_code):
 
 
 
-
+import asyncio
 
 @api_view(['GET'])
 #@permission_classes([IsAuthenticated])
@@ -2499,11 +2500,23 @@ def lang_detect(request):
     '''
     This function is to detect the language and return the language object and language.
     '''
-    from googletrans import Translator
     from ai_staff.models import Languages
-    text = request.GET.get('text')
-    detector = Translator()
-    lang = detector.detect(text).lang
+    text = request.GET.get('text', '')
+
+    if not text:
+        return Response({'error': 'Text is required'}, status=400)
+
+    try:
+        result = asyncio.run(detect_lang(text))
+        lang = result.lang
+        if isinstance(lang, list):
+            lang = lang[0]
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+    # text = request.GET.get('text')
+    # detector = Translator()
+    # lang = detector.detect(text).lang
     if isinstance(lang,list):
         lang = lang[0]
     lang_code = get_lang_code(lang)
