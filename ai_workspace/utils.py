@@ -626,3 +626,28 @@ class AdaptiveSegmentTranslator:
 #     except Exception as e:
 #         print(e)
 #         return []
+
+
+def word_count_find(task):
+    import requests
+    from .serializers import TaskSerializer
+    from ai_workspace_okapi.api_views import DocumentViewByTask  
+    from ai_workspace_okapi.utils import get_res_path
+    from os.path import exists
+
+
+    spring_host = os.environ.get("SPRING_HOST")
+    data = TaskSerializer(task).data
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+
+    res_paths = get_res_path(params_data["source_language"])
+
+    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+        "doc_req_params": json.dumps(params_data),
+        "doc_req_res_params": json.dumps(res_paths)
+    })
+    if doc.status_code == 200:
+        doc_data = doc.json()
+        return doc_data.get('total_word_count')
+        

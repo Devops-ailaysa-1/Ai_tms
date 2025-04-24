@@ -385,6 +385,7 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 
 
 from ai_glex.models import Glossary, GlossarySelected
+from .utils import word_count_find
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
@@ -671,6 +672,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project_jobs_set = validated_data.get("project_jobs_set",None)
 		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
 		glossary_job_update = validated_data.pop('glossary_job_update', None)
+		adaptive_simple = validated_data.pop('adaptive_simple', None)
+
 
 		try:
 			with transaction.atomic():
@@ -723,7 +726,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
 
+				
+					
 				task_assign = TaskAssign.objects.assign_task(project=project)
+
+				get_task = project.get_tasks[0]
+				if adaptive_simple:
+					word_count = word_count_find(get_task)
+					if word_count == 0:
+						raise serializers.ValidationError({"error": "Word count is 0"})
+					if word_count > 10000:
+						raise serializers.ValidationError({"error": "Word count is more than 10000"})
+					
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
 					default_gloss_project.file_translate_glossary = project
