@@ -811,8 +811,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         # normal create
         else:
             files = request.FILES.getlist("files")
-            adaptive_file_translate = request.POST.get('adaptive_file_translate',None)
-            if adaptive_file_translate and len(files) > 1:
+            adaptive_simple = request.POST.get('adaptive_simple',None)
+            if adaptive_simple and len(files) > 1:
                 return Response({"error": "Only one file is allowed."}, status=400)
             serlzr = ser(data=\
             {**request.data, "files": files,"audio_file":audio_file},context={"request": request,'user_1':user_1})

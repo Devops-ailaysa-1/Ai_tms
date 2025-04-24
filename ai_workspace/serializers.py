@@ -427,7 +427,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update")
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple")
 
 	def run_validation(self, data):
 
@@ -460,6 +460,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		#data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 		data['file_translate'] =data.get('file_translate',['false'])[0]
 		data['adaptive_file_translate'] = data.get('adaptive_file_translate',['false'])[0]
+		data['adaptive_simple'] = data.get('adaptive_simple',['false'])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		data['team_exist'] = data.get('team',[None])[0]

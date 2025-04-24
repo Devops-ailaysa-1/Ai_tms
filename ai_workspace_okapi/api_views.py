@@ -238,7 +238,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                if not task.job.project.adaptive_file_translate:
+                if not task.job.project.adaptive_simple:
                     write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
                 else:
                     write_segments_to_db(task_write_data, document.id)

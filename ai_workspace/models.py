@@ -222,6 +222,7 @@ class Project(models.Model):
     get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
     file_translate = models.BooleanField(default=False) # Use for default glossary
     adaptive_file_translate = models.BooleanField(default=False)
+    adaptive_simple = models.BooleanField(default=False)
     isAdaptiveTranslation = models.BooleanField(default=False) # Used to have adaptive translation or not
 
 
