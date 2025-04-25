@@ -746,7 +746,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-        
+        #asdfadsfasdfasdfasdf
     def list(self, request, *args, **kwargs):
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
