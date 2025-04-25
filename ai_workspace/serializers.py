@@ -41,6 +41,7 @@ from itertools import repeat
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 from ai_workspace.utils import federal_json_translate
 from concurrent.futures import ThreadPoolExecutor
+from rest_framework.exceptions import ValidationError
 logger = logging.getLogger('django')
 
 # class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -743,7 +744,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					default_gloss_project.file_translate_glossary = project
 					default_gloss_project.save()
 					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)
-
+		except ValidationError:
+			raise
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
