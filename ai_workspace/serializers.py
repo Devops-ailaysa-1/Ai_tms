@@ -673,7 +673,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project_jobs_set = validated_data.get("project_jobs_set",None)
 		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
 		glossary_job_update = validated_data.pop('glossary_job_update', None)
-		adaptive_simple = validated_data.pop('adaptive_simple', None)
+		adaptive_simple = validated_data.get('adaptive_simple', None)
 
 
 		try:
@@ -736,9 +736,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					if adaptive_simple:
 						word_count = word_count_find(get_task)
 						if word_count == 0:
-							raise serializers.ValidationError({"error": "Word count is 0"})
+							raise serializers.ValidationError({"msg": "File is Empty"})
 						if word_count > 10000:
-							raise serializers.ValidationError({"error": "Word count is more than 10000"})
+							raise serializers.ValidationError({"msg": "Word count is more than 10000"})
 					
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
