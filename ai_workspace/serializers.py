@@ -419,7 +419,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
 	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
-	glossary_proj_id = serializers.ReadOnlyField(source='individual_gloss_project.project.id')
+	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
 
 	class Meta:
