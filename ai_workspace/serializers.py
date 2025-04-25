@@ -731,13 +731,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					
 				task_assign = TaskAssign.objects.assign_task(project=project)
 
-				get_task = project.get_tasks[0]
-				if adaptive_simple:
-					word_count = word_count_find(get_task)
-					if word_count == 0:
-						raise serializers.ValidationError({"error": "Word count is 0"})
-					if word_count > 10000:
-						raise serializers.ValidationError({"error": "Word count is more than 10000"})
+				if project_type == 1:
+					get_task = project.get_tasks[0]
+					if adaptive_simple:
+						word_count = word_count_find(get_task)
+						if word_count == 0:
+							raise serializers.ValidationError({"error": "Word count is 0"})
+						if word_count > 10000:
+							raise serializers.ValidationError({"error": "Word count is more than 10000"})
 					
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
