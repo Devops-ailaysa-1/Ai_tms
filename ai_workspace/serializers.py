@@ -671,7 +671,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
-		default_gloss_project = validated_data.get('default_gloss_project_id', None)
+		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
 		glossary_job_update = validated_data.pop('glossary_job_update', None)
 		adaptive_simple = validated_data.get('adaptive_simple', None)
 
