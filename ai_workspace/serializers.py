@@ -434,7 +434,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def get_individual_gloss_project_id(self, obj):
 		if hasattr(obj, 'individual_gloss_project') and obj.individual_gloss_project:
-			return obj.individual_gloss_project.id
+			return obj.individual_gloss_project.project.id
 		return None
 		
 	def run_validation(self, data):
