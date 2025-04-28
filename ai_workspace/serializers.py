@@ -421,6 +421,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
+	individual_gloss_project_id = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Project
@@ -429,8 +430,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple")
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple", "individual_gloss_project_id")
 
+	def get_individual_gloss_project_id(self, obj):
+		if hasattr(obj, 'individual_gloss_project') and obj.individual_gloss_project:
+			return obj.individual_gloss_project.id
+		return None
+		
 	def run_validation(self, data):
 
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
