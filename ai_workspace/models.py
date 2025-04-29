@@ -1995,3 +1995,11 @@ class TrackSegmentsBatchStatus(models.Model):
     status = models.CharField(max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+
+
+class ProcessFile(models.Model):
+    uid = models.UUIDField(unique=True,default=uuid.uuid4, editable=False)
+    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="process_file")
+    style_text = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

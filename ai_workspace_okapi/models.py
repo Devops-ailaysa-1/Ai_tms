@@ -36,6 +36,15 @@ class TextUnit(models.Model):
     def task_obj(self):
         return self.document.task_obj
 
+class MergedTextUnit(models.Model):
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE)
+    source_para = models.TextField()
+    temp_para = models.TextField(blank=True)
+    tagged_para = models.TextField(blank=True)
+    translated_para = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 # class TextUnitDetail(models.Model):
 #     source = models.TextField(blank=True)
 #     target = models.TextField(null=True, blank=True)

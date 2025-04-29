@@ -650,4 +650,28 @@ def word_count_find(task):
     if doc.status_code == 200:
         doc_data = doc.json()
         return doc_data.get('total_word_count')
+
+
+def merge_source_text_by_text_unit():
+    from ai_workspace_okapi.models import MergedTextUnit
+    from ai_workspace_okapi.models import TextUnit, Segment
+
+    text_units = TextUnit.objects.prefetch_related(
+        Prefetch('text_unit_segment_set',queryset=Segment.objects.order_by('id')))
+
+    for text_unit in text_units:
+        source_paragraph = ""
         
+        segments = text_unit.text_unit_segment_set.all()
+        
+        if not segments:
+            continue  
+
+        for seg in segments:
+            if seg.source:
+                source_paragraph += seg.source + " "
+
+        MergedTextUnit.objects.create(
+            text_unit=text_unit,
+            source_para=source_paragraph.strip(),
+        )

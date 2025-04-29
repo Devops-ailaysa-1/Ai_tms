@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.apps import apps
 from django.utils.functional import cached_property
-
+import uuid
 
 # Create your models here.
 
@@ -766,4 +766,14 @@ class LanguageGrammarPrompt(models.Model):
 
     def __str__(self) -> str:
         return self.prompt_name
+
+class SystemPrompt(models.Model):
+    uid = models.UUIDField(unique=True,default=uuid.uuid4, editable=False)
+    prompt = models.TextField(null=False,blank=False)
+    task_name = models.CharField(max_length=50,null=True,blank=True)
+    stages = models.CharField(max_length=50,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
+    def __str__(self):
+        return self.stages
