@@ -1429,7 +1429,6 @@ def proz_list_send_email(projectpost_id):
 
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
-@task(queue='high-priority')
 def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms,task_id):
     from ai_workspace_okapi.models import Segment
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
@@ -1438,13 +1437,13 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
-    seg_ids = [segment["segment_id"] for segment in segments_data]
-    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
-    if consumable_credits < user.credit_balance.get("total_left"):
-        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-    else:
-        logger.info("Insufficient credits for segment translation")
-        raise ValueError("Insufficient credits for segment translation")
+    # seg_ids = [segment["segment_id"] for segment in segments_data]
+    # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
+    # if consumable_credits < user.credit_balance.get("total_left"):
+    #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    # else:
+    #     logger.info("Insufficient credits for segment translation")
+    #     raise ValueError("Insufficient credits for segment translation")
     try:
         translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
         translated_segments = translator.process_batch(segments_data) 
@@ -1532,48 +1531,24 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
 
 
 
-# @task(queue='high-priority')
-# def segment_batch_translation(segments_data, batch_size, min_threshold, source_lang, target_lang, task_id, project_id, total_segments):
-#     from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
-#     from ai_workspace_okapi.models import Segment
+def segment_batch_translation(segments_data, task_id, project_id, source_lang, target_lang):
+    from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
+    from ai_workspace_okapi.models import Segment
 
-#     task = Task.objects.get(id=task_id)
-#     project = Project.objects.get(id=project_id)
-#     start_idx = 0
+    task = Task.objects.get(id=task_id)
+    project = Project.objects.get(id=project_id)
+    get_terms_for_task = get_glossary_for_task(project, task)
+    # TrackSegmentsBatchStatus.objects.create(
+    #     celery_task_id=translation_task.id,
+    #     status=BatchStatus.ONGOING,
+    #     document=task.document,
+    #     seg_start_id=seg_start_id,  
+    #     seg_end_id=seg_end_id,  
+    #     project=project
+    # )
+    adaptive_segment_translation(segments_data, source_lang, target_lang, get_terms_for_task, task_id)
 
-#     print("Total segment count : {}".format(total_segments))
 
-#     get_terms_for_task = get_glossary_for_task(project, task)
-
-#     while start_idx < total_segments:
-#         end_idx = min(start_idx + batch_size, total_segments)
-
-#         if (total_segments - end_idx) <= min_threshold:
-#             end_idx = total_segments
-
-#         batch_segments_data = segments_data[start_idx:end_idx]
-
-#         seg_ids = [segment["segment_id"] for segment in batch_segments_data]
-
-#         # translation_task =  app.send_task('ai_processor.adaptive_segment_translation',
-#         #     (seg_ids, source_lang, target_lang, get_terms_for_task,task_id)
-#         # )
-#         translation_task = adaptive_segment_translation.apply_async(
-#             (batch_segments_data, source_lang, target_lang, get_terms_for_task, task_id),
-#             queue='high-priority'
-#         )
-#         seg_start_id = batch_segments_data[0]["segment_id"]
-#         seg_end_id = batch_segments_data[-1]["segment_id"]
-
-#         TrackSegmentsBatchStatus.objects.create(
-#             celery_task_id=translation_task.id,
-#             status=BatchStatus.ONGOING,
-#             document=task.document,
-#             seg_start_id=seg_start_id,  
-#             seg_end_id=seg_end_id,  
-#             project=project
-#         )
-#         start_idx = end_idx
 
 def create_batch_by_para(doc_id, min_words_per_batch=3000):
     from ai_workspace_okapi.models import MergedTextUnit
@@ -1604,7 +1579,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.models import TextUnit, Segment
     from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
-    from ai_workspace.utils import merge_source_text_by_text_unit
+    from ai_workspace.utils import merge_source_text_by_text_unit, DocumentTranslate
     try:
         task = Task.objects.get(id=task_id)
         project = task.job.project
@@ -1612,17 +1587,14 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
-        merge_source_text_by_text_unit()
+        merge_source_text_by_text_unit(document.id)
         batches = create_batch_by_para(document.id)
-        get_terms = get_glossary_for_task(project, task)
-        
         # segments = Segment.objects.filter(text_unit__document__id=document.id).order_by('id')
         # serializer = AdaptiveSegmentSerializer(segments, many=True)
         # total_segments = len(serializer.data)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        
-        # segment_batch_translation.apply_async((serializer.data, 50, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
+        segment_batch_translation(batches, task.id, project.id, source_lang, target_lang)
 
     except Exception as e:
         logger.error(f'Error in batch task: {e}')
