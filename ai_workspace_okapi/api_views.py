@@ -3176,6 +3176,7 @@ def get_all_segments(request):
 from ai_workspace_okapi.models import Segment ,TranslationStatus
 tran_status_instance = TranslationStatus.objects.get(status_id=104)
 
+@api_view(['GET',])
 def update_segment(request):
     segment_content = request.query_params.get('segment_content',None)
     seg_id = request.query_params.get('seg_id',None)
