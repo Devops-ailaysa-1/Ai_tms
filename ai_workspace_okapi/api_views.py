@@ -3182,9 +3182,19 @@ def update_segment(request):
     seg_id = request.query_params.get('seg_id',None)
   
     segment_instance = Segment.objects.get(id=seg_id)
-    print("segment_instance",segment_instance)
+ 
+    
+    if segment_content:
+        segment_content = segment_content.strip()
+    source_sentence = segment_instance.source
+
+    if source_sentence.endswith(" "):
+        segment_content = segment_content+" "
+    if source_sentence.startswith(" "):
+        segment_content = " "+segment_content
+
     segment_instance.temp_target = segment_content
-    print("segment_content",segment_content)
+
     segment_instance.status = tran_status_instance
     segment_instance.save()
     return JsonResponse({"result":"updated"},status=200 )
