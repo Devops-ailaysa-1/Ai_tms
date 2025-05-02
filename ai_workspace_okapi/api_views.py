@@ -3167,11 +3167,26 @@ def get_all_segments(request):
                         all_segments.append({"id":seg.id , "seg":seg.tagged_source})
     except Project.DoesNotExist:
         print(f"Project with ID {project_id} does not exist.")
-
-
     try:
         return JsonResponse({"result":all_segments},status=200 )
     except:
         return JsonResponse({'msg':'something went wrong'},status=400)
+
+
+from ai_workspace_okapi.models import Segment ,TranslationStatus
+tran_status_instance = TranslationStatus.objects.get(status_id=104)
+
+def update_segment(request):
+    segment_content = request.query_params.get('segment_content',None)
+    seg_id = request.query_params.get('seg_id',None)
+    try:
+        segment_instance = Segment.objects.get(id=seg_id)
+        segment_instance.temp_target = segment_content
+        segment_instance.status = tran_status_instance
+        segment_instance.save()
+        return JsonResponse({"result":"updated"},status=200 )
+    except:
+        return JsonResponse({"result":"error"},status=400 )
+
 
 
