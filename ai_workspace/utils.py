@@ -432,14 +432,16 @@ class StyleAnalysis(TranslationStage):
         if combined_text:
             messages = [self.continue_conversation_user(combined_text)]
             result_content_prompt = self.api.send_request(system_prompt, messages)
+            self.style_text = result_content_prompt
             return result_content_prompt
         else:
+            self.style_text = None
             return None
 
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
-    def process(self, segments, style_guideline, gloss_terms):
+    def process(self, segments, style_guideline, gloss_terms, d_batches):
         system_prompt = f"""
             Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
             Style Guidelines: 
@@ -459,7 +461,6 @@ class InitialTranslation(TranslationStage):
         #     glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
         #     system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
-        print(self.style_text, "style text in stage 2")
         message_list = []
         response_result = []
         for para in segments:
@@ -468,10 +469,9 @@ class InitialTranslation(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 5:
-                message_list=[]
+                message_list.pop(0)
 
-        # print(message_list)
-        print(response_result, "response result stage 2")
+
         return response_result
 
 
@@ -501,10 +501,7 @@ class RefinementStage1(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 5:
-                message_list=[]
-
-        # print(message_list)
-        print(response_result, "response result stage 3")
+                message_list.pop(0)
         return response_result
 
 
@@ -533,10 +530,8 @@ class RefinementStage2(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 4:
-                message_list=[]
-
-        # print(message_list)
-        print(response_result, "response result stage 4")
+                message_list.pop(0)
+                
         return response_result
 
 
@@ -553,13 +548,13 @@ class AdaptiveSegmentTranslator:
         self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language)
         self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language)
 
-    def process_batch(self, segments):
+    def process_batch(self, segments, d_batches):
         style_guideline = self.style_analysis.process(segments)
-        translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
+        translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
         # batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
-        # return final_segments
+        return final_segments
         
 
     def extract_tags(self, text):
@@ -637,7 +632,17 @@ class AdaptiveSegmentTranslator:
             logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
             return translated_segments
 
-        
+    
+    # translated_paragraphs = response_text.strip().split("\n\n")
+    # ids = list(text_unit_dict.keys())
+
+    # if len(ids) != len(translated_paragraphs):
+    #     raise ValueError("Mismatch between original and translated paragraph counts")
+
+    # for i, text_unit_id in enumerate(ids):
+    #     translated_para = translated_paragraphs[i]
+    #     # Save the translation to the related MergedTextUnit
+    #     MergedTextUnit.objects.filter(text_unit_id=text_unit_id).update(target_para=translated_para)
 
 
     def get_first_translated_text_and_language(self,translated_segments):
@@ -717,10 +722,6 @@ def word_count_find(task):
 def merge_source_text_by_text_unit(document_id):
     from ai_workspace_okapi.models import MergedTextUnit
     from ai_workspace_okapi.models import TextUnit, Segment
-
-    # text_units = TextUnit.objects.prefetch_related(
-    #     Prefetch('text_unit_segment_set',queryset=Segment.objects.order_by('id')))
-
     text_units = TextUnit.objects.filter(document_id=document_id)
 
     for text_unit in text_units:
