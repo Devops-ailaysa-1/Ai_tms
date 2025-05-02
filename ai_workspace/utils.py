@@ -379,12 +379,11 @@ class AnthropicAPI:
 
     
 class TranslationStage(ABC):
-    def __init__(self, anthropic_api, target_language, source_language, task_progress):
+    def __init__(self, anthropic_api, target_language, source_language):
         self.api = anthropic_api
         self.target_language = target_language
         self.source_language = source_language
         self.style_text = None
-        self.task_progress = task_progress
 
     @abstractmethod
     def process(self, segment, **kwargs):

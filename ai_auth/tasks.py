@@ -1555,23 +1555,24 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         print(len(batches), "Total batches")
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        for i, para in enumerate(batches):
-            metadata = d_batches[i] 
-            translation_task = adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id),
-                queue='high-priority'
-            )
-            TrackSegmentsBatchStatus.objects.create(
-                celery_task_id=translation_task.id,
-                status=BatchStatus.ONGOING,
-                document=task.document,
-                seg_start_id=min(metadata.keys()),  
-                seg_end_id= max(metadata.keys()),  
-                project=project
-            )
-            print("Adaptive translation task created for batch:", i)
-
-
+        if os.environ.get("ENV_NAME") == 'Testing':
+            for i, para in enumerate(batches):
+                metadata = d_batches[i] 
+                translation_task = adaptive_segment_translation.apply_async(
+                    args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id),
+                    queue='high-priority'
+                )
+                TrackSegmentsBatchStatus.objects.create(
+                    celery_task_id=translation_task.id,
+                    status=BatchStatus.ONGOING,
+                    document=task.document,
+                    seg_start_id=min(metadata.keys()),  
+                    seg_end_id= max(metadata.keys()),  
+                    project=project
+                )
+                print("Adaptive translation task created for batch:", i)
+        else:
+            logger.info("Adaptive translation was mocked")
 
     except Exception as e:
         logger.error(f'Error in batch task: {e}')

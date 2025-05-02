@@ -403,7 +403,15 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     file_obj = DJFile(f2)
     return file_obj,f2
 
-
+def download_simple_file(data,filename):
+    mime_type, _ = mimetypes.guess_type(filename)
+    file_name = os.path.basename(filename)
+    response = HttpResponse(data, content_type=mime_type)
+    encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' .format(encoded_filename)
+    response['X-Suggested-Filename'] = file_name
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
 
 def get_res_path(source_lang):
 

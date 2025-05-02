@@ -1422,6 +1422,38 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
+    def download_simple_file_response(self, document_id):
+        import io
+        from docx import Document
+        from ai_workspace_okapi.models import MergedTextUnit
+        from ai_workspace_okapi.utils import download_simple_file
+
+        source_file_path = self.get_source_file_path(document_id)
+        text_units = TextUnit.objects.filter(document_id=document_id).order_by('id')
+        print('text_units',text_units)
+        print(source_file_path, "source_file_path")
+
+        all_text = [(MergedTextUnit.objects.filter(text_unit=text_unit).first().translated_para) for text_unit in text_units]
+        print(all_text, "all_text")
+        if all_text and source_file_path.endswith((".doc", ".docx")):
+            document = Document()
+            # for para in all_text:
+            for i in all_text:
+                document.add_paragraph(i)
+            target_stream = io.BytesIO()
+            document.save(target_stream)
+            target_stream.seek(0)
+            doc_bytes = target_stream.read()
+            return download_simple_file(data=doc_bytes, filename=source_file_path)
+
+        elif all_text and source_file_path.endswith(".txt"):
+            target_stream = io.BytesIO(all_text.encode("utf-8"))
+            doc_bytes = target_stream.getvalue()
+            return download_simple_file(data=doc_bytes, filename=source_file_path)
+
+        else:
+            raise ValueError("Unsupported file type or empty content.")
+        
     def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
         if pandas_dataframe:
              
@@ -1624,6 +1656,8 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
+            if output_type == 'SIMPLE':
+                return self.download_simple_file_response(document_id)
 
             # For Downloading Audio File
             if output_type == "AUDIO":
