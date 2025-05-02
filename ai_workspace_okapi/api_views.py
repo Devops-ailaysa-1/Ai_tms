@@ -3182,7 +3182,7 @@ def update_segment(request):
     seg_id = request.query_params.get('seg_id',None)
   
     segment_instance = Segment.objects.get(id=seg_id)
-    pre_process("segment_instance",segment_instance)
+    print("segment_instance",segment_instance)
     segment_instance.temp_target = segment_content
     print("segment_content",segment_content)
     segment_instance.status = tran_status_instance
