@@ -5373,7 +5373,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 }
 
                 if status_counter["completed"] == total_batches and total_batches > 0:
-                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=SIMPLE"
 
                 batch_status_summary.append(batch_status)
 
