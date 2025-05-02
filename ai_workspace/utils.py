@@ -379,11 +379,12 @@ class AnthropicAPI:
 
     
 class TranslationStage(ABC):
-    def __init__(self, anthropic_api, target_language, source_language):
+    def __init__(self, anthropic_api, target_language, source_language, task_progress):
         self.api = anthropic_api
         self.target_language = target_language
         self.source_language = source_language
         self.style_text = None
+        self.task_progress = task_progress
 
     @abstractmethod
     def process(self, segment, **kwargs):
@@ -536,11 +537,12 @@ class RefinementStage2(TranslationStage):
 
 
 class AdaptiveSegmentTranslator:
-    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms):
+    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms, task_progress):
         self.api = AnthropicAPI(api_key, model_name)
         self.source_language = source_language
         self.target_language = target_language
         self.gloss_terms = gloss_terms
+        self.task_progress = task_progress
 
         # Translation stages (New stages can be added)
         self.style_analysis = StyleAnalysis(self.api, target_language, source_language)
@@ -550,10 +552,18 @@ class AdaptiveSegmentTranslator:
 
     def process_batch(self, segments, d_batches):
         style_guideline = self.style_analysis.process(segments)
+        self.task_progress.progress_percent += 10
+        self.task_progress.save()
         translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
+        self.task_progress.progress_percent += 40
+        self.task_progress.save()
         # batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
+        self.task_progress.progress_percent += 25
+        self.task_progress.save()
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
+        self.task_progress.progress_percent += 25
+        self.task_progress.save()
         return final_segments
         
 
