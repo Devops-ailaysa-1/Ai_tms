@@ -3178,8 +3178,9 @@ def get_all_segments(request):
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
-                        segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
-                        all_segments.append(segment_data)
+                        if not seg.tagged_source:
+                            segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
+                            all_segments.append(segment_data)
         
         return JsonResponse({"result":all_segments},status=200 )
     except:
