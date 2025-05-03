@@ -68,7 +68,9 @@ urlpatterns+=[
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
     path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file"),
+    
     path("get_seg_lerma", api_views.get_all_segments, name="get_lerma"),
-    path("update_seg",api_views.update_segment , name="update_the_seg")
+    path("update_seg",api_views.update_segment , name="update_the_seg"),
+    path("get_seg_tag",api_views.get_all_segments_tag,name="get_all_the_tag_seg")
 
 ]
