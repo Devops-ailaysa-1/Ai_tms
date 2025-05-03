@@ -3150,6 +3150,17 @@ from ai_workspace.models import Project
 from ai_workspace_okapi.models import Segment ,TranslationStatus
 tran_status_instance = TranslationStatus.objects.get(status_id=104)
 
+def contains_tag(sentence):
+    pattern = r"<\d+>|</\d+>"
+    return bool(re.search(pattern, sentence))
+
+
+def remove_tags(sentence):
+    pattern = r"</?\d+>"
+    cleaned_sentence = re.sub(pattern, "", sentence)
+    return cleaned_sentence
+
+
 @api_view(['GET',])
 def get_all_segments(request):
  
@@ -3157,7 +3168,7 @@ def get_all_segments(request):
     only_tag = request.query_params.get('only_tag', 'false').lower() == 'true'
 
     project_instance = Project.objects.get(id=project_id)
-    
+
     from ai_workspace_okapi.api_views import DocumentViewByTask
     for i in project_instance.project_jobs_set.last().job_tasks_set.all():
         DocumentViewByTask.create_document_for_task_if_not_exists(i)
@@ -3168,11 +3179,13 @@ def get_all_segments(request):
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
-                        segment_data = {"id": seg.id,
-                                        "seg": seg.tagged_source}
-                        if only_tag:
-                            segment_data.update({"trans_seg": seg.temp_target,
-                                                "ref_tag": seg.target_tags})
+
+                        if only_tag and contains_tag(seg.tagged_source):
+                            segment_data = {"id": seg.id, "seg": seg.tagged_source ,
+                                            "trans_seg": seg.temp_target, "ref_tag": seg.target_tags}
+                                                                                     
+                        else:
+                            segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
                         all_segments.append(segment_data)
         
         return JsonResponse({"result":all_segments},status=200 )
