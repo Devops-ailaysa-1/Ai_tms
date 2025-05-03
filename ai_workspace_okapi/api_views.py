@@ -3143,7 +3143,7 @@ def target_source_words(target_mt,task):
 
 
 
-######### lerma #####
+######### lerma ######################################
 
 from tqdm import tqdm
 from ai_workspace.models import Project
@@ -3178,6 +3178,32 @@ def get_all_segments(request):
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
+                        segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
+                        all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+
+
+
+@api_view(['GET',])
+def get_not_translated_seg(request):
+ 
+    project_id = request.query_params.get('project_id',None)
+
+    project_instance = Project.objects.get(id=project_id)
+
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
                         if not seg.tagged_source:
                             segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
                             all_segments.append(segment_data)
@@ -3185,9 +3211,29 @@ def get_all_segments(request):
         return JsonResponse({"result":all_segments},status=200 )
     except:
         return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
-        
- 
 
+def cross_check_segment(request):
+
+    project_id = request.query_params.get('project_id',None)
+
+    project_instance = Project.objects.get(id=project_id)
+
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
+                        segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) ,  "trans_seg": seg.temp_target}
+                        all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
 
 
 @api_view(['GET',])
