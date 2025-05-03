@@ -3147,43 +3147,51 @@ def target_source_words(target_mt,task):
 
 from tqdm import tqdm
 from ai_workspace.models import Project
+from ai_workspace_okapi.models import Segment ,TranslationStatus
+tran_status_instance = TranslationStatus.objects.get(status_id=104)
 
 @api_view(['GET',])
 def get_all_segments(request):
  
     project_id = request.query_params.get('project_id',None)
+    only_tag = request.query_params.get('only_tag', 'false').lower() == 'true'
 
     project_instance = Project.objects.get(id=project_id)
+    
     from ai_workspace_okapi.api_views import DocumentViewByTask
     for i in project_instance.project_jobs_set.last().job_tasks_set.all():
-        document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-    print("done doc")
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
     all_segments = []
     try:
         for job_instance in project_instance.project_jobs_set.all():
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
-                        all_segments.append({"id":seg.id , "seg":seg.tagged_source})
-    except Project.DoesNotExist:
-        print(f"Project with ID {project_id} does not exist.")
-    try:
+                        segment_data = {"id": seg.id,
+                                        "seg": seg.tagged_source}
+                        if only_tag:
+                            segment_data.update({"trans_seg": seg.temp_target,
+                                                "ref_tag": seg.target_tags})
+                        all_segments.append(segment_data)
+        
         return JsonResponse({"result":all_segments},status=200 )
     except:
-        return JsonResponse({'msg':'something went wrong'},status=400)
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+        
+ 
 
 
-from ai_workspace_okapi.models import Segment ,TranslationStatus
-tran_status_instance = TranslationStatus.objects.get(status_id=104)
+
+
+
+
 
 @api_view(['GET',])
 def update_segment(request):
     segment_content = request.query_params.get('segment_content',None)
     seg_id = request.query_params.get('seg_id',None)
-  
     segment_instance = Segment.objects.get(id=seg_id)
- 
-    
     if segment_content:
         segment_content = segment_content.strip()
     source_sentence = segment_instance.source
@@ -3192,7 +3200,6 @@ def update_segment(request):
         segment_content = segment_content+" "
     if source_sentence.startswith(" "):
         segment_content = " "+segment_content
-
     segment_instance.temp_target = segment_content
 
     segment_instance.status = tran_status_instance
