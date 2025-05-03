@@ -3180,11 +3180,11 @@ def get_all_segments(request):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
 
-                        if only_tag and contains_tag(seg.tagged_source):
-                            segment_data = {"id": seg.id, "seg": seg.tagged_source ,
-                                            "trans_seg": seg.temp_target, "ref_tag": seg.target_tags}
+                        if only_tag and contains_tag(seg.tagged_source) and seg.target_tags:
+                                segment_data = {"id": seg.id, "seg": seg.tagged_source,
+                                                "trans_seg": seg.temp_target, "ref_tag": seg.target_tags}
                                                                                      
-                        else:
+                        if not only_tag:
                             segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
                         all_segments.append(segment_data)
         
