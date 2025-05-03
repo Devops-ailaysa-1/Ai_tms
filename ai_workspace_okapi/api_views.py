@@ -3212,6 +3212,8 @@ def get_not_translated_seg(request):
     except:
         return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
 
+
+@api_view(['GET',]) 
 def cross_check_segment(request):
 
     project_id = request.query_params.get('project_id',None)
