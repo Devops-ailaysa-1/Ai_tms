@@ -407,9 +407,9 @@ def download_simple_file(data,filename):
     mime_type, _ = mimetypes.guess_type(filename)
     file_name = os.path.basename(filename)
     response = HttpResponse(data, content_type=mime_type)
-    encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+    encoded_filename = urllib.parse.quote(file_name, encoding='utf-8')
     response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' .format(encoded_filename)
-    response['X-Suggested-Filename'] = file_name
+    response['X-Suggested-Filename'] = encoded_filename
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
