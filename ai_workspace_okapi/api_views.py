@@ -1444,14 +1444,14 @@ class DocumentToFile(views.APIView):
             document.save(target_stream)
             target_stream.seek(0)
             doc_bytes = target_stream.read()
-            return download_file(source_file_path)
+            return download_simple_file(doc_bytes, source_file_path)
 
         elif all_text and source_file_path.endswith(".txt"):
             text_str = "\n".join(all_text)
             target_stream = io.BytesIO()
             target_stream.write(text_str.encode("utf-8"))
             doc_bytes = target_stream.getvalue()    
-            return download_file(source_file_path)
+            return download_simple_file(doc_bytes, source_file_path)
 
         else:
             raise ValueError("Unsupported file type or empty content.")

@@ -466,6 +466,7 @@ class InitialTranslation(TranslationStage):
 
         message_list = []
         response_result = []
+        merge_text_unit = ''
         for para in segments:
             message_list.append(self.continue_conversation_user(user_message=para))
             response_text = self.api.send_request(system_prompt,message_list)
