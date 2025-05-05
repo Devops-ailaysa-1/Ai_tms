@@ -408,9 +408,11 @@ def download_simple_file(data,filename):
     file_name = os.path.basename(filename)
     response = HttpResponse(data, content_type=mime_type)
     encoded_filename = urllib.parse.quote(file_name, encoding='utf-8')
+    print(encoded_filename, "encoded filename")
     response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' .format(encoded_filename)
     response['X-Suggested-Filename'] = encoded_filename
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    print(response)
     return response
 
 def get_res_path(source_lang):
