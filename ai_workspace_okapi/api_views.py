@@ -1425,12 +1425,13 @@ class DocumentToFile(views.APIView):
     def download_simple_file_response(self, document_id):
         import io
         from docx import Document
+        from ai_workspace_okapi.models import Document as DBDocument
         from ai_workspace_okapi.models import MergedTextUnit
         from ai_workspace_okapi.utils import download_simple_file
         from ai_workspace.models import Job
         source_file_path = self.get_source_file_path(document_id)
         text_units = TextUnit.objects.filter(document_id=document_id).order_by('id')
-        job = Job.objects.get(id=Document.objects.get(id=document_id).job_id)
+        job = Job.objects.get(id=DBDocument.objects.get(id=document_id).job_id)
         output_lang = f"({job.source_language_code}-{job.target_language_code})"
         print('text_units',text_units)
         print(source_file_path, "source_file_path")
