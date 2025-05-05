@@ -1427,9 +1427,11 @@ class DocumentToFile(views.APIView):
         from docx import Document
         from ai_workspace_okapi.models import MergedTextUnit
         from ai_workspace_okapi.utils import download_simple_file
-
+        from ai_workspace.models import Job
         source_file_path = self.get_source_file_path(document_id)
         text_units = TextUnit.objects.filter(document_id=document_id).order_by('id')
+        job = Job.objects.get(id=Document.objects.get(id=document_id).job_id)
+        output_lang = f"({job.source_language_code}-{job.target_language_code})"
         print('text_units',text_units)
         print(source_file_path, "source_file_path")
 
@@ -1444,14 +1446,14 @@ class DocumentToFile(views.APIView):
             document.save(target_stream)
             target_stream.seek(0)
             doc_bytes = target_stream.read()
-            return download_simple_file(doc_bytes, source_file_path)
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
 
         elif all_text and source_file_path.endswith(".txt"):
             text_str = "\n".join(all_text)
             target_stream = io.BytesIO()
             target_stream.write(text_str.encode("utf-8"))
             doc_bytes = target_stream.getvalue()    
-            return download_simple_file(doc_bytes, source_file_path)
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
 
         else:
             raise ValueError("Unsupported file type or empty content.")
