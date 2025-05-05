@@ -377,7 +377,6 @@ class AnthropicAPI:
         )
         return response.content[0].text.strip() if response.content else None
 
-    
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language):
         self.api = anthropic_api
@@ -401,6 +400,10 @@ class TranslationStage(ABC):
             "content": user_message
         }
     
+    # def split_into_chunks(self, text, chunk_word_limit=150):
+    #     words = text.split()
+    #     return [' '.join(words[i:i + chunk_word_limit]) for i in range(0, len(words), chunk_word_limit)]
+
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
@@ -529,7 +532,7 @@ class RefinementStage2(TranslationStage):
             response_text = self.api.send_request(system_prompt,message_list)
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 4:
+            if len(message_list) > 5:
                 message_list.pop(0)
                 
         return response_result

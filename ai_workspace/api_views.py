@@ -5341,7 +5341,11 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     continue
 
                 batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+                total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
+                print("total",total)
+                # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
+                total_percentage = total.get('progress_percent__sum', 0) / total_batches
 
                 status_counter = {
                     "completed": 0,
@@ -5368,7 +5372,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     "task_id": task.id,
                     "total_batches": total_batches,
                     "completed_batches": status_counter["completed"],
-                    "completed_percentage": int(completed_percentage),
+                    "completed_percentage": int(total_percentage),
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
 

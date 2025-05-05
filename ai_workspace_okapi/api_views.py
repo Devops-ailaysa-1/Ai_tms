@@ -1447,8 +1447,10 @@ class DocumentToFile(views.APIView):
             return download_simple_file(data=doc_bytes, filename=source_file_path)
 
         elif all_text and source_file_path.endswith(".txt"):
-            target_stream = io.BytesIO(all_text.encode("utf-8"))
-            doc_bytes = target_stream.getvalue()
+            text_str = "\n".join(all_text)
+            target_stream = io.BytesIO()
+            target_stream.write(text_str.encode("utf-8"))
+            doc_bytes = target_stream.getvalue()    
             return download_simple_file(data=doc_bytes, filename=source_file_path)
 
         else:
