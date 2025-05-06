@@ -491,8 +491,8 @@ class InitialTranslation(TranslationStage):
             response_text = self.api.send_request(system_prompt,message_list)
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 5:
-                message_list.pop(0)
+            if len(message_list) > 4:
+                message_list = []
 
         return (segments, response_result)
 
@@ -522,8 +522,8 @@ class RefinementStage1(TranslationStage):
             response_text = self.api.send_request(system_prompt,message_list)
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 5:
-                message_list.pop(0)
+            if len(message_list) > 4:
+                message_list = []
         return response_result
 
 
@@ -551,8 +551,8 @@ class RefinementStage2(TranslationStage):
             response_text = self.api.send_request(system_prompt,message_list)
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 5:
-                message_list.pop(0)
+            if len(message_list) > 4:
+                message_list = []
                 
         return response_result
 
@@ -585,7 +585,6 @@ class AdaptiveSegmentTranslator:
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         self.task_progress.progress_percent += 25
         self.task_progress.save()
-        print(final_segments, 'Final segments')
         return final_segments
     
 
