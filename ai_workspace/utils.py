@@ -473,14 +473,14 @@ class InitialTranslation(TranslationStage):
             The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
             Final output should only be the translated text. no feedback or any sort of additional information should be provided.
                     
-            Note: Only translate from the given target language
+            Note: Only translate from the given source language
             Text to translate:
                 """
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
-            
+
         if self.group_text_units:
             segments = self.group_strings_max_150_words(segments, max_words=150)
 
