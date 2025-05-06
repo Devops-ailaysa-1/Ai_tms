@@ -5411,7 +5411,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 data = json.loads(data)
                 total_word_count = data.get('total_word_count')
                 if total_word_count == 0:
-                    return Response({'msg': 'File is Empty'}, status=400)
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
             
         else:
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
@@ -5422,7 +5422,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 doc_data = doc.json()
                 total_word_count = doc_data.get('total_word_count')
                 if total_word_count == 0:
-                    return Response({'msg': 'File is Empty'}, status=400)
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
                 elif get_credit_count('document_translation_adaptive',total_word_count) > user.credit_balance.get("total_left"):
                     return Response({'msg': 'Insufficient Credits'}, status=400)
                             

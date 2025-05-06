@@ -742,7 +742,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					if adaptive_simple:
 						word_count = word_count_find(get_task)
 						if word_count == 0:
-							raise serializers.ValidationError({"msg": "File is Empty"})
+							raise serializers.ValidationError({"files": [{"file": ["The submitted file is empty."]}]})
 						if word_count > 10000:
 							raise serializers.ValidationError({"msg": "Word count is more than 10000"})
 					

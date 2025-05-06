@@ -1436,8 +1436,10 @@ class DocumentToFile(views.APIView):
         print('text_units',text_units)
         print(source_file_path, "source_file_path")
 
-        all_text = [(MergedTextUnit.objects.filter(text_unit=text_unit).first().translated_para) for text_unit in text_units]
-        print(all_text, "all_text")
+        all_text = [
+            merged.translated_para if (merged := MergedTextUnit.objects.filter(text_unit=text_unit).first()) else None
+            for text_unit in text_units
+        ]
         if all_text and source_file_path.endswith((".doc", ".docx")):
             document = Document()
             # for para in all_text:

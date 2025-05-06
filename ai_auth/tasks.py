@@ -1447,7 +1447,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     #     raise ValueError("Insufficient credits for segment translation")
     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
 
-    if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+    if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
         try:
             translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status)
             translated_segments = translator.process_batch(segments, d_batches)
