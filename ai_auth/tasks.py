@@ -1448,9 +1448,9 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     
     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
     try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units)
+        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
         translated_segments = translator.process_batch(segments, d_batches)
-        
+        print(translated_segments, "translated_segments")
         all_translations = {}
 
         if group_text_units:
@@ -1539,7 +1539,6 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        print(batches, "this is batches")
         for i, para in enumerate(batches):
             metadata = d_batches[i] 
             translation_task = adaptive_segment_translation.apply_async(

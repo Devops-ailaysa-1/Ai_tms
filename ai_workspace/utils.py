@@ -374,7 +374,7 @@ class AnthropicAPI:
             ],
             messages=messages,
             max_tokens=max_tokens,
-            temperature=0.3,
+            # temperature=0.3,
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
         )
         return response.content[0].text.strip() if response.content else None
@@ -443,7 +443,7 @@ class StyleAnalysis(TranslationStage):
         combined_text_list = []
         for single_paragraph in all_paragraph:
             para = single_paragraph
-            if len("".join(combined_text_list)) < 2000:
+            if len("".join(combined_text_list)) < 1400:
                 combined_text_list.append(para)
             else:break
             
@@ -451,7 +451,7 @@ class StyleAnalysis(TranslationStage):
         combined_text = "".join(combined_text_list)
 
 
-        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+        if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
             if combined_text:
                 messages = [self.continue_conversation_user(combined_text)]
                 result_content_prompt = self.api.send_request(system_prompt, messages)
@@ -487,11 +487,11 @@ class InitialTranslation(TranslationStage):
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
         if self.group_text_units:
-            segments = self.group_strings_max_250_words(segments, max_words=150)
+            segments = self.group_strings_max_250_words(segments, max_words=250)
 
         message_list = []
         response_result = []
-        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
             for para in segments:
                 message_list.append(self.continue_conversation_user(user_message=para))
                 response_text = self.api.send_request(system_prompt,message_list)
@@ -522,7 +522,7 @@ class RefinementStage1(TranslationStage):
 
         message_list = []
         response_result = []
-        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
             for trans_text, original_text in zip(segments, source_text):
                 user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
                                                                                                                     translated_text=trans_text)
@@ -556,7 +556,7 @@ class RefinementStage2(TranslationStage):
 
         message_list = []
         response_result = []
-        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+        if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
             for para in segments:
                 instruct_text = """{} sentence: {}""".format(self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=instruct_text))
