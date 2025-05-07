@@ -451,15 +451,19 @@ class StyleAnalysis(TranslationStage):
         combined_text = "".join(combined_text_list)
 
 
-        if combined_text:
-            messages = [self.continue_conversation_user(combined_text)]
-            result_content_prompt = self.api.send_request(system_prompt, messages)
-            self.style_text = result_content_prompt
-            return result_content_prompt
+        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+            if combined_text:
+                messages = [self.continue_conversation_user(combined_text)]
+                result_content_prompt = self.api.send_request(system_prompt, messages)
+                self.style_text = result_content_prompt
+                return result_content_prompt
+            
+            else:
+                self.style_text = None
+                return None
         else:
-            self.style_text = None
+            time.sleep(10)
             return None
-
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
@@ -487,14 +491,16 @@ class InitialTranslation(TranslationStage):
 
         message_list = []
         response_result = []
-        for para in segments:
-            message_list.append(self.continue_conversation_user(user_message=para))
-            response_text = self.api.send_request(system_prompt,message_list)
-            response_result.append(response_text)
-            message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 4:
-                message_list.pop(0)
-
+        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+            for para in segments:
+                message_list.append(self.continue_conversation_user(user_message=para))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list.pop(0)
+        else:
+            time.sleep(10)
         return (segments, response_result)
 
 
@@ -516,15 +522,19 @@ class RefinementStage1(TranslationStage):
 
         message_list = []
         response_result = []
-        for trans_text, original_text in zip(segments, source_text):
-            user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
-                                                                                                                 translated_text=trans_text)
-            message_list.append(self.continue_conversation_user(user_message=user_text))
-            response_text = self.api.send_request(system_prompt,message_list)
-            response_result.append(response_text)
-            message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 4:
-                message_list.pop(0)
+        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+            for trans_text, original_text in zip(segments, source_text):
+                user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
+                                                                                                                    translated_text=trans_text)
+                message_list.append(self.continue_conversation_user(user_message=user_text))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list.pop(0)
+        else:
+            time.sleep(10)
+
         return response_result
 
 
@@ -546,15 +556,18 @@ class RefinementStage2(TranslationStage):
 
         message_list = []
         response_result = []
-        for para in segments:
-            instruct_text = """{} sentence: {}""".format(self.target_language,para)
-            message_list.append(self.continue_conversation_user(user_message=instruct_text))
-            response_text = self.api.send_request(system_prompt,message_list)
-            response_result.append(response_text)
-            message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-            if len(message_list) > 4:
-                message_list.pop(0)
-                
+        if os.getenv('ENV_NAME') in ['Testing', 'Production']:
+            for para in segments:
+                instruct_text = """{} sentence: {}""".format(self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=instruct_text))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list.pop(0)
+
+        else:
+            time.sleep(10)
         return response_result
 
 

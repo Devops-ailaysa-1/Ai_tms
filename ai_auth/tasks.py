@@ -1430,7 +1430,7 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id):
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units):
     from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -1445,63 +1445,50 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     # else:
     #     logger.info("Insufficient credits for segment translation")
     #     raise ValueError("Insufficient credits for segment translation")
+    
     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-    if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
-        try:
-            translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status)
-            translated_segments = translator.process_batch(segments, d_batches)
-            # translated_sentences = translated_segments[0].split('\n\n')
-            all_translations = {}
-            final_trans = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
-            for para_dict, para_response in zip(d_batches, final_trans):
-                all_translations[int(para_dict)] = para_response
-
-            merged_instances = MergedTextUnit.objects.filter(
-                text_unit__in=all_translations.keys()
-            ).select_related('text_unit')
-
-            for instance in merged_instances:
-                text_unit_id = instance.text_unit_id
-                if text_unit_id in all_translations:
-                    instance.translated_para = all_translations[text_unit_id]
-            MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
-
-
-            batch_status.status = BatchStatus.COMPLETED
-            batch_status.save()
-
-            logger.info("Adaptive segment translation was completed and saved to DB")
-
-            # Mark overall task as completed if all batches are done
-            task = Task.objects.get(document=batch_status.document)
-            if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-                task.save()
-                logger.info("All batches completed. Task marked as COMPLETED")
+    try:
+        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units)
+        translated_segments = translator.process_batch(segments, d_batches)
         
-        except Exception as e:
-            logger.error(f"Batch task failed: {e}")
-            batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
-            if batch_status:
-                batch_status.status = BatchStatus.FAILED
-                batch_status
-                batch_status.save()
+        all_translations = {}
 
-    # if gloss_terms:
-    #     print(gloss_terms, "Gloss terms")
-    #     print(len(gloss_terms), "Length of gloss_terms")
-    else:
-        import time
-        time.sleep(10)
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+        if group_text_units:
+            translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
+
+        for para_dict, para_response in zip(d_batches, translated_segments):
+            all_translations[int(para_dict)] = para_response
+
+        merged_instances = MergedTextUnit.objects.filter(
+            text_unit__in=all_translations.keys()
+        ).select_related('text_unit')
+
+        for instance in merged_instances:
+            text_unit_id = instance.text_unit_id
+            if text_unit_id in all_translations:
+                instance.translated_para = all_translations[text_unit_id]
+        MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
+
+
         batch_status.status = BatchStatus.COMPLETED
         batch_status.save()
+
+        logger.info("Adaptive segment translation was completed and saved to DB")
+
         # Mark overall task as completed if all batches are done
         task = Task.objects.get(document=batch_status.document)
         if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
             task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
             task.save()
             logger.info("All batches completed. Task marked as COMPLETED")
+
+    except Exception as e:
+        logger.error(f"Batch task failed: {e}")
+        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+        if batch_status:
+            batch_status.status = BatchStatus.FAILED
+            batch_status
+            batch_status.save()
 
 
 
@@ -1556,7 +1543,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         for i, para in enumerate(batches):
             metadata = d_batches[i] 
             translation_task = adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id),
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
                 queue='high-priority'
             )
             TrackSegmentsBatchStatus.objects.create(
