@@ -2009,3 +2009,13 @@ class ProcessFile(models.Model):
     style_text = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class TaskStageResults(models.Model):
+    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="task_stage_results")
+    stage_01 = models.TextField(null=True,blank=True)
+    stage_02 = models.TextField(null=True,blank=True)
+    stage_03 = models.TextField(null=True,blank=True)
+    stage_04 = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

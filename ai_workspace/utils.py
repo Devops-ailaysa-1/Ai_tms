@@ -373,7 +373,9 @@ class AnthropicAPI:
                 # },
             ],
             messages=messages,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            temperature=0.3,
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
         )
         return response.content[0].text.strip() if response.content else None
 
@@ -400,7 +402,7 @@ class TranslationStage(ABC):
             "content": user_message
         }
 
-    def group_strings_max_150_words(self, segments, max_words=150):
+    def group_strings_max_250_words(self, segments, max_words=250):
         grouped = []
         temp = []
         word_count = 0
@@ -466,14 +468,13 @@ class InitialTranslation(TranslationStage):
             Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
             Style Guidelines: 
             {style_guideline}
-
             Ensure both accuracy and natural fluency while translating.
             The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
             Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
             The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
             Final output should only be the translated text. no feedback or any sort of additional information should be provided.
                     
-            Note: Only translate from the given source language
+            Note: Strictly translate to the given source language
             Text to translate:
                 """
 
@@ -482,7 +483,7 @@ class InitialTranslation(TranslationStage):
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
         if self.group_text_units:
-            segments = self.group_strings_max_150_words(segments, max_words=150)
+            segments = self.group_strings_max_250_words(segments, max_words=150)
 
         message_list = []
         response_result = []
@@ -492,7 +493,7 @@ class InitialTranslation(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 4:
-                message_list = []
+                message_list.pop(0)
 
         return (segments, response_result)
 
@@ -523,7 +524,7 @@ class RefinementStage1(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 4:
-                message_list = []
+                message_list.pop(0)
         return response_result
 
 
@@ -552,7 +553,7 @@ class RefinementStage2(TranslationStage):
             response_result.append(response_text)
             message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
             if len(message_list) > 4:
-                message_list = []
+                message_list.pop(0)
                 
         return response_result
 

@@ -1446,16 +1446,14 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     #     logger.info("Insufficient credits for segment translation")
     #     raise ValueError("Insufficient credits for segment translation")
     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-
     if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
         try:
             translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status)
             translated_segments = translator.process_batch(segments, d_batches)
-            print(translated_segments, "Translated segments")
             # translated_sentences = translated_segments[0].split('\n\n')
             all_translations = {}
-
-            for para_dict, para_response in zip(d_batches, translated_segments):
+            final_trans = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
+            for para_dict, para_response in zip(d_batches, final_trans):
                 all_translations[int(para_dict)] = para_response
 
             merged_instances = MergedTextUnit.objects.filter(
@@ -1554,6 +1552,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
+        print(batches, "this is batches")
         for i, para in enumerate(batches):
             metadata = d_batches[i] 
             translation_task = adaptive_segment_translation.apply_async(
