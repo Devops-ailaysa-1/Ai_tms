@@ -5341,7 +5341,11 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     continue
 
                 batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+                total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
+                print("total",total)
+                # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
+                total_percentage = total.get('progress_percent__sum', 0) / total_batches
 
                 status_counter = {
                     "completed": 0,
@@ -5368,12 +5372,13 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     "task_id": task.id,
                     "total_batches": total_batches,
                     "completed_batches": status_counter["completed"],
-                    "completed_percentage": int(completed_percentage),
+                    "completed_percentage": int(total_percentage),
+                    "failed": status_counter["failed"],
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
 
                 if status_counter["completed"] == total_batches and total_batches > 0:
-                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=ORIGINAL"
+                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=SIMPLE"
 
                 batch_status_summary.append(batch_status)
 
@@ -5401,14 +5406,13 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
         res_paths = get_res_path(params_data["source_language"])
         json_file_path = DocumentViewByTask.get_json_file_path(task)
-
         if exists(json_file_path):
             with open(json_file_path, 'r', encoding='utf-8') as file:
                 data = json.load(file)
                 data = json.loads(data)
                 total_word_count = data.get('total_word_count')
                 if total_word_count == 0:
-                    return Response({'msg': 'File is Empty'}, status=400)
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
             
         else:
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
@@ -5417,13 +5421,14 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             })
             if doc.status_code == 200:
                 doc_data = doc.json()
-                if doc_data.get('total_word_count') == 0:
-                    return Response({'msg': 'File is Empty'}, status=400)
-                elif get_credit_count('document_translation_adaptive',doc_data.get('total_word_count')) > user.credit_balance.get("total_left"):
+                total_word_count = doc_data.get('total_word_count')
+                if total_word_count == 0:
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
+                elif get_credit_count('document_translation_adaptive',total_word_count) > user.credit_balance.get("total_left"):
                     return Response({'msg': 'Insufficient Credits'}, status=400)
                             
         try:
-            create_doc_and_write_seg_to_db.apply_async((task.id,), queue='high-priority')
+            create_doc_and_write_seg_to_db.apply_async((task.id,total_word_count,), queue='high-priority')
             task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             task.save()
             endpoint = f'workspace/adaptive_file_translate/{project.id}'

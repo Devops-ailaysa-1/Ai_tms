@@ -1430,43 +1430,46 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_terms,task_id):
-    from ai_workspace_okapi.models import Segment
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units):
+    from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
-    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace.models import TaskStageResults
     from json_repair import repair_json
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
-    seg_ids = [segment["segment_id"] for segment in segments_data]
-    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
-    if consumable_credits < user.credit_balance.get("total_left"):
-        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-    else:
-        logger.info("Insufficient credits for segment translation")
-        raise ValueError("Insufficient credits for segment translation")
+    # seg_ids = [segment["segment_id"] for segment in segments_data]
+    # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
+    # if consumable_credits < user.credit_balance.get("total_left"):
+    #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    # else:
+    #     logger.info("Insufficient credits for segment translation")
+    #     raise ValueError("Insufficient credits for segment translation")
+    
+    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
     try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms)
-        translated_segments = translator.process_batch(segments_data) 
-        try:
-            segments_data = json.loads(translated_segments) 
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from translation output: {e}")
-            segments_data = repair_json(translated_segments,return_objects=True)
-            print(segments_data, "jakeeeeer_update")
-            # segments_data = []
+        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
+        translated_segments = translator.process_batch(segments, d_batches)
+        print(translated_segments, "translated_segments")
+        all_translations = {}
 
-        for segment in segments_data:
-            try:
-                segment_obj = Segment.objects.get(id=segment["segment_id"])
-                segment_obj.temp_target = segment["translated_text"]
-                segment_obj.save()
-            except Segment.DoesNotExist:
-                logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")
-            except Exception as e:
-                logger.error(f"Error updating segment {segment['segment_id']}: {str(e)}")
+        if group_text_units:
+            translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
 
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+        for para_dict, para_response in zip(d_batches, translated_segments):
+            all_translations[int(para_dict)] = para_response
+
+        merged_instances = MergedTextUnit.objects.filter(
+            text_unit__in=all_translations.keys()
+        ).select_related('text_unit')
+
+        for instance in merged_instances:
+            text_unit_id = instance.text_unit_id
+            if text_unit_id in all_translations:
+                instance.translated_para = all_translations[text_unit_id]
+        MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
+
+
         batch_status.status = BatchStatus.COMPLETED
         batch_status.save()
 
@@ -1486,102 +1489,44 @@ def adaptive_segment_translation(segments_data, source_lang, target_lang, gloss_
             batch_status.status = BatchStatus.FAILED
             batch_status
             batch_status.save()
-    # if gloss_terms:
-    #     print(gloss_terms, "Gloss terms")
-    #     print(len(gloss_terms), "Length of gloss_terms")
-    # import time
-    # time.sleep(10)
-    # batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
-    # batch_status.status = BatchStatus.COMPLETED
-    # batch_status.save()
-    # # Mark overall task as completed if all batches are done
-    # task = Task.objects.get(document=batch_status.document)
-    # if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-    #     task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-    #     task.save()
-    #     logger.info("All batches completed. Task marked as COMPLETED")
 
 
-# @app.task(name='ai_tms.write_adaptive_segments_db')
-# def write_adaptive_segments_db(translated_segments,batch_status_id):
-#     from ai_workspace_okapi.models import Segment
 
-#     for segment in translated_segments:
-#         try:
-#             segment_obj = Segment.objects.get(id=segment["segment_id"])
-#             segment_obj.temp_target = segment["translated_text"]
-#             segment_obj.save()
-#         except Segment.DoesNotExist:
-#             logger.warning(f"Segment with ID {segment['segment_id']} does not exist.")
-#         except Exception as e:
-#             logger.error(f"Error updating segment {segment['segment_id']}: {str(e)}")
+def create_batch_by_para(doc_id, min_words_per_batch=1500):
+    from ai_workspace_okapi.models import MergedTextUnit
+    merged_units = MergedTextUnit.objects.filter(text_unit__document_id=doc_id).order_by('id')
+    batches = []
+    d_batches = []
+    current_text = []
+    current_d = {}
+    current_word_count = 0
 
+    for unit in merged_units:
+        paragraph = unit.source_para or ""
+        paragraph_word_count = len(paragraph.split())
 
-#     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=batch_status_id)
-#     batch_status.status = BatchStatus.COMPLETED
-#     batch_status.save()
+        if current_word_count >= min_words_per_batch:
+            batches.append(current_text)
+            d_batches.append(current_d)
+            current_d = {}
+            current_text = []
+            current_word_count = 0
 
-#     logger.info("Adaptive segment translation was completed and saved to DB")
+        current_text.append(paragraph)
+        current_d[unit.text_unit.id] = paragraph
+        current_word_count += paragraph_word_count
 
-#     # Mark overall task as completed if all batches are done
-#     task = Task.objects.get(document=batch_status.document)
-#     if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-#         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-#         task.save()
-#         logger.info("All batches completed. Task marked as COMPLETED")
-
-
+    if current_text:
+        batches.append(current_text)
+    if current_d:
+        d_batches.append(current_d)
+    
+    return (batches, d_batches)
 
 @task(queue='high-priority')
-def segment_batch_translation(segments_data, batch_size, min_threshold, source_lang, target_lang, task_id, project_id, total_segments):
-    from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
-    from ai_workspace_okapi.models import Segment
-
-    task = Task.objects.get(id=task_id)
-    project = Project.objects.get(id=project_id)
-    start_idx = 0
-
-    print("Total segment count : {}".format(total_segments))
-
-    get_terms_for_task = get_glossary_for_task(project, task)
-
-    while start_idx < total_segments:
-        end_idx = min(start_idx + batch_size, total_segments)
-
-        if (total_segments - end_idx) <= min_threshold:
-            end_idx = total_segments
-
-        batch_segments_data = segments_data[start_idx:end_idx]
-
-        seg_ids = [segment["segment_id"] for segment in batch_segments_data]
-
-        # translation_task =  app.send_task('ai_processor.adaptive_segment_translation',
-        #     (seg_ids, source_lang, target_lang, get_terms_for_task,task_id)
-        # )
-        translation_task = adaptive_segment_translation.apply_async(
-            (batch_segments_data, source_lang, target_lang, get_terms_for_task, task_id),
-            queue='high-priority'
-        )
-        seg_start_id = batch_segments_data[0]["segment_id"]
-        seg_end_id = batch_segments_data[-1]["segment_id"]
-
-        TrackSegmentsBatchStatus.objects.create(
-            celery_task_id=translation_task.id,
-            status=BatchStatus.ONGOING,
-            document=task.document,
-            seg_start_id=seg_start_id,  
-            seg_end_id=seg_end_id,  
-            project=project
-        )
-        start_idx = end_idx
-
-
-@task(queue='high-priority')
-def create_doc_and_write_seg_to_db(task_id):
+def create_doc_and_write_seg_to_db(task_id, total_word_count):
     from ai_workspace_okapi.api_views import DocumentViewByTask
-    from ai_workspace_okapi.models import TextUnit, Segment
-    from ai_workspace_okapi.serializers import AdaptiveSegmentSerializer
-
+    from ai_workspace.utils import merge_source_text_by_text_unit
     try:
         task = Task.objects.get(id=task_id)
         project = task.job.project
@@ -1589,12 +1534,26 @@ def create_doc_and_write_seg_to_db(task_id):
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
-        segments = Segment.objects.filter(text_unit__document__id=document.id).order_by('id')
-        serializer = AdaptiveSegmentSerializer(segments, many=True)
-        total_segments = len(serializer.data)
+        merge_source_text_by_text_unit(document.id)
+        get_terms_for_task = get_glossary_for_task(project, task)
+        batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        segment_batch_translation.apply_async((serializer.data, 50, 7, source_lang, target_lang, task_id, project.id, total_segments,), queue='high-priority')
+        for i, para in enumerate(batches):
+            metadata = d_batches[i] 
+            translation_task = adaptive_segment_translation.apply_async(
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
+                queue='high-priority'
+            )
+            TrackSegmentsBatchStatus.objects.create(
+                celery_task_id=translation_task.id,
+                status=BatchStatus.ONGOING,
+                document=task.document,
+                seg_start_id=min(metadata.keys()),  
+                seg_end_id= max(metadata.keys()),  
+                project=project
+            )
+            print("Adaptive translation task created for batch:", i)
 
     except Exception as e:
         logger.error(f'Error in batch task: {e}')

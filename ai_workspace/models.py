@@ -1985,6 +1985,10 @@ class FileTermExtracted(models.Model):
 
 
 class TrackSegmentsBatchStatus(models.Model):
+    class SegmentType(models.TextChoices):
+        SENTENCE = "sentence", "Sentence"
+        PARAGRAPH = "paragraph", "Paragraph"
+        
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="track_batch_segment_status")
@@ -1994,4 +1998,24 @@ class TrackSegmentsBatchStatus(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     status = models.CharField(max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    progress_percent = models.IntegerField(default=0)
+    segment_type = models.CharField(max_length=20, choices=SegmentType.choices, default=SegmentType.PARAGRAPH)
     error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+
+
+class ProcessFile(models.Model):
+    uid = models.UUIDField(unique=True,default=uuid.uuid4, editable=False)
+    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="process_file")
+    style_text = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class TaskStageResults(models.Model):
+    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="task_stage_results")
+    stage_01 = models.TextField(null=True,blank=True)
+    stage_02 = models.TextField(null=True,blank=True)
+    stage_03 = models.TextField(null=True,blank=True)
+    stage_04 = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

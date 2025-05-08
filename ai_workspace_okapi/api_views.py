@@ -1422,6 +1422,46 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
+    def download_simple_file_response(self, document_id):
+        import io
+        from docx import Document
+        from ai_workspace_okapi.models import Document as DBDocument
+        from ai_workspace_okapi.models import MergedTextUnit
+        from ai_workspace_okapi.utils import download_simple_file
+        from ai_workspace.models import Job
+        source_file_path = self.get_source_file_path(document_id)
+        text_units = TextUnit.objects.filter(document_id=document_id).order_by('id')
+        job = Job.objects.get(id=DBDocument.objects.get(id=document_id).job_id)
+        output_lang = f"({job.source_language_code}-{job.target_language_code})"
+        print('text_units',text_units)
+        print(source_file_path, "source_file_path")
+
+        all_text = [
+            merged.translated_para if (merged := MergedTextUnit.objects.filter(text_unit=text_unit).first()) else '\n\n'
+            for text_unit in text_units
+        ]
+        print(all_text, "this is all text")
+        if all_text and source_file_path.endswith((".doc", ".docx")):
+            document = Document()
+            # for para in all_text:
+            for i in all_text:
+                document.add_paragraph(i)
+            target_stream = io.BytesIO()
+            document.save(target_stream)
+            target_stream.seek(0)
+            doc_bytes = target_stream.read()
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
+
+        elif all_text and source_file_path.endswith(".txt"):
+            text_str = "\n".join(all_text)
+            target_stream = io.BytesIO()
+            target_stream.write(text_str.encode("utf-8"))
+            doc_bytes = target_stream.getvalue()    
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
+
+        else:
+            raise ValueError("Unsupported file type or empty content.")
+        
     def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
         if pandas_dataframe:
              
@@ -1624,6 +1664,8 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
+            if output_type == 'SIMPLE':
+                return self.download_simple_file_response(document_id)
 
             # For Downloading Audio File
             if output_type == "AUDIO":

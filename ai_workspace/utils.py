@@ -333,7 +333,7 @@ def number_of_words_delete(segment):
 import json
 from abc import ABC, abstractmethod
 import os
-from anthropic import Anthropic
+from anthropic import Anthropic, AnthropicVertex
 import re
 import logging
 from langdetect import detect
@@ -359,7 +359,7 @@ class AnthropicAPI:
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
 
-    def send_request(self, system_prompt, messages, max_tokens=10000):
+    def send_request(self, system_prompt, messages, max_tokens=20000):
         response = self.client.messages.create(
             model=self.model_name,
             system=[
@@ -368,137 +368,243 @@ class AnthropicAPI:
                 "text": system_prompt,
                 "cache_control": {"type": "ephemeral"}
                 },                        
-                {"type": "text",
-                "text": self.tag_prompt,
-                },
+                # {"type": "text",
+                # "text": self.tag_prompt,
+                # },
             ],
             messages=messages,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            # temperature=0.3,
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
         )
         return response.content[0].text.strip() if response.content else None
 
-
 class TranslationStage(ABC):
-    def __init__(self, anthropic_api, target_language, source_language):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False):
         self.api = anthropic_api
         self.target_language = target_language
         self.source_language = source_language
+        self.group_text_units = group_text_units
 
     @abstractmethod
     def process(self, segment, **kwargs):
         pass
+    
+    def continue_conversation_assistant(self,assistant_message):
+        return {
+        "role": "assistant",
+        "content": assistant_message
+    }
 
+    def continue_conversation_user(self,user_message):
+        return {
+            "role": "user",
+            "content": user_message
+        }
+
+    def group_strings_max_250_words(self, segments, max_words=250):
+        grouped = []
+        temp = []
+        word_count = 0
+
+        for segment in segments:
+            segment_word_count = len(segment.split())
+
+            if word_count + segment_word_count > max_words:
+                grouped.append("\n\n".join(temp))
+                temp = [segment]
+                word_count = segment_word_count
+            else:
+                temp.append(segment)
+                word_count += segment_word_count
+
+        if temp:
+            grouped.append("\n\n".join(temp))
+
+        return grouped
+    
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
-    def process(self, segments):
-        system_prompt = """Analyze the following segments of texts and provide a comprehensive description of its:
+    def process(self, all_paragraph):
+        system_prompt = """Analyze the following text and provide a comprehensive description of its:
         1. Writing tone and style
         2. Emotional conduct
         3. Technical level
         4. Target audience
         5. Key contextual elements
-        Format your response as a translation guidance prompt that can be used to maintain these elements.
-        Make sure you generate only the prompt as an output. No feedback or any sort of additional information should be generated.
+        
+        Format your response as a translation guidance prompt that can be used to maintain these elements. 
+        Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
+
+         Text to analyze:
 """
+        combined_text = ''
+        combined_text_list = []
+        for single_paragraph in all_paragraph:
+            para = single_paragraph
+            if len("".join(combined_text_list)) < 1400:
+                combined_text_list.append(para)
+            else:break
+            
 
-        combined_text = " ".join([seg['source'] for seg in segments])
-        messages = [{"role": "user", "content": combined_text}]
-        return self.api.send_request(system_prompt, messages)
+        combined_text = "".join(combined_text_list)
 
+
+        if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
+            if combined_text:
+                messages = [self.continue_conversation_user(combined_text)]
+                result_content_prompt = self.api.send_request(system_prompt, messages)
+                self.style_text = result_content_prompt
+                return result_content_prompt
+            
+            else:
+                self.style_text = None
+                return None
+        else:
+            time.sleep(10)
+            return None
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
-    def process(self, segments, style_guideline, gloss_terms):
+    def process(self, segments, style_prompt, gloss_terms, d_batches):
         system_prompt = f"""
-            Translate the following list of Json segments containing source sentences to {self.target_language} sentences while adhering to the provided style guidelines.             
-Style Guidelines: {style_guideline}
-Ensure the translation closely resembles the source sentences in meaning, tone, and structure.
-            Make sure the segment ids and necessary inline tags are followed as such in the translation if found in the source sentences.
-The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
+            Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
+            Style Guidelines: 
+            {style_prompt}
+            Ensure both accuracy and natural fluency while translating.
+            The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
             Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
-            The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions.
-            Final output should only be the translated sentences with their relevant segment_id and Inline tags if found in the source. no feedback or any sort of additional information should be provided. wrap the entire output in a JSON array and output of the each segment containes only the segment_id and the translated_text key
+            The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
+            Final output should only be the translated text. no feedback or any sort of additional information should be provided.
+                    
+            Note: Strictly translate to the given source language
+            Text to translate:
                 """
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
-        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
-        messages = [{"role": "user", "content": user_message}]
-        response = self.api.send_request(system_prompt, messages)
+        if self.group_text_units:
+            segments = self.group_strings_max_250_words(segments, max_words=250)
 
-        return response
+        message_list = []
+        response_result = []
+        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+            for para in segments:
+                message_list.append(self.continue_conversation_user(user_message=para))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list = []
+        else:
+            time.sleep(10)
+        return (segments, response_result)
 
 
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
-    def process(self, segments, gloss_terms):
+    def process(self, segments, source_text, gloss_terms):
         system_prompt = f"""
-           For the provided source segment of sentences and translated segment sentences, ensure the translation is smooth and correct. Also Make sure the necessary Inlinetags are maintained in the translated sentences if found in the source sentences.
-            Make sure the tone, style of the source sentences is followed in the target sentences. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} sentences perfectly resembles the source sentences
-            Make necessary translation corrections if needed.
-            strictly, Result must be only the final target translation sentences along with their relevant segment_ids and Inline tags if found.
-            no feedback or any sort of additional information should be provided and wrap the entire output in a JSON array and output of the each segment containes only the segment_id and the translated_text key
+           For the provided source and target sentences, ensure the translation is smooth and correct. Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
+
+        Make necessary translation corrections if needed.
+        strictly, Result must be only the final target translation.
+        no feedbacks or any sort of additional information should be provided.
+
             """
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
 
-        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
-        messages = [{"role": "user", "content": user_message}]
-        return self.api.send_request(system_prompt, messages)
+        message_list = []
+        response_result = []
+        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+            for trans_text, original_text in zip(segments, source_text):
+                user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
+                                                                                                                    translated_text=trans_text)
+                message_list.append(self.continue_conversation_user(user_message=user_text))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list = []
+        else:
+            time.sleep(10)
+
+        return response_result
 
 
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
     def process(self, segments, gloss_terms):
         system_prompt = f"""
-            For the provided list of Json segment sentences,Focus the {self.target_language} content and rewrite it as if it was originally conceived and written in {self.target_language} itself.
-            The segment sentences should be in the modern standard {self.target_language} language. The changes must only be in syntax. The core words, terminologies, named entities,keywords and their meaning, sense and emphasis shouldn't be changed.
-                    
-            Output: Provide the Rewritten {self.target_language} segment sentences while preserving the segment_ids and the Inline tags of the sentences if provided. 
+                Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself. The text should be in the modern standard {self.target_language}. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
 
-            Output Format:
-                Return a **JSON array** of objects, where each object contains:
-                - "segment_id": the original segment ID
-                - "translated_text": the rewritten version of the original text in `{self.target_language}`
-                                    
-            Note: No feedback or any sort of additional information should be provided.
+                If no changes are needed, return the same {self.target_language} without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence.
+
+                Note: No feedback or any sort of additional information should be provided.
+
             """
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
             
 
-        user_message = json.dumps(segments, ensure_ascii=False, indent=2)
-        messages = [{"role": "user", "content": user_message}]
-        return self.api.send_request(system_prompt, messages)
+        message_list = []
+        response_result = []
+        if os.getenv('ENV_NAME') in ['Testing', 'Production', 'Local']:
+            for para in segments:
+                instruct_text = """{} sentence: {}""".format(self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=instruct_text))
+                response_text = self.api.send_request(system_prompt,message_list)
+                response_result.append(response_text)
+                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                if len(message_list) > 4:
+                    message_list = []
 
+        else:
+            time.sleep(10)
+        return response_result
 
 
 class AdaptiveSegmentTranslator:
-    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms):
+    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False):
         self.api = AnthropicAPI(api_key, model_name)
         self.source_language = source_language
         self.target_language = target_language
         self.gloss_terms = gloss_terms
-        # Translation stages (New stages can be added)
-        self.style_analysis = StyleAnalysis(self.api, target_language, source_language)
-        self.initial_translation = InitialTranslation(self.api, target_language, source_language)
-        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language)
-        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language)
+        self.task_progress = task_progress
 
-    def process_batch(self, segments):
+        # Translation stages (New stages can be added)
+        self.style_analysis = StyleAnalysis(self.api, target_language, source_language, group_text_units)
+        self.initial_translation = InitialTranslation(self.api, target_language, source_language, group_text_units)
+        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units)
+        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units)
+
+    def process_batch(self, segments, d_batches):
         style_guideline = self.style_analysis.process(segments)
-        translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms)
-        batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
-        refined_segments = self.refinement_stage_1.process(batch_translation, self.gloss_terms)
+        self.task_progress.progress_percent += 10
+        self.task_progress.save()
+        # stage_result_ins.stage_01 = style_guideline
+        segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
+        self.task_progress.progress_percent += 40
+        self.task_progress.save()
+        # stage_result_ins.stage_02 = translated_segments
+        refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
+        self.task_progress.progress_percent += 25
+        self.task_progress.save()
+        # stage_result_ins.stage_03 = refined_segments
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
+        self.task_progress.progress_percent += 25
+        self.task_progress.save()
+        # stage_result_ins.stage_04 = final_segments
+        # stage_result_ins.save()
         return final_segments
-        
+    
 
     def extract_tags(self, text):
         """Extract all XML-like tags (e.g. <1>, </1>, <n>, </n>)."""
@@ -575,7 +681,17 @@ class AdaptiveSegmentTranslator:
             logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
             return translated_segments
 
-        
+    
+    # translated_paragraphs = response_text.strip().split("\n\n")
+    # ids = list(text_unit_dict.keys())
+
+    # if len(ids) != len(translated_paragraphs):
+    #     raise ValueError("Mismatch between original and translated paragraph counts")
+
+    # for i, text_unit_id in enumerate(ids):
+    #     translated_para = translated_paragraphs[i]
+    #     # Save the translation to the related MergedTextUnit
+    #     MergedTextUnit.objects.filter(text_unit_id=text_unit_id).update(target_para=translated_para)
 
 
     def get_first_translated_text_and_language(self,translated_segments):
@@ -650,4 +766,26 @@ def word_count_find(task):
     if doc.status_code == 200:
         doc_data = doc.json()
         return doc_data.get('total_word_count')
+
+
+def merge_source_text_by_text_unit(document_id):
+    from ai_workspace_okapi.models import MergedTextUnit
+    from ai_workspace_okapi.models import TextUnit, Segment
+    text_units = TextUnit.objects.filter(document_id=document_id)
+
+    for text_unit in text_units:
+        source_paragraph = ""
         
+        segments = text_unit.text_unit_segment_set.all()
+        
+        if not segments:
+            continue  
+
+        for seg in segments:
+            if seg.source:
+                source_paragraph += seg.source + " "
+
+        MergedTextUnit.objects.create(
+            text_unit=text_unit,
+            source_para=source_paragraph.strip(),
+        )
