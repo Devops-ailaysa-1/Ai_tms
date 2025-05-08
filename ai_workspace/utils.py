@@ -333,7 +333,7 @@ def number_of_words_delete(segment):
 import json
 from abc import ABC, abstractmethod
 import os
-from anthropic import Anthropic
+from anthropic import Anthropic, AnthropicVertex
 import re
 import logging
 from langdetect import detect
@@ -467,11 +467,11 @@ class StyleAnalysis(TranslationStage):
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
-    def process(self, segments, style_guideline, gloss_terms, d_batches):
+    def process(self, segments, style_prompt, gloss_terms, d_batches):
         system_prompt = f"""
             Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
             Style Guidelines: 
-            {style_guideline}
+            {style_prompt}
             Ensure both accuracy and natural fluency while translating.
             The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
             Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
@@ -498,7 +498,7 @@ class InitialTranslation(TranslationStage):
                 response_result.append(response_text)
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 if len(message_list) > 4:
-                    message_list.pop(0)
+                    message_list = []
         else:
             time.sleep(10)
         return (segments, response_result)
@@ -531,7 +531,7 @@ class RefinementStage1(TranslationStage):
                 response_result.append(response_text)
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 if len(message_list) > 4:
-                    message_list.pop(0)
+                    message_list = []
         else:
             time.sleep(10)
 
@@ -564,7 +564,7 @@ class RefinementStage2(TranslationStage):
                 response_result.append(response_text)
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 if len(message_list) > 4:
-                    message_list.pop(0)
+                    message_list = []
 
         else:
             time.sleep(10)

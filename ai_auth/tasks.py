@@ -1492,7 +1492,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
 
 
-def create_batch_by_para(doc_id, min_words_per_batch=3000):
+def create_batch_by_para(doc_id, min_words_per_batch=1500):
     from ai_workspace_okapi.models import MergedTextUnit
     merged_units = MergedTextUnit.objects.filter(text_unit__document_id=doc_id).order_by('id')
     batches = []
@@ -1542,7 +1542,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         for i, para in enumerate(batches):
             metadata = d_batches[i] 
             translation_task = adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 queue='high-priority'
             )
             TrackSegmentsBatchStatus.objects.create(

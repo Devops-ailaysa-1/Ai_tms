@@ -5373,6 +5373,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     "total_batches": total_batches,
                     "completed_batches": status_counter["completed"],
                     "completed_percentage": int(total_percentage),
+                    "failed": status_counter["failed"],
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
 
