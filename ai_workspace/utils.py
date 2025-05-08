@@ -585,20 +585,24 @@ class AdaptiveSegmentTranslator:
         self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units)
         self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units)
 
-    def process_batch(self, segments, d_batches):
+    def process_batch(self, segments, d_batches, stage_result_ins):
         style_guideline = self.style_analysis.process(segments)
         self.task_progress.progress_percent += 10
         self.task_progress.save()
+        stage_result_ins.stage_01 = style_guideline
         segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
         self.task_progress.progress_percent += 40
         self.task_progress.save()
-        # batch_translation = self.handle_batch_translation_tags(segments,translated_segments)
+        stage_result_ins.stage_02 = translated_segments
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
         self.task_progress.progress_percent += 25
         self.task_progress.save()
+        stage_result_ins.stage_03 = refined_segments
         final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
         self.task_progress.progress_percent += 25
         self.task_progress.save()
+        stage_result_ins.stage_04 = final_segments
+        stage_result_ins.save()
         return final_segments
     
 
