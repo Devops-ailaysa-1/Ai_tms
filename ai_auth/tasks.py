@@ -1438,7 +1438,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
-    stage_result_ins = TaskStageResults.objects.filter(task=task).first()
+    stage_result_ins = TaskStageResults.objects.create(task=task)
     # seg_ids = [segment["segment_id"] for segment in segments_data]
     # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
     # if consumable_credits < user.credit_balance.get("total_left"):
