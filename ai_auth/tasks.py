@@ -1438,7 +1438,6 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
-    stage_result_ins = TaskStageResults.objects.create(task=task)
     # seg_ids = [segment["segment_id"] for segment in segments_data]
     # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
     # if consumable_credits < user.credit_balance.get("total_left"):
@@ -1450,7 +1449,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
     try:
         translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
-        translated_segments = translator.process_batch(segments, d_batches, stage_result_ins)
+        translated_segments = translator.process_batch(segments, d_batches)
         print(translated_segments, "translated_segments")
         all_translations = {}
 
