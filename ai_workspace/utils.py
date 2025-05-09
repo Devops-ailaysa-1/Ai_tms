@@ -359,7 +359,7 @@ class AnthropicAPI:
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
 
-    def send_request(self, system_prompt, messages, max_tokens=20000):
+    def send_request(self, system_prompt, messages, max_tokens=60000):
         response = self.client.messages.create(
             model=self.model_name,
             system=[
@@ -402,7 +402,7 @@ class TranslationStage(ABC):
             "content": user_message
         }
 
-    def group_strings_max_250_words(self, segments, max_words=250):
+    def group_strings_max_words(self, segments, max_words=200):
         grouped = []
         temp = []
         word_count = 0
@@ -487,7 +487,7 @@ class InitialTranslation(TranslationStage):
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
         if self.group_text_units:
-            segments = self.group_strings_max_250_words(segments, max_words=250)
+            segments = self.group_strings_max_words(segments, max_words=200)
 
         message_list = []
         response_result = []
