@@ -767,7 +767,7 @@ class LanguageGrammarPrompt(models.Model):
     def __str__(self) -> str:
         return self.prompt_name
 
-class SystemPrompt(models.Model):
+class AdaptiveSystemPrompt(models.Model):
     uid = models.UUIDField(unique=True,default=uuid.uuid4, editable=False)
     prompt = models.TextField(null=False,blank=False)
     task_name = models.CharField(max_length=50,null=True,blank=True)

@@ -7,6 +7,7 @@ import string
 import re
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 import nltk
+from ai_staff.models import AdaptiveSystemPrompt
 
 async def detect_lang(text):
     from googletrans import Translator
@@ -360,24 +361,38 @@ class AnthropicAPI:
         """
 
     def send_request(self, system_prompt, messages, max_tokens=60000):
-        response = self.client.messages.create(
-            model=self.model_name,
-            system=[
-                {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"}
-                },                        
-                # {"type": "text",
-                # "text": self.tag_prompt,
-                # },
-            ],
+        # response = self.client.messages.create(
+        #     model=self.model_name,
+        #     system=[
+        #         {
+        #         "type": "text",
+        #         "text": system_prompt,
+        #         "cache_control": {"type": "ephemeral"}
+        #         },                        
+        #         # {"type": "text",
+        #         # "text": self.tag_prompt,
+        #         # },
+        #     ],
+        #     messages=messages,
+        #     max_tokens=max_tokens,
+        #     # temperature=0.3,
+        #     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+        # )
+        # return response.content[0].text.strip() if response.content else None
+        streamed_output = ""
+        with self.client.messages.stream(
+            max_tokens=60_000,
+            system=[{"type": "text",
+                    "text": system_prompt},                        
+        
+                    ],
             messages=messages,
-            max_tokens=max_tokens,
-            # temperature=0.3,
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-        )
-        return response.content[0].text.strip() if response.content else None
+            model=self.model_name,
+        ) as stream:
+            for text in stream.text_stream:
+                streamed_output += text  
+        
+        return streamed_output.strip()
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False):
@@ -427,18 +442,18 @@ class TranslationStage(ABC):
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
     def process(self, all_paragraph):
-        system_prompt = """Analyze the following text and provide a comprehensive description of its:
-        1. Writing tone and style
-        2. Emotional conduct
-        3. Technical level
-        4. Target audience
-        5. Key contextual elements
+#         system_prompt = """Analyze the following text and provide a comprehensive description of its:
+#         1. Writing tone and style
+#         2. Emotional conduct
+#         3. Technical level
+#         4. Target audience
+#         5. Key contextual elements
         
-        Format your response as a translation guidance prompt that can be used to maintain these elements. 
-        Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
-
-         Text to analyze:
-"""
+#         Format your response as a translation guidance prompt that can be used to maintain these elements. 
+#         Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
+#          Text to analyze:
+# """   
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_01').prompt
         combined_text = ''
         combined_text_list = []
         for single_paragraph in all_paragraph:
@@ -468,19 +483,7 @@ class StyleAnalysis(TranslationStage):
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
     def process(self, segments, style_prompt, gloss_terms, d_batches):
-        system_prompt = f"""
-            Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
-            Style Guidelines: 
-            {style_prompt}
-            Ensure both accuracy and natural fluency while translating.
-            The translation should read as if it were originally written in {self.target_language}, maintaining authentic {self.target_language} syntax and style.
-            Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
-            The translation should preserve the original meaning while using natural, idiomatic {self.target_language} expressions. 
-            Final output should only be the translated text. no feedback or any sort of additional information should be provided.
-                    
-            Note: Strictly translate to the given source language
-            Text to translate:
-                """
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_02').prompt
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -507,14 +510,7 @@ class InitialTranslation(TranslationStage):
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
     def process(self, segments, source_text, gloss_terms):
-        system_prompt = f"""
-           For the provided source and target sentences, ensure the translation is smooth and correct. Make sure the tone, style of the source sentence is followed in the target sentence. Ensure grammar and punctuations are correct. Ensure the translated {self.target_language} text is perfect resembling the source text
-
-        Make necessary translation corrections if needed.
-        strictly, Result must be only the final target translation.
-        no feedbacks or any sort of additional information should be provided.
-
-            """
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_03').prompt
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -541,14 +537,7 @@ class RefinementStage1(TranslationStage):
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
     def process(self, segments, gloss_terms):
-        system_prompt = f"""
-                Focus the {self.target_language} content and rewrite it as if it is originally conceived and written in {self.target_language} itself. The text should be in the modern standard {self.target_language}. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
-
-                If no changes are needed, return the same {self.target_language} without any acknowledgment. Otherwise, provide the modified {self.target_language} sentence.
-
-                Note: No feedback or any sort of additional information should be provided.
-
-            """
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_04').prompt
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
