@@ -442,17 +442,6 @@ class TranslationStage(ABC):
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
     def process(self, all_paragraph):
-#         system_prompt = """Analyze the following text and provide a comprehensive description of its:
-#         1. Writing tone and style
-#         2. Emotional conduct
-#         3. Technical level
-#         4. Target audience
-#         5. Key contextual elements
-        
-#         Format your response as a translation guidance prompt that can be used to maintain these elements. 
-#         Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
-#          Text to analyze:
-# """   
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_01').prompt
         combined_text = ''
         combined_text_list = []
@@ -461,8 +450,6 @@ class StyleAnalysis(TranslationStage):
             if len("".join(combined_text_list)) < 1400:
                 combined_text_list.append(para)
             else:break
-            
-
         combined_text = "".join(combined_text_list)
 
 
@@ -484,6 +471,7 @@ class StyleAnalysis(TranslationStage):
 class InitialTranslation(TranslationStage):
     def process(self, segments, style_prompt, gloss_terms, d_batches):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_02').prompt
+        system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -511,6 +499,8 @@ class InitialTranslation(TranslationStage):
 class RefinementStage1(TranslationStage):
     def process(self, segments, source_text, gloss_terms):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_03').prompt
+        system_prompt = system_prompt.format(target_language=self.target_language)
+
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -538,6 +528,8 @@ class RefinementStage1(TranslationStage):
 class RefinementStage2(TranslationStage):
     def process(self, segments, gloss_terms):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_04').prompt
+        system_prompt = system_prompt.format(target_language=self.target_language)
+        
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
