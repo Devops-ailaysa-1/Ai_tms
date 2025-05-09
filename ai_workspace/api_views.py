@@ -5377,8 +5377,11 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
                 if status_counter['failed'] > 0:
+                    if task.adaptive_file_translate_status != AdaptiveFileTranslateStatus.FAILED:
+                        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+                        task.save()
                     batch_status["status"] = "failed"
-                    
+
                 if status_counter["completed"] == total_batches and total_batches > 0:
                     batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=SIMPLE"
 
