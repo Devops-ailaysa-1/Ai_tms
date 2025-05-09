@@ -5357,9 +5357,9 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
 
                     if task_result:
-                        if batch.status == "SUCCESS":
+                        if batch.status == "COMPLETED":
                             status_counter["completed"] += 1
-                        elif batch.status == "FAILURE":
+                        elif batch.status == "FAILED":
                             status_counter["failed"] += 1
                     else:
                         status_counter["in_progress"] += 1
