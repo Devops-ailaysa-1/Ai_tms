@@ -801,4 +801,4 @@ def get_credit_count(task_type,word_count):
     elif task_type == "document_translation_ocr":
         return 2*word_count
     elif task_type == "document_translation_adaptive":
-        return 1.5*word_count
+        return 1*word_count

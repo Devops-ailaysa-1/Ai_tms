@@ -964,26 +964,34 @@ class MT_RawAndTM_View(views.APIView):
                 return split_seg_count
             
     @staticmethod
-    def get_adaptive_consumable_credits_multiple_segments(doc, segment_ids, seg):
-
+    def get_adaptive_consumable_credits_multiple_segments(doc, segment_ids, seg,seg_type='para'):
         all_segments_source = ""
-        for segment_id in segment_ids:
-            if seg:
+
+
+        if seg_type == 'para':
+            if isinstance(seg, list):
+                all_segments_source=' '.join(seg)
+            elif isinstance(seg, str):
                 all_segments_source+=seg
+        else:
 
-            elif segment_id:
-                if split_check(segment_id):
-                    segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
-                    all_segments_source+=segment.source #if segment!= None else seg
-                    # seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
-                    # return seg_count
+            for segment_id in segment_ids:
+                if seg:
+                    all_segments_source+=seg
 
-                # For split segment
-                else:
-                    split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
-                    all_segments_source+=split_seg_source
-                    # split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
-                    # return split_seg_count
+                elif segment_id:
+                    if split_check(segment_id):
+                        segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                        all_segments_source+=segment.source #if segment!= None else seg
+                        # seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
+                        # return seg_count
+
+                    # For split segment
+                    else:
+                        split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                        all_segments_source+=split_seg_source
+                        # split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+                        # return split_seg_count
         seg_count = MT_RawAndTM_View.get_word_count(all_segments_source, doc)
         return seg_count
 
