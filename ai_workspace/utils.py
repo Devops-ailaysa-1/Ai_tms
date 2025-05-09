@@ -395,11 +395,12 @@ class AnthropicAPI:
         return streamed_output.strip()
 
 class TranslationStage(ABC):
-    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
         self.api = anthropic_api
         self.target_language = target_language
         self.source_language = source_language
         self.group_text_units = group_text_units
+        self.task_progress = task_progress
 
     @abstractmethod
     def process(self, segment, **kwargs):
@@ -441,6 +442,10 @@ class TranslationStage(ABC):
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+        super().__init__(anthropic_api, target_language, source_language, group_text_units, task_progress)
+        self.stage_weight = 10
+
     def process(self, all_paragraph):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_01').prompt
         combined_text = ''
@@ -469,6 +474,10 @@ class StyleAnalysis(TranslationStage):
 
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+        super().__init__(anthropic_api, target_language, source_language, group_text_units)
+        self.stage_weight = 40
+
     def process(self, segments, style_prompt, gloss_terms, d_batches):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_02').prompt
         system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
@@ -482,6 +491,7 @@ class InitialTranslation(TranslationStage):
 
         message_list = []
         response_result = []
+        total = len(segments)
         if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
             for para in segments:
                 message_list.append(self.continue_conversation_user(user_message=para))
@@ -497,6 +507,10 @@ class InitialTranslation(TranslationStage):
 
 # Refinement 1 (Stage 3)
 class RefinementStage1(TranslationStage):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+        super().__init__(anthropic_api, target_language, source_language, group_text_units)
+        self.stage_weight = 25
+
     def process(self, segments, source_text, gloss_terms):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_03').prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
@@ -526,10 +540,14 @@ class RefinementStage1(TranslationStage):
 
 # Final refinement (Stage 4)
 class RefinementStage2(TranslationStage):
+    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+        super().__init__(anthropic_api, target_language, source_language, group_text_units)
+        self.stage_weight = 25
+
     def process(self, segments, gloss_terms):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages='stage_04').prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
-        
+
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -561,10 +579,10 @@ class AdaptiveSegmentTranslator:
         self.task_progress = task_progress
 
         # Translation stages (New stages can be added)
-        self.style_analysis = StyleAnalysis(self.api, target_language, source_language, group_text_units)
-        self.initial_translation = InitialTranslation(self.api, target_language, source_language, group_text_units)
-        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units)
-        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units)
+        self.style_analysis = StyleAnalysis(self.api, target_language, source_language, group_text_units, self.task_progress)
+        self.initial_translation = InitialTranslation(self.api, target_language, source_language, group_text_units, self.task_progress)
+        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units, self.task_progress)
+        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units, self.task_progress)
 
     def process_batch(self, segments, d_batches):
         style_guideline = self.style_analysis.process(segments)
