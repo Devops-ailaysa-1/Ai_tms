@@ -1708,9 +1708,11 @@ class DocumentToFile(views.APIView):
 
     @staticmethod
     def document_data_to_file(request, document_id,mt_raw=None):
+        from ai_workspace_okapi.utils import save_simple_file
         output_type = request.GET.get("output_type", "")
         document = DocumentToFile.get_object(document_id)
-
+        is_simple = document.job.project.adaptive_simple
+        print("is_simple",is_simple)
         if mt_raw == True:
             # This extra_context is to get the MT_raw of segments with the get_mt_raw_target_if_have() property 
             doc_serlzr = DocumentSerializerV3(document,extra_context={'mt_raw':True})
@@ -1744,12 +1746,18 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
-        res = requests.post(
-            f'http://{spring_host}:8080/getTranslatedAsFile/',
-            data={
-                'document-json-dump': json.dumps(data),
-                "doc_req_res_params": json.dumps(res_paths),
-                "doc_req_params": json.dumps(params_data),})
+        if is_simple:
+            http_response = DocumentToFile().download_simple_file_response(document_id)
+            res = save_simple_file(http_response, task_data["output_file_path"])
+            print("Saved simple file at:", res)
+        else:
+            res = requests.post(
+                f'http://{spring_host}:8080/getTranslatedAsFile/',
+                data={
+                    'document-json-dump': json.dumps(data),
+                    "doc_req_res_params": json.dumps(res_paths),
+                    "doc_req_params": json.dumps(params_data),})
+                    
 
         if settings.USE_SPACES:
 
