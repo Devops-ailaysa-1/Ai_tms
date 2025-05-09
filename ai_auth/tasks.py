@@ -1489,7 +1489,9 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
             batch_status.status = BatchStatus.FAILED
             batch_status
             batch_status.save()
-
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+        task.save()
+        logger.error("Adaptive segment translation failed and task marked as FAILED")
 
 
 def create_batch_by_para(doc_id, min_words_per_batch=1500):
