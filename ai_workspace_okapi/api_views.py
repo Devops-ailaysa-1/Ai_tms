@@ -574,40 +574,49 @@ class SegmentsView(views.APIView, PageNumberPagination):
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
         page_segments = self.paginate_queryset(sorted_final_segments, request, view=self)
-
-        if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
+        
+        if page_segments and task.job.project.get_mt_by_page == True and task.job.project.mt_enable == True:
             mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
-        elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
-            track_seg = TrackSegmentsBatchStatus.objects.filter(
-                document=task.document,
-                project=task.job.project ,
-                seg_start_id__lte=page_segments[0].id,
-                seg_end_id__gte=page_segments[-1].id
-            ).first()
-            if track_seg:
-                if track_seg.status == BatchStatus.COMPLETED:
-                    pass  # No need to trigger translation, it's already done
-                elif track_seg.status == BatchStatus.ONGOING:
-                    return Response({"response": "Adaptive translation is already in progress. Please wait."})
-                elif track_seg.status == BatchStatus.FAILED:
-                    return Response({"response": "Oops! Something went wrong. Please reach out to support for help."})
-            else:
-                consumable_credits = 0
-                for seg in page_segments:
-                    if not seg.temp_target:
-                        consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, seg.id, None)
-                initial_credit = user.credit_balance.get("total_left")
-                if initial_credit < consumable_credits:
-                    return  Response({'msg':'Insufficient Credits'}, status=400)
-                # No record found, so initiate a new translation task
-                if any(seg.temp_target is None or seg.temp_target == '' for seg in page_segments):
-                    page_segments_serialized = [{"id": seg.id} for seg in page_segments]
-                    adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
-                    return Response({"response": "Adaptive translation is already in progress. Please wait."}) 
+        
         segments_ser = SegmentSerializer(page_segments, many=True)
+
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
         return res
+
+        # if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
+        #     mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
+        # elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
+        #     track_seg = TrackSegmentsBatchStatus.objects.filter(
+        #         document=task.document,
+        #         project=task.job.project ,
+        #         seg_start_id__lte=page_segments[0].id,
+        #         seg_end_id__gte=page_segments[-1].id
+        #     ).first()
+        #     if track_seg:
+        #         if track_seg.status == BatchStatus.COMPLETED:
+        #             pass  # No need to trigger translation, it's already done
+        #         elif track_seg.status == BatchStatus.ONGOING:
+        #             return Response({"response": "Adaptive translation is already in progress. Please wait."})
+        #         elif track_seg.status == BatchStatus.FAILED:
+        #             return Response({"response": "Oops! Something went wrong. Please reach out to support for help."})
+        #     else:
+        #         consumable_credits = 0
+        #         for seg in page_segments:
+        #             if not seg.temp_target:
+        #                 consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, seg.id, None)
+        #         initial_credit = user.credit_balance.get("total_left")
+        #         if initial_credit < consumable_credits:
+        #             return  Response({'msg':'Insufficient Credits'}, status=400)
+        #         # No record found, so initiate a new translation task
+        #         if any(seg.temp_target is None or seg.temp_target == '' for seg in page_segments):
+        #             page_segments_serialized = [{"id": seg.id} for seg in page_segments]
+        #             adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
+        #             return Response({"response": "Adaptive translation is already in progress. Please wait."}) 
+        # segments_ser = SegmentSerializer(page_segments, many=True)
+        # [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
+        # res = self.get_paginated_response(segments_ser.data)
+        # return res
 
 class MergeSegmentView(viewsets.ModelViewSet):
     serializer_class = MergeSegmentSerializer
@@ -1708,9 +1717,11 @@ class DocumentToFile(views.APIView):
 
     @staticmethod
     def document_data_to_file(request, document_id,mt_raw=None):
+        from ai_workspace_okapi.utils import save_simple_file
         output_type = request.GET.get("output_type", "")
         document = DocumentToFile.get_object(document_id)
-
+        is_simple = document.job.project.adaptive_simple
+        print("is_simple",is_simple)
         if mt_raw == True:
             # This extra_context is to get the MT_raw of segments with the get_mt_raw_target_if_have() property 
             doc_serlzr = DocumentSerializerV3(document,extra_context={'mt_raw':True})
@@ -1744,12 +1755,18 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
-        res = requests.post(
-            f'http://{spring_host}:8080/getTranslatedAsFile/',
-            data={
-                'document-json-dump': json.dumps(data),
-                "doc_req_res_params": json.dumps(res_paths),
-                "doc_req_params": json.dumps(params_data),})
+        if is_simple:
+            http_response = DocumentToFile().download_simple_file_response(document_id)
+            res = save_simple_file(http_response, task_data["output_file_path"])
+            print("Saved simple file at:", res)
+        else:
+            res = requests.post(
+                f'http://{spring_host}:8080/getTranslatedAsFile/',
+                data={
+                    'document-json-dump': json.dumps(data),
+                    "doc_req_res_params": json.dumps(res_paths),
+                    "doc_req_params": json.dumps(params_data),})
+                    
 
         if settings.USE_SPACES:
 

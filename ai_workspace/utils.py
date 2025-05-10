@@ -868,3 +868,42 @@ def merge_source_text_by_text_unit(document_id):
             text_unit=text_unit,
             source_para=source_paragraph.strip(),
         )
+
+
+def re_initiate_failed_batch(task, project):
+    from ai_workspace.models import TrackSegmentsBatchStatus
+    from ai_workspace_okapi.models import MergedTextUnit
+    from ai_workspace.enums import BatchStatus
+    from ai_workspace.models import Task
+    from ai_auth.tasks import get_glossary_for_task
+    from ai_auth.tasks import adaptive_segment_translation
+
+    try:
+        task_id = task.id
+        get_terms_for_task = get_glossary_for_task(project, task)
+        failed_task_batches = TrackSegmentsBatchStatus.objects.filter(document=task.document, status=BatchStatus.FAILED)
+        task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
+        source_lang = task.job.source_language.language
+        target_lang = task.job.target_language.language
+
+        for failed_task_batch in failed_task_batches:
+            merged_text_units = MergedTextUnit.objects.filter(text_unit__id__range=(failed_task_batch.seg_start_id, failed_task_batch.seg_end_id))
+            para = []
+            metadata = {}
+            for text_unit in merged_text_units:
+                para.append(text_unit.source_para)
+                metadata[text_unit.text_unit.id] = text_unit.source_para
+            
+            adaptive_segment_translation.apply_async(
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
+                kwargs={
+                    'failed_batch': True,
+                    'celery_task_id': failed_task_batch.celery_task_id,
+                },
+                queue='high-priority'
+            )
+            failed_task_batch.status = BatchStatus.ONGOING
+            failed_task_batch.progress_percent = 0
+            failed_task_batch.save()
+    except Exception as e:
+        print("Error in re_initiate_failed_batch:", e)

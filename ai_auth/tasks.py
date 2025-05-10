@@ -1431,7 +1431,7 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units):
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None):
     from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -1447,7 +1447,11 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         logger.info("Insufficient credits for segment translation")
         raise ValueError("Insufficient credits for segment translation")
     
-    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    if failed_batch == True:
+        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+    else:
+        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+
     try:
         translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
         translated_segments = translator.process_batch(segments, d_batches)
@@ -1485,7 +1489,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
     except Exception as e:
         logger.error(f"Batch task failed: {e}")
-        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id).first()
         if batch_status:
             batch_status.status = BatchStatus.FAILED
             batch_status

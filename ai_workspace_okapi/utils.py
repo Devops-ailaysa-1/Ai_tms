@@ -802,3 +802,13 @@ def get_credit_count(task_type,word_count):
         return 2*word_count
     elif task_type == "document_translation_adaptive":
         return 1*word_count
+
+def save_simple_file(http_response, output_file_path):
+    directory = os.path.dirname(output_file_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    with open(output_file_path, 'wb') as f:
+        f.write(http_response.content)
+
+    return os.path.abspath(output_file_path)
