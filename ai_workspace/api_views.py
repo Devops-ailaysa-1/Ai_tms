@@ -5356,7 +5356,10 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                 print("total",total)
                 # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
-                total_percentage = total/total_batches
+                if total_batches > 0:
+                    total_percentage = (total / total_batches) * 100
+                else:   
+                    total_percentage = 0
 
                 status_counter = {
                     "completed": 0,
