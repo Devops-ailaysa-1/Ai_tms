@@ -5316,6 +5316,7 @@ def get_task_segment_diff(request):
 
 
 
+
 class AdaptiveFileTranslate(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         from ai_workspace.models import TrackSegmentsBatchStatus
@@ -5394,6 +5395,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
     def create(self, request):
         from ai_workspace_okapi.api_views import DocumentViewByTask
+        from ai_workspace.utils import re_initiate_failed_batch
         task_id = request.data.get('task')
         if not task_id:
             return Response({'msg': 'Task id required'}, status=400)
@@ -5404,6 +5406,21 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
         if user != request.user:
             return Response({"msg": "Unauthorized access"}, status=403)
+
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.COMPLETED:
+            return Response({'msg': 'Translation already completed'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
+            return Response({'msg': 'Translation already in progress'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.FAILED:
+            re_initiate_failed_batch(task, project)
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            task.save()
+            endpoint = f'workspace/adaptive_file_translate/{project.id}'
+            return Response({
+                'msg': 'Translation Re-Initialized. To get the status poll the endpoint below',
+                'endpoint': endpoint,
+                'status': 'success',
+            }, status=200)
         
         data = TaskSerializer(task).data
         DocumentViewByTask.correct_fields(data)
