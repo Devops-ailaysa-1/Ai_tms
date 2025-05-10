@@ -1439,12 +1439,12 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
     # seg_ids = [segment["segment_id"] for segment in segments_data]
-    # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
-    # if consumable_credits < user.credit_balance.get("total_left"):
-    #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-    # else:
-    #     logger.info("Insufficient credits for segment translation")
-    #     raise ValueError("Insufficient credits for segment translation")
+    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
+    if consumable_credits < user.credit_balance.get("total_left"):
+        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    else:
+        logger.info("Insufficient credits for segment translation")
+        raise ValueError("Insufficient credits for segment translation")
     
     if failed_batch == True:
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
