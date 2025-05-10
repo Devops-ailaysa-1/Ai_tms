@@ -44,6 +44,7 @@ import time
 from django.db.models.functions import Lower
 from ai_workspace.utils import AdaptiveSegmentTranslator
 from ai_tms.celery import app
+import traceback
 
 
 extend_mail_sent= 0
@@ -1492,6 +1493,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
         task.save()
         logger.error("Adaptive segment translation failed and task marked as FAILED")
+        logger.error("Exception occurred:\n%s", traceback.format_exc())
 
 
 def create_batch_by_para(doc_id, min_words_per_batch=1500):
