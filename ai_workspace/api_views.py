@@ -5348,18 +5348,10 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
                 batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
                 total = 0
-                for batch in batches:
-                    get_progress = self.get_progress(batch)
-                    total += get_progress.get('total', 0)
                 # get_progress = self.get_progress(batches)
                 # total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
-                print("total",total)
                 # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
-                if total_batches > 0:
-                    total_percentage = (total / total_batches) * 100
-                else:   
-                    total_percentage = 0
 
                 status_counter = {
                     "completed": 0,
@@ -5369,7 +5361,8 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
                 for batch in batches:
                     task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
-
+                    progress_data = self.get_progress(batch)
+                    total += progress_data.get('total', 0)
                     if task_result:
                         if batch.status == "COMPLETED":
                             status_counter["completed"] += 1
@@ -5379,14 +5372,14 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                         status_counter["in_progress"] += 1
                 
                 completed_percentage = (
-                    (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+                    (total / total_batches) if total_batches > 0 else 0
                 )
                     
                 batch_status = {
                     "task_id": task.id,
                     "total_batches": total_batches,
                     "completed_batches": status_counter["completed"],
-                    "completed_percentage": int(total_percentage),
+                    "completed_percentage": int(completed_percentage),
                     "failed_batches": status_counter["failed"],
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
