@@ -110,6 +110,7 @@ from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from django.core.cache import cache
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5318,6 +5319,10 @@ def get_task_segment_diff(request):
 
 
 class AdaptiveFileTranslate(viewsets.ViewSet):
+    def get_progress(self,task_progress):
+        cache_key = f"adaptive_progress_{task_progress.id}"
+        return cache.get(cache_key, None)
+    
     def retrieve(self, request, pk=None):
         from ai_workspace.models import TrackSegmentsBatchStatus
 
@@ -5342,11 +5347,16 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     continue
 
                 batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
-                total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
+                total = 0
+                for batch in batches:
+                    get_progress = self.get_progress(batch)
+                    total += get_progress.get('total', 0)
+                # get_progress = self.get_progress(batches)
+                # total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
                 print("total",total)
                 # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
-                total_percentage = total.get('progress_percent__sum', 0) / total_batches
+                total_percentage = total/total_batches
 
                 status_counter = {
                     "completed": 0,
