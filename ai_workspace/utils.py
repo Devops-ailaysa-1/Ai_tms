@@ -667,7 +667,7 @@ class AdaptiveSegmentTranslator:
         # self.task_progress.save()
         # stage_result_ins.stage_01 = style_guideline
         segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
-        progress_data = self.get_progress()
+        # progress_data = self.get_progress()
         # self.task_progress.progress_percent += 40
         # self.task_progress.save()
         # stage_result_ins.stage_02 = translated_segments
