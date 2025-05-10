@@ -476,8 +476,8 @@ class TranslationStage(ABC):
 
 
     def mock_api(self,segments,stage=None):
-        if isinstance(segments,list):
-            total = len(segments)
+        if isinstance(segments,list) and len(segments) > 0:
+            total = len(segments) 
             progress_counter = 1 
             for i in segments:
                 time.sleep(1)
