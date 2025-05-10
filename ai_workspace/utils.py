@@ -671,7 +671,7 @@ class AdaptiveSegmentTranslator:
         # self.task_progress.progress_percent += 40
         # self.task_progress.save()
         # stage_result_ins.stage_02 = translated_segments
-        self.style_analysis.update_progress_db()
+        self.initial_translation.update_progress_db()
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
         # self.task_progress.progress_percent += 25
         # self.task_progress.save()
@@ -681,7 +681,7 @@ class AdaptiveSegmentTranslator:
         # self.task_progress.save()
         # stage_result_ins.stage_04 = final_segments
         # stage_result_ins.save()
-        self.update_progress_db()
+        self.refinement_stage_2.update_progress_db()
         return final_segments
     
 
