@@ -510,7 +510,7 @@ class StyleAnalysis(TranslationStage):
         combined_text = "".join(combined_text_list)
 
 
-        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             if combined_text:
                 messages = [self.continue_conversation_user(combined_text)]
                 result_content_prompt = self.api.send_request(system_prompt, messages)
@@ -549,7 +549,7 @@ class InitialTranslation(TranslationStage):
         response_result = []
         total = len(segments)
         progress_counter = 1 
-        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
                 message_list.append(self.continue_conversation_user(user_message=para))
                 response_text = self.api.send_request(system_prompt,message_list)
@@ -587,7 +587,7 @@ class RefinementStage1(TranslationStage):
         response_result = []
         total = len(segments)
         progress_counter = 1 
-        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for trans_text, original_text in zip(segments, source_text):
                 user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
                                                                                                                     translated_text=trans_text)
@@ -628,7 +628,7 @@ class RefinementStage2(TranslationStage):
         total = len(segments)
         progress_counter = 1 
 
-        if os.getenv('ENV_NAME') in ['Testing', 'Production','Local']:
+        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
                 instruct_text = """{} sentence: {}""".format(self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=instruct_text))
