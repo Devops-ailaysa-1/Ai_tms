@@ -364,32 +364,32 @@ class AnthropicAPI:
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
 
-    def send_request(self, system_prompt, messages, max_tokens=60000):
+    def send_request(self, messages, max_tokens=40000):
         # response = self.client.messages.create(
         #     model=self.model_name,
-        #     system=[
-        #         {
-        #         "type": "text",
-        #         "text": system_prompt,
-        #         "cache_control": {"type": "ephemeral"}
-        #         },                        
-        #         # {"type": "text",
-        #         # "text": self.tag_prompt,
-        #         # },
-        #     ],
+        #     # system=[
+        #     #     {
+        #     #     "type": "text",
+        #     #     "text": system_prompt,
+        #     #     "cache_control": {"type": "ephemeral"}
+        #     #     },                        
+        #     #     # {"type": "text",
+        #     #     # "text": self.tag_prompt,
+        #     #     # },
+        #     # ],
         #     messages=messages,
         #     max_tokens=max_tokens,
         #     # temperature=0.3,
-        #     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+        #     # extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
         # )
         # return response.content[0].text.strip() if response.content else None
         streamed_output = ""
         with self.client.messages.stream(
             max_tokens=60_000,
-            system=[{"type": "text",
-                    "text": system_prompt},                        
+            # system=[{"type": "text",
+            #         "text": system_prompt},                        
         
-                    ],
+            #         ],
             messages=messages,
             model=self.model_name,
         ) as stream:
@@ -499,7 +499,7 @@ class StyleAnalysis(TranslationStage):
         self.stage = "stage_01"
 
     def process(self, all_paragraph):
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+
         combined_text = ''
         combined_text_list = []
         for single_paragraph in all_paragraph:
@@ -509,12 +509,28 @@ class StyleAnalysis(TranslationStage):
             else:break
         combined_text = "".join(combined_text_list)
 
+        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+        prompt = f"""Analyze the following text and provide a comprehensive description of its:
+        1. Writing tone and style
+        2. Emotional conduct
+        3. Technical level
+        4. Target audience
+        5. Key contextual elements
+        
+        Format your response as a translation guidance prompt that can be used to maintain these elements.
+        Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
+        
+        Text to analyze:
+        {combined_text}"""
+
+
+
 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             if combined_text:
-                messages = [self.continue_conversation_user(combined_text)]
-                result_content_prompt = self.api.send_request(system_prompt, messages)
-                self.style_text = result_content_prompt
+                messages = [self.continue_conversation_user(prompt)]
+                result_content_prompt = self.api.send_request(messages)
+                # self.style_text = result_content_prompt
                 self.set_progress(stage=self.stage, stage_percent=100)
                 return result_content_prompt
             
@@ -538,6 +554,27 @@ class InitialTranslation(TranslationStage):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
 
+
+        translation_prompt = """Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
+    
+        
+        Style Guidelines:
+        {0}
+        
+        Ensure both accuracy and natural fluency while translating.
+        The translation should read as if it were originally written in {1}, maintaining authentic {2} syntax and style.
+        Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
+        The translation should preserve the original meaning while using natural, idiomatic {3} expressions. 
+        final output should only be the translated text. no feedbacks or any sort of additional information should be provided.
+     
+
+        Note: Only translate on the given target language 
+        
+        Text to translate:
+        {4}"""
+
+
+
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -551,12 +588,14 @@ class InitialTranslation(TranslationStage):
         progress_counter = 1 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
-                message_list.append(self.continue_conversation_user(user_message=para))
-                response_text = self.api.send_request(system_prompt,message_list)
+                para_message = translation_prompt.format(style_prompt,self.target_language,self.target_language,self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                # if len(message_list) > 4:
+                #     message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -578,6 +617,22 @@ class RefinementStage1(TranslationStage):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
 
+        refinement_prompt = """Review and refine the following translation from English to {0}.
+        
+        Source:
+        {1}
+        
+        Translation:
+        {2}
+        
+        For the provided source and target sentence ensure 
+            the translation is smooth and correct.Make sure the tone, style of the
+            source sentence is followed in the target sentence. 
+            ensure grammar and punctuation are correct. Ensure the translated {3} text is perfect resembling the source text
+            Make necessary translation corrections if needed.
+            strictly, Result must be only the final target translation.
+            no feebacks or any sort of additional information should be provided."""
+
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -589,14 +644,16 @@ class RefinementStage1(TranslationStage):
         progress_counter = 1 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for trans_text, original_text in zip(segments, source_text):
-                user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
-                                                                                                                    translated_text=trans_text)
-                message_list.append(self.continue_conversation_user(user_message=user_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                para_message = refinement_prompt.format(self.target_language,original_text,trans_text,self.target_language)
+                # user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
+                                                                                                                    # translated_text=trans_text)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                # if len(message_list) > 4:
+                #     message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -618,6 +675,12 @@ class RefinementStage2(TranslationStage):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
 
+        final_refinement_prompt = """Text:{0}
+
+        Focus the {1} content and rewrite it as if it is originally conceived and written in {2} itself. The text should be in the modern standard {3}. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
+        If no changes are needed, return the same {4} without any acknowledgment. Otherwise, provide the modified {5} sentence.
+        Note: No feedback or any sort of additional information should be provided."""
+
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
             system_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
@@ -630,13 +693,16 @@ class RefinementStage2(TranslationStage):
 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
-                instruct_text = """{} sentence: {}""".format(self.target_language,para)
-                message_list.append(self.continue_conversation_user(user_message=instruct_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                para_message = final_refinement_prompt.format(para,self.target_language,self.target_language,self.target_language,self.target_language,
+                                                              self.target_language)
+                # instruct_text = """{} sentence: {}""".format(self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                # if len(message_list) > 4:
+                #     message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
