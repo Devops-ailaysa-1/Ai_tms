@@ -709,14 +709,14 @@ class RefinementStage2(TranslationStage):
                                                               self.target_language)
                 # instruct_text = """{} sentence: {}""".format(self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=para_message))
-                input_token, output_token, response_text = self.api.send_request(system_prompt,message_list)
+                input_token, output_token, response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 4 data written to excel")
                 #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 # if len(message_list) > 4:
-                #   message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
