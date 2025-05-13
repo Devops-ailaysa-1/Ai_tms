@@ -110,6 +110,7 @@ from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from django.core.cache import cache
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -5316,7 +5317,12 @@ def get_task_segment_diff(request):
 
 
 
+
 class AdaptiveFileTranslate(viewsets.ViewSet):
+    def get_progress(self,task_progress):
+        cache_key = f"adaptive_progress_{task_progress.id}"
+        return cache.get(cache_key, None)
+    
     def retrieve(self, request, pk=None):
         from ai_workspace.models import TrackSegmentsBatchStatus
 
@@ -5341,11 +5347,11 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     continue
 
                 batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
-                total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
-                print("total",total)
+                total = 0
+                # get_progress = self.get_progress(batches)
+                # total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
                 # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
                 total_batches = batches.count()
-                total_percentage = total.get('progress_percent__sum', 0) / total_batches
 
                 status_counter = {
                     "completed": 0,
@@ -5355,7 +5361,11 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
                 for batch in batches:
                     task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
-
+                    progress_data = self.get_progress(batch)
+                    if progress_data!=None:
+                        total += progress_data.get('total', 0)
+                    else:
+                        total += 0
                     if task_result:
                         if batch.status == "COMPLETED":
                             status_counter["completed"] += 1
@@ -5365,14 +5375,14 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                         status_counter["in_progress"] += 1
                 
                 completed_percentage = (
-                    (status_counter["completed"] / total_batches) * 100 if total_batches > 0 else 0
+                    (total / total_batches) if total_batches > 0 else 0
                 )
                     
                 batch_status = {
                     "task_id": task.id,
                     "total_batches": total_batches,
                     "completed_batches": status_counter["completed"],
-                    "completed_percentage": int(total_percentage),
+                    "completed_percentage": int(completed_percentage),
                     "failed_batches": status_counter["failed"],
                     "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
                 }
@@ -5394,6 +5404,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
     def create(self, request):
         from ai_workspace_okapi.api_views import DocumentViewByTask
+        from ai_workspace.utils import re_initiate_failed_batch
         task_id = request.data.get('task')
         if not task_id:
             return Response({'msg': 'Task id required'}, status=400)
@@ -5404,6 +5415,21 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
         if user != request.user:
             return Response({"msg": "Unauthorized access"}, status=403)
+
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.COMPLETED:
+            return Response({'msg': 'Translation already completed'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
+            return Response({'msg': 'Translation already in progress'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.FAILED:
+            re_initiate_failed_batch(task, project)
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            task.save()
+            endpoint = f'workspace/adaptive_file_translate/{project.id}'
+            return Response({
+                'msg': 'Translation Re-Initialized. To get the status poll the endpoint below',
+                'endpoint': endpoint,
+                'status': 'success',
+            }, status=200)
         
         data = TaskSerializer(task).data
         DocumentViewByTask.correct_fields(data)
