@@ -1458,6 +1458,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         print(translated_segments, "translated_segments")
         all_translations = {}
 
+        print(group_text_units, "group text units")
         if group_text_units:
             translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
 

@@ -395,8 +395,12 @@ class AnthropicAPI:
         ) as stream:
             for text in stream.text_stream:
                 streamed_output += text  
-        
-        return streamed_output.strip()
+            
+        token_usage = stream.get_final_message().usage
+        input_token = token_usage.input_tokens
+        output_token = token_usage.output_tokens
+       
+        return (input_token, output_token, streamed_output.strip())
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
@@ -513,11 +517,11 @@ class StyleAnalysis(TranslationStage):
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             if combined_text:
                 messages = [self.continue_conversation_user(combined_text)]
-                result_content_prompt = self.api.send_request(system_prompt, messages)
+                input_token, output_token,result_content_prompt = self.api.send_request(system_prompt, messages)
                 self.style_text = result_content_prompt
                 self.set_progress(stage=self.stage, stage_percent=100)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 1 data written to excel")
                 return result_content_prompt
             else:
@@ -554,15 +558,14 @@ class InitialTranslation(TranslationStage):
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
                 message_list.append(self.continue_conversation_user(user_message=para))
-                response_text = self.api.send_request(system_prompt,message_list)
+                input_token, output_token,response_text = self.api.send_request(system_prompt,message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
-                    logger.info(f"Stage 1 data written to excel")
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 2 data written to excel")
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                # message_list = []
-                if len(message_list) > 1:
-                    message_list.pop(0)
+                if len(message_list) > 4:
+                    message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -598,15 +601,14 @@ class RefinementStage1(TranslationStage):
                 user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
                                                                                                                     translated_text=trans_text)
                 message_list.append(self.continue_conversation_user(user_message=user_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                input_token, output_token,response_text = self.api.send_request(system_prompt,message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
-                    logger.info(f"Stage 1 data written to excel")
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 3 data written to excel")
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 1:
-                    message_list.pop(0)
-                # message_list = []
+                if len(message_list) > 4:
+                    message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -642,14 +644,14 @@ class RefinementStage2(TranslationStage):
             for para in segments:
                 instruct_text = """{} sentence: {}""".format(self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=instruct_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                input_token, output_token, response_text = self.api.send_request(system_prompt,message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 4 data written to excel")
                 message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 1:
-                    message_list.pop(0)
-                # message_list = []
+                if len(message_list) > 4:
+                    message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -675,7 +677,6 @@ class AdaptiveSegmentTranslator:
         self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units, self.task_progress)
 
     def process_batch(self, segments, d_batches, batch_no):
-        
         style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
         # self.task_progress.progress_percent += 10
         # self.task_progress.save()
@@ -939,7 +940,9 @@ def write_stage_response_in_excel(
     user_message,
     translated_result,
     stage,
-    base_dir="Translation_Results"
+    base_dir="Translation_Results",
+    input_token=None,
+    output_token=None
 ):
     os.makedirs(base_dir, exist_ok=True)
 
@@ -965,9 +968,9 @@ def write_stage_response_in_excel(
         ws = wb[sheet_name]
     else:
         ws = wb.create_sheet(title=sheet_name)
-        ws.append(["Result", "User_Message", "System_Message", "Stage"])
+        ws.append(["Result", "User_Message", "System_Message", "Stage", "Input_Token", "Output_Token"])
 
-    ws.append([translated_result, user_message, system_prompt, stage])
+    ws.append([translated_result, user_message, system_prompt, stage, input_token, output_token])
 
     for column_cells in ws.columns:
         max_length = max(len(str(cell.value)) for cell in column_cells if cell.value)
