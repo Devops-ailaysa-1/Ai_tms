@@ -1431,7 +1431,7 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None):
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None, batch_no=None):
     from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -1453,11 +1453,12 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
     try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
-        translated_segments = translator.process_batch(segments, d_batches)
+        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
         print(translated_segments, "translated_segments")
         all_translations = {}
 
+        print(group_text_units, "group text units")
         if group_text_units:
             translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
 
@@ -1551,6 +1552,9 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
             metadata = d_batches[i] 
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
+                kwargs={
+                    'batch_no': f"batch_{i+1}",
+                },
                 queue='high-priority'
             )
             TrackSegmentsBatchStatus.objects.create(
