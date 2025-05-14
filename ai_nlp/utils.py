@@ -157,7 +157,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
-    compressor = CohereRerank(user_agent="langchain")
+    compressor = CohereRerank(user_agent="langchain", model=settings.COHERE_MODEL)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
     compressed_docs = compression_retriever.get_relevant_documents(query=query)
     memory = load_chat_history(instance)
