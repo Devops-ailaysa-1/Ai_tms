@@ -364,39 +364,43 @@ class AnthropicAPI:
             Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
         """
 
-    def send_request(self, system_prompt, messages, max_tokens=60000):
+    def send_request(self, messages, max_tokens=40000):
         # response = self.client.messages.create(
         #     model=self.model_name,
-        #     system=[
-        #         {
-        #         "type": "text",
-        #         "text": system_prompt,
-        #         "cache_control": {"type": "ephemeral"}
-        #         },                        
-        #         # {"type": "text",
-        #         # "text": self.tag_prompt,
-        #         # },
-        #     ],
+        #     # system=[
+        #     #     {
+        #     #     "type": "text",
+        #     #     "text": system_prompt,
+        #     #     "cache_control": {"type": "ephemeral"}
+        #     #     },                        
+        #     #     # {"type": "text",
+        #     #     # "text": self.tag_prompt,
+        #     #     # },
+        #     # ],
         #     messages=messages,
         #     max_tokens=max_tokens,
         #     # temperature=0.3,
-        #     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+        #     # extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
         # )
         # return response.content[0].text.strip() if response.content else None
         streamed_output = ""
         with self.client.messages.stream(
             max_tokens=60_000,
-            system=[{"type": "text",
-                    "text": system_prompt},                        
+            # system=[{"type": "text",
+            #         "text": system_prompt},                        
         
-                    ],
+            #         ],
             messages=messages,
             model=self.model_name,
         ) as stream:
             for text in stream.text_stream:
                 streamed_output += text  
-        
-        return streamed_output.strip()
+            
+        token_usage = stream.get_final_message().usage
+        input_token = token_usage.input_tokens
+        output_token = token_usage.output_tokens
+       
+        return (input_token, output_token, streamed_output.strip())
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
@@ -498,7 +502,7 @@ class StyleAnalysis(TranslationStage):
         self.stage_percent = 0
         self.stage = "stage_01"
 
-    def process(self, all_paragraph):
+    def process(self, all_paragraph, document=None, batch_no=None, batch_instance=None):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         combined_text = ''
         combined_text_list = []
@@ -509,15 +513,33 @@ class StyleAnalysis(TranslationStage):
             else:break
         combined_text = "".join(combined_text_list)
 
+        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+        prompt = f"""Analyze the following text and provide a comprehensive description of its:
+        1. Writing tone and style
+        2. Emotional conduct
+        3. Technical level
+        4. Target audience
+        5. Key contextual elements
+        
+        Format your response as a translation guidance prompt that can be used to maintain these elements.
+        Make sure you generate only the prompt as an output.no feedback or any sort of additional information should be generated.
+        
+        Text to analyze:
+        {combined_text}"""
+
+
+
 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             if combined_text:
-                messages = [self.continue_conversation_user(combined_text)]
-                result_content_prompt = self.api.send_request(system_prompt, messages)
+                messages = [self.continue_conversation_user(prompt)]
+                input_token, output_token,result_content_prompt = self.api.send_request(messages)
                 self.style_text = result_content_prompt
                 self.set_progress(stage=self.stage, stage_percent=100)
+                if os.getenv('ANALYTICS') == 'True':
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 1 data written to excel")
                 return result_content_prompt
-            
             else:
                 self.style_text = None
                 return None
@@ -534,9 +556,30 @@ class InitialTranslation(TranslationStage):
         self.stage_percent = 0
         self.stage = "stage_02"
 
-    def process(self, segments, style_prompt, gloss_terms, d_batches):
+    def process(self, segments, style_prompt, gloss_terms, d_batches, document=None, batch_no=None, batch_instance=None):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
+
+
+        translation_prompt = """Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
+    
+        
+        Style Guidelines:
+        {0}
+        
+        Ensure both accuracy and natural fluency while translating.
+        The translation should read as if it were originally written in {1}, maintaining authentic {2} syntax and style.
+        Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
+        The translation should preserve the original meaning while using natural, idiomatic {3} expressions. 
+        final output should only be the translated text. no feedbacks or any sort of additional information should be provided.
+     
+
+        Note: Only translate on the given target language 
+        
+        Text to translate:
+        {4}"""
+
+
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -551,12 +594,17 @@ class InitialTranslation(TranslationStage):
         progress_counter = 1 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
-                message_list.append(self.continue_conversation_user(user_message=para))
-                response_text = self.api.send_request(system_prompt,message_list)
+                para_message = translation_prompt.format(style_prompt,self.target_language,self.target_language,self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                input_token, output_token,response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                if os.getenv('ANALYTICS') == 'True':
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 2 data written to excel")
+                #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                #if len(message_list) > 4:
+                 #   message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -574,9 +622,25 @@ class RefinementStage1(TranslationStage):
         self.stage_percent = 0
         self.stage = "stage_03"
 
-    def process(self, segments, source_text, gloss_terms):
+    def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
+
+        refinement_prompt = """Review and refine the following translation from English to {0}.
+        
+        Source:
+        {1}
+        
+        Translation:
+        {2}
+        
+        For the provided source and target sentence ensure 
+            the translation is smooth and correct.Make sure the tone, style of the
+            source sentence is followed in the target sentence. 
+            ensure grammar and punctuation are correct. Ensure the translated {3} text is perfect resembling the source text
+            Make necessary translation corrections if needed.
+            strictly, Result must be only the final target translation.
+            no feebacks or any sort of additional information should be provided."""
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -589,14 +653,19 @@ class RefinementStage1(TranslationStage):
         progress_counter = 1 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for trans_text, original_text in zip(segments, source_text):
-                user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
-                                                                                                                    translated_text=trans_text)
-                message_list.append(self.continue_conversation_user(user_message=user_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                #user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
+                #                                                                                                    translated_text=trans_text)
+                para_message = refinement_prompt.format(self.target_language,original_text,trans_text,self.target_language)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                input_token, output_token,response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                if os.getenv('ANALYTICS') == 'True':
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 3 data written to excel")
+                # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                #if len(message_list) > 4:
+                #    message_list = []
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -614,9 +683,15 @@ class RefinementStage2(TranslationStage):
         self.stage_percent = 0
         self.stage = "stage_04"
 
-    def process(self, segments, gloss_terms):
+    def process(self, segments, gloss_terms, document=None, batch_no=None, batch_instance=None):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
+
+        final_refinement_prompt = """Text:{0}
+
+        Focus the {1} content and rewrite it as if it is originally conceived and written in {2} itself. The text should be in the modern standard {3}. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
+        If no changes are needed, return the same {4} without any acknowledgment. Otherwise, provide the modified {5} sentence.
+        Note: No feedback or any sort of additional information should be provided."""
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -630,13 +705,18 @@ class RefinementStage2(TranslationStage):
 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
-                instruct_text = """{} sentence: {}""".format(self.target_language,para)
-                message_list.append(self.continue_conversation_user(user_message=instruct_text))
-                response_text = self.api.send_request(system_prompt,message_list)
+                para_message = final_refinement_prompt.format(para,self.target_language,self.target_language,self.target_language,self.target_language,
+                                                              self.target_language)
+                # instruct_text = """{} sentence: {}""".format(self.target_language,para)
+                message_list.append(self.continue_conversation_user(user_message=para_message))
+                input_token, output_token, response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
-                message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
-                if len(message_list) > 4:
-                    message_list = []
+                if os.getenv('ANALYTICS') == 'True':
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    logger.info(f"Stage 4 data written to excel")
+                #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
+                # if len(message_list) > 4:
+                message_list = []
                 percent = int((progress_counter/total)*100)
                 self.set_progress(stage=self.stage, stage_percent=percent)
                 progress_counter += 1
@@ -647,12 +727,13 @@ class RefinementStage2(TranslationStage):
 
 
 class AdaptiveSegmentTranslator:
-    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False):
+    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False, document=None):
         self.api = AnthropicAPI(api_key, model_name)
         self.source_language = source_language
         self.target_language = target_language
         self.gloss_terms = gloss_terms
         self.task_progress = task_progress
+        self.document = document
 
         # Translation stages (New stages can be added)
         self.style_analysis = StyleAnalysis(self.api, target_language, source_language, group_text_units, self.task_progress)
@@ -660,23 +741,23 @@ class AdaptiveSegmentTranslator:
         self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units, self.task_progress)
         self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units, self.task_progress)
 
-    def process_batch(self, segments, d_batches):
-        
-        style_guideline = self.style_analysis.process(segments)
+    def process_batch(self, segments, d_batches, batch_no):
+        style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
         # self.task_progress.progress_percent += 10
         # self.task_progress.save()
         # stage_result_ins.stage_01 = style_guideline
-        segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches)
+        
+        segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
         # progress_data = self.get_progress()
         # self.task_progress.progress_percent += 40
         # self.task_progress.save()
         # stage_result_ins.stage_02 = translated_segments
         self.initial_translation.update_progress_db()
-        refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms)
+        refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
         # self.task_progress.progress_percent += 25
         # self.task_progress.save()
         # stage_result_ins.stage_03 = refined_segments
-        final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms)
+        final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms, self.document,batch_no, self.task_progress)
         # self.task_progress.progress_percent += 25
         # self.task_progress.save()
         # stage_result_ins.stage_04 = final_segments
@@ -907,3 +988,61 @@ def re_initiate_failed_batch(task, project):
             failed_task_batch.save()
     except Exception as e:
         print("Error in re_initiate_failed_batch:", e)
+
+
+
+import os
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
+from zipfile import BadZipFile
+
+
+def write_stage_response_in_excel(
+    project_id,
+    task_id,
+    batch_no,
+    system_prompt,
+    user_message,
+    translated_result,
+    stage,
+    base_dir="Translation_Results",
+    input_token=None,
+    output_token=None
+):
+    os.makedirs(base_dir, exist_ok=True)
+
+    project_task_folder = os.path.join(base_dir, f"{project_id}_{task_id}")
+    os.makedirs(project_task_folder, exist_ok=True)
+
+    file_path = os.path.join(project_task_folder, f"{batch_no}.xlsx")
+
+    try:
+        if os.path.exists(file_path):
+            wb = load_workbook(file_path)
+        else:
+            wb = Workbook()
+    except BadZipFile:
+        print(f"Warning: {file_path} is not a valid Excel file. Recreating.")
+        wb = Workbook()
+
+    if "Sheet" in wb.sheetnames and wb["Sheet"].max_row == 1:
+        wb.remove(wb["Sheet"])
+
+    sheet_name = batch_no
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+    else:
+        ws = wb.create_sheet(title=sheet_name)
+        ws.append(["Result", "User_Message", "System_Message", "Stage", "Input_Token", "Output_Token"])
+
+    ws.append([translated_result, user_message, system_prompt, stage, input_token, output_token])
+
+    for column_cells in ws.columns:
+        max_length = max(len(str(cell.value)) for cell in column_cells if cell.value)
+        col_letter = get_column_letter(column_cells[0].column)
+        ws.column_dimensions[col_letter].width = max_length + 2
+
+    wb.save(file_path)
+    print(f"Data written to: {file_path}")
+
+
