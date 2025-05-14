@@ -575,9 +575,6 @@ class InitialTranslation(TranslationStage):
         The translation should preserve the original meaning while using natural, idiomatic {5} expressions. 
         final output should only be the translated text. no feedbacks or any sort of additional information should be provided.
      
-
-        Note: Only translate on the given target language 
-        
         Text to translate:
         {6}
 
@@ -640,7 +637,7 @@ class RefinementStage1(TranslationStage):
         For the provided source and target sentence ensure 
             the translation is smooth and correct.Make sure the tone, style of the
             source sentence is followed in the target sentence. 
-            ensure grammar and punctuation are correct. Ensure the translated {4} text is perfect resembling the source text
+            ensure grammar and punctuation are correct. Ensure the translated {4} text is perfectly resembling the source text
             Make necessary translation corrections if needed.
             strictly, Result must be only the final target translation.
             no feebacks or any sort of additional information should be provided."""
