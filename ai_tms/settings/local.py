@@ -451,3 +451,4 @@ NOTEBOOK_ARGUMENTS = [
 "--allow-root",
 "--no-browser",
 ]
+COHERE_MODEL=os.getenv("COHERE_MODEL","")
