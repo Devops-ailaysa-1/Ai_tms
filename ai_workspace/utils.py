@@ -988,6 +988,8 @@ def re_initiate_failed_batch(task, project):
             failed_task_batch.status = BatchStatus.ONGOING
             failed_task_batch.progress_percent = 0
             failed_task_batch.save()
+            cache_key = f"adaptive_progress_{failed_task_batch.id}"
+            cache.delete(cache_key)
     except Exception as e:
         print("Error in re_initiate_failed_batch:", e)
 
