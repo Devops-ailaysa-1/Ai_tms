@@ -537,8 +537,9 @@ class StyleAnalysis(TranslationStage):
                 self.style_text = result_content_prompt
                 self.set_progress(stage=self.stage, stage_percent=100)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 1 data written to excel")
+                # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                 return result_content_prompt
             else:
                 self.style_text = None
@@ -561,25 +562,26 @@ class InitialTranslation(TranslationStage):
         system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
 
 
-        translation_prompt = """Translate the following text while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
+        translation_prompt = """
+        Translate the following text from {0} to {1},while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
     
         
         Style Guidelines:
-        {0}
+        {2}
         
         Ensure both accuracy and natural fluency while translating.
-        The translation should read as if it were originally written in {1}, maintaining authentic {2} syntax and style.
+        The translation should read as if it were originally written in {3}, maintaining authentic {4} syntax and style.
         Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
-        The translation should preserve the original meaning while using natural, idiomatic {3} expressions. 
+        The translation should preserve the original meaning while using natural, idiomatic {5} expressions. 
         final output should only be the translated text. no feedbacks or any sort of additional information should be provided.
      
 
         Note: Only translate on the given target language 
         
         Text to translate:
-        {4}"""
+        {6}
 
-
+"""
 
         if gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
@@ -594,12 +596,12 @@ class InitialTranslation(TranslationStage):
         progress_counter = 1 
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
-                para_message = translation_prompt.format(style_prompt,self.target_language,self.target_language,self.target_language,para)
+                para_message = translation_prompt.format(self.source_language, self.target_language, style_prompt,self.target_language,self.target_language,self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=para_message))
                 input_token, output_token,response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,translation_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 2 data written to excel")
                 #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 #if len(message_list) > 4:
@@ -611,6 +613,7 @@ class InitialTranslation(TranslationStage):
                 
         else:
             self.mock_api(segments,self.stage)
+        # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',translation_prompt, user_message=json.dumps(segments, ensure_ascii=False), translated_result=json.dumps(response_result, ensure_ascii=False), stage=self.stage, input_token=input_token, output_token=output_token)
         return (segments, response_result)
 
 
@@ -626,18 +629,18 @@ class RefinementStage1(TranslationStage):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
 
-        refinement_prompt = """Review and refine the following translation from English to {0}.
+        refinement_prompt = """Review and refine the following translation from {0} to {1}..
         
         Source:
-        {1}
+        {2}
         
         Translation:
-        {2}
+        {3}
         
         For the provided source and target sentence ensure 
             the translation is smooth and correct.Make sure the tone, style of the
             source sentence is followed in the target sentence. 
-            ensure grammar and punctuation are correct. Ensure the translated {3} text is perfect resembling the source text
+            ensure grammar and punctuation are correct. Ensure the translated {4} text is perfect resembling the source text
             Make necessary translation corrections if needed.
             strictly, Result must be only the final target translation.
             no feebacks or any sort of additional information should be provided."""
@@ -655,12 +658,12 @@ class RefinementStage1(TranslationStage):
             for trans_text, original_text in zip(segments, source_text):
                 #user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
                 #                                                                                                    translated_text=trans_text)
-                para_message = refinement_prompt.format(self.target_language,original_text,trans_text,self.target_language)
+                para_message = refinement_prompt.format(self.source_language, self.target_language,original_text,trans_text,self.target_language)
                 message_list.append(self.continue_conversation_user(user_message=para_message))
                 input_token, output_token,response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,refinement_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 3 data written to excel")
                 # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 #if len(message_list) > 4:
@@ -672,6 +675,7 @@ class RefinementStage1(TranslationStage):
         else:
             self.mock_api(segments,self.stage)
 
+        # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',refinement_prompt, user_message=json.dumps(source_text, ensure_ascii=False), translated_result=json.dumps(response_result, ensure_ascii=False), stage=self.stage, input_token=input_token, output_token=output_token)
         return response_result
 
 
@@ -683,7 +687,7 @@ class RefinementStage2(TranslationStage):
         self.stage_percent = 0
         self.stage = "stage_04"
 
-    def process(self, segments, gloss_terms, document=None, batch_no=None, batch_instance=None):
+    def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         system_prompt = system_prompt.format(target_language=self.target_language)
 
@@ -723,6 +727,7 @@ class RefinementStage2(TranslationStage):
 
         else:
             self.mock_api(segments,self.stage)
+        # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',system_prompt, user_message=json.dumps(source_text, ensure_ascii=False), translated_result=json.dumps(response_result, ensure_ascii=False), stage=self.stage, input_token=input_token, output_token=output_token)
         return response_result
 
 
@@ -757,7 +762,7 @@ class AdaptiveSegmentTranslator:
         # self.task_progress.progress_percent += 25
         # self.task_progress.save()
         # stage_result_ins.stage_03 = refined_segments
-        final_segments = self.refinement_stage_2.process(refined_segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+        final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
         # self.task_progress.progress_percent += 25
         # self.task_progress.save()
         # stage_result_ins.stage_04 = final_segments
