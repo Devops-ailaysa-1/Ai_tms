@@ -744,7 +744,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 						if word_count == 0:
 							raise serializers.ValidationError({"files": [{"file": ["The submitted file is empty."]}]})
 						if word_count > 2000:
-							raise serializers.ValidationError({"msg": "Word count is more than 2000"})
+							raise serializers.ValidationError({"msg": "Word count is more than 10000"})
 					
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
