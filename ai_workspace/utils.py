@@ -397,6 +397,7 @@ class AnthropicAPI:
                 streamed_output += text  
             
         token_usage = stream.get_final_message().usage
+        print(token_usage)
         input_token = token_usage.input_tokens
         output_token = token_usage.output_tokens
        
@@ -729,8 +730,8 @@ class RefinementStage2(TranslationStage):
 
 
 class AdaptiveSegmentTranslator:
-    def __init__(self, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False, document=None):
-        self.api = AnthropicAPI(api_key, model_name)
+    def __init__(self, provider, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False, document=None):
+        self.client = LLMClient(provider, api_key, model_name)
         self.source_language = source_language
         self.target_language = target_language
         self.gloss_terms = gloss_terms
@@ -738,10 +739,10 @@ class AdaptiveSegmentTranslator:
         self.document = document
 
         # Translation stages (New stages can be added)
-        self.style_analysis = StyleAnalysis(self.api, target_language, source_language, group_text_units, self.task_progress)
-        self.initial_translation = InitialTranslation(self.api, target_language, source_language, group_text_units, self.task_progress)
-        self.refinement_stage_1 = RefinementStage1(self.api, target_language, source_language, group_text_units, self.task_progress)
-        self.refinement_stage_2 = RefinementStage2(self.api, target_language, source_language, group_text_units, self.task_progress)
+        self.style_analysis = StyleAnalysis(self.client, target_language, source_language, group_text_units, self.task_progress)
+        self.initial_translation = InitialTranslation(self.client, target_language, source_language, group_text_units, self.task_progress)
+        self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, group_text_units, self.task_progress)
+        self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, group_text_units, self.task_progress)
 
     def process_batch(self, segments, d_batches, batch_no):
         style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
@@ -1050,3 +1051,102 @@ def write_stage_response_in_excel(
     print(f"Data written to: {file_path}")
 
 
+class LLMClient:
+    def __init__(self, provider, api_key, model_name):
+        self.provider = provider.lower()
+        self.api_key = api_key
+        self.model_name = model_name
+
+        if self.provider == "anthropic":
+            from anthropic import Anthropic
+            self.client = Anthropic(api_key=api_key)
+        elif self.provider == "openai":
+            import openai
+            openai.api_key = api_key
+            self.client = openai
+        elif self.provider == "gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel(model_name)
+        else:
+            raise ValueError(f"Unsupported provider: {provider}")
+
+    def send_request(self, messages, max_tokens=4000, stream=False):
+        if self.provider == "anthropic":
+            return self._handle_anthropic(messages, max_tokens, stream)
+        elif self.provider == "openai":
+            return self._handle_openai(messages, max_tokens, stream)
+        elif self.provider == "gemini":
+            return self._handle_gemini(messages, max_tokens, stream)
+        else:
+            raise ValueError("Unknown provider")
+
+    def _handle_anthropic(self, messages, max_tokens, stream):
+        if stream:
+            streamed_output = ""
+            with self.client.messages.stream(
+                model=self.model_name,
+                messages=messages,
+                max_tokens=max_tokens,
+            ) as stream:
+                for text in stream.text_stream:
+                    streamed_output += text
+            usage = stream.get_final_message().usage
+            return usage.input_tokens, usage.output_tokens, streamed_output.strip()
+        else:
+            response = self.client.messages.create(
+                model=self.model_name,
+                messages=messages,
+                max_tokens=max_tokens,
+            )
+            return None, None, response.content[0].text.strip()
+
+    def _handle_openai(self, messages, max_tokens, stream):
+        chat_messages = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
+        response = self.client.ChatCompletion.create(
+            model=self.model_name,
+            messages=chat_messages,
+            max_tokens=max_tokens,
+            stream=stream
+        )
+
+        if stream:
+            output = ""
+            for chunk in response:
+                if "choices" in chunk and chunk["choices"][0]["delta"].get("content"):
+                    output += chunk["choices"][0]["delta"]["content"]
+            return None, None, output.strip()
+        else:
+            content = response.choices[0].message["content"]
+            usage = response.usage
+            return usage.prompt_tokens, usage.completion_tokens, content.strip()
+
+    def _handle_gemini(self, messages, max_tokens, stream):
+        full_prompt = "\n".join(msg["content"] for msg in messages if msg["role"] != "system")
+        print(full_prompt)
+        if stream:
+            output = ""
+            for chunk in self.client.generate_content(full_prompt, stream=True):
+                output += chunk.text
+            return None, None, output.strip()
+        else:
+            response = self.client.generate_content(full_prompt)
+            return response.usage_metadata.prompt_token_count, response.usage_metadata.candidates_token_count, response.text.strip()
+        
+    
+    # def generate(system_prompt,text):
+    #     contents = [types.Content(role="user", parts=[types.Part.from_text(text=text),],),]
+        
+    #     generate_content_config = types.GenerateContentConfig(max_output_tokens=65532,
+    #         response_mime_type="text/plain",
+    #         thinking_config=types.ThinkingConfig(thinking_budget=0),
+    #         system_instruction=[types.Part.from_text(text=system_prompt),],)
+    
+    #     res = client.models.generate_content(
+    #         model=model_name,
+    #         contents=contents,
+    #         config=generate_content_config,
+    #     )
+    
+    
+    #     return res

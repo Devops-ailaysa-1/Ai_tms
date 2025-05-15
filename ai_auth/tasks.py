@@ -45,7 +45,7 @@ from django.db.models.functions import Lower
 from ai_workspace.utils import AdaptiveSegmentTranslator
 from ai_tms.celery import app
 import traceback
-
+from ai_workspace.utils import LLMClient
 
 extend_mail_sent= 0
 
@@ -1453,11 +1453,10 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
     try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
         translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
         print(translated_segments, "translated_segments")
         all_translations = {}
-
         print(group_text_units, "group text units")
         if group_text_units:
             translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
