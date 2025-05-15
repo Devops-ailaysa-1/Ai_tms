@@ -347,7 +347,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-        translate = client.translate(source_string,target_language=target_lang_code,
+        translate = client.translate(source_string,target_language=target_lang_code,source_language=source_lang_code,
                                 format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
