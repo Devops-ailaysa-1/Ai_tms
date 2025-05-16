@@ -586,7 +586,7 @@ class InitialTranslation(TranslationStage):
             translation_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
 
         if self.group_text_units:
-            segments = self.group_strings_max_words(segments, max_words=200)
+            segments = self.group_strings_max_words(segments, max_words=150)
 
         message_list = []
         response_result = []
