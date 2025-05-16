@@ -1077,7 +1077,7 @@ class LLMClient:
         elif self.provider == "openai":
             return self._handle_openai(messages, max_tokens, stream)
         elif self.provider == "gemini":
-            return self._handle_gemini_generate(messages, max_tokens, stream)
+            return self._handle_gemini(messages, max_tokens, stream)
         else:
             raise ValueError("Unknown provider")
 
