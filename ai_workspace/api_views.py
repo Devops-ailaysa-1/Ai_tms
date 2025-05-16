@@ -5361,9 +5361,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
 
                 for batch in batches:
                     task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
-                    progress_data = None
-                    if batch.status != 'FAILED':
-                        progress_data = self.get_progress(batch)
+                    progress_data = self.get_progress(batch)
                     if progress_data!=None:
                         total += progress_data.get('total', 0)
                     else:
