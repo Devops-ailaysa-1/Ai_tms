@@ -1077,7 +1077,7 @@ class LLMClient:
         elif self.provider == "openai":
             return self._handle_openai(messages, max_tokens, stream)
         elif self.provider == "gemini":
-            return self._handle_gemini(messages, max_tokens, stream)
+            return self._handle_gemini_generate(messages, max_tokens, stream)
         else:
             raise ValueError("Unknown provider")
 
@@ -1123,27 +1123,28 @@ class LLMClient:
 
     def _handle_gemini(self, messages, max_tokens, stream):
         full_prompt = "\n".join(msg["content"] for msg in messages if msg["role"] != "system")
-        print(full_prompt)
         if stream:
             output = ""
             for chunk in self.client.generate_content(full_prompt, stream=True):
                 output += chunk.text
             return None, None, output.strip()
         else:
-            response = self.client.generate_content(full_prompt)
+            generation_config = {
+                "max_output_tokens": max_tokens
+            }
+            response = self.client.generate_content(full_prompt, generation_config=generation_config)
             return response.usage_metadata.prompt_token_count, response.usage_metadata.candidates_token_count, response.text.strip()
         
     
-    # def generate(system_prompt,text):
-    #     contents = [types.Content(role="user", parts=[types.Part.from_text(text=text),],),]
+    # def _handle_gemini_generate(self,messages, max_token, stream):
+    #     contents = [types.Content(role="user", parts=[types.Part.from_text(text=messages),],),]
         
     #     generate_content_config = types.GenerateContentConfig(max_output_tokens=65532,
     #         response_mime_type="text/plain",
-    #         thinking_config=types.ThinkingConfig(thinking_budget=0),
-    #         system_instruction=[types.Part.from_text(text=system_prompt),],)
+    #         thinking_config=types.ThinkingConfig(thinking_budget=0))
     
-    #     res = client.models.generate_content(
-    #         model=model_name,
+    #     res = self.client.models.generate_content(
+    #         model=self.model_name,
     #         contents=contents,
     #         config=generate_content_config,
     #     )
