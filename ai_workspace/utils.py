@@ -348,63 +348,6 @@ from django.core.cache import cache
 
 
 
-# Handles API interaction
-class AnthropicAPI:
-    def __init__(self, api_key, model_name):
-        self.client = Anthropic(api_key=api_key)
-        self.model_name = model_name
-        self.tag_prompt = """
-            Tag Translation Guidelines: 
-            - Preserve Tags: Keep all tags (<n>, </n>) exactly as in the original sentence.  
-            - Correct Placement: Place tags in the translated sentence where they correspond naturally based on the target language's structure.  
-            - No Changes:** Do not add, remove, or modify tags.  
-            - Match Tag Count: Ensure the same number of tags in both the source and translated sentence.  
-            - Output Format: Provide only the translated sentence with correctly placed tags, without any extra text.  
-
-            Example:  
-            Input: "Original sentence with <1>tags</1> here."  
-            Output (Translated): "Translated sentence with <1>tags</1> in the correct place."   
-        """
-
-    def send_request(self, messages, max_tokens=40000):
-        # response = self.client.messages.create(
-        #     model=self.model_name,
-        #     # system=[
-        #     #     {
-        #     #     "type": "text",
-        #     #     "text": system_prompt,
-        #     #     "cache_control": {"type": "ephemeral"}
-        #     #     },                        
-        #     #     # {"type": "text",
-        #     #     # "text": self.tag_prompt,
-        #     #     # },
-        #     # ],
-        #     messages=messages,
-        #     max_tokens=max_tokens,
-        #     # temperature=0.3,
-        #     # extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-        # )
-        # return response.content[0].text.strip() if response.content else None
-        streamed_output = ""
-        with self.client.messages.stream(
-            max_tokens=60_000,
-            # system=[{"type": "text",
-            #         "text": system_prompt},                        
-        
-            #         ],
-            messages=messages,
-            model=self.model_name,
-        ) as stream:
-            for text in stream.text_stream:
-                streamed_output += text  
-            
-        token_usage = stream.get_final_message().usage
-        print(token_usage)
-        input_token = token_usage.input_tokens
-        output_token = token_usage.output_tokens
-       
-        return (input_token, output_token, streamed_output.strip())
-
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
         self.api = anthropic_api
@@ -434,12 +377,13 @@ class TranslationStage(ABC):
         grouped = []
         temp = []
         word_count = 0
-        print(segments, "Grouping segments list")
+        print(segments, "All paragraphs")
         for segment in segments:
             segment_word_count = len(segment.split())
 
             if word_count + segment_word_count > max_words:
-                grouped.append("\n\n".join(temp))
+                if temp:
+                    grouped.append("\n\n".join(temp))
                 temp = [segment]
                 word_count = segment_word_count
             else:
@@ -518,7 +462,6 @@ class StyleAnalysis(TranslationStage):
             else:break
         combined_text = "".join(combined_text_list)
 
-        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
         prompt = f"""Analyze the following text and provide a comprehensive description of its:
         1. Writing tone and style
         2. Emotional conduct
@@ -539,22 +482,19 @@ class StyleAnalysis(TranslationStage):
             if combined_text:
                 messages = [self.continue_conversation_user(prompt)]
                 print(messages, "user message")
+
                 result_content_prompt = self.api.send_request(messages)
-                self.style_text = result_content_prompt
                 
                 self.set_progress(stage=self.stage, stage_percent=100)
                 
                 if os.getenv('ANALYTICS') == 'True':
-
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 1 data written to excel")
                 # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                 return result_content_prompt
-            else:
-                self.style_text = None
-                return None
+            return None
+        
         else:
-            # self.set_progress(stage=self.stage, stage_percent=100)
             self.mock_api(combined_text,self.stage)
             return None
 
@@ -562,22 +502,18 @@ class StyleAnalysis(TranslationStage):
 class InitialTranslation(TranslationStage):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
         super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
-        # self.stage_weight = 40
         self.stage_percent = 0
         self.stage = "stage_02"
 
     def process(self, segments, style_prompt, gloss_terms, d_batches, document=None, batch_no=None, batch_instance=None):
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
+        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+        # system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
 
 
         translation_prompt = """
         Translate the following text from {0} to {1},while adhering to the provided style guidelines. Ensure the translation closely resembles the source sentence in meaning, tone, and structure.    
-    
-        
         Style Guidelines:
         {2}
-        
         Ensure both accuracy and natural fluency while translating.
         The translation should read as if it were originally written in {3}, maintaining authentic {4} syntax and style.
         Choose words and expressions that are semantically and pragmatically appropriate for the target language, considering the full context.
@@ -586,7 +522,6 @@ class InitialTranslation(TranslationStage):
      
         Text to translate:
         {6}
-
 """
 
         if gloss_terms:
@@ -628,16 +563,14 @@ class InitialTranslation(TranslationStage):
 class RefinementStage1(TranslationStage):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
         super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
-        # self.stage_weight = 0.25
         self.stage_percent = 0
         self.stage = "stage_03"
 
     def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        system_prompt = system_prompt.format(target_language=self.target_language)
+        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+        # system_prompt = system_prompt.format(target_language=self.target_language)
 
         refinement_prompt = """Review and refine the following translation from {0} to {1}..
-        
         Source:
         {2}
         
@@ -690,16 +623,14 @@ class RefinementStage1(TranslationStage):
 class RefinementStage2(TranslationStage):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
         super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
-        # self.stage_weight = 0.25
         self.stage_percent = 0
         self.stage = "stage_04"
 
     def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        system_prompt = system_prompt.format(target_language=self.target_language)
+        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+        # system_prompt = system_prompt.format(target_language=self.target_language)
 
         final_refinement_prompt = """Text:{0}
-
         Focus the {1} content and rewrite it as if it is originally conceived and written in {2} itself. The text should be in the modern standard {3}. The changes must only be in syntax. The core words, terminologies, named entities, and keywords and their meaning, sense and emphasis shouldn't be changed.
         If no changes are needed, return the same {4} without any acknowledgment. Otherwise, provide the modified {5} sentence.
         Note: No feedback or any sort of additional information should be provided."""
@@ -747,7 +678,6 @@ class AdaptiveSegmentTranslator:
         self.task_progress = task_progress
         self.document = document
 
-        # Translation stages (New stages can be added)
         self.style_analysis = StyleAnalysis(self.client, target_language, source_language, group_text_units, self.task_progress)
         self.initial_translation = InitialTranslation(self.client, target_language, source_language, group_text_units, self.task_progress)
         self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, group_text_units, self.task_progress)
@@ -755,25 +685,10 @@ class AdaptiveSegmentTranslator:
 
     def process_batch(self, segments, d_batches, batch_no):
         style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
-        # self.task_progress.progress_percent += 10
-        # self.task_progress.save()
-        # stage_result_ins.stage_01 = style_guideline
-        
         segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
-        # progress_data = self.get_progress()
-        # self.task_progress.progress_percent += 40
-        # self.task_progress.save()
-        # stage_result_ins.stage_02 = translated_segments
         self.initial_translation.update_progress_db()
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        # self.task_progress.progress_percent += 25
-        # self.task_progress.save()
-        # stage_result_ins.stage_03 = refined_segments
         final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        # self.task_progress.progress_percent += 25
-        # self.task_progress.save()
-        # stage_result_ins.stage_04 = final_segments
-        # stage_result_ins.save()
         self.refinement_stage_2.update_progress_db()
         return final_segments
     
@@ -878,42 +793,6 @@ class AdaptiveSegmentTranslator:
         
         return language_name
 
-
-# from google import genai
-
-# def translate_with_gemini_fallback(segments_data, source_lang, target_lang):
-#     try:
-#         prompt = f"""
-#             You are a professional translator.
-
-#             Input: A list of segment sentences in {source_lang}.
-#             Output: The same list rewritten in Modern Standard {target_lang}, preserving meaning, tone, and technical terms.
-
-#             **Format output strictly as JSON.**
-#             Each translated item must be formatted like:
-#             {{
-#             "segment_id": int,
-#             "translated_text": str
-#             }}
-
-#             Do NOT return any markdown or extra comments. Output must be a plain JSON array only.
-
-#             Translate and rewrite this list:
-
-#             {json.dumps(segments_data, ensure_ascii=False)}
-#         """
-
-#         client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
-#         response = client.models.generate_content(
-#             model='gemini-2.0-flash',
-#             contents=prompt,
-#         )
-#         print(response.text, "Formatted by fallback gemini")
-#         return response.text
-    
-#     except Exception as e:
-#         print(e)
-#         return []
 
 
 def word_count_find(task):
@@ -1074,11 +953,12 @@ class LLMClient:
             openai.api_key = api_key
             self.client = openai
         elif self.provider == "gemini":
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            print(self.provider, "Provider")
-            print(self.model_name, "Model name")
-            self.client = genai.GenerativeModel(self.model_name)
+            import google.generativeai as genaideprecate
+            from google import genai
+            # genaideprecate.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
+            # self.client = genaideprecate.GenerativeModel(self.model_name)
+            self.client = client
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -1088,7 +968,9 @@ class LLMClient:
         elif self.provider == "openai":
             return self._handle_openai(messages, max_tokens, stream)
         elif self.provider == "gemini":
-            return self._handle_gemini(messages, max_tokens, stream)
+            # return self._handle_gemini(messages, max_tokens, stream)
+            return self._handle_genai(messages)
+        
         else:
             raise ValueError("Unknown provider")
 
@@ -1147,16 +1029,30 @@ class LLMClient:
                     output += chunk.text
                 return output.strip()
             else:
-                # generation_config = {
-                #     "max_output_tokens": max_tokens
-                # }
                 response = self.client.generate_content(full_prompt)
                 print(response, "response")
                 print(response.text, "response_text")
                 return response.text
-                # if response.result:
-                #     return response.result.candidates[0].content.parts[0].text
-                # else:
-                #     return ''
         except Exception as e:
             print(e)
+    
+
+    def _handle_genai(self, messages):
+        # Using genai package instead of generativeai
+        from google.genai import types
+        messages = messages[0]['content']
+        contents = [ types.Content(role="user", parts=[types.Part.from_text(text=messages),],),]
+    
+        generate_content_config = types.GenerateContentConfig(max_output_tokens=65532,
+            response_mime_type="text/plain",
+            )
+    
+        res = self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            config=generate_content_config,
+        )
+
+        print(res.usage_metadata, "usage data")
+        print(res)
+        return res.candidates[0].content.parts[0].text

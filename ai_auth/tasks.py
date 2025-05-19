@@ -1548,7 +1548,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
         for i, para in enumerate(batches):
-            metadata = d_batches[i] 
+            metadata = d_batches[i]
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 kwargs={
