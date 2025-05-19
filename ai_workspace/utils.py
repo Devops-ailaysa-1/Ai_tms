@@ -7,6 +7,8 @@ import string
 import re
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 import nltk
+import backoff
+
 from ai_staff.models import AdaptiveSystemPrompt
 
 async def detect_lang(text):
@@ -428,11 +430,11 @@ class TranslationStage(ABC):
             "content": user_message
         }
 
-    def group_strings_max_words(self, segments, max_words=200):
+    def group_strings_max_words(self, segments, max_words):
         grouped = []
         temp = []
         word_count = 0
-
+        print(segments, "Grouping segments list")
         for segment in segments:
             segment_word_count = len(segment.split())
 
@@ -447,6 +449,8 @@ class TranslationStage(ABC):
         if temp:
             grouped.append("\n\n".join(temp))
 
+        print(grouped, "merged paragraphs")
+        print(len(grouped), "merged paragraphs length")
         return grouped
 
     def get_progress(self):
@@ -534,10 +538,14 @@ class StyleAnalysis(TranslationStage):
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             if combined_text:
                 messages = [self.continue_conversation_user(prompt)]
-                input_token, output_token,result_content_prompt = self.api.send_request(messages)
+                print(messages, "user message")
+                result_content_prompt = self.api.send_request(messages)
                 self.style_text = result_content_prompt
+                
                 self.set_progress(stage=self.stage, stage_percent=100)
+                
                 if os.getenv('ANALYTICS') == 'True':
+
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                     logger.info(f"Stage 1 data written to excel")
                 # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
@@ -595,8 +603,9 @@ class InitialTranslation(TranslationStage):
         if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
             for para in segments:
                 para_message = translation_prompt.format(self.source_language, self.target_language, style_prompt,self.target_language,self.target_language,self.target_language,para)
+                print(para_message, "user message")
                 message_list.append(self.continue_conversation_user(user_message=para_message))
-                input_token, output_token,response_text = self.api.send_request(message_list)
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,translation_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
@@ -658,7 +667,7 @@ class RefinementStage1(TranslationStage):
                 #                                                                                                    translated_text=trans_text)
                 para_message = refinement_prompt.format(self.source_language, self.target_language,original_text,trans_text,self.target_language)
                 message_list.append(self.continue_conversation_user(user_message=para_message))
-                input_token, output_token,response_text = self.api.send_request(message_list)
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,refinement_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
@@ -711,7 +720,7 @@ class RefinementStage2(TranslationStage):
                                                               self.target_language)
                 # instruct_text = """{} sentence: {}""".format(self.target_language,para)
                 message_list.append(self.continue_conversation_user(user_message=para_message))
-                input_token, output_token, response_text = self.api.send_request(message_list)
+                response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
                     write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
@@ -1067,7 +1076,9 @@ class LLMClient:
         elif self.provider == "gemini":
             import google.generativeai as genai
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel(model_name)
+            print(self.provider, "Provider")
+            print(self.model_name, "Model name")
+            self.client = genai.GenerativeModel(self.model_name)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -1121,33 +1132,31 @@ class LLMClient:
             usage = response.usage
             return usage.prompt_tokens, usage.completion_tokens, content.strip()
 
+    @backoff.on_exception(
+    backoff.expo,  
+    Exception,    
+    max_tries=2,
+    jitter=backoff.full_jitter
+)
     def _handle_gemini(self, messages, max_tokens, stream):
-        full_prompt = "\n".join(msg["content"] for msg in messages if msg["role"] != "system")
-        if stream:
-            output = ""
-            for chunk in self.client.generate_content(full_prompt, stream=True):
-                output += chunk.text
-            return None, None, output.strip()
-        else:
-            generation_config = {
-                "max_output_tokens": max_tokens
-            }
-            response = self.client.generate_content(full_prompt, generation_config=generation_config)
-            return response.usage_metadata.prompt_token_count, response.usage_metadata.candidates_token_count, response.text.strip()
-        
-    
-    # def _handle_gemini_generate(self,messages, max_token, stream):
-    #     contents = [types.Content(role="user", parts=[types.Part.from_text(text=messages),],),]
-        
-    #     generate_content_config = types.GenerateContentConfig(max_output_tokens=65532,
-    #         response_mime_type="text/plain",
-    #         thinking_config=types.ThinkingConfig(thinking_budget=0))
-    
-    #     res = self.client.models.generate_content(
-    #         model=self.model_name,
-    #         contents=contents,
-    #         config=generate_content_config,
-    #     )
-    
-    
-    #     return res
+        try:
+            full_prompt = "\n".join(msg["content"] for msg in messages if msg["role"] != "system")
+            if stream:
+                output = ""
+                for chunk in self.client.generate_content(full_prompt, stream=True):
+                    output += chunk.text
+                return output.strip()
+            else:
+                # generation_config = {
+                #     "max_output_tokens": max_tokens
+                # }
+                response = self.client.generate_content(full_prompt)
+                print(response, "response")
+                print(response.text, "response_text")
+                return response.text
+                # if response.result:
+                #     return response.result.candidates[0].content.parts[0].text
+                # else:
+                #     return ''
+        except Exception as e:
+            print(e)
