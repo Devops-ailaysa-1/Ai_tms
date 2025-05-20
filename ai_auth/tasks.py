@@ -44,7 +44,8 @@ import time
 from django.db.models.functions import Lower
 from ai_workspace.utils import AdaptiveSegmentTranslator
 from ai_tms.celery import app
-
+import traceback
+from ai_workspace.utils import LLMClient
 
 extend_mail_sent= 0
 
@@ -1430,29 +1431,33 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units):
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None, batch_no=None):
     from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace.models import TaskStageResults
-    from json_repair import repair_json
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
     # seg_ids = [segment["segment_id"] for segment in segments_data]
-    # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, seg_ids, None)
-    # if consumable_credits < user.credit_balance.get("total_left"):
-    #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-    # else:
-    #     logger.info("Insufficient credits for segment translation")
-    #     raise ValueError("Insufficient credits for segment translation")
+    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
+    if consumable_credits < user.credit_balance.get("total_left"):
+        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    else:
+        logger.info("Insufficient credits for segment translation")
+        raise ValueError("Insufficient credits for segment translation")
     
-    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=adaptive_segment_translation.request.id)
+    if failed_batch == True:
+        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+    else:
+        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+
     try:
-        translator = AdaptiveSegmentTranslator(source_lang, target_lang, os.getenv('ANTHROPIC_API_KEY') ,os.getenv('ANTHROPIC_MODEL_NAME'), gloss_terms, batch_status, group_text_units=group_text_units)
-        translated_segments = translator.process_batch(segments, d_batches)
+        translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
         print(translated_segments, "translated_segments")
         all_translations = {}
-
+        print(group_text_units, "group text units")
         if group_text_units:
             translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
 
@@ -1484,12 +1489,15 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
     except Exception as e:
         logger.error(f"Batch task failed: {e}")
-        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id=adaptive_segment_translation.request.id).first()
+        batch_status = TrackSegmentsBatchStatus.objects.filter(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id).first()
         if batch_status:
             batch_status.status = BatchStatus.FAILED
             batch_status
             batch_status.save()
-
+        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+        task.save()
+        logger.error("Adaptive segment translation failed and task marked as FAILED")
+        logger.error("Exception occurred:\n%s", traceback.format_exc())
 
 
 def create_batch_by_para(doc_id, min_words_per_batch=1500):
@@ -1540,9 +1548,12 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
         for i, para in enumerate(batches):
-            metadata = d_batches[i] 
+            metadata = d_batches[i]
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
+                kwargs={
+                    'batch_no': f"batch_{i+1}",
+                },
                 queue='high-priority'
             )
             TrackSegmentsBatchStatus.objects.create(

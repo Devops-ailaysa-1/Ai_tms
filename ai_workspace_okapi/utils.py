@@ -347,7 +347,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-        translate = client.translate(source_string,target_language=target_lang_code,
+        translate = client.translate(source_string,target_language=target_lang_code,source_language=source_lang_code,
                                 format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
@@ -801,4 +801,14 @@ def get_credit_count(task_type,word_count):
     elif task_type == "document_translation_ocr":
         return 2*word_count
     elif task_type == "document_translation_adaptive":
-        return 1.5*word_count
+        return 1*word_count
+
+def save_simple_file(http_response, output_file_path):
+    directory = os.path.dirname(output_file_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    with open(output_file_path, 'wb') as f:
+        f.write(http_response.content)
+
+    return os.path.abspath(output_file_path)
