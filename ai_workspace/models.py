@@ -2019,3 +2019,7 @@ class TaskStageResults(models.Model):
     stage_04 = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+
+

@@ -42,10 +42,10 @@ from django.db import connection
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 import time
 from django.db.models.functions import Lower
-from ai_workspace.utils import AdaptiveSegmentTranslator
+from ai_workspace.adaptive import AdaptiveSegmentTranslator
 from ai_tms.celery import app
 import traceback
-from ai_workspace.utils import LLMClient
+from ai_workspace.adaptive import LLMClient
 
 extend_mail_sent= 0
 

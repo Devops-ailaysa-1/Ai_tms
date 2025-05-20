@@ -766,3 +766,7 @@ class SegmentDiff(models.Model):
 
     def __str__(self) -> str:
         return self.sentense_diff_result
+
+
+
+
