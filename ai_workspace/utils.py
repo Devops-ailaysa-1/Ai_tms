@@ -669,143 +669,131 @@ class RefinementStage2(TranslationStage):
         return response_result
 
 
-class AdaptiveSegmentTranslator:
-    def __init__(self, provider, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False, document=None):
-        self.client = LLMClient(provider, api_key, model_name)
-        self.source_language = source_language
-        self.target_language = target_language
-        self.gloss_terms = gloss_terms
-        self.task_progress = task_progress
-        self.document = document
-        self.group_text_units = group_text_units
+# class AdaptiveSegmentTranslator:
+#     def __init__(self, provider, source_language, target_language, api_key, model_name, gloss_terms, task_progress, group_text_units=False, document=None):
+#         self.client = LLMClient(provider, api_key, model_name)
+#         self.source_language = source_language
+#         self.target_language = target_language
+#         self.gloss_terms = gloss_terms
+#         self.task_progress = task_progress
+#         self.document = document
+#         self.group_text_units = group_text_units
 
-        self.style_analysis = StyleAnalysis(self.client, target_language, source_language, self.group_text_units, self.task_progress)
-        self.initial_translation = InitialTranslation(self.client, target_language, source_language, self.group_text_units, self.task_progress)
-        self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, self.group_text_units, self.task_progress)
-        self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+#         self.style_analysis = StyleAnalysis(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+#         self.initial_translation = InitialTranslation(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+#         self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+#         self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, self.group_text_units, self.task_progress)
 
-    def process_batch(self, segments, d_batches, batch_no):
-        from ai_workspace.models import TaskStageResults
-        style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
-        store_result = TaskStageResults.objects.filter(task=self.document.task_obj, celery_task_batch=batch_no).first()
+#     def process_batch(self, segments, d_batches, batch_no):
+#         from ai_workspace.models import TaskStageResults
+#         style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
+#         store_result = TaskStageResults.objects.filter(task=self.document.task_obj, celery_task_batch=batch_no).first()
 
-        if not store_result:
-            store_result = TaskStageResults.objects.create(task=self.document.task_obj,celery_task_batch=batch_no, stage_01=style_guideline, group_text_units=self.group_text_units)
-        else:
-            store_result.group_text_units = self.group_text_units
-            store_result.stage_01 = style_guideline
+#         if not store_result:
+#             store_result = TaskStageResults.objects.create(task=self.document.task_obj,celery_task_batch=batch_no, stage_01=style_guideline, group_text_units=self.group_text_units)
+#         else:
+#             store_result.group_text_units = self.group_text_units
+#             store_result.stage_01 = style_guideline
 
-        segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
-        store_result.stage_02 = translated_segments
-        self.initial_translation.update_progress_db()
-        refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        store_result.stage_03 = refined_segments
-        final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        self.refinement_stage_2.update_progress_db()
-        store_result.stage_04 = final_segments
-        store_result.save()
-        return final_segments
+#         segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
+#         store_result.stage_02 = translated_segments
+#         self.initial_translation.update_progress_db()
+#         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+#         store_result.stage_03 = refined_segments
+#         final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+#         self.refinement_stage_2.update_progress_db()
+#         store_result.stage_04 = final_segments
+#         store_result.save()
+#         return final_segments
     
 
-    def extract_tags(self, text):
-        """Extract all XML-like tags (e.g. <1>, </1>, <n>, </n>)."""
-        return re.findall(r"</?[a-zA-Z0-9]+>", text)
+#     def extract_tags(self, text):
+#         """Extract all XML-like tags (e.g. <1>, </1>, <n>, </n>)."""
+#         return re.findall(r"</?[a-zA-Z0-9]+>", text)
 
-    def handle_batch_translation_tags(self, segments, translated_segments):
-        """
-        Validate and clean up XML-like tags in translated segments based on original source segments.
-        Ensures that translated output has all required tags and removes unexpected ones.
-        """
-        try:
-            if isinstance(translated_segments, str):
-                try:
-                    json_ts = json.loads(translated_segments)
-                except json.JSONDecodeError as e:
-                    try:
-                        json_ts = repair_json(translated_segments,return_objects=True)
-                        logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
-                    except json.JSONDecodeError as e:
-                        logger.info(f"Failed to parse JSON from translation output {e}!")
-                        return translated_segments
-            else:
-                json_ts = translated_segments
+#     def handle_batch_translation_tags(self, segments, translated_segments):
+#         """
+#         Validate and clean up XML-like tags in translated segments based on original source segments.
+#         Ensures that translated output has all required tags and removes unexpected ones.
+#         """
+#         try:
+#             if isinstance(translated_segments, str):
+#                 try:
+#                     json_ts = json.loads(translated_segments)
+#                 except json.JSONDecodeError as e:
+#                     try:
+#                         json_ts = repair_json(translated_segments,return_objects=True)
+#                         logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
+#                     except json.JSONDecodeError as e:
+#                         logger.info(f"Failed to parse JSON from translation output {e}!")
+#                         return translated_segments
+#             else:
+#                 json_ts = translated_segments
 
-            text_lang = self.get_first_translated_text_and_language(json_ts)
-            if text_lang != self.target_language:
-                logger.info(
-                    f"Language mismatch detected. First segment language: {text_lang}, target language: {self.target_language}"
-                )
+#             text_lang = self.get_first_translated_text_and_language(json_ts)
+#             if text_lang != self.target_language:
+#                 logger.info(
+#                     f"Language mismatch detected. First segment language: {text_lang}, target language: {self.target_language}"
+#                 )
 
-            segment_map = {seg["segment_id"]: seg for seg in segments}
+#             segment_map = {seg["segment_id"]: seg for seg in segments}
 
-            for translated in json_ts:
-                segment_id = translated.get("segment_id")
-                translated_text = translated.get("translated_text", "")
+#             for translated in json_ts:
+#                 segment_id = translated.get("segment_id")
+#                 translated_text = translated.get("translated_text", "")
 
-                source_segment = segment_map.get(segment_id)
-                if not source_segment:
-                    logger.error(f"[Segment {segment_id}] Source segment not found.")
-                    continue
+#                 source_segment = segment_map.get(segment_id)
+#                 if not source_segment:
+#                     logger.error(f"[Segment {segment_id}] Source segment not found.")
+#                     continue
 
-                if not translated_text:
-                    logger.error(f"[Segment {segment_id}] Translated text is empty.")
-                    continue
+#                 if not translated_text:
+#                     logger.error(f"[Segment {segment_id}] Translated text is empty.")
+#                     continue
 
-                source_tags = set(self.extract_tags(source_segment.get("tagged_source", "")))
-                translated_tags = set(self.extract_tags(translated_text))
+#                 source_tags = set(self.extract_tags(source_segment.get("tagged_source", "")))
+#                 translated_tags = set(self.extract_tags(translated_text))
 
-                missing_tags = source_tags - translated_tags
-                extra_tags = translated_tags - source_tags
+#                 missing_tags = source_tags - translated_tags
+#                 extra_tags = translated_tags - source_tags
 
-                if missing_tags:
-                    logger.error(f"[Segment {segment_id}] Missing tags: {missing_tags}")
+#                 if missing_tags:
+#                     logger.error(f"[Segment {segment_id}] Missing tags: {missing_tags}")
 
-                if extra_tags:
-                    logger.error(f"[Segment {segment_id}] Unwanted tags: {extra_tags}")
+#                 if extra_tags:
+#                     logger.error(f"[Segment {segment_id}] Unwanted tags: {extra_tags}")
 
-                # Clean translated text from unexpected tags
-                cleaned_parts = []
-                for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
-                    if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
-                        if part in source_tags:
-                            cleaned_parts.append(part)
-                        else:
-                            logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
-                    else:
-                        cleaned_parts.append(part)
+#                 # Clean translated text from unexpected tags
+#                 cleaned_parts = []
+#                 for part in re.split(r"(</?[a-zA-Z0-9]+>)", translated_text):
+#                     if re.fullmatch(r"</?[a-zA-Z0-9]+>", part):
+#                         if part in source_tags:
+#                             cleaned_parts.append(part)
+#                         else:
+#                             logger.info(f"[Segment {segment_id}] Removed unexpected tag: {part}")
+#                     else:
+#                         cleaned_parts.append(part)
 
-                translated["translated_text"] = "".join(cleaned_parts).strip()
+#                 translated["translated_text"] = "".join(cleaned_parts).strip()
 
-            return json_ts  
+#             return json_ts  
 
-        except Exception as e:
-            logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
-            return translated_segments
-
-    
-    # translated_paragraphs = response_text.strip().split("\n\n")
-    # ids = list(text_unit_dict.keys())
-
-    # if len(ids) != len(translated_paragraphs):
-    #     raise ValueError("Mismatch between original and translated paragraph counts")
-
-    # for i, text_unit_id in enumerate(ids):
-    #     translated_para = translated_paragraphs[i]
-    #     # Save the translation to the related MergedTextUnit
-    #     MergedTextUnit.objects.filter(text_unit_id=text_unit_id).update(target_para=translated_para)
+#         except Exception as e:
+#             logger.exception(f"Unhandled error during tag validation in batch translation - {e}")
+#             return translated_segments
 
 
-    def get_first_translated_text_and_language(self,translated_segments):
-        from ai_staff.models import LanguagesLocale
-        translated_text = translated_segments[0]["translated_text"]
-        language_code = detect(translated_text)    
-        try:
-            language_name = LanguagesLocale.objects.get(locale_code=language_code)
-            language_name = language_name.language.language
-        except LanguagesLocale.DoesNotExist:
-            language_name = ''
+#     def get_first_translated_text_and_language(self,translated_segments):
+#         from ai_staff.models import LanguagesLocale
+#         translated_text = translated_segments[0]["translated_text"]
+#         language_code = detect(translated_text)    
+#         try:
+#             language_name = LanguagesLocale.objects.get(locale_code=language_code)
+#             language_name = language_name.language.language
+#         except LanguagesLocale.DoesNotExist:
+#             language_name = ''
         
-        return language_name
+#         return language_name
 
 
 
@@ -952,101 +940,3 @@ def write_stage_response_in_excel(
 
     wb.save(file_path)
     print(f"Data written to: {file_path}")
-
-
-class LLMClient:
-    def __init__(self, provider, api_key, model_name):
-        self.provider = provider.lower()
-        self.api_key = api_key
-        self.model_name = model_name
-
-        if self.provider == "anthropic":
-            from anthropic import Anthropic
-            self.client = Anthropic(api_key=api_key)
-        elif self.provider == "openai":
-            import openai
-            openai.api_key = api_key
-            self.client = openai
-        elif self.provider == "gemini":
-            import google.generativeai as genaideprecate
-            from google import genai
-            # genaideprecate.configure(api_key=api_key)
-            client = genai.Client(api_key=api_key)
-            # self.client = genaideprecate.GenerativeModel(self.model_name)
-            self.client = client
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
-
-    def send_request(self, messages, max_tokens=4000, stream=False):
-        if self.provider == "anthropic":
-            return self._handle_anthropic(messages, max_tokens, stream)
-        elif self.provider == "openai":
-            return self._handle_openai(messages, max_tokens, stream)
-        elif self.provider == "gemini":
-            # return self._handle_gemini(messages, max_tokens, stream=True)
-            return self._handle_genai(messages)
-        
-        else:
-            raise ValueError("Unknown provider")
-
-    def _handle_anthropic(self, messages, max_tokens, stream):
-        if stream:
-            streamed_output = ""
-            with self.client.messages.stream(
-                model=self.model_name,
-                messages=messages,
-                max_tokens=max_tokens,
-            ) as stream:
-                for text in stream.text_stream:
-                    streamed_output += text
-            usage = stream.get_final_message().usage
-            return usage.input_tokens, usage.output_tokens, streamed_output.strip()
-        else:
-            response = self.client.messages.create(
-                model=self.model_name,
-                messages=messages,
-                max_tokens=max_tokens,
-            )
-            return None, None, response.content[0].text.strip()
-
-    def _handle_openai(self, messages, max_tokens, stream):
-        chat_messages = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
-        response = self.client.ChatCompletion.create(
-            model=self.model_name,
-            messages=chat_messages,
-            max_tokens=max_tokens,
-            stream=stream
-        )
-
-        if stream:
-            output = ""
-            for chunk in response:
-                if "choices" in chunk and chunk["choices"][0]["delta"].get("content"):
-                    output += chunk["choices"][0]["delta"]["content"]
-            return None, None, output.strip()
-        else:
-            content = response.choices[0].message["content"]
-            usage = response.usage
-            return usage.prompt_tokens, usage.completion_tokens, content.strip()
-
-
-    def _handle_genai(self, messages):
-        # Using genai package instead of generativeai
-        from google.genai import types
-    
-        messages = messages[0]['content']
-        contents = [ types.Content(role="user", parts=[types.Part.from_text(text=messages),],),]
-    
-        generate_content_config = types.GenerateContentConfig(max_output_tokens=65532,
-            response_mime_type="text/plain",
-            )
-    
-        res = self.client.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            config=generate_content_config,
-        )
-
-        print(res.usage_metadata, "usage data")
-        print(res)
-        return res.candidates[0].content.parts[0].text
