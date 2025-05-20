@@ -488,7 +488,7 @@ class StyleAnalysis(TranslationStage):
                 self.set_progress(stage=self.stage, stage_percent=100)
                 
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage)
                     logger.info(f"Stage 1 data written to excel")
                 # write_stage_response_in_excel(document.project, document.task_obj.id, 'Stages_Final_Result',prompt, user_message=json.dumps(messages, ensure_ascii=False), translated_result=result_content_prompt, stage=self.stage,input_token=input_token, output_token=output_token)
                 return result_content_prompt
@@ -543,7 +543,7 @@ class InitialTranslation(TranslationStage):
                 response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,translation_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,translation_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
                     logger.info(f"Stage 2 data written to excel")
                 #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 #if len(message_list) > 4:
@@ -603,7 +603,7 @@ class RefinementStage1(TranslationStage):
                 response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,refinement_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,refinement_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
                     logger.info(f"Stage 3 data written to excel")
                 # message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 #if len(message_list) > 4:
@@ -654,7 +654,7 @@ class RefinementStage2(TranslationStage):
                 response_text = self.api.send_request(message_list)
                 response_result.append(response_text)
                 if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
+                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,final_refinement_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage)
                     logger.info(f"Stage 4 data written to excel")
                 #message_list.append(self.continue_conversation_assistant(assistant_message=response_text))
                 # if len(message_list) > 4:
@@ -677,19 +677,33 @@ class AdaptiveSegmentTranslator:
         self.gloss_terms = gloss_terms
         self.task_progress = task_progress
         self.document = document
+        self.group_text_units = group_text_units
 
-        self.style_analysis = StyleAnalysis(self.client, target_language, source_language, group_text_units, self.task_progress)
-        self.initial_translation = InitialTranslation(self.client, target_language, source_language, group_text_units, self.task_progress)
-        self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, group_text_units, self.task_progress)
-        self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, group_text_units, self.task_progress)
+        self.style_analysis = StyleAnalysis(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+        self.initial_translation = InitialTranslation(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+        self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, self.group_text_units, self.task_progress)
+        self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, self.group_text_units, self.task_progress)
 
     def process_batch(self, segments, d_batches, batch_no):
+        from ai_workspace.models import TaskStageResults
         style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
+        store_result = TaskStageResults.objects.filter(task=self.document.task_obj, celery_task_batch=batch_no).first()
+
+        if not store_result:
+            store_result = TaskStageResults.objects.create(task=self.document.task_obj,celery_task_batch=batch_no, stage_01=style_guideline, group_text_units=self.group_text_units)
+        else:
+            store_result.group_text_units = self.group_text_units
+            store_result.stage_01 = style_guideline
+
         segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
+        store_result.stage_02 = translated_segments
         self.initial_translation.update_progress_db()
         refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+        store_result.stage_03 = refined_segments
         final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
         self.refinement_stage_2.update_progress_db()
+        store_result.stage_04 = final_segments
+        store_result.save()
         return final_segments
     
 
@@ -867,10 +881,11 @@ def re_initiate_failed_batch(task, project):
                 metadata[text_unit.text_unit.id] = text_unit.source_para
             
             adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 kwargs={
                     'failed_batch': True,
                     'celery_task_id': failed_task_batch.celery_task_id,
+                    'batch_no': failed_task_batch.celery_task_batch
                 },
                 queue='high-priority'
             )
@@ -899,15 +914,15 @@ def write_stage_response_in_excel(
     translated_result,
     stage,
     base_dir="Translation_Results",
-    input_token=None,
-    output_token=None
+    input_token=0,
+    output_token=0
 ):
     os.makedirs(base_dir, exist_ok=True)
 
     project_task_folder = os.path.join(base_dir, f"{project_id}_{task_id}")
     os.makedirs(project_task_folder, exist_ok=True)
 
-    file_path = os.path.join(project_task_folder, f"{batch_no}.xlsx")
+    file_path = os.path.join(project_task_folder, f"batch_{batch_no}.xlsx")
 
     try:
         if os.path.exists(file_path):
@@ -921,7 +936,7 @@ def write_stage_response_in_excel(
     if "Sheet" in wb.sheetnames and wb["Sheet"].max_row == 1:
         wb.remove(wb["Sheet"])
 
-    sheet_name = batch_no
+    sheet_name = f"batch_{batch_no}"
     if sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
     else:
@@ -968,7 +983,7 @@ class LLMClient:
         elif self.provider == "openai":
             return self._handle_openai(messages, max_tokens, stream)
         elif self.provider == "gemini":
-            # return self._handle_gemini(messages, max_tokens, stream)
+            # return self._handle_gemini(messages, max_tokens, stream=True)
             return self._handle_genai(messages)
         
         else:
@@ -1014,32 +1029,11 @@ class LLMClient:
             usage = response.usage
             return usage.prompt_tokens, usage.completion_tokens, content.strip()
 
-    @backoff.on_exception(
-    backoff.expo,  
-    Exception,    
-    max_tries=2,
-    jitter=backoff.full_jitter
-)
-    def _handle_gemini(self, messages, max_tokens, stream):
-        try:
-            full_prompt = "\n".join(msg["content"] for msg in messages if msg["role"] != "system")
-            if stream:
-                output = ""
-                for chunk in self.client.generate_content(full_prompt, stream=True):
-                    output += chunk.text
-                return output.strip()
-            else:
-                response = self.client.generate_content(full_prompt)
-                print(response, "response")
-                print(response.text, "response_text")
-                return response.text
-        except Exception as e:
-            print(e)
-    
 
     def _handle_genai(self, messages):
         # Using genai package instead of generativeai
         from google.genai import types
+    
         messages = messages[0]['content']
         contents = [ types.Content(role="user", parts=[types.Part.from_text(text=messages),],),]
     
