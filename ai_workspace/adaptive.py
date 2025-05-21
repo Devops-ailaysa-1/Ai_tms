@@ -6,6 +6,8 @@ from django.core.cache import cache
 import time,os
 from ai_staff.models import AdaptiveSystemPrompt
 import logging
+from ai_workspace.models import AllStageResult 
+
 logger = logging.getLogger('django')
 
 
@@ -49,7 +51,7 @@ class LLMClient:
             elif self.provider == "gemini":
                 from google import genai
 
-                client = genai.Client(api_key=os.environ['gemini_api_key'])
+                client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
                 self.client = client
 
             else:
@@ -118,30 +120,17 @@ class LLMClient:
             return usage.prompt_tokens, usage.completion_tokens, content.strip()
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
-
     def _handle_genai(self, messages, system_instruction):
-        print("messages")
-        print(messages)
-
-        print("system_instruction")
-        print(system_instruction)
-
-
-        print(self.model_name)
 
         if messages:
 
-            print(os.environ['gemini_api_key'])
-            
             from google import genai
-            client = genai.Client(api_key = os.environ['gemini_api_key'])
-
-
+            client = genai.Client(api_key = os.environ['GEMINI_API_KEY'])
 
             contents = [
                         types.Content(
                             role="user",
-                            parts=[types.Part.from_text(text="Hi this is Test")]
+                            parts=[types.Part.from_text(text=messages)]
                         )
             ]
 
@@ -152,7 +141,6 @@ class LLMClient:
                 safety_settings = safety_settings,
                 system_instruction = system_instruction ,
                 top_p=1.0, top_k=0,
-
             )
 
             res = client.models.generate_content(
@@ -161,7 +149,6 @@ class LLMClient:
                 config = generate_content_config,
             )
  
-
             return res.candidates[0].content.parts[0].text
  
         else:
@@ -253,17 +240,16 @@ class TranslationStage(ABC):
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
+
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+
         super().__init__(anthropic_api, target_language, source_language, group_text_units, task_progress)
-        # self.stage_weight = 10
+        
         self.stage_percent = 0
-        self.stage = "stage_1"
         self.max_word = 1_000
 
     def process(self, all_paragraph, document=None, batch_no=None, batch_instance=None):
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-
- 
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_01").prompt
 
         combined_text = ''
         combined_text_list = []
@@ -281,7 +267,6 @@ class StyleAnalysis(TranslationStage):
         if combined_text:
 
             result_content_prompt = self.api.send_request(messages = combined_text, system_instruction=system_prompt)
- 
 
             if result_content_prompt:
                 self.set_progress(stage=self.stage, stage_percent=100)
@@ -291,136 +276,51 @@ class StyleAnalysis(TranslationStage):
                 return None
  
 
+
+
+
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
+
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
+
         super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
         self.stage_percent = 0
-        self.stage = "stage_02"
-
-    def process(self, segments, style_prompt, gloss_terms, d_batches, document=None, batch_no=None, batch_instance=None):
-        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        # system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language)
-        
  
 
+    def process(self, task_adaptive_instance, segments, style_prompt, gloss_terms, d_batches, document=None, batch_no=None, task_progress=None):
+
+        # all_stage_result_instance = AllStageResult.objects.filter(task_stage_result=task_adaptive_instance)
+
+        # if all_stage_result_instance:
+        #     all_stage_result_instance = all_stage_result_instance.last()
+        # else:
+        #     all_stage_result_instance = AllStageResult.objects.create(task_stage_result=task_adaptive_instance)
+
+        system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_02").prompt
+        system_prompt = system_prompt.format(style_prompt=style_prompt, target_language=self.target_language, source_language=self.source_language)
+    
         if gloss_terms:
-            gloss_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
+            gloss_prompt = AdaptiveSystemPrompt.objects.get(stages = self.stage).prompt
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
-            translation_prompt += f"{gloss_prompt}\n{glossary_lines}."
+            system_prompt += f"\n{gloss_prompt}\n{glossary_lines}."
 
-        if self.group_text_units:
-            segments = self.group_strings_max_words(segments, max_words=150)
 
-        message_list = []
-        response_result = []
         total = len(segments)
         progress_counter = 1 
-        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
-            for para in segments:
-                para_message = translation_prompt.format(self.source_language, self.target_language, style_prompt,self.target_language,self.target_language,self.target_language,para)
-                 
-                message_list.append(self.continue_conversation_user(user_message=para_message))
-                response_text = self.api.send_request(message_list)
-                response_result.append(response_text)
- 
- 
-                message_list = []
-                percent = int((progress_counter/total)*100)
-                self.set_progress(stage=self.stage, stage_percent=percent)
-                progress_counter += 1
+
+        for para in segments:
+            response_text = self.api.send_request(messages = para, system_instruction = system_prompt)
+            if response_text:
+                all_stage_result_instance =0
                 
-        else:
-            self.mock_api(segments,self.stage)
-         
-        return (segments, response_result)
-
  
-class RefinementStage1(TranslationStage):
-    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
-        super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
-        self.stage_percent = 0
-        self.stage = "stage_03"
-
-    def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
-        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        # system_prompt = system_prompt.format(target_language=self.target_language)
-
- 
-
-        if gloss_terms:
-            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
-            refinement_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
-
-
-        message_list = []
-        response_result = []
-        total = len(segments)
-        progress_counter = 1 
-        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
-            for trans_text, original_text in zip(segments, source_text):
-                #user_text = """Source text:\n{source_text}\n\nTranslation text:\n{translated_text}""".format(source_text=original_text,
-                #                                                                                                    translated_text=trans_text)
-                para_message = refinement_prompt.format(self.source_language, self.target_language,original_text,trans_text,self.target_language)
-                message_list.append(self.continue_conversation_user(user_message=para_message))
-                response_text = self.api.send_request(message_list)
-                response_result.append(response_text)
- 
- 
-                percent = int((progress_counter/total)*100)
-                self.set_progress(stage=self.stage, stage_percent=percent)
-                progress_counter += 1
-        else:
-            raise "Switch to Production"
-
-         
-        return response_result
-
-
-# Final refinement (Stage 4)
-class RefinementStage2(TranslationStage):
-    def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
-        super().__init__(anthropic_api, target_language, source_language, group_text_units,task_progress)
-        self.stage_percent = 0
-        self.stage = "stage_04"
-
-    def process(self, segments, source_text, gloss_terms, document=None, batch_no=None, batch_instance=None):
-        # system_prompt = AdaptiveSystemPrompt.objects.get(stages=self.stage).prompt
-        # system_prompt = system_prompt.format(target_language=self.target_language)
-
- 
-
-        if gloss_terms:
-            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in gloss_terms.items()])
-            final_refinement_prompt += f"\nNote: While translating, make sure to translate the specific words as such if mentioned in the glossary pairs.Ensure that the replacements maintain the original grammatical categories like tense, aspect, modality,voice and morphological features.\nGlossary:\n{glossary_lines}."
-            
-
-        message_list = []
-        response_result = []
-        total = len(segments)
-        progress_counter = 1 
-
-        if (True if os.getenv("LLM_TRANSLATE_ENABLE",False) == 'True' else False):
-            for para in segments:
-                para_message = final_refinement_prompt.format(para,self.target_language,self.target_language,self.target_language,self.target_language,
-                                                              self.target_language)
- 
-                message_list.append(self.continue_conversation_user(user_message=para_message))
-                response_text = self.api.send_request(message_list)
-                response_result.append(response_text)
-                if os.getenv('ANALYTICS') == 'True':
-                    write_stage_response_in_excel(document.project, document.task_obj.id, batch_no,system_prompt, user_message=json.dumps(message_list, ensure_ascii=False), translated_result=response_text, stage=self.stage, input_token=input_token, output_token=output_token)
-                    logger.info(f"Stage 4 data written to excel")
- 
-                message_list = []
-                percent = int((progress_counter/total)*100)
-                self.set_progress(stage=self.stage, stage_percent=percent)
-                progress_counter += 1
-
-        else:
-            raise "Switch to Production"
-         
-        return response_result
+             
+            percent = int((progress_counter/total)*100)
+            self.set_progress(stage=self.stage, stage_percent=percent)
+            progress_counter += 1
+        
+        return segments
 
  
 class AdaptiveSegmentTranslator:
@@ -432,47 +332,50 @@ class AdaptiveSegmentTranslator:
         self.gloss_terms = gloss_terms
         self.task_progress = task_progress
         self.document = document
+        self.group_text_units = group_text_units
 
         self.style_analysis = StyleAnalysis(self.client, target_language, source_language, group_text_units, self.task_progress)
-        #self.initial_translation = InitialTranslation(self.client, target_language, source_language, group_text_units, self.task_progress)
+        self.initial_translation = InitialTranslation(self.client, target_language, source_language, group_text_units, self.task_progress)
         #self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, group_text_units, self.task_progress)
         #self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, group_text_units, self.task_progress)
 
     def process_batch(self, segments, d_batches, batch_no):
+        from ai_workspace.models import TaskStageResults, AllStageResult
 
- 
+        task_obj = self.document.task_obj
+
+        task_adaptive_instance = TaskStageResults.objects.filter(task=task_obj)
+
+        ##### style guidance  
+
+        if not task_adaptive_instance:
+            
+            style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
+
+            if style_guideline:
+
+                task_adaptive_instance = TaskStageResults.objects.create(task = task_obj , style_guide_stage_1 = style_guideline ,
+                                                                         group_text_units=self.group_text_units,celery_task_batch=batch_no)
+                
+            else:
+                raise RuntimeError("style not created")
+            
+
+            if self.group_text_units:
+                segments = self.group_strings_max_words(segments, max_words=150)
+
+
+        translated_segments = self.initial_translation.process(task_adaptive_instance = task_adaptive_instance ,
+                                                                        segments = segments, gloss_terms = self.gloss_terms, 
+                                                                        d_batches=d_batches, document = self.document, batch_no = batch_no,
+                                                                        task_progress = self.task_progress)
         
-        style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
-        #segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
-        #self.initial_translation.update_progress_db()
-        #refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        #final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-        #self.refinement_stage_2.update_progress_db()
-        return style_guideline
-    
-
-
-
-    # def process_batch(self, segments, d_batches, batch_no):
-    #     from ai_workspace.models import TaskStageResults
-    #     style_guideline = self.style_analysis.process(segments, self.document, batch_no, self.task_progress)
-    #     store_result = TaskStageResults.objects.filter(task=self.document.task_obj, celery_task_batch=batch_no).first()
-
-    #     if not store_result:
-    #         store_result = TaskStageResults.objects.create(task=self.document.task_obj,celery_task_batch=batch_no, stage_01=style_guideline, group_text_units=self.group_text_units)
-    #     else:
-    #         store_result.group_text_units = self.group_text_units
-    #         store_result.stage_01 = style_guideline
-
-    #     segments,translated_segments = self.initial_translation.process(segments, style_guideline, self.gloss_terms, d_batches, self.document, batch_no, self.task_progress)
-    #     store_result.stage_02 = translated_segments
-    #     self.initial_translation.update_progress_db()
-    #     refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-    #     store_result.stage_03 = refined_segments
-    #     final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
-    #     self.refinement_stage_2.update_progress_db()
-    #     store_result.stage_04 = final_segments
-    #     store_result.save()
-    #     return final_segments
-
-     
+        # self.initial_translation.update_progress_db()
+        # refined_segments = self.refinement_stage_1.process(translated_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+        # store_result.stage_03 = refined_segments
+        # final_segments = self.refinement_stage_2.process(refined_segments, segments, self.gloss_terms, self.document,batch_no, self.task_progress)
+        # self.refinement_stage_2.update_progress_db()
+        # store_result.stage_04 = final_segments
+        # return final_segments
+        print(translated_segments, "This is translated segments Stage_02")
+        return translated_segments

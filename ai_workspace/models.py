@@ -2001,6 +2001,7 @@ class TrackSegmentsBatchStatus(models.Model):
     progress_percent = models.IntegerField(default=0)
     segment_type = models.CharField(max_length=20, choices=SegmentType.choices, default=SegmentType.PARAGRAPH)
     error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    celery_task_batch = models.IntegerField(default=1)
 
 
 class ProcessFile(models.Model):
@@ -2012,14 +2013,17 @@ class ProcessFile(models.Model):
 
 
 class TaskStageResults(models.Model):
-    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="task_stage_results")
-    stage_01 = models.TextField(null=True,blank=True)
-    stage_02 = models.TextField(null=True,blank=True)
-    stage_03 = models.TextField(null=True,blank=True)
-    stage_04 = models.TextField(null=True,blank=True)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
+    style_guide_stage_1 = models.TextField(null=True,blank=True)
+    celery_task_batch = models.IntegerField()
+    group_text_units = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
-
-
+class AllStageResult(models.Model):
+    task_stage_result = models.ForeignKey(TaskStageResults, on_delete=models.CASCADE, related_name='each_task_stage')
+    source_text = models.TextField(null=True,blank=True)
+    stage_02 = models.TextField(null=True,blank=True)
+    stage_03 = models.TextField(null=True,blank=True)
+    stage_04 = models.TextField(null=True,blank=True)

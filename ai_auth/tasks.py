@@ -45,7 +45,6 @@ from django.db.models.functions import Lower
 from ai_workspace.adaptive import AdaptiveSegmentTranslator
 from ai_tms.celery import app
 import traceback
-from ai_workspace.adaptive import LLMClient
 
 extend_mail_sent= 0
 
@@ -1455,9 +1454,9 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     try:
         translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
         translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
-        print(translated_segments, "translated_segments")
+        
         all_translations = {}
-        print(group_text_units, "group text units")
+
         if group_text_units:
             translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
 
@@ -1552,7 +1551,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 kwargs={
-                    'batch_no': f"batch_{i+1}",
+                    'batch_no': i+1,
                 },
                 queue='high-priority'
             )
@@ -1562,8 +1561,10 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
                 document=task.document,
                 seg_start_id=min(metadata.keys()),  
                 seg_end_id= max(metadata.keys()),  
-                project=project
+                project=project,
+                celery_task_batch = i+1
             )
+            print("Adaptive created")
             print("Adaptive translation task created for batch:", i)
 
     except Exception as e:

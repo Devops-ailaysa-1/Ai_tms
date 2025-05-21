@@ -1,24 +1,17 @@
-import os
-import random
+
+
+import os,sys,random
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO, BytesIO
-import sys
-import string
-import re
 from indicnlp.tokenize.sentence_tokenize import sentence_split
-import nltk
+import nltk, re ,logging ,json,os,string
+from django.core.cache import cache
  
-import json
- 
-import os
- 
-import re
-import logging
  
  
 logger = logging.getLogger('django')
 
-from django.core.cache import cache
+
  
 
 async def detect_lang(text):
@@ -402,10 +395,11 @@ def re_initiate_failed_batch(task, project):
                 metadata[text_unit.text_unit.id] = text_unit.source_para
             
             adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, False,),
+                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 kwargs={
                     'failed_batch': True,
                     'celery_task_id': failed_task_batch.celery_task_id,
+                    'batch_no': failed_task_batch.celery_task_batch
                 },
                 queue='high-priority'
             )
@@ -434,15 +428,15 @@ def write_stage_response_in_excel(
     translated_result,
     stage,
     base_dir="Translation_Results",
-    input_token=None,
-    output_token=None
+    input_token=0,
+    output_token=0
 ):
     os.makedirs(base_dir, exist_ok=True)
 
     project_task_folder = os.path.join(base_dir, f"{project_id}_{task_id}")
     os.makedirs(project_task_folder, exist_ok=True)
 
-    file_path = os.path.join(project_task_folder, f"{batch_no}.xlsx")
+    file_path = os.path.join(project_task_folder, f"batch_{batch_no}.xlsx")
 
     try:
         if os.path.exists(file_path):
@@ -456,7 +450,7 @@ def write_stage_response_in_excel(
     if "Sheet" in wb.sheetnames and wb["Sheet"].max_row == 1:
         wb.remove(wb["Sheet"])
 
-    sheet_name = batch_no
+    sheet_name = f"batch_{batch_no}"
     if sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
     else:
