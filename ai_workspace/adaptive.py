@@ -264,7 +264,7 @@ class StyleAnalysis(TranslationStage):
             result_content_prompt,token = self.api_client.send_request(messages = combined_text, system_instruction=system_prompt)
 
             if result_content_prompt:
-                self.set_progress(stage = "stage_1" , stage_percent=100)
+                self.set_progress(stage = "stage_01" , stage_percent=100)
                 return result_content_prompt
             
             else:        
@@ -332,7 +332,7 @@ class InitialTranslation(TranslationStage):
                     stage_result_instance.save()
     
                 percent = int((progress_counter/self.total)*100)
-                self.set_progress(stage = "stage_2", stage_percent=percent)
+                self.set_progress(stage = "stage_02", stage_percent=percent)
                 progress_counter += 1
             
  
@@ -350,7 +350,6 @@ class InitialTranslation(TranslationStage):
         system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_3").prompt
         system_prompt = system_prompt.format(source_language = self.source_language,  target_language = self.target_language )
          
-    
         if self.glossary_lines:
             gloss_prompt = AdaptiveSystemPrompt.objects.get(stages = "gloss_adapt").prompt
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
@@ -383,8 +382,10 @@ class InitialTranslation(TranslationStage):
                     stage_result_instance.save()
     
                 percent = int((progress_counter/self.total)*100)
-                self.set_progress(stage = "stage_3", stage_percent=percent)
+                self.set_progress(stage = "stage_03", stage_percent=percent)
                 progress_counter += 1
+        
+
             
  
             
@@ -394,8 +395,16 @@ class InitialTranslation(TranslationStage):
             logger.error("Adaptive segment translation failed and task marked as FAILED in stage 3")
             logger.exception("Exception occurred during translation")
 
-    def stage_4():
-        pass
+    def stage_4(self):
+        progress_counter = 1
+        for _ in self.all_stage_result_instance:
+            percent = int((progress_counter/self.total)*100)
+            self.set_progress(stage = "stage_04", stage_percent=percent)
+    
+        self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+        self.task.save()
+
+
 
     
 
@@ -471,9 +480,9 @@ class AdaptiveSegmentTranslator:
         print("done stage 2")
         self.initial_translation.stage_3()
         print("done stage 3")
-        
-        
- 
+        self.initial_translation.stage_4()
+        print("done stage 4")
+
         return None
 
 

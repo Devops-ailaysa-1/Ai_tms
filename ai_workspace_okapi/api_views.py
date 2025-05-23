@@ -3290,9 +3290,7 @@ def get_not_translated_seg(request):
 def cross_check_segment(request):
 
     project_id = request.query_params.get('project_id',None)
-
     project_instance = Project.objects.get(id=project_id)
-
     from ai_workspace_okapi.api_views import DocumentViewByTask
     for i in project_instance.project_jobs_set.last().job_tasks_set.all():
         DocumentViewByTask.create_document_for_task_if_not_exists(i)
