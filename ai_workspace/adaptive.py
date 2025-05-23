@@ -1,14 +1,17 @@
-from ai_workspace.utils import write_stage_response_in_excel
+ 
 import backoff
 from google.genai import types
-from abc import ABC, abstractmethod
+from abc import ABC
 from django.core.cache import cache
-import time,os
+ 
 from ai_staff.models import AdaptiveSystemPrompt
-import logging,traceback
+import logging
 from ai_workspace.enums import AdaptiveFileTranslateStatus
 logger = logging.getLogger('django')
+from django.conf import settings
 
+GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
+GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 
 safety_settings=[
             types.SafetySetting(
@@ -50,7 +53,7 @@ class LLMClient:
             elif self.provider == "gemini":
                 from google import genai
 
-                client = genai.Client(api_key=os.environ['gemini_api_key'])
+                client = genai.Client(api_key=GOOGLE_GEMINI_API)
                 self.client = client
 
             else:
@@ -126,7 +129,7 @@ class LLMClient:
         if messages:
 
             from google import genai
-            client = genai.Client(api_key = os.environ['gemini_api_key'])
+            client = genai.Client(api_key = GOOGLE_GEMINI_API)
 
             contents = [
                         types.Content(
@@ -148,12 +151,12 @@ class LLMClient:
 
             stream_output = ""
             for chunk in client.models.generate_content_stream(
-                                                                model = os.environ['GOOGLE_GEMINI_MODEL'],
+                                                                model = GOOGLE_GEMINI_MODEL,
                                                                 contents = contents ,
                                                                 config = generate_content_config ):
                 stream_output+=chunk.text
             
-            total_tokens = client.models.count_tokens( model = os.environ['GOOGLE_GEMINI_MODEL'], contents=stream_output)
+            total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
             print("stream_output",stream_output)
              
 
