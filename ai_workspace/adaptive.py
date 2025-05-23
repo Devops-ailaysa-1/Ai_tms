@@ -384,11 +384,8 @@ class InitialTranslation(TranslationStage):
                 percent = int((progress_counter/self.total)*100)
                 self.set_progress(stage = "stage_03", stage_percent=percent)
                 progress_counter += 1
-        
 
-            
- 
-            
+        
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
@@ -399,6 +396,7 @@ class InitialTranslation(TranslationStage):
         progress_counter = 1
         for _ in self.all_stage_result_instance:
             percent = int((progress_counter/self.total)*100)
+            self.set_progress(stage = "stage_03", stage_percent=percent)
             self.set_progress(stage = "stage_04", stage_percent=percent)
     
         self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
@@ -478,7 +476,7 @@ class AdaptiveSegmentTranslator:
 
         translated_segments = self.initial_translation.trans()
         print("done stage 2")
-        self.initial_translation.stage_3()
+        #self.initial_translation.stage_3()
         print("done stage 3")
         self.initial_translation.stage_4()
         print("done stage 4")
