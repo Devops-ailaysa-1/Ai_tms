@@ -1447,7 +1447,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         raise ValueError("Insufficient credits for segment translation")
     
     if failed_batch == True:
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id=celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
     else:
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
@@ -1539,6 +1539,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
     from ai_workspace.utils import merge_source_text_by_text_unit
     try:
         task = Task.objects.get(id=task_id)
+        print("task",task)
         project = task.job.project
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
@@ -1549,6 +1550,8 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
+        print("d_batches",d_batches)
+        print("batches",batches)
         for i, para in enumerate(batches):
             metadata = d_batches[i]
             translation_task = adaptive_segment_translation.apply_async(

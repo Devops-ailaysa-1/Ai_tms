@@ -157,7 +157,6 @@ class LLMClient:
                 stream_output+=chunk.text
             
             total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
-            print("stream_output",stream_output)
              
 
             # res = client.models.generate_content(
