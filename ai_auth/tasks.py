@@ -1452,26 +1452,29 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
     try:
-        translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,
+                                               os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        
         translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
         
-        all_translations = {}
+        #all_translations = {}
 
-        if group_text_units:
-            translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
+        # if group_text_units:
+        #     #translated_segments = [segment.strip() for text in translated_segments for segment in text.split('\n\n') if segment.strip()]
+        #     translated_segments = ["Hi","This is Test"]
 
-        for para_dict, para_response in zip(d_batches, translated_segments):
-            all_translations[int(para_dict)] = para_response
+        # for para_dict, para_response in zip(d_batches, translated_segments):
+        #     all_translations[int(para_dict)] = para_response
 
-        merged_instances = MergedTextUnit.objects.filter(
-            text_unit__in=all_translations.keys()
-        ).select_related('text_unit')
+        # merged_instances = MergedTextUnit.objects.filter(
+        #     text_unit__in=all_translations.keys()
+        # ).select_related('text_unit')
 
-        for instance in merged_instances:
-            text_unit_id = instance.text_unit_id
-            if text_unit_id in all_translations:
-                instance.translated_para = all_translations[text_unit_id]
-        MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
+        # for instance in merged_instances:
+        #     text_unit_id = instance.text_unit_id
+        #     if text_unit_id in all_translations:
+        #         instance.translated_para = all_translations[text_unit_id]
+        # MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
 
 
         batch_status.status = BatchStatus.COMPLETED
@@ -1481,10 +1484,10 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
 
         # Mark overall task as completed if all batches are done
         task = Task.objects.get(document=batch_status.document)
-        if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
-            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-            task.save()
-            logger.info("All batches completed. Task marked as COMPLETED")
+        # if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
+            # task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+            # task.save()
+            # logger.info("All batches completed. Task marked as COMPLETED")
 
     except Exception as e:
         logger.error(f"Batch task failed: {e}")

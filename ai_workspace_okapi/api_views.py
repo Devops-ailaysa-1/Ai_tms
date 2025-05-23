@@ -1441,26 +1441,32 @@ class DocumentToFile(views.APIView):
 
     def download_simple_file_response(self, document_id):
         import io
-        from docx import Document
+        from docx import Document 
         from ai_workspace_okapi.models import Document as DBDocument
         from ai_workspace_okapi.models import MergedTextUnit
+        from ai_workspace.models import TaskStageResults
         from ai_workspace_okapi.utils import download_simple_file
-        from ai_workspace.models import Job
-        source_file_path = self.get_source_file_path(document_id)
-        text_units = TextUnit.objects.filter(document_id=document_id).order_by('id')
-        job = Job.objects.get(id=DBDocument.objects.get(id=document_id).job_id)
-        output_lang = f"({job.source_language_code}-{job.target_language_code})"
-        print('text_units',text_units)
-        print(source_file_path, "source_file_path")
+        
 
-        all_text = [
-            merged.translated_para if (merged := MergedTextUnit.objects.filter(text_unit=text_unit).first()) else '\n\n'
-            for text_unit in text_units
-        ]
-        print(all_text, "this is all text")
+        source_file_path = self.get_source_file_path(document_id)
+        doc_instance =  DBDocument.objects.get(id=document_id)
+        task_instance = doc_instance.task_obj
+        job_instance = doc_instance.job
+
+        output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
+
+        all_text = TaskStageResults.objects.get(task=task_instance).each_task_stage.all().values_list('stage_03', flat=True)
+
+        # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
+        
+        # all_text = [
+        #     merged.translated_para if (merged := MergedTextUnit.objects.filter(text_unit=text_unit).first()) else '\n\n'
+        #     for text_unit in text_units
+        # ]
+
         if all_text and source_file_path.endswith((".doc", ".docx")):
             document = Document()
-            # for para in all_text:
+ 
             for i in all_text:
                 document.add_paragraph(i)
             target_stream = io.BytesIO()

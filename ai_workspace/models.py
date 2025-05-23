@@ -2027,3 +2027,16 @@ class AllStageResult(models.Model):
     stage_02 = models.TextField(null=True,blank=True)
     stage_03 = models.TextField(null=True,blank=True)
     stage_04 = models.TextField(null=True,blank=True)
+
+    stage_2_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_2_output_token = models.CharField(max_length=20,blank=True, null=True)
+
+    stage_3_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_3_output_token = models.CharField(max_length=20,blank=True, null=True)
+
+    stage_4_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_4_output_token = models.CharField(max_length=20,blank=True, null=True)
+
+
+ 
+
