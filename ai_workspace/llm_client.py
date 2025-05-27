@@ -5,7 +5,7 @@ from django.conf import settings
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 ANTHROPIC_MODEL_NAME = settings.ANTHROPIC_MODEL_NAME
-
+ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 safety_settings=[
             types.SafetySetting(
                 category="HARM_CATEGORY_HARASSMENT",
@@ -35,7 +35,7 @@ class LLMClient:
         try:
             if self.provider == "anthropic":
                 from anthropic import Anthropic
-                self.client = Anthropic(api_key=api_key)
+                self.client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
             elif self.provider == "openai":
                 import openai
