@@ -45,7 +45,7 @@ from django.db.models.functions import Lower
 from ai_workspace.adaptive import AdaptiveSegmentTranslator
 from ai_tms.celery import app
 import traceback
-
+ADAPTIVE_LLM_MODEL = settings.ADAPTIVE_LLM_MODEL
 extend_mail_sent= 0
 
 def striphtml(data):
@@ -1452,7 +1452,9 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
     try:
-        translator = AdaptiveSegmentTranslator('gemini', source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,
+        # gemini
+        # anthropic
+        translator = AdaptiveSegmentTranslator(ADAPTIVE_LLM_MODEL, source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,
                                                os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
         
         translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)

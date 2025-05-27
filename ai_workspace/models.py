@@ -2024,9 +2024,9 @@ class TaskStageResults(models.Model):
 class AllStageResult(models.Model):
     task_stage_result = models.ForeignKey(TaskStageResults, on_delete=models.CASCADE, related_name='each_task_stage')
     source_text = models.TextField(null=True,blank=True)
-    stage_02 = models.TextField(null=True,blank=True)
-    stage_03 = models.TextField(null=True,blank=True)
-    stage_04 = models.TextField(null=True,blank=True)
+    stage_2 = models.TextField(null=True,blank=True)
+    stage_3 = models.TextField(null=True,blank=True)
+    stage_4 = models.TextField(null=True,blank=True)
 
     stage_2_input_token = models.CharField(max_length=20,blank=True, null=True)
     stage_2_output_token = models.CharField(max_length=20,blank=True, null=True)

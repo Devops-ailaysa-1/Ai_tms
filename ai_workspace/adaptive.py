@@ -1,179 +1,17 @@
  
-import backoff
-from google.genai import types
+
 from abc import ABC
 from django.core.cache import cache
- 
+from ai_workspace.llm_client import LLMClient
 from ai_staff.models import AdaptiveSystemPrompt
-import logging
+import logging,time
 from ai_workspace.enums import AdaptiveFileTranslateStatus
 logger = logging.getLogger('django')
 from django.conf import settings
-
-GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
-GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
-
-safety_settings=[
-            types.SafetySetting(
-                category="HARM_CATEGORY_HARASSMENT",
-                threshold="BLOCK_LOW_AND_ABOVE",   
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_HATE_SPEECH",
-                threshold="BLOCK_LOW_AND_ABOVE",  
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                threshold="BLOCK_LOW_AND_ABOVE",  
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                threshold="BLOCK_LOW_AND_ABOVE",  
-            ),
-        ]
-
+from ai_workspace.models import AllStageResult
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from django.db import transaction
  
-class LLMClient:
-    def __init__(self, provider, api_key, model_name):
-        self.provider = provider.lower()
-        self.api_key = api_key
-        self.model_name = model_name
-
-        try:
-
-            if self.provider == "anthropic":
-                from anthropic import Anthropic
-                self.client = Anthropic(api_key=api_key)
-
-            elif self.provider == "openai":
-                import openai
-                openai.api_key = api_key
-                self.client = openai
-
-            elif self.provider == "gemini":
-                from google import genai
-
-                client = genai.Client(api_key=GOOGLE_GEMINI_API)
-                self.client = client
-
-            else:
-                raise ValueError(f"Unsupported provider: {provider}")
-            
-        except ImportError as e:
-            raise ImportError(f"Missing required package for {provider}: {e}")
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize client for {provider}: {e}")
-
-    def send_request(self, messages, system_instruction,max_tokens=4000, stream=False):
-
-        if self.provider == "anthropic":
-            return self._handle_anthropic(messages, max_tokens, stream)
-        
-        elif self.provider == "openai":
-            return self._handle_openai(messages, max_tokens, stream)
-        
-        elif self.provider == "gemini":
-            return self._handle_genai(messages,system_instruction)
-        
-        else:
-            raise ValueError("Unknown provider")
-
-    def _handle_anthropic(self, messages, max_tokens, stream):
-        if stream:
-            streamed_output = ""
-            with self.client.messages.stream(
-                model=self.model_name,
-                messages=messages,
-                max_tokens=max_tokens,
-            ) as stream:
-                for text in stream.text_stream:
-                    streamed_output += text
-            usage = stream.get_final_message().usage
-            return usage.input_tokens, usage.output_tokens, streamed_output.strip()
-        else:
-            response = self.client.messages.create(
-                model=self.model_name,
-                messages=messages,
-                max_tokens=max_tokens,
-            )
-            return None, None, response.content[0].text.strip()
-
-    def _handle_openai(self, messages, max_tokens, stream):
-        
-        chat_messages = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
-        
-        response = self.client.ChatCompletion.create(
-                                                        model=self.model_name,
-                                                        messages=chat_messages,
-                                                        max_tokens=max_tokens,
-                                                        stream=stream
-                                                    )
-
-        if stream:
-            output = ""
-            for chunk in response:
-                if "choices" in chunk and chunk["choices"][0]["delta"].get("content"):
-                    output += chunk["choices"][0]["delta"]["content"]
-            return None, None, output.strip()
-        else:
-            content = response.choices[0].message["content"]
-            usage = response.usage
-            return usage.prompt_tokens, usage.completion_tokens, content.strip()
-    
-
-
-    @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
-    def _handle_genai(self, messages, system_instruction):
-
-        if messages:
-
-            from google import genai
-            client = genai.Client(api_key = GOOGLE_GEMINI_API)
-
-            contents = [
-                        types.Content(
-                            role="user",
-                            parts=[types.Part.from_text(text=messages)]
-                        )
-            ]
-
-            generate_content_config = types.GenerateContentConfig(
-                max_output_tokens=65532,  
-                response_mime_type="text/plain",
-                candidate_count=1,
-                safety_settings = safety_settings,
-                system_instruction = system_instruction ,
-                top_p=1.0, top_k=0,
-                #thinking_config=types.ThinkingConfig(thinking_budget=0),
-            )
-
-
-            stream_output = ""
-            for chunk in client.models.generate_content_stream(
-                                                                model = GOOGLE_GEMINI_MODEL,
-                                                                contents = contents ,
-                                                                config = generate_content_config ):
-                stream_output+=chunk.text
-            
-            total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
-             
-
-            # res = client.models.generate_content(
-            #     model = os.environ['GOOGLE_GEMINI_MODEL'],   
-            #     contents = contents,
-            #     config = generate_content_config,
-            # ) 
-            # res.candidates[0].content.parts[0].text  
- 
-            return stream_output , total_tokens.total_tokens
- 
-        else:
-            return None
-
-
-
-
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
@@ -187,6 +25,9 @@ class TranslationStage(ABC):
     # @abstractmethod
     # def process(self, segment, **kwargs):
     #     pass
+
+    def get_prompt_by_stage(self,stage ):
+        return AdaptiveSystemPrompt.objects.get(stages=stage).prompt
     
     def continue_conversation_assistant(self,assistant_message):
         return {
@@ -295,115 +136,251 @@ class InitialTranslation(TranslationStage):
             if response_text:
                 return response_text, token_count
         return None, None
+ 
+
+    def process_stage_result(self,stage_result_instance, system_prompt):
+        messages = stage_result_instance.source_text
+        if not messages:
+            stage_result_instance.stage_2 = messages
+            return stage_result_instance
+
+        if stage_result_instance.stage_2:
+            logging.info(f"Already processed: {stage_result_instance.id}")
+            return None
+
+        response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
+        
+        if response_text:
+            stage_result_instance.stage_2 = response_text
+            stage_result_instance.stage_2_output_token = total_count
+            return stage_result_instance
+        else:
+            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+            return None
+
+
+    def process_stage_result_stage_3(self,stage_result_instance, system_prompt):
+        
+         
+        if not stage_result_instance.source_text:
+            stage_result_instance.stage_3 = stage_result_instance.source_text
+            return stage_result_instance
+        
+        if stage_result_instance.stage_3:
+            logging.info(f"Already processed: {stage_result_instance.id}")
+            return None
+        
+        messages = f"{self.source_language} Source:\n{stage_result_instance.source_text}\n{self.target_language} Translation:\n{stage_result_instance.stage_2}"
+        print("messages",messages)
+
+        response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
+        
+        if response_text:
+            stage_result_instance.stage_3 = response_text
+            stage_result_instance.stage_3_output_token = total_count
+            return stage_result_instance
+        
+        else:
+            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+            return None
+        
+    def process_stage_result_stage_4(self,stage_result_instance, system_prompt):
+        if not stage_result_instance.source_text:
+            stage_result_instance.stage_4 = stage_result_instance.source_text
+            return stage_result_instance
+        
+        if stage_result_instance.stage_4:
+            logging.info(f"Already processed: {stage_result_instance.id}")
+            return None
+        
+        messages=stage_result_instance.stage_3
+        if messages:
+            response_text, total_count = self.safe_request(messages=messages , system_instruction=system_prompt)
+        
+            if response_text:
+                stage_result_instance.stage_4 = response_text
+                stage_result_instance.stage_4_output_token = total_count
+                return stage_result_instance
+            else:
+                logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                return None
+            
+        else:
+            logging.error(f"empty message")
+            return None
+
 
     def trans(self):
  
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_2").prompt
+        system_prompt = self.get_prompt_by_stage(stage = "stage_2")
         system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
     
         if self.glossary_lines:
-            gloss_prompt = AdaptiveSystemPrompt.objects.get(stages = "gloss_adapt").prompt
+            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
 
         progress_counter = 1 
-        try:
-            for stage_result_instance in self.all_stage_result_instance:
-                messages = stage_result_instance.source_text
-                if messages:
-                    if not stage_result_instance.stage_02:
- 
-                        response_text , total_count = self.safe_request(messages = messages, system_instruction =system_prompt)
- 
+        updated_instances = []
 
-                        if response_text:
-                            stage_result_instance.stage_02 = response_text
-                            stage_result_instance.stage_2_output_token = total_count
-                            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
-                            self.task.save()
-                            stage_result_instance.save()
-                        
-                        else:
-                            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                    else:
-                        print("already there")
-                    
-                else:
-                    stage_result_instance.stage_02 = messages
-                    stage_result_instance.save()
-    
-                percent = int((progress_counter/self.total)*100)
-                self.set_progress(stage = "stage_02", stage_percent=percent)
-                progress_counter += 1
+        try:
             
+            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            self.task.save()
+
+
+            with ThreadPoolExecutor(max_workers=3) as executor:  
+                future_to_instance = {
+                    executor.submit(self.process_stage_result, instance, system_prompt): instance
+                    for instance in self.all_stage_result_instance
+                }
+
+                for future in as_completed(future_to_instance):
+                    result = future.result()
+                    if result:
+                        updated_instances.append(result)
+
+                    progress_counter += 1
+                    percent = int((progress_counter / self.total) * 100)
+                    self.set_progress(stage="stage_02", stage_percent=percent)
+            
+            logging.info("✅ Done inference. stage 1")
+
+            if updated_instances:
+                with transaction.atomic():
+                    BATCH_SIZE = 3
+                    for i in range(0, len(updated_instances), BATCH_SIZE):
+                            AllStageResult.objects.bulk_update(
+                                updated_instances[i:i + BATCH_SIZE],
+                                ['stage_2', 'stage_2_output_token']
+                            )
+
+                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_2', 'stage_2_output_token'])
+                    logging.info("✅ Bulk updated all stage_02 results.")
  
-            
+     
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
             logger.error("Adaptive segment translation failed and task marked as FAILED")
-            logger.exception("Exception occurred during translation")
+            logger.exception(f"Exception occurred during translation {e}")
 
  
+    def refine(self):
 
-    def stage_3(self):
-         
-        system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_3").prompt
-        system_prompt = system_prompt.format(source_language = self.source_language,  target_language = self.target_language )
-         
+        system_prompt = self.get_prompt_by_stage(stage = "stage_3")
+        system_prompt = system_prompt.format(target_language= self.target_language, source_language=self.source_language)
+    
         if self.glossary_lines:
-            gloss_prompt = AdaptiveSystemPrompt.objects.get(stages = "gloss_adapt").prompt
+            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
+        
+ 
 
         progress_counter = 1 
+        updated_instances = []
+
         try:
-            for stage_result_instance in self.all_stage_result_instance:
-                source_text = stage_result_instance.source_text
-                if source_text:
-                    if not stage_result_instance.stage_03:
-                        messages = f"{self.source_language}\n{source_text}\n\n{self.target_language}\n{stage_result_instance.stage_02}"
- 
- 
-                        response_text , total_count = self.safe_request(messages = messages, system_instruction = system_prompt)
+            
+            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            self.task.save()
 
-                        if response_text:
-                            stage_result_instance.stage_03 = response_text
-                            stage_result_instance.stage_3_output_token = total_count
-                            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
-                            self.task.save()
-                            stage_result_instance.save()
-                        
-                        else:
-                            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                    else:
-                        print("already there stage 3")
-                    
-                else:
-                    stage_result_instance.stage_02 = messages
-                    stage_result_instance.save()
-    
-                percent = int((progress_counter/self.total)*100)
-                self.set_progress(stage = "stage_03", stage_percent=percent)
-                progress_counter += 1
 
-        
+            with ThreadPoolExecutor(max_workers=3) as executor:  
+                future_to_instance = {
+                    executor.submit(self.process_stage_result_stage_3, instance, system_prompt): instance
+                    for instance in self.all_stage_result_instance
+                }
+
+                for future in as_completed(future_to_instance):
+                    result = future.result()
+                    if result:
+                        updated_instances.append(result)
+
+                    progress_counter += 1
+                    percent = int((progress_counter / self.total) * 100)
+                    self.set_progress(stage="stage_03", stage_percent=percent)
+            
+            logging.info("✅ Done inference. stage 3")
+
+            if updated_instances:
+                with transaction.atomic():
+                    BATCH_SIZE = 3
+                    for i in range(0, len(updated_instances), BATCH_SIZE):
+                        AllStageResult.objects.bulk_update(
+                                updated_instances[i:i + BATCH_SIZE],
+                                ['stage_3', 'stage_3_output_token']
+                            )
+
+                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_3', 'stage_3_output_token'])
+                    logging.info("✅ Bulk updated all stage_03 results.")
+ 
+     
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
-            logger.error("Adaptive segment translation failed and task marked as FAILED in stage 3")
-            logger.exception("Exception occurred during translation")
+            logger.error("Adaptive segment translation failed and task marked as FAILED")
+            logger.exception(f"Exception occurred during translation {e}")
 
-    def stage_4(self):
-        progress_counter = 1
-        for _ in self.all_stage_result_instance:
-            percent = int((progress_counter/self.total)*100)
-            self.set_progress(stage = "stage_03", stage_percent=percent)
-            self.set_progress(stage = "stage_04", stage_percent=percent)
+
+
+    def rewrite(self):
+        system_prompt = self.get_prompt_by_stage(stage = "stage_4")
+        system_prompt = system_prompt.format(target_language= self.target_language )
     
-        self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-        self.task.save()
+        if self.glossary_lines:
+            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
+            system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
+        
+ 
+
+        progress_counter = 1 
+        updated_instances = []
+
+        try:
+            
+            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            self.task.save()
 
 
+            with ThreadPoolExecutor(max_workers=3) as executor:  
+                future_to_instance = {
+                    executor.submit(self.process_stage_result_stage_4, instance, system_prompt): instance
+                    for instance in self.all_stage_result_instance
+                }
 
+                for future in as_completed(future_to_instance):
+                    result = future.result()
+                    if result:
+                        updated_instances.append(result)
+
+                    progress_counter += 1
+                    percent = int((progress_counter / self.total) * 100)
+                    self.set_progress(stage="stage_03", stage_percent=percent)
+            
+            logging.info("✅ Done inference. stage 4")
+
+            if updated_instances:
+                with transaction.atomic():
+                    BATCH_SIZE = 3
+                    for i in range(0, len(updated_instances), BATCH_SIZE):
+                        AllStageResult.objects.bulk_update(
+                                updated_instances[i:i + BATCH_SIZE],
+                                ['stage_4', 'stage_4_output_token']
+                            )
+
+                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_3', 'stage_3_output_token'])
+                    logging.info("✅ Bulk updated all stage_04 results.")
+            
+            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+            self.task.save()
+            logger.info("✅ Done Adaptive segment translation")
+ 
+     
+        except Exception as e:
+            self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+            self.task.save()
+            logger.error("Adaptive segment translation failed and task marked as FAILED")
+            logger.exception(f"Exception occurred during translation {e}")
     
 
  
@@ -441,7 +418,7 @@ class AdaptiveSegmentTranslator:
             
             style_guideline = self.style_analysis.process(all_paragraph=segments )
             if style_guideline:
-                task_adaptive_instance = TaskStageResults.objects.create(task = task_obj, style_guide_stage_1 =style_guideline,
+                task_adaptive_instance = TaskStageResults.objects.create(task = task_obj, style_guide_stage_1 = style_guideline,
                                                                          group_text_units=self.group_text_units,celery_task_batch=batch_no)
                 
             else:
@@ -451,19 +428,19 @@ class AdaptiveSegmentTranslator:
             if self.group_text_units:
                 segments = self.group_strings_max_words(segments, max_words=150)
                 all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
-                AllStageResult.objects.bulk_create(all_segment_obj)
+                AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
                 
                 logging.info("all_segments are created")
         
         else:
             task_adaptive_instance = task_adaptive_instance.last()
 
-            if self.group_text_units and  task_adaptive_instance.each_task_stage.all().exists():
-                segments = self.group_strings_max_words(segments, max_words=150)
-                all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
-                AllStageResult.objects.bulk_create(all_segment_obj)
+            # if self.group_text_units and  not task_adaptive_instance.each_task_stage.all().exists():
+            #     segments = self.group_strings_max_words(segments, max_words=150)
+            #     all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
+            #     AllStageResult.objects.bulk_create(all_segment_obj)
                 
-                logging.info("all_segments are created from created style")
+            logging.info("all_segments are created from created style")
         
         if self.gloss_terms:
             glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in self.gloss_terms.items()])
@@ -474,12 +451,12 @@ class AdaptiveSegmentTranslator:
                                                       glossary_lines= glossary_lines, source_language=self.source_language,
                                                       target_language = self.target_language,task_progress = self.task_progress )
 
-        translated_segments = self.initial_translation.trans()
-        print("done stage 2")
-        #self.initial_translation.stage_3()
-        print("done stage 3")
-        self.initial_translation.stage_4()
-        print("done stage 4")
+        self.initial_translation.trans()
+        logging.info("done stage 2")
+        self.initial_translation.refine()
+        logging.info("done stage 3")
+        self.initial_translation.rewrite()
+        logging.info("done stage 4")
 
         return None
 
@@ -505,5 +482,4 @@ class AdaptiveSegmentTranslator:
         if temp:
             grouped.append("\n\n".join(temp))
 
- 
         return grouped

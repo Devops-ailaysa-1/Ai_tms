@@ -1455,7 +1455,11 @@ class DocumentToFile(views.APIView):
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
 
-        all_text = TaskStageResults.objects.get(task=task_instance).each_task_stage.all().values_list('stage_03', flat=True)
+        #all_text = TaskStageResults.objects.filter(task=task_instance).each_task_stage.all().values_list('stage_4', flat=True)
+
+        all_text = []
+        for task_stage_res_ins in TaskStageResults.objects.filter(task=task_instance).order_by("celery_task_batch"):
+            all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list('stage_4', flat=True))
 
         # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
         
@@ -1469,6 +1473,7 @@ class DocumentToFile(views.APIView):
  
             for i in all_text:
                 document.add_paragraph(i)
+                document.add_paragraph("\n")
             target_stream = io.BytesIO()
             document.save(target_stream)
             target_stream.seek(0)
