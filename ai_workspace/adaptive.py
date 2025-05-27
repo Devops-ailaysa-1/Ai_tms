@@ -355,7 +355,7 @@ class InitialTranslation(TranslationStage):
 
                     progress_counter += 1
                     percent = int((progress_counter / self.total) * 100)
-                    self.set_progress(stage="stage_03", stage_percent=percent)
+                    self.set_progress(stage="stage_04", stage_percent=percent)
             
             logging.info("✅ Done inference. stage 4")
 
