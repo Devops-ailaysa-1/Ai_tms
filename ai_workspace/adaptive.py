@@ -45,13 +45,19 @@ class TranslationStage(ABC):
 
     def get_progress(self):
         cache_key = f"adaptive_progress_{self.task_progress.id}"
-        return cache.get(cache_key, None)
-
+        res = cache.get(cache_key, None)
+        return res
     
+    #def create_progress(self):
+
+
+ 
     def set_progress(self,stage=None,stage_percent=None):
         stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
         data = self.get_progress()
         if data!=None:
+            # data = self.get_progress()
+            # get_stage = data.get(stage)
             if stage_percent != None and stage != None:
                 data[stage] = stage_percent
                 data["total"] = int(sum(data[stage_key] * stage_weights[stage_key] for stage_key in stage_weights.keys())) 
@@ -62,14 +68,16 @@ class TranslationStage(ABC):
             progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0}
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
- 
-        return cache.set(cache_key, progress, timeout=3600)  # expires in 1 hour
+        print("progress",progress)
+        return cache.set(cache_key, progress, timeout=3600)  # expires in 1 hour         
+      
     
     def update_progress_db(self):
         data = self.get_progress()
+        print("data",data)
         if data!=None and self.task_progress.progress_percent!=data['total']:
-             self.task_progress.progress_percent = data['total']
-             self.task_progress.save()
+            self.task_progress.progress_percent = data['total']
+            self.task_progress.save()
 
 
 
@@ -83,9 +91,10 @@ class StyleAnalysis(TranslationStage):
         self.max_word = 1_000
         self.api_client = api_client
         self.task_progress = task_progress
+         
 
     def process(self, all_paragraph):
-
+        
         system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_1").prompt
 
         combined_text = ''
@@ -106,6 +115,7 @@ class StyleAnalysis(TranslationStage):
 
             if result_content_prompt:
                 self.set_progress(stage = "stage_01" , stage_percent=100)
+                
                 return result_content_prompt
             
             else:        
@@ -139,7 +149,7 @@ class InitialTranslation(TranslationStage):
  
 
     def process_stage_result(self,stage_result_instance, system_prompt):
-        messages = stage_result_instance.source_text
+        messages = stage_result_instance.source_text 
         if not messages:
             stage_result_instance.stage_2 = messages
             return stage_result_instance
@@ -171,7 +181,6 @@ class InitialTranslation(TranslationStage):
             return None
         
         messages = f"{self.source_language} Source:\n{stage_result_instance.source_text}\n{self.target_language} Translation:\n{stage_result_instance.stage_2}"
-        print("messages",messages)
 
         response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
         
@@ -195,7 +204,7 @@ class InitialTranslation(TranslationStage):
         
         messages=stage_result_instance.stage_3
         if messages:
-            response_text, total_count = self.safe_request(messages=messages , system_instruction=system_prompt)
+            response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
         
             if response_text:
                 stage_result_instance.stage_4 = response_text
@@ -223,11 +232,8 @@ class InitialTranslation(TranslationStage):
         updated_instances = []
 
         try:
-            
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             self.task.save()
-
-
             with ThreadPoolExecutor(max_workers=3) as executor:  
                 future_to_instance = {
                     executor.submit(self.process_stage_result, instance, system_prompt): instance
@@ -239,9 +245,11 @@ class InitialTranslation(TranslationStage):
                     if result:
                         updated_instances.append(result)
 
-                    progress_counter += 1
+                    
                     percent = int((progress_counter / self.total) * 100)
                     self.set_progress(stage="stage_02", stage_percent=percent)
+                    progress_counter += 1
+ 
             
             logging.info("✅ Done inference. stage 1")
 
@@ -254,7 +262,6 @@ class InitialTranslation(TranslationStage):
                                 ['stage_2', 'stage_2_output_token']
                             )
 
-                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_2', 'stage_2_output_token'])
                     logging.info("✅ Bulk updated all stage_02 results.")
  
      
@@ -295,10 +302,11 @@ class InitialTranslation(TranslationStage):
                     result = future.result()
                     if result:
                         updated_instances.append(result)
-
-                    progress_counter += 1
+                    
                     percent = int((progress_counter / self.total) * 100)
                     self.set_progress(stage="stage_03", stage_percent=percent)
+                    progress_counter += 1
+ 
             
             logging.info("✅ Done inference. stage 3")
 
@@ -311,7 +319,6 @@ class InitialTranslation(TranslationStage):
                                 ['stage_3', 'stage_3_output_token']
                             )
 
-                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_3', 'stage_3_output_token'])
                     logging.info("✅ Bulk updated all stage_03 results.")
  
      
@@ -353,9 +360,12 @@ class InitialTranslation(TranslationStage):
                     if result:
                         updated_instances.append(result)
 
-                    progress_counter += 1
+                    
                     percent = int((progress_counter / self.total) * 100)
                     self.set_progress(stage="stage_04", stage_percent=percent)
+                    progress_counter += 1
+
+ 
             
             logging.info("✅ Done inference. stage 4")
 
@@ -374,6 +384,7 @@ class InitialTranslation(TranslationStage):
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
             self.task.save()
             logger.info("✅ Done Adaptive segment translation")
+            self.update_progress_db()
  
      
         except Exception as e:
@@ -415,7 +426,7 @@ class AdaptiveSegmentTranslator:
         ##### style guidance  
 
         if not task_adaptive_instance:
-            
+            self.style_analysis.set_progress()
             style_guideline = self.style_analysis.process(all_paragraph=segments )
             if style_guideline:
                 task_adaptive_instance = TaskStageResults.objects.create(task = task_obj, style_guide_stage_1 = style_guideline,
