@@ -213,7 +213,7 @@ class InitialTranslation(TranslationStage):
         
         messages=stage_result_instance.stage_3
         if messages:
-            response_text, total_count = self.safe_request_claude(messages=messages ,system_instruction=system_prompt)
+            response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
         
             if response_text:
                 stage_result_instance.stage_4 = response_text
