@@ -5,7 +5,7 @@ from django.core.cache import cache
 from ai_workspace.llm_client import LLMClient
 from ai_staff.models import AdaptiveSystemPrompt
 import logging,time
-from ai_workspace.enums import AdaptiveFileTranslateStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus ,BatchStatus
 logger = logging.getLogger('django')
 from django.conf import settings
 from ai_workspace.models import AllStageResult
@@ -101,7 +101,19 @@ class StyleAnalysis(TranslationStage):
 
         combined_text = "".join(combined_text_list)
         if combined_text:
-            result_content_prompt,token = self.api_client.send_request(messages = combined_text, system_instruction=system_prompt)
+
+            try:
+                result_content_prompt,token = self.api_client.send_request(messages = combined_text, system_instruction=system_prompt)
+
+            except Exception as e:
+                self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+                self.task.save()
+
+                self.task_progress.status = BatchStatus.FAILED
+                self.task_progress.save()
+
+                logger.error("Adaptive segment translation failed and task marked as FAILED")
+                logger.exception(f"Exception occurred during translation {e}")
 
             if result_content_prompt:
                 self.set_progress(stage = "stage_01" , stage_percent=100)
@@ -110,7 +122,7 @@ class StyleAnalysis(TranslationStage):
             
             else:        
                 return None
- 
+
 
 
 
@@ -231,7 +243,7 @@ class InitialTranslation(TranslationStage):
         try:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             self.task.save()
-            with ThreadPoolExecutor(max_workers=3) as executor:  
+            with ThreadPoolExecutor(max_workers=4) as executor:  
                 future_to_instance = {
                     executor.submit(self.process_stage_result, instance, system_prompt): instance
                     for instance in self.all_stage_result_instance
@@ -265,6 +277,10 @@ class InitialTranslation(TranslationStage):
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
+
+            self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.save()
+
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
 
@@ -287,7 +303,7 @@ class InitialTranslation(TranslationStage):
             self.task.save()
 
 
-            with ThreadPoolExecutor(max_workers=3) as executor:  
+            with ThreadPoolExecutor(max_workers=4) as executor:  
                 future_to_instance = {
                     executor.submit(self.process_stage_result_stage_3, instance, system_prompt): instance
                     for instance in self.all_stage_result_instance
@@ -320,6 +336,10 @@ class InitialTranslation(TranslationStage):
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
+
+            self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.save()
+
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
 
@@ -341,7 +361,7 @@ class InitialTranslation(TranslationStage):
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             self.task.save()
 
-            with ThreadPoolExecutor(max_workers=3) as executor:  
+            with ThreadPoolExecutor(max_workers=4) as executor:  
                 future_to_instance = {
                     executor.submit(self.process_stage_result_stage_4, instance, system_prompt): instance
                     for instance in self.all_stage_result_instance
@@ -380,6 +400,9 @@ class InitialTranslation(TranslationStage):
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
+
+            self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.save()
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
     
