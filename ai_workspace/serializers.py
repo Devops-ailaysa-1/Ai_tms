@@ -732,8 +732,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-
-				
 					
 				task_assign = TaskAssign.objects.assign_task(project=project)
 

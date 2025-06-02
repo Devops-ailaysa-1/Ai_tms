@@ -455,3 +455,8 @@ NOTEBOOK_ARGUMENTS = [
 "--no-browser",
 ]
 COHERE_MODEL=os.getenv("COHERE_MODEL","")
+
+
+## OPENAI 
+
+OPENAI_MODEL_NAME_ADAPT = os.getenv('OPENAI_MODEL_NAME_ADAPT')

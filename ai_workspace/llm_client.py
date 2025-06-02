@@ -6,6 +6,9 @@ GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 ANTHROPIC_MODEL_NAME = settings.ANTHROPIC_MODEL_NAME
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
+OPENAI_MODEL_NAME_ADAPT = settings.OPENAI_MODEL_NAME_ADAPT
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+
 safety_settings=[
             types.SafetySetting(
                 category="HARM_CATEGORY_HARASSMENT",
@@ -39,7 +42,7 @@ class LLMClient:
 
             elif self.provider == "openai":
                 import openai
-                openai.api_key = api_key
+                openai.api_key = OPENAI_API_KEY 
                 self.client = openai
 
             elif self.provider == "gemini":
@@ -63,7 +66,7 @@ class LLMClient:
             return self._handle_anthropic(messages,system_instruction)
         
         elif self.provider == "openai":
-            return self._handle_openai(messages, max_tokens, stream)
+            return self._handle_openai(messages, system_instruction)
         
         elif self.provider == "gemini":
             return self._handle_genai(messages,system_instruction)
@@ -89,24 +92,23 @@ class LLMClient:
         return streamed_output , usage
  
 
-    def _handle_openai(self, messages, max_tokens, stream):
-        chat_messages = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
-        response = self.client.ChatCompletion.create(
-                                                    model=self.model_name,
-                                                    messages=chat_messages,
-                                                    max_tokens=max_tokens,
-                                                    stream=stream)
-
-        if stream:
-            output = ""
-            for chunk in response:
-                if "choices" in chunk and chunk["choices"][0]["delta"].get("content"):
-                    output += chunk["choices"][0]["delta"]["content"]
-            return None, None, output.strip()
-        else:
-            content = response.choices[0].message["content"]
-            usage = response.usage
-            return usage.prompt_tokens, usage.completion_tokens, content.strip()
+    def _handle_openai(self, messages, system_instruction):
+        print("model",OPENAI_MODEL_NAME_ADAPT)
+        usage = 0
+        completion = self.client.ChatCompletion.create(
+        model= OPENAI_MODEL_NAME_ADAPT,
+        messages=[
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": messages}
+        ], stream=True )
+        output_stream = ""
+        for chunk in completion:
+            if "content" in chunk.choices[0].delta and chunk.choices[0].delta.content:
+                output_stream = output_stream + chunk.choices[0].delta.content
+            else:
+                output_stream = output_stream + " "
+        output_stream = output_stream.strip() 
+        return output_stream ,usage
         
  
 

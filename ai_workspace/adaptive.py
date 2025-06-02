@@ -458,6 +458,7 @@ class AdaptiveSegmentTranslator:
         
         else:
             task_adaptive_instance = task_adaptive_instance.last()
+            self.style_analysis.set_progress(stage = "stage_01" , stage_percent=100)
 
             # if self.group_text_units and  not task_adaptive_instance.each_task_stage.all().exists():
             #     segments = self.group_strings_max_words(segments, max_words=150)
