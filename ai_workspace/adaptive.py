@@ -48,16 +48,11 @@ class TranslationStage(ABC):
         res = cache.get(cache_key, None)
         return res
     
-    #def create_progress(self):
-
-
  
     def set_progress(self,stage=None,stage_percent=None):
         stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
         data = self.get_progress()
         if data!=None:
-            # data = self.get_progress()
-            # get_stage = data.get(stage)
             if stage_percent != None and stage != None:
                 data[stage] = stage_percent
                 data["total"] = int(sum(data[stage_key] * stage_weights[stage_key] for stage_key in stage_weights.keys())) 
@@ -69,19 +64,16 @@ class TranslationStage(ABC):
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
         print("progress",progress)
-        return cache.set(cache_key, progress, timeout=3600)  # expires in 1 hour         
+        return cache.set(cache_key, progress, timeout=3600)         
       
     
     def update_progress_db(self):
         data = self.get_progress()
-        print("data",data)
         if data!=None and self.task_progress.progress_percent!=data['total']:
             self.task_progress.progress_percent = data['total']
             self.task_progress.save()
 
-
-
-    
+ 
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
@@ -108,9 +100,7 @@ class StyleAnalysis(TranslationStage):
                 break
 
         combined_text = "".join(combined_text_list)
-
         if combined_text:
-
             result_content_prompt,token = self.api_client.send_request(messages = combined_text, system_instruction=system_prompt)
 
             if result_content_prompt:
@@ -139,10 +129,18 @@ class InitialTranslation(TranslationStage):
         self.target_language = target_language
         self.task_progress = task_progress 
         self.api_client = api_client
+        self.claude_client = LLMClient("anthropic", api_key=None, model_name=None)
  
     def safe_request(self,messages, system_instruction, retries=2):
         for _ in range(retries):
             response_text, token_count = self.api_client.send_request(messages=messages, system_instruction=system_instruction)
+            if response_text:
+                return response_text, token_count
+        return None, None
+    
+    def safe_request_claude(self,messages, system_instruction, retries=2):
+        for _ in range(retries):
+            response_text, token_count = self.claude_client.send_request(messages=messages, system_instruction=system_instruction)
             if response_text:
                 return response_text, token_count
         return None, None
@@ -171,7 +169,6 @@ class InitialTranslation(TranslationStage):
 
     def process_stage_result_stage_3(self,stage_result_instance, system_prompt):
         
-         
         if not stage_result_instance.source_text:
             stage_result_instance.stage_3 = stage_result_instance.source_text
             return stage_result_instance
@@ -204,7 +201,7 @@ class InitialTranslation(TranslationStage):
         
         messages=stage_result_instance.stage_3
         if messages:
-            response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
+            response_text, total_count = self.safe_request_claude(messages=messages ,system_instruction=system_prompt)
         
             if response_text:
                 stage_result_instance.stage_4 = response_text
@@ -280,8 +277,6 @@ class InitialTranslation(TranslationStage):
         if self.glossary_lines:
             gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
-        
- 
 
         progress_counter = 1 
         updated_instances = []
@@ -338,8 +333,6 @@ class InitialTranslation(TranslationStage):
             gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
         
- 
-
         progress_counter = 1 
         updated_instances = []
 
@@ -347,7 +340,6 @@ class InitialTranslation(TranslationStage):
             
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
             self.task.save()
-
 
             with ThreadPoolExecutor(max_workers=3) as executor:  
                 future_to_instance = {
@@ -364,8 +356,6 @@ class InitialTranslation(TranslationStage):
                     percent = int((progress_counter / self.total) * 100)
                     self.set_progress(stage="stage_04", stage_percent=percent)
                     progress_counter += 1
-
- 
             
             logging.info("✅ Done inference. stage 4")
 
