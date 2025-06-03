@@ -1456,8 +1456,8 @@ class DocumentToFile(views.APIView):
         job_instance = doc_instance.job
         tar_lang = job_instance.target_language.language
 
-        if tar_lang not in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
-            stage = "stage_1"
+        if tar_lang in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            stage = "stage_2"
         else:
             stage = "stage_4"
 

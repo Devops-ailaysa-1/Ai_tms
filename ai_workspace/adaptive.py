@@ -480,10 +480,11 @@ class AdaptiveSegmentTranslator:
                                                       target_language = self.target_language,task_progress = self.task_progress )
 
         self.initial_translation.trans()
-        if self.target_language  in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
-            logging.info("done stage 2")
+        logging.info("done stage 2")
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.initial_translation.refine()
             logging.info("done stage 3")
+            
             self.initial_translation.rewrite()
             logging.info("done stage 4")
         else:
