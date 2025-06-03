@@ -141,20 +141,12 @@ class LLMClient:
             stream_output = ""
             for chunk in client.models.generate_content_stream(
                                                                 model = GOOGLE_GEMINI_MODEL,
-                                                                contents = contents ,
+                                                                contents = contents,
                                                                 config = generate_content_config ):
                 stream_output+=chunk.text
             
             total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
              
-
-            # res = client.models.generate_content(
-            #     model = os.environ['GOOGLE_GEMINI_MODEL'],   
-            #     contents = contents,
-            #     config = generate_content_config,
-            # ) 
-            # res.candidates[0].content.parts[0].text  
- 
             return stream_output , total_tokens.total_tokens
  
         else:
