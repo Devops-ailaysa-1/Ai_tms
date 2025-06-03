@@ -1454,20 +1454,22 @@ class DocumentToFile(views.APIView):
         doc_instance =  DBDocument.objects.get(id=document_id)
         task_instance = doc_instance.task_obj
         job_instance = doc_instance.job
-        tar_lang = job_instance.target_language.language
+        tar_lang = job_instance 
 
         if tar_lang in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
-            stage = "stage_2"
-        else:
             stage = "stage_4"
+        else:
+            stage = "stage_2"
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
 
- 
         task_stage_res = TaskStageResults.objects.filter(task=task_instance).order_by("celery_task_batch")
         all_text = []
+
         for task_stage_res_ins in task_stage_res:
             all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list(stage, flat=True))
+
+        print("all_text--->",all_text)
 
         # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
         
