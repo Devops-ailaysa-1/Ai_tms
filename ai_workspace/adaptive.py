@@ -7,11 +7,14 @@ from ai_staff.models import AdaptiveSystemPrompt
 import logging,time
 from ai_workspace.enums import AdaptiveFileTranslateStatus ,BatchStatus
 logger = logging.getLogger('django')
-from django.conf import settings
+ 
 from ai_workspace.models import AllStageResult
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
- 
+from django.conf import settings
+
+
+ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
@@ -477,11 +480,15 @@ class AdaptiveSegmentTranslator:
                                                       target_language = self.target_language,task_progress = self.task_progress )
 
         self.initial_translation.trans()
-        logging.info("done stage 2")
-        self.initial_translation.refine()
-        logging.info("done stage 3")
-        self.initial_translation.rewrite()
-        logging.info("done stage 4")
+        if self.target_language  in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            logging.info("done stage 2")
+            self.initial_translation.refine()
+            logging.info("done stage 3")
+            self.initial_translation.rewrite()
+            logging.info("done stage 4")
+        else:
+            logging.info(f"done in first stage {self.target_language}")
+
 
         return None
 

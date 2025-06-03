@@ -1446,20 +1446,28 @@ class DocumentToFile(views.APIView):
         from ai_workspace_okapi.models import MergedTextUnit
         from ai_workspace.models import TaskStageResults
         from ai_workspace_okapi.utils import download_simple_file
+        from django.conf import settings
+        ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
         
 
         source_file_path = self.get_source_file_path(document_id)
         doc_instance =  DBDocument.objects.get(id=document_id)
         task_instance = doc_instance.task_obj
         job_instance = doc_instance.job
+        tar_lang = job_instance.target_language.language
+
+        if tar_lang not in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            stage = "stage_1"
+        else:
+            stage = "stage_4"
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
 
-        #all_text = TaskStageResults.objects.filter(task=task_instance).each_task_stage.all().values_list('stage_4', flat=True)
-
+ 
+        task_stage_res = TaskStageResults.objects.filter(task=task_instance).order_by("celery_task_batch")
         all_text = []
-        for task_stage_res_ins in TaskStageResults.objects.filter(task=task_instance).order_by("celery_task_batch"):
-            all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list('stage_4', flat=True))
+        for task_stage_res_ins in task_stage_res:
+            all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list(stage, flat=True))
 
         # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
         
