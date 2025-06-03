@@ -1,7 +1,6 @@
 import backoff
 from google.genai import types
 from django.conf import settings
-
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 ANTHROPIC_MODEL_NAME = settings.ANTHROPIC_MODEL_NAME

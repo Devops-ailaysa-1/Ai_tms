@@ -488,6 +488,8 @@ class AdaptiveSegmentTranslator:
             logging.info("done stage 4")
         else:
             logging.info(f"done in first stage {self.target_language}")
+            self.style_analysis.set_progress(stage="stage_03", stage_percent=100)
+            self.style_analysis.set_progress(stage="stage_04", stage_percent=100)
 
 
         return None
