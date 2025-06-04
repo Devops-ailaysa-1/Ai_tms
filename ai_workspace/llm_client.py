@@ -115,9 +115,6 @@ class LLMClient:
     def _handle_genai(self, messages, system_instruction):
  
         if messages and system_instruction:
-            print(messages)
-            print("----------------")
-            print(system_instruction)
 
             from google import genai
             client = genai.Client(api_key = GOOGLE_GEMINI_API)
@@ -139,12 +136,14 @@ class LLMClient:
                 #thinking_config=types.ThinkingConfig(thinking_budget=0),
             )
 
-            print( GOOGLE_GEMINI_MODEL)
+ 
 
             stream_output = ""
             for chunk in client.models.generate_content_stream(model = GOOGLE_GEMINI_MODEL,
                                                                 contents = contents,
-                                                                config = generate_content_config ):
+                                                                config = generate_content_config ): 
+                print(chunk)
+                
                 if chunk.text:
                     stream_output+=chunk.text
  
