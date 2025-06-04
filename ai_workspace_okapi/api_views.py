@@ -1443,7 +1443,6 @@ class DocumentToFile(views.APIView):
         import io
         from docx import Document 
         from ai_workspace_okapi.models import Document as DBDocument
-        from ai_workspace_okapi.models import MergedTextUnit
         from ai_workspace.models import TaskStageResults
         from ai_workspace_okapi.utils import download_simple_file
         from django.conf import settings
@@ -1469,7 +1468,7 @@ class DocumentToFile(views.APIView):
         for task_stage_res_ins in task_stage_res:
             all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list(stage, flat=True))
 
-        print("all_text--->",all_text)
+ 
 
         # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
         

@@ -239,7 +239,7 @@ class InitialTranslation(TranslationStage):
         if self.glossary_lines:
             gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
-
+ 
         progress_counter = 1 
         updated_instances = []
 
@@ -296,7 +296,7 @@ class InitialTranslation(TranslationStage):
         if self.glossary_lines:
             gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
-
+ 
         progress_counter = 1 
         updated_instances = []
 
@@ -355,7 +355,7 @@ class InitialTranslation(TranslationStage):
         if self.glossary_lines:
             gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
             system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
-        
+ 
         progress_counter = 1 
         updated_instances = []
 
@@ -374,8 +374,7 @@ class InitialTranslation(TranslationStage):
                     result = future.result()
                     if result:
                         updated_instances.append(result)
-
-                    
+                   
                     percent = int((progress_counter / self.total) * 100)
                     self.set_progress(stage="stage_04", stage_percent=percent)
                     progress_counter += 1
@@ -484,7 +483,7 @@ class AdaptiveSegmentTranslator:
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.initial_translation.refine()
             logging.info("done stage 3")
-            
+
             self.initial_translation.rewrite()
             logging.info("done stage 4")
         else:

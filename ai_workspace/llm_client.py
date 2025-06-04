@@ -76,7 +76,7 @@ class LLMClient:
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_anthropic(self,messages, system_instruction):
         print("model",ANTHROPIC_MODEL_NAME)
- 
+        
         streamed_output = ""
         with self.client.messages.stream(
             model= ANTHROPIC_MODEL_NAME,
@@ -113,8 +113,11 @@ class LLMClient:
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_genai(self, messages, system_instruction):
-
-        if messages:
+ 
+        if messages and system_instruction:
+            print(messages)
+            print("----------------")
+            print(system_instruction)
 
             from google import genai
             client = genai.Client(api_key = GOOGLE_GEMINI_API)
@@ -139,13 +142,14 @@ class LLMClient:
             print( GOOGLE_GEMINI_MODEL)
 
             stream_output = ""
-            for chunk in client.models.generate_content_stream(
-                                                                model = GOOGLE_GEMINI_MODEL,
+            for chunk in client.models.generate_content_stream(model = GOOGLE_GEMINI_MODEL,
                                                                 contents = contents,
                                                                 config = generate_content_config ):
-                stream_output+=chunk.text
-            
+                if chunk.text:
+                    stream_output+=chunk.text
+ 
             total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
+ 
              
             return stream_output , total_tokens.total_tokens
  
