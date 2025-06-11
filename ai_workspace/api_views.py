@@ -5518,7 +5518,7 @@ def get_glossary(request):
     task_id = request.data.get('task_id')
     user_input = request.data.get('user_input')
 
-    task_ins = Task.objects.get(id= task_id)
+    task_ins = Task.objects.get(id = task_id)
     job = task_ins.job
     gloss_proj = task_ins.proj_obj.individual_gloss_project.project
     gloss_job_list = gloss_proj.project_jobs_set.all()

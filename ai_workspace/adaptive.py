@@ -148,7 +148,7 @@ class StyleAnalysis(TranslationStage):
 class InitialTranslation(TranslationStage):
 
     def __init__(self, user,api_client, task_adaptive_instance,glossary_lines ,source_language, target_language,task_progress):
-        from ai_glex.api_views import job_lang_pair_check
+        
         self.stage_percent = 0
         self.all_stage_result_instance =  task_adaptive_instance.each_task_stage.all()
         self.style_prompt = task_adaptive_instance.style_guide_stage_1
@@ -177,10 +177,10 @@ class InitialTranslation(TranslationStage):
 
         self.source_code = self.source_language_ins.locale_code
 
-        self.gloss_proj = self.task.proj_obj.individual_gloss_project.project
-        gloss_job_list = self.gloss_proj.project_jobs_set.all()
+         
         
-        self.gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
+        
+ 
 
         self.gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt")
 
@@ -194,10 +194,14 @@ class InitialTranslation(TranslationStage):
         from ai_workspace_okapi.api_views import matching_word
         from django.db.models import Value, CharField
         from django.db.models import Q
+        from ai_glex.api_views import job_lang_pair_check
 
         glossary_selected = GlossarySelected.objects.filter(project = self.project_ins ,glossary__project__project_type__id=3).values('glossary_id')
 
         if glossary_selected:
+            gloss_proj = self.task.proj_obj.individual_gloss_project.project
+            gloss_job_list = self.gloss_proj.project_jobs_set.all()
+            gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
             #queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job_ins__target_language = self.target_language)
             queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = self.gloss_job_ins) 
             matching_exact_queryset = matching_word(user_input, self.source_code)
