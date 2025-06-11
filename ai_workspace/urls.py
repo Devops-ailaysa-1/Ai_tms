@@ -115,6 +115,7 @@ urlpatterns += [
 	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
 	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+    path("gloss",api_views.get_glossary ,name="check_gloss")
     
 
 	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here

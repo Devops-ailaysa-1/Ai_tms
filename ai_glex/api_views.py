@@ -663,7 +663,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-from ai_workspace_okapi.api_views import matching_word
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
@@ -673,6 +673,7 @@ def glossary_search(request):
     and returns the match if any.
     '''
     from ai_qa.api_views import remove_tags
+    from ai_workspace_okapi.api_views import matching_word
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")

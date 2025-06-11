@@ -7,7 +7,7 @@ from ai_staff.models import AdaptiveSystemPrompt
 import logging,time
 from ai_workspace.enums import AdaptiveFileTranslateStatus ,BatchStatus
 logger = logging.getLogger('django')
- 
+#from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import AllStageResult
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
@@ -15,6 +15,14 @@ from django.conf import settings
 
 
 ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
+
+# def credits_consum_adaptive(user,consumable_credits):
+#     if consumable_credits < user.credit_balance.get("total_left"):
+#         UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#     else:
+#         logger.info("Insufficient credits for segment translation")
+#         raise ValueError("Insufficient credits for segment translation")
+
 
 class TranslationStage(ABC):
     def __init__(self, anthropic_api, target_language, source_language, group_text_units=False, task_progress=None):
@@ -25,9 +33,6 @@ class TranslationStage(ABC):
         self.task_progress = task_progress
         self.set_progress()
 
-    # @abstractmethod
-    # def process(self, segment, **kwargs):
-    #     pass
 
     def get_prompt_by_stage(self,stage ):
         return AdaptiveSystemPrompt.objects.get(stages=stage).prompt
@@ -76,16 +81,20 @@ class TranslationStage(ABC):
             self.task_progress.progress_percent = data['total']
             self.task_progress.save()
 
- 
+
+
+
+
 
 # Style analysis (Stage 1)
 class StyleAnalysis(TranslationStage):
-    def __init__(self,api_client,task_progress):
+    def __init__(self,user,api_client,task_progress):
          
         self.stage_percent = 0
         self.max_word = 1_000
         self.api_client = api_client
         self.task_progress = task_progress
+        self.user = user
          
 
     def process(self, all_paragraph):
@@ -107,6 +116,12 @@ class StyleAnalysis(TranslationStage):
 
             try:
                 result_content_prompt,token = self.api_client.send_request(messages = combined_text, system_instruction=system_prompt)
+
+                print("result_content_prompt",result_content_prompt)
+
+ 
+                #credits_consum_adaptive(user=self.user,consumable_credits=token) ######## reducing the credit for style ######
+
 
             except Exception as e:
                 self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
@@ -132,19 +147,80 @@ class StyleAnalysis(TranslationStage):
 # Initial translation (Stage 2)
 class InitialTranslation(TranslationStage):
 
-    def __init__(self, api_client, task_adaptive_instance,glossary_lines ,source_language, target_language,task_progress):
-
+    def __init__(self, user,api_client, task_adaptive_instance,glossary_lines ,source_language, target_language,task_progress):
+        from ai_glex.api_views import job_lang_pair_check
         self.stage_percent = 0
         self.all_stage_result_instance =  task_adaptive_instance.each_task_stage.all()
         self.style_prompt = task_adaptive_instance.style_guide_stage_1
         self.task = task_adaptive_instance.task
         self.glossary_lines = glossary_lines
         self.total = len(self.all_stage_result_instance)
+
+        
+
+
         self.source_language = source_language
         self.target_language = target_language
+        
         self.task_progress = task_progress 
         self.api_client = api_client
         self.claude_client = LLMClient("anthropic", api_key=None, model_name=None)
+        self.user = user
+        self.job_ins = self.task.job
+
+        self.source_language_ins = self.job_ins.source_language
+        self.target_language_ins = self.job_ins.target_language
+
+
+        self.project_ins = self.job_ins.project
+        self.user = self.project_ins.ai_user
+
+        self.source_code = self.source_language_ins.locale_code
+
+        self.gloss_proj = self.task.proj_obj.individual_gloss_project.project
+        gloss_job_list = self.gloss_proj.project_jobs_set.all()
+        
+        self.gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
+
+        self.gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt")
+
+         
+         
+
+
+
+    def get_glossary(self,user_input):
+        from ai_glex.models import GlossarySelected,TermsModel,MyGlossary
+        from ai_workspace_okapi.api_views import matching_word
+        from django.db.models import Value, CharField
+        from django.db.models import Q
+
+        glossary_selected = GlossarySelected.objects.filter(project = self.project_ins ,glossary__project__project_type__id=3).values('glossary_id')
+
+        if glossary_selected:
+            #queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job_ins__target_language = self.target_language)
+            queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = self.gloss_job_ins) 
+            matching_exact_queryset = matching_word(user_input, self.source_code)
+            all_sorted_query = queryset.filter(matching_exact_queryset)
+
+            queryset1 = MyGlossary.objects.filter(Q(tl_language__language= self.target_language)& Q(user=self.user)& Q(sl_language__language= self.source_language))\
+                        .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                            params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+
+            queryset_final = queryset1.union(all_sorted_query)
+            all_gloss = ""
+            if queryset_final:
+                #res=[]
+                for data in queryset_final:
+ 
+                    all_gloss += f"{data.get('sl_term')}  → {data.get('tl_term')} "
+                    all_gloss+="\n"
+ 
+                print("all_gloss",all_gloss)
+                return all_gloss
+ 
+        else:
+            return None
  
     def safe_request(self,messages, system_instruction, retries=2):
         for _ in range(retries):
@@ -161,23 +237,41 @@ class InitialTranslation(TranslationStage):
         return None, None
  
 
-    def process_stage_result(self,stage_result_instance, system_prompt):
+    def process_stage_result(self, stage_result_instance, system_prompt):
+
         messages = stage_result_instance.source_text 
+        print("messages",messages)
+
         if not messages:
             stage_result_instance.stage_2 = messages
             return stage_result_instance
+        
+        gloss = self.get_glossary(user_input=messages)
+        if gloss:
+            
+            stage_result_instance.glossary_text = gloss
+ 
+            system_prompt += f"\n{self.gloss_prompt}\n{gloss}."
+
+            print("system_prompt",system_prompt)
+
 
         if stage_result_instance.stage_2:
             logging.info(f"Already processed: {stage_result_instance.id}")
             return None
-
-        response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
+        try:
+            response_text, total_count = self.safe_request(messages=messages, system_instruction= system_prompt)
+            #credits_consum_adaptive(user=self.user,consumable_credits=total_count) ######## reducing the credit for stage 2 ######
+ 
         
-        if response_text:
-            stage_result_instance.stage_2 = response_text
-            stage_result_instance.stage_2_output_token = total_count
-            return stage_result_instance
-        else:
+            if response_text:
+                stage_result_instance.stage_2 = response_text
+                stage_result_instance.stage_2_output_token = total_count
+                return stage_result_instance
+            else:
+                logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                return None
+        except:
             logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
             return None
 
@@ -194,16 +288,29 @@ class InitialTranslation(TranslationStage):
         
         messages = f"{self.source_language} Source:\n{stage_result_instance.source_text}\n{self.target_language} Translation:\n{stage_result_instance.stage_2}"
 
-        response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
+        if stage_result_instance.glossary_text:
+            system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
         
-        if response_text:
-            stage_result_instance.stage_3 = response_text
-            stage_result_instance.stage_3_output_token = total_count
-            return stage_result_instance
+        print("stage_3",system_prompt)
+
+
+        try:
+            response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
+            #credits_consum_adaptive(user=self.user,consumable_credits=total_count) ######## reducing the credit for stage 3 ######
         
-        else:
+            if response_text:
+                stage_result_instance.stage_3 = response_text
+                stage_result_instance.stage_3_output_token = total_count
+                return stage_result_instance
+        
+            else:
+                logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                return None
+        except:
             logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
             return None
+
+    
         
     def process_stage_result_stage_4(self,stage_result_instance, system_prompt):
         if not stage_result_instance.source_text:
@@ -214,8 +321,13 @@ class InitialTranslation(TranslationStage):
             logging.info(f"Already processed: {stage_result_instance.id}")
             return None
         
-        messages=stage_result_instance.stage_3
+        messages = stage_result_instance.stage_3
         if messages:
+            if stage_result_instance.glossary_text:
+                system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
+
+            print("stage_4",system_prompt)
+
             response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
         
             if response_text:
@@ -236,9 +348,6 @@ class InitialTranslation(TranslationStage):
         system_prompt = self.get_prompt_by_stage(stage = "stage_2")
         system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
     
-        if self.glossary_lines:
-            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
-            system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
  
         progress_counter = 1 
         updated_instances = []
@@ -293,9 +402,7 @@ class InitialTranslation(TranslationStage):
         system_prompt = self.get_prompt_by_stage(stage = "stage_3")
         system_prompt = system_prompt.format(target_language= self.target_language, source_language=self.source_language)
     
-        if self.glossary_lines:
-            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
-            system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
+ 
  
         progress_counter = 1 
         updated_instances = []
@@ -351,10 +458,7 @@ class InitialTranslation(TranslationStage):
     def rewrite(self):
         system_prompt = self.get_prompt_by_stage(stage = "stage_4")
         system_prompt = system_prompt.format(target_language= self.target_language )
-    
-        if self.glossary_lines:
-            gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt") 
-            system_prompt += f"\n{gloss_prompt}\n{self.glossary_lines}."
+ 
  
         progress_counter = 1 
         updated_instances = []
@@ -390,7 +494,7 @@ class InitialTranslation(TranslationStage):
                                 ['stage_4', 'stage_4_output_token']
                             )
 
-                    #AllStageResult.objects.bulk_update(updated_instances, ['stage_3', 'stage_3_output_token'])
+ 
                     logging.info("✅ Bulk updated all stage_04 results.")
             
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
@@ -405,6 +509,7 @@ class InitialTranslation(TranslationStage):
 
             self.task_progress.status = BatchStatus.FAILED
             self.task_progress.save()
+
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
     
@@ -425,12 +530,11 @@ class AdaptiveSegmentTranslator:
         self.task_progress = task_progress
         self.document = document
         self.group_text_units = group_text_units
+        self.user = self.task_progress.project.ai_user
 
-        self.style_analysis = StyleAnalysis(api_client = self.client ,task_progress = self.task_progress)
+        self.style_analysis = StyleAnalysis(user=self.user,api_client = self.client ,task_progress = self.task_progress)
         
-
-        #self.refinement_stage_1 = RefinementStage1(self.client, target_language, source_language, group_text_units, self.task_progress)
-        #self.refinement_stage_2 = RefinementStage2(self.client, target_language, source_language, group_text_units, self.task_progress)
+ 
 
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
@@ -439,7 +543,7 @@ class AdaptiveSegmentTranslator:
         task_adaptive_instance = TaskStageResults.objects.filter(task=task_obj)
 
         ##### style guidance  
-
+        print(ADAPTIVE_INDIAN_LANGUAGE.split(" "))
         if not task_adaptive_instance:
             self.style_analysis.set_progress()
             style_guideline = self.style_analysis.process(all_paragraph=segments )
@@ -461,24 +565,17 @@ class AdaptiveSegmentTranslator:
         else:
             task_adaptive_instance = task_adaptive_instance.last()
             self.style_analysis.set_progress(stage = "stage_01" , stage_percent=100)
-
-            # if self.group_text_units and  not task_adaptive_instance.each_task_stage.all().exists():
-            #     segments = self.group_strings_max_words(segments, max_words=150)
-            #     all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
-            #     AllStageResult.objects.bulk_create(all_segment_obj)
                 
             logging.info("all_segments are created from created style")
         
-        if self.gloss_terms:
-            glossary_lines = "\n".join([f'- "{src}" → "{tgt}"' for src, tgt in self.gloss_terms.items()])
-        else:
-            glossary_lines = None
+ 
             
-        self.initial_translation = InitialTranslation(api_client= self.client, task_adaptive_instance= task_adaptive_instance,
-                                                      glossary_lines= glossary_lines, source_language=self.source_language,
+        self.initial_translation = InitialTranslation(user = self.user , api_client= self.client, task_adaptive_instance= task_adaptive_instance,
+                                                      glossary_lines= self.gloss_terms, source_language = self.source_language,
                                                       target_language = self.target_language,task_progress = self.task_progress )
 
         self.initial_translation.trans()
+        
         logging.info("done stage 2")
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.initial_translation.refine()

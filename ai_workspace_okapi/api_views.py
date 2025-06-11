@@ -1482,7 +1482,7 @@ class DocumentToFile(views.APIView):
  
             for i in all_text:
                 document.add_paragraph(i)
-                document.add_paragraph("\n")
+                #document.add_paragraph("\n")
             target_stream = io.BytesIO()
             document.save(target_stream)
             target_stream.seek(0)
@@ -3126,27 +3126,17 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 def matching_word(user_input,lang_code):
     from ai_workspace_okapi.utils import nltk_lemma
-    from ai_glex.api_views import identify_lemma_it
+    #from ai_glex.api_views import identify_lemma_it
     user_words = user_input.split()
     query = Q()
-    # if lang_code == "it":
-    #     word_lemma_user_input = identify_lemma_it(user_input)
-    #     for word in word_lemma_user_input:
-    #         if word:
-    #             word = word.lower()
-    #             query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
+ 
 
     for word in user_words:
         if word:
             word_lower = word.lower()
             word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
             word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
-            # if lang_code == "it":
-            #     query |= (
-            #                     Q(root_word__exact=word_lemma_v) |
-            #                     Q(sl_term__exact=word_lemma_v) )
-            # else:
-                 # Combine multiple conditions with one query operation using OR
+ 
             query |= (
                 Q(root_word__exact=word_lemma_v) |
                 Q(sl_term__exact=word_lemma_v) |

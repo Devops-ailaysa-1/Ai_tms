@@ -2038,5 +2038,8 @@ class AllStageResult(models.Model):
     stage_4_output_token = models.CharField(max_length=20,blank=True, null=True)
 
 
+    glossary_text = models.TextField(null=True,blank=True)
+
+
  
 

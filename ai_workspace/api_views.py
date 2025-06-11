@@ -5503,4 +5503,65 @@ def custom_proj_create(request):
         }, status=201)
     else:
         return Response(serializer.errors, status=400)
-			
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def get_glossary(request):
+    from ai_glex.models import GlossarySelected,TermsModel,MyGlossary
+    from ai_workspace_okapi.api_views import matching_word
+    from django.db.models import Value, CharField
+    from django.db.models import Q
+    from ai_glex.api_views import job_lang_pair_check
+
+    task_id = request.data.get('task_id')
+    user_input = request.data.get('user_input')
+
+    task_ins = Task.objects.get(id= task_id)
+    job = task_ins.job
+    gloss_proj = task_ins.proj_obj.individual_gloss_project.project
+    gloss_job_list = gloss_proj.project_jobs_set.all()
+
+    target_language = job.target_language
+    source_language = job.source_language
+    source_code =  job.source_language.locale_code
+
+    gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+
+
+    #project_ins = gloss_job_ins.proj_obj
+    project_ins = task_ins.proj_obj #### standard translation project and gloss job ins
+    user = project_ins.ai_user
+
+ 
+    glossary_selected = GlossarySelected.objects.filter(project = project_ins ,glossary__project__project_type__id=3).values('glossary_id')
+
+    print("glossary_selected--->",glossary_selected)
+ 
+    if glossary_selected:
+        queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = gloss_job_ins) 
+ 
+        matching_exact_queryset = matching_word(user_input, source_code)
+        all_sorted_query = queryset.filter(matching_exact_queryset)
+ 
+        queryset1 = MyGlossary.objects.filter(Q(tl_language__language=  target_language)& Q(user= user)& Q(sl_language__language= source_language))\
+                    .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                        params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+
+        queryset_final = queryset1.union(all_sorted_query)
+        all_gloss = ""
+        if queryset_final:
+ 
+            for data in queryset_final:
+ 
+                all_gloss += f"{data.get('sl_term')}  → {data.get('tl_term')}"
+                all_gloss +="\n"
+
+            print("all_gloss",all_gloss)
+            return Response({'msg': all_gloss}, status=200)
+        else:
+            return Response({'msg': "no queryset_final "}, status=200)
+
+    else:
+        return Response({'msg': "no glossary_selected"}, status=200)

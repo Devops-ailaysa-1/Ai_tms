@@ -1428,13 +1428,18 @@ def proz_list_send_email(projectpost_id):
     return Response({'msg':'email sent'})
 
 
+
+
+
+
+
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
 def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None, batch_no=None):
-    from ai_workspace_okapi.models import Segment, TextUnit, MergedTextUnit
+     
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
-    from ai_workspace.models import TaskStageResults
+     
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
@@ -1457,7 +1462,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
         translator = AdaptiveSegmentTranslator(ADAPTIVE_LLM_MODEL, source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,
                                                os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
         
-        translated_segments = translator.process_batch(segments, d_batches, batch_no=batch_no)
+        translator.process_batch(segments, d_batches, batch_no=batch_no)
         
         #all_translations = {}
 
@@ -1556,6 +1561,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         print("batches",batches)
         for i, para in enumerate(batches):
             metadata = d_batches[i]
+            print("into loop")
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
                 kwargs={

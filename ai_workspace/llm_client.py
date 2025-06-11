@@ -1,12 +1,17 @@
 import backoff
 from google.genai import types
 from django.conf import settings
+import logging
+logger = logging.getLogger('django')
+
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
 ANTHROPIC_MODEL_NAME = settings.ANTHROPIC_MODEL_NAME
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 OPENAI_MODEL_NAME_ADAPT = settings.OPENAI_MODEL_NAME_ADAPT
 OPENAI_API_KEY = settings.OPENAI_API_KEY
+ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
+
 
 safety_settings=[
             types.SafetySetting(
@@ -75,6 +80,7 @@ class LLMClient:
         
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_anthropic(self,messages, system_instruction):
+        
         print("model",ANTHROPIC_MODEL_NAME)
         
         streamed_output = ""
@@ -108,7 +114,18 @@ class LLMClient:
                 output_stream = output_stream + " "
         output_stream = output_stream.strip() 
         return output_stream ,usage
-        
+    
+    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    def try_stream(self,client,model_name,contents,generate_content_config):
+        stream_output = ""
+ 
+        for chunk in client.models.generate_content_stream(model = model_name,
+                                                           contents = contents,
+                                                           config = generate_content_config ):
+            stream_output+=chunk.text
+        return stream_output
+ 
+ 
  
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
@@ -129,28 +146,25 @@ class LLMClient:
             generate_content_config = types.GenerateContentConfig(
                 max_output_tokens=65532,  
                 response_mime_type="text/plain",
-                candidate_count=1,
-                safety_settings = safety_settings,
-                system_instruction = system_instruction ,
-                top_p=1.0, top_k=0,
+                candidate_count=1, safety_settings = safety_settings,
+                system_instruction = system_instruction, top_p=1.0, top_k=0,
                 #thinking_config=types.ThinkingConfig(thinking_budget=0),
             )
 
+            try:
+
+                stream_output_result = self.try_stream(client=client,
+                                                   model_name=GOOGLE_GEMINI_MODEL, contents=contents,
+                                                   generate_content_config=generate_content_config)
+            except:
+            #if not stream_output_result:
+                stream_output_result = self.try_stream(client=client,
+                                                   model_name=ALTERNATE_GEMINI_MODEL, contents=contents,
+                                                   generate_content_config=generate_content_config)
  
 
-            stream_output = ""
-            for chunk in client.models.generate_content_stream(model = GOOGLE_GEMINI_MODEL,
-                                                                contents = contents,
-                                                                config = generate_content_config ): 
-                print(chunk)
-                
-                if chunk.text:
-                    stream_output+=chunk.text
- 
-            total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output)
- 
-             
-            return stream_output , total_tokens.total_tokens
- 
+            total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
+            return stream_output_result , total_tokens.total_tokens
+            
         else:
             return None
