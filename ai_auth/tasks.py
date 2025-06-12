@@ -983,108 +983,108 @@ def replace_with_gloss(src, raw_mt, task):
     return final_mt
     
 
-@task(queue='high-priority')
-def adaptive_translate(task_id,segments):
-    from ai_workspace_okapi.models import Segment, TranslationStatus
-    from ai_workspace.models import Task
-    from ai_workspace.api_views import UpdateTaskCreditStatus
-    from ai_workspace_okapi.api_views import MT_RawAndTM_View
-    from json_repair import repair_json
+# @task(queue='high-priority')
+# def adaptive_translate(task_id,segments):
+#     from ai_workspace_okapi.models import Segment, TranslationStatus
+#     from ai_workspace.models import Task
+#     from ai_workspace.api_views import UpdateTaskCreditStatus
+#     from ai_workspace_okapi.api_views import MT_RawAndTM_View
+#     from json_repair import repair_json
 
-    print('Adaptive translate started')
-    track_seg = None
-    try:
-        task = Task.objects.get(id=task_id)
-        user = task.job.project.ai_user
-        MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name="adaptive_translate", status=1, celery_task_id=adaptive_translate.request.id)
-        user = task.job.project.ai_user
-        # Convert JSON data back to Segment objects
-        segment_ids = [segment["id"] for segment in segments]
-        final_segments = Segment.objects.filter(id__in=segment_ids)
-        track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
-                                                        seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
-                                                        project=task.proj_obj,status=BatchStatus.ONGOING)
-        get_terms_for_task = get_glossary_for_task(task.job.project, task)
-        # Initialize translator
-        translator = AdaptiveSegmentTranslator(
-            task.document.source_language,
-            task.document.target_language,
-            settings.ANTHROPIC_API_KEY,
-            settings.ANTHROPIC_MODEL_NAME,
-            gloss_terms=get_terms_for_task
-        )
+#     print('Adaptive translate started')
+#     track_seg = None
+#     try:
+#         task = Task.objects.get(id=task_id)
+#         user = task.job.project.ai_user
+#         MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name="adaptive_translate", status=1, celery_task_id=adaptive_translate.request.id)
+#         user = task.job.project.ai_user
+#         # Convert JSON data back to Segment objects
+#         segment_ids = [segment["id"] for segment in segments]
+#         final_segments = Segment.objects.filter(id__in=segment_ids)
+#         track_seg = TrackSegmentsBatchStatus.objects.create(celery_task_id=adaptive_translate.request.id,document=task.document,
+#                                                         seg_start_id=final_segments[0].id,seg_end_id=final_segments[len(final_segments)-1].id,
+#                                                         project=task.proj_obj,status=BatchStatus.ONGOING)
+#         get_terms_for_task = get_glossary_for_task(task.job.project, task)
+#         # Initialize translator
+#         translator = AdaptiveSegmentTranslator(
+#             task.document.source_language,
+#             task.document.target_language,
+#             settings.ANTHROPIC_API_KEY,
+#             settings.ANTHROPIC_MODEL_NAME,
+#             gloss_terms=get_terms_for_task
+#         )
         
-        segments_to_process = []
-        consumable_credits = 0
-        for segment in final_segments:
-            if not segment.target:
-                segments_to_process.append({
-                    "segment_id": segment.id,
-                    "source": segment.source,
-                    "tagged_source": segment.tagged_source
-                })
-                consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
-        print('consumable_credits',consumable_credits)
-        # Translate segments in batch
-        update_list = []
-        initial_credit = user.credit_balance.get("total_left")
-        if initial_credit >= consumable_credits:
-            translated_segments = translator.process_batch(segments_to_process)
-            try:
-                translated_segments = json.loads(translated_segments)
-            except json.JSONDecodeError as e:
-                try:
-                    translated_segments = repair_json(translated_segments,return_objects=True)
-                    logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
-                except json.JSONDecodeError as e:
-                    translated_segments = []
-                    logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate - {e} !")
+#         segments_to_process = []
+#         consumable_credits = 0
+#         for segment in final_segments:
+#             if not segment.target:
+#                 segments_to_process.append({
+#                     "segment_id": segment.id,
+#                     "source": segment.source,
+#                     "tagged_source": segment.tagged_source
+#                 })
+#                 consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, segment.id, None)
+#         print('consumable_credits',consumable_credits)
+#         # Translate segments in batch
+#         update_list = []
+#         initial_credit = user.credit_balance.get("total_left")
+#         if initial_credit >= consumable_credits:
+#             translated_segments = translator.process_batch(segments_to_process)
+#             try:
+#                 translated_segments = json.loads(translated_segments)
+#             except json.JSONDecodeError as e:
+#                 try:
+#                     translated_segments = repair_json(translated_segments,return_objects=True)
+#                     logger.info(f"Failed to parse JSON from translation output, repaired with json_repair! {e}")
+#                 except json.JSONDecodeError as e:
+#                     translated_segments = []
+#                     logger.info(f"Failed to parse JSON from translation output from anthropic adaptive_translate - {e} !")
                 
-            segment_ids = [seg["segment_id"] for seg in translated_segments]
-            segment_objs = Segment.objects.in_bulk(segment_ids)
+#             segment_ids = [seg["segment_id"] for seg in translated_segments]
+#             segment_objs = Segment.objects.in_bulk(segment_ids)
         
-            for segment in translated_segments:
-                segment_id = segment["segment_id"]
-                final_text = segment["translated_text"]
-                if segment_id in segment_objs:
-                    seg_obj = segment_objs[segment_id]
-                    if not seg_obj.target:
-                        try:        
-                            seg_obj.temp_target = final_text
-                            seg_obj.target = final_text
-                            seg_obj.status_id = TranslationStatus.objects.get(status_id=103).id
-                            update_list.append(seg_obj)
-                        except Exception as e:
-                            logger.error(f"Error processing segment {seg_obj.id}: {e}")
-                            seg_obj.target = ''
-                            seg_obj.temp_target = ''
-                            seg_obj.status_id = None
-                            continue
+#             for segment in translated_segments:
+#                 segment_id = segment["segment_id"]
+#                 final_text = segment["translated_text"]
+#                 if segment_id in segment_objs:
+#                     seg_obj = segment_objs[segment_id]
+#                     if not seg_obj.target:
+#                         try:        
+#                             seg_obj.temp_target = final_text
+#                             seg_obj.target = final_text
+#                             seg_obj.status_id = TranslationStatus.objects.get(status_id=103).id
+#                             update_list.append(seg_obj)
+#                         except Exception as e:
+#                             logger.error(f"Error processing segment {seg_obj.id}: {e}")
+#                             seg_obj.target = ''
+#                             seg_obj.temp_target = ''
+#                             seg_obj.status_id = None
+#                             continue
                         
-            # Bulk update all segments and debet credits
-            Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
-            UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            # Update batch status
-            track_seg.status = BatchStatus.COMPLETED
-            track_seg.save()
-            logger.info("Adaptive segment translation completed successfully.")
+#             # Bulk update all segments and debet credits
+#             Segment.objects.bulk_update(update_list, ["target","temp_target", "status_id"])
+#             UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#             # Update batch status
+#             track_seg.status = BatchStatus.COMPLETED
+#             track_seg.save()
+#             logger.info("Adaptive segment translation completed successfully.")
         
-            print('Adaptive translate completed')
-        else:
-            logger.info(f"Insufficient credits for segment {seg_obj.id}")
-            MTonlytaskCeleryStatus.objects.create(
-                task_id=task_id, task_name="adaptive_translate", status=1, 
-                celery_task_id=adaptive_translate.request.id, error_type="Insufficient Credits"
-            )
-            logger.info("Insufficient credits")
-            if track_seg:
-                track_seg.delete()
+#             print('Adaptive translate completed')
+#         else:
+#             logger.info(f"Insufficient credits for segment {seg_obj.id}")
+#             MTonlytaskCeleryStatus.objects.create(
+#                 task_id=task_id, task_name="adaptive_translate", status=1, 
+#                 celery_task_id=adaptive_translate.request.id, error_type="Insufficient Credits"
+#             )
+#             logger.info("Insufficient credits")
+#             if track_seg:
+#                 track_seg.delete()
 
-    except Exception as e:
-        logger.error(f"Batch task failed: {e}")
-        if track_seg:
-            track_seg.status = BatchStatus.FAILED
-            track_seg.save()
+#     except Exception as e:
+#         logger.error(f"Batch task failed: {e}")
+#         if track_seg:
+#             track_seg.status = BatchStatus.FAILED
+#             track_seg.save()
 
 
 @task(queue='high-priority')
@@ -1444,7 +1444,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
-    # seg_ids = [segment["segment_id"] for segment in segments_data]
+ 
     consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
     if consumable_credits < user.credit_balance.get("total_left"):
         UpdateTaskCreditStatus.update_credits(user, consumable_credits)
@@ -1554,28 +1554,30 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
     from ai_workspace.llm_client import LLMClient
     try:
         task = Task.objects.get(id=task_id)
-        print("task",task)
+ 
         project = task.job.project
         user = project.ai_user
+
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-        task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
+        merge_source_text_by_text_unit(document.id)
+
+        #task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
-        merge_source_text_by_text_unit(document.id)
-        #get_terms_for_task = get_glossary_for_task(project, task)
+        
+ 
         batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
 
         api_client = LLMClient("gemini")
         style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
-        style_create.process(all_paragraph=batches[0] )
+        style_create.process(all_paragraph=batches[0])
         print("len(batches)", len(batches))
 
  
         for i, para in enumerate(batches):
             metadata = d_batches[i]
-            print("para",para)
  
             translation_task = adaptive_segment_translation.apply_async(
                 args=(para, metadata, source_lang, target_lang, task_id, True,),

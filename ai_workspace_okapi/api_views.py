@@ -7,7 +7,7 @@ import json, logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update,adaptive_translate
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update
 from ai_auth.tasks import record_api_usage
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
@@ -3161,7 +3161,7 @@ def matching_word(user_input,lang_code):
                 #Q(sl_term__exact=lemma) |
                 Q(sl_term__icontains=lemma) 
             )
-    print("query",query)
+ 
     return query
 
 
