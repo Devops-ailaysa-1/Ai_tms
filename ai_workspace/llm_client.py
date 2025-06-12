@@ -121,6 +121,7 @@ class LLMClient:
         for chunk in client.models.generate_content_stream(model = model_name,
                                                            contents = contents,
                                                            config = generate_content_config ):
+            print(chunk)
             stream_output+=chunk.text
         return stream_output
  

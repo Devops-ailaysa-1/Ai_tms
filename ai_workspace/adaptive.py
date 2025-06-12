@@ -526,7 +526,6 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.group_text_units = group_text_units
         self.user = self.task_progress.project.ai_user
         self.style_guideline = None
-        #self.style_analysis = StyleAnalysis(user=self.user,api_client = self.client ,task_progress = self.task_progress)
         
  
 
@@ -535,14 +534,10 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
         task_obj = self.document.task_obj
         task_adaptive_instance = TaskStageResults.objects.filter(task=task_obj)
-        
-         
  
         if not task_adaptive_instance:
             self.set_progress()
             self.style_guideline =  TaskStyle.objects.filter(task=task_obj).last().style_guide
-
-             
 
             if self.style_guideline:
                 self.set_progress(stage = "stage_01" , stage_percent=100)
@@ -566,7 +561,6 @@ class AdaptiveSegmentTranslator(TranslationStage):
                 
             logging.info("all_segments are created from created style")
         
- 
             
         self.initial_translation = InitialTranslation(user = self.user , api_client= self.client,
                                                       task_adaptive_instance= task_adaptive_instance,
