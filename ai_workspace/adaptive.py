@@ -71,7 +71,7 @@ class TranslationStage(ABC):
             progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0}
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
-        print("progress",progress)
+         
         return cache.set(cache_key, progress, timeout=3600)         
       
     
@@ -139,7 +139,7 @@ class StyleAnalysis:
                     logger.exception(f"Exception occurred during style {e}")
         else:
             logger.info("Adaptive style already exists")
-            print("Adaptive style already exists")
+             
             return None
 
  
@@ -181,43 +181,38 @@ class InitialTranslation(TranslationStage):
         self.gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt")
 
 
-    def get_glossary(self,user_input):
-        from ai_glex.models import GlossarySelected,TermsModel,MyGlossary
+    def get_glossary(self, user_input):
+        from ai_glex.models import GlossarySelected, TermsModel
         from ai_workspace_okapi.api_views import matching_word
-        from django.db.models import Value, CharField
-        from django.db.models import Q
         from ai_glex.api_views import job_lang_pair_check
 
-        glossary_selected = GlossarySelected.objects.filter(project = self.project_ins ,glossary__project__project_type__id=3).values('glossary_id')
+ 
+        glossary_selected = GlossarySelected.objects.filter(project=self.project_ins, glossary__project__project_type__id=3).values_list('glossary_id', flat=True)
 
-        if glossary_selected:
-            gloss_proj = self.task.proj_obj.individual_gloss_project.project
-            gloss_job_list = gloss_proj.project_jobs_set.all()
-            gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
- 
-            queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = gloss_job_ins) 
-            matching_exact_queryset = matching_word(user_input, self.source_code)
-            all_sorted_query = queryset.filter(matching_exact_queryset)
-
-            queryset1 = MyGlossary.objects.filter(Q(tl_language__language= self.target_language)& Q(user=self.user)& Q(sl_language__language= self.source_language))\
-                        .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                            params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
-
-            queryset_final = queryset1.union(all_sorted_query)
-            all_gloss = ""
-            if queryset_final:
- 
-                for data in queryset_final:
- 
-                    all_gloss += f"{data.get('sl_term')}  → {data.get('tl_term')} "
-                    all_gloss+="\n"
- 
-                print("all_gloss",all_gloss)
-                return all_gloss
- 
-        else:
+        if not glossary_selected:
             return None
+
+        # Get glossary job instance based on language pair
+        gloss_proj = self.task.proj_obj.individual_gloss_project.project
+        gloss_job_list = gloss_proj.project_jobs_set.all()
+        gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
  
+        queryset = TermsModel.objects.filter(glossary_id__in=glossary_selected, job=gloss_job_ins)
+
+ 
+        matching_exact_queryset = matching_word(user_input=user_input, lang_code=self.source_code)
+        filtered_terms = queryset.filter(matching_exact_queryset)
+
+        if filtered_terms.exists():
+            all_gloss = "\n".join(f"{term.sl_term}  → {term.tl_term}" for term in filtered_terms)
+            print("all_gloss--->",all_gloss)
+            return all_gloss
+
+        return None
+ 
+
+
+
     def safe_request(self,messages, system_instruction, retries=2):
         for _ in range(retries):
             response_text, token_count = self.api_client.send_request(messages=messages, system_instruction=system_instruction)
@@ -236,7 +231,6 @@ class InitialTranslation(TranslationStage):
     def process_stage_result(self, stage_result_instance, system_prompt):
 
         messages = stage_result_instance.source_text 
-        print("messages",messages)
 
         if not messages:
             stage_result_instance.stage_2 = messages
@@ -249,7 +243,7 @@ class InitialTranslation(TranslationStage):
  
             system_prompt += f"\n{self.gloss_prompt}\n{gloss}."
 
-            print("system_prompt",system_prompt)
+            
 
 
         if stage_result_instance.stage_2:
@@ -287,7 +281,7 @@ class InitialTranslation(TranslationStage):
         if stage_result_instance.glossary_text:
             system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
         
-        print("stage_3",system_prompt)
+         
 
 
         try:
@@ -322,7 +316,7 @@ class InitialTranslation(TranslationStage):
             if stage_result_instance.glossary_text:
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
-            print("stage_4",system_prompt)
+             
 
             response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
         
@@ -542,13 +536,13 @@ class AdaptiveSegmentTranslator(TranslationStage):
         task_obj = self.document.task_obj
         task_adaptive_instance = TaskStageResults.objects.filter(task=task_obj)
         
-        print("task_adaptive_instance",task_adaptive_instance)
+         
  
         if not task_adaptive_instance:
             self.set_progress()
             self.style_guideline =  TaskStyle.objects.filter(task=task_obj).last().style_guide
 
-            print("style_guideline",self.style_guideline)
+             
 
             if self.style_guideline:
                 self.set_progress(stage = "stage_01" , stage_percent=100)
@@ -583,6 +577,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.initial_translation.trans()
         
         logging.info("done stage 2")
+ 
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.initial_translation.refine()
             logging.info("done stage 3")

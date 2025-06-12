@@ -767,10 +767,12 @@ def get_consumption_of_file_translate(task):
 
 
 
-def nltk_lemma(word,pos="v",language=None):
+def nltk_lemma(word,pos="v",language=None,gloss=False):
     from ai_glex.api_views import identify_lemma
     if language and word:
-        result = identify_lemma(word,language=language)
+        print("called _identify lemma ")
+        print("gloss--->",gloss)
+        result = identify_lemma(word,language=language,gloss=gloss)
         return result
     elif word:
         return lemmatizer.lemmatize(word.strip(), pos=pos)

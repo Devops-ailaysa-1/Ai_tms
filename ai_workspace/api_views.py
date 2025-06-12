@@ -5533,29 +5533,31 @@ def get_glossary(request):
     #project_ins = gloss_job_ins.proj_obj
     project_ins = task_ins.proj_obj #### standard translation project and gloss job ins
     user = project_ins.ai_user
-
  
     glossary_selected = GlossarySelected.objects.filter(project = project_ins ,glossary__project__project_type__id=3).values('glossary_id')
 
-    print("glossary_selected--->",glossary_selected)
+    #print("glossary_selected--->",glossary_selected)
  
     if glossary_selected:
         queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = gloss_job_ins) 
  
         matching_exact_queryset = matching_word(user_input, source_code)
         all_sorted_query = queryset.filter(matching_exact_queryset)
+        #print("all_sorted_query",all_sorted_query)
  
-        queryset1 = MyGlossary.objects.filter(Q(tl_language__language=  target_language)& Q(user= user)& Q(sl_language__language= source_language))\
-                    .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                        params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+        # queryset1 = MyGlossary.objects.filter(Q(tl_language__language=  target_language)& Q(user= user)& Q(sl_language__language= source_language))\
+        #             .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+        #                 params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
 
-        queryset_final = queryset1.union(all_sorted_query)
+        #queryset_final = queryset1.union(all_sorted_query)
+
         all_gloss = ""
-        if queryset_final:
+        if all_sorted_query:
  
-            for data in queryset_final:
- 
-                all_gloss += f"{data.get('sl_term')}  → {data.get('tl_term')}"
+            for data in all_sorted_query:
+                sl_term = data.sl_term
+                tl_term = data.tl_term
+                all_gloss += f"{sl_term}  → {tl_term}"
                 all_gloss +="\n"
 
             print("all_gloss",all_gloss)

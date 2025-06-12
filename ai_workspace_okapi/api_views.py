@@ -3124,30 +3124,48 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 
 
-def matching_word(user_input,lang_code):
-    from ai_workspace_okapi.utils import nltk_lemma
-    #from ai_glex.api_views import identify_lemma_it
-    user_words = user_input.split()
-    query = Q()
+# def matching_word(user_input,lang_code):
+#     from ai_workspace_okapi.utils import nltk_lemma
+ 
+#     user_words = user_input.split()
+#     query = Q()
  
 
-    for word in user_words:
-        if word:
-            word_lower = word.lower()
-            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
-            word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
+#     for word in user_words:
+#         if word:
+#             word_lower = word.lower()
+#             word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
+#             word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
  
+#             query |= (
+#                 Q(root_word__exact=word_lemma_v) |
+#                 Q(sl_term__exact=word_lemma_v) |
+#                 Q(sl_term__exact=word_lower) |
+#                 Q(root_word__exact=word_lemma_n) |
+#                 Q(sl_term__icontains=word_lemma_v) |
+#                 Q(sl_term__icontains=word_lower)
+#             )
+#     return query
+
+def matching_word(user_input,lang_code):
+ 
+    from ai_workspace_okapi.utils import nltk_lemma
+    lemma_res = nltk_lemma(word = user_input, language="en", gloss=True)
+ 
+    query = Q()
+    for lemma in lemma_res:
+        if lemma:
             query |= (
-                Q(root_word__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lower) |
-                Q(root_word__exact=word_lemma_n) |
-                Q(sl_term__icontains=word_lemma_v) |
-                Q(sl_term__icontains=word_lower)
+                Q(root_word__exact=lemma) |
+                Q(root_word__icontains=lemma) |
+                #Q(sl_term__exact=lemma) |
+                Q(sl_term__icontains=lemma) 
             )
+    print("query",query)
     return query
 
-    
+
+
 def check_source_words(user_input, task):
 
     '''

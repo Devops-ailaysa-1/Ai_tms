@@ -1383,12 +1383,21 @@ def segment_term_pos_identify(sentence,word,lang_code=None):
 
 ### finding lemma
 
-def identify_lemma(word,language=None):
-    IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
-    payload = {'word':word,'language':language}
+def identify_lemma(word, language=None,gloss=False):
+    if gloss:
+        IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA_GLOSS
+        payload = {'sentence':word,'language':language}
+    else:
+        IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
+        payload = {'word':word,'language':language}
+        
+    print("IDENTIFY_LEMMA_URL",IDENTIFY_LEMMA_URL)
+    
     response = requests.request("POST", IDENTIFY_LEMMA_URL, headers={}, data=payload, files=[])
     if response.status_code == 200:
-        return response.json()['lemma']
+        lemma = response.json()
+ 
+        return lemma['lemma']
     else:
         return None
 
