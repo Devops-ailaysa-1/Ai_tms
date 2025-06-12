@@ -1435,7 +1435,8 @@ def proz_list_send_email(projectpost_id):
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
-def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, gloss_terms,task_id,group_text_units, failed_batch=False, celery_task_id=None, batch_no=None):
+def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
+                                 task_id,group_text_units, failed_batch=False, celery_task_id=None, batch_no=None):
      
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
     from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -1459,8 +1460,10 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
     try:
         # gemini
         # anthropic
-        translator = AdaptiveSegmentTranslator(ADAPTIVE_LLM_MODEL, source_lang, target_lang, os.getenv('GEMINI_API_KEY') ,
-                                               os.getenv('GENAI_MODEL'), gloss_terms, batch_status, group_text_units=group_text_units, document=task.document)
+        translator = AdaptiveSegmentTranslator(provider = ADAPTIVE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
+                                            task_progress = batch_status, group_text_units=group_text_units, document=task.document)
+        
+ 
         
         translator.process_batch(segments, d_batches, batch_no=batch_no)
         
@@ -1540,30 +1543,42 @@ def create_batch_by_para(doc_id, min_words_per_batch=1500):
     
     return (batches, d_batches)
 
+
+
+
 @task(queue='high-priority')
 def create_doc_and_write_seg_to_db(task_id, total_word_count):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.utils import merge_source_text_by_text_unit
+    from ai_workspace.adaptive import StyleAnalysis
+    from ai_workspace.llm_client import LLMClient
     try:
         task = Task.objects.get(id=task_id)
         print("task",task)
         project = task.job.project
+        user = project.ai_user
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
         merge_source_text_by_text_unit(document.id)
-        get_terms_for_task = get_glossary_for_task(project, task)
+        #get_terms_for_task = get_glossary_for_task(project, task)
         batches, d_batches = create_batch_by_para(document.id)
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
-        print("d_batches",d_batches)
-        print("batches",batches)
+
+        api_client = LLMClient("gemini")
+        style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
+        style_create.process(all_paragraph=batches[0] )
+        print("len(batches)", len(batches))
+
+ 
         for i, para in enumerate(batches):
             metadata = d_batches[i]
-            print("into loop")
+            print("para",para)
+ 
             translation_task = adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
+                args=(para, metadata, source_lang, target_lang, task_id, True,),
                 kwargs={
                     'batch_no': i+1,
                 },

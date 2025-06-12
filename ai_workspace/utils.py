@@ -375,12 +375,12 @@ def re_initiate_failed_batch(task, project):
     from ai_workspace_okapi.models import MergedTextUnit
     from ai_workspace.enums import BatchStatus
     from ai_workspace.models import Task
-    from ai_auth.tasks import get_glossary_for_task
+     
     from ai_auth.tasks import adaptive_segment_translation
 
     try:
         task_id = task.id
-        get_terms_for_task = get_glossary_for_task(project, task)
+        #get_terms_for_task = get_glossary_for_task(project, task)
         failed_task_batches = TrackSegmentsBatchStatus.objects.filter(document=task.document, status=BatchStatus.FAILED)
         task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
         source_lang = task.job.source_language.language
@@ -395,7 +395,7 @@ def re_initiate_failed_batch(task, project):
                 metadata[text_unit.text_unit.id] = text_unit.source_para
             
             adaptive_segment_translation.apply_async(
-                args=(para, metadata, source_lang, target_lang, get_terms_for_task, task_id, True,),
+                args=(para, metadata, source_lang, target_lang, task_id, True,),
                 kwargs={
                     'failed_batch': True,
                     'celery_task_id': failed_task_batch.celery_task_id,

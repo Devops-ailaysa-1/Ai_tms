@@ -2012,9 +2012,19 @@ class ProcessFile(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
+class TaskStyle(models.Model):
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_style")
+    style_guide = models.TextField(null=True,blank=True)
+    status = models.TextField(null=True,blank=True)
+
+    style_input_token = models.CharField(max_length=20,blank=True, null=True)
+    style_output_token = models.CharField(max_length=20,blank=True, null=True)
+
+
 class TaskStageResults(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
-    style_guide_stage_1 = models.TextField(null=True,blank=True)
+    #style_guide_stage_1 = models.TextField(null=True,blank=True)
     celery_task_batch = models.IntegerField()
     group_text_units = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

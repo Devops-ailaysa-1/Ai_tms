@@ -34,10 +34,9 @@ safety_settings=[
 
  
 class LLMClient:
-    def __init__(self, provider, api_key, model_name):
+    def __init__(self, provider ):
         self.provider = provider.lower()
-        self.api_key = api_key
-        self.model_name = model_name
+ 
 
         try:
             if self.provider == "anthropic":
