@@ -541,7 +541,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
 
-        task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj)
+        task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj,celery_task_batch=batch_no)
  
         if not task_adaptive_instance:
             self.set_progress()
@@ -557,7 +557,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
                 logging.info("all_segments are created")
         
         else:
-            task_adaptive_instance = task_adaptive_instance.last()
+            #task_adaptive_instance = task_adaptive_instance.last()
             self.set_progress(stage = "stage_01" , stage_percent=100)
                 
             logging.info("all_segments are created from created style")
