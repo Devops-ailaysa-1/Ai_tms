@@ -304,15 +304,21 @@ class InitialTranslation(TranslationStage):
             logging.info(f"Already processed: {stage_result_instance.id}")
             return None
         
-        messages = stage_result_instance.stage_3
+        if stage_result_instance.stage_3:
+            messages = stage_result_instance.stage_3
+        
+            
+        else:
+            messages = stage_result_instance.stage_2
+            logging.info(f"stage_2 message is added in stage 4 process")
         if messages:
             if stage_result_instance.glossary_text:
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
             messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} +\n\n{self.target_language} :+{messages} " 
-            print(system_prompt)
-            print("-------------")
-            print(messages)
+            # print(system_prompt)
+            # print("-------------")
+            # print(messages)
 
             response_text, total_count = self.safe_request(messages= messages, system_instruction= system_prompt)
         
@@ -364,7 +370,7 @@ class InitialTranslation(TranslationStage):
                     progress_counter += 1
  
             
-            logging.info("✅ Done inference. stage 1")
+            logging.info("✅ Done inference. stage Trans")
 
             if updated_instances:
                 with transaction.atomic():
@@ -568,16 +574,21 @@ class AdaptiveSegmentTranslator(TranslationStage):
         logging.info("done stage 2")
  
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            
             self.initial_translation.refine()
-            logging.info("done stage 3")
+            logging.info(f"done stage 3 {self.target_language}")
 
             self.initial_translation.rewrite()
-            logging.info("done stage 4")
+            logging.info(f"done stage 4 {self.target_language}")
+            
+
         else:
             self.initial_translation.rewrite()
-            logging.info(f"done in first stage {self.target_language}")
-            self.set_progress(stage="stage_03", stage_percent=100)
-            self.set_progress(stage="stage_04", stage_percent=100)
+            logging.info(f"done in trans stage and rewrite {self.target_language}")
+ 
+        
+        self.set_progress(stage="stage_03", stage_percent=100)
+        self.set_progress(stage="stage_04", stage_percent=100)
 
 
         return None
