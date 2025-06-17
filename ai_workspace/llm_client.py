@@ -11,7 +11,7 @@ ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 OPENAI_MODEL_NAME_ADAPT = settings.OPENAI_MODEL_NAME_ADAPT
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
-
+ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
 
 safety_settings=[
             types.SafetySetting(
@@ -34,8 +34,9 @@ safety_settings=[
 
  
 class LLMClient:
-    def __init__(self, provider ):
+    def __init__(self, provider,style):
         self.provider = provider.lower()
+        self.style = style
  
 
         try:
@@ -97,7 +98,7 @@ class LLMClient:
  
 
     def _handle_openai(self, messages, system_instruction):
-        print("model",OPENAI_MODEL_NAME_ADAPT)
+ 
         usage = 0
         completion = self.client.ChatCompletion.create(
         model= OPENAI_MODEL_NAME_ADAPT,
@@ -115,13 +116,13 @@ class LLMClient:
         return output_stream ,usage
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def try_stream(self,client,model_name,contents,generate_content_config):
+    def try_stream(self,client,model_name, contents, generate_content_config):
         stream_output = ""
  
         for chunk in client.models.generate_content_stream(model = model_name,
                                                            contents = contents,
                                                            config = generate_content_config ):
-            logger.info(str(chunk))
+            
             stream_output+=chunk.text
         return stream_output
  
@@ -145,23 +146,34 @@ class LLMClient:
 
             generate_content_config = types.GenerateContentConfig(
                 max_output_tokens=65532,  
-                response_mime_type="text/plain",
+                #response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
-                system_instruction = system_instruction, top_p=1.0, top_k=0,
-                #thinking_config=types.ThinkingConfig(thinking_budget=0),
+                response_mime_type="application/json",
+                system_instruction = system_instruction,  
+                response_schema=genai.types.Schema(
+                    type = genai.types.Type.OBJECT,
+                    properties = {
+                        "data": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                        ),
+                    },
+                )
             )
 
-            try:
+            #try:
+ 
 
-                stream_output_result = self.try_stream(client=client,
+            stream_output_result = self.try_stream(client=client,
                                                    model_name=GOOGLE_GEMINI_MODEL, contents=contents,
                                                    generate_content_config=generate_content_config)
-            except:
-            #if not stream_output_result:
-                stream_output_result = self.try_stream(client=client,
-                                                   model_name=ALTERNATE_GEMINI_MODEL, contents=contents,
-                                                   generate_content_config=generate_content_config)
+            # except:
  
+            #     stream_output_result = self.try_stream(client=client,
+            #                                        model_name=ALTERNATE_GEMINI_MODEL, contents=contents,
+            #                                        generate_content_config=generate_content_config)
+
+            stream_output_result = eval(stream_output_result)['data']
+            
 
             total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
             return stream_output_result , total_tokens.total_tokens

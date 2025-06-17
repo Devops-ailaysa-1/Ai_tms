@@ -81,10 +81,7 @@ class TranslationStage(ABC):
             self.task_progress.progress_percent = data['total']
             self.task_progress.save()
 
-
-
-
-
+ 
 
 # Style analysis (Stage 1)
 class StyleAnalysis:
@@ -109,6 +106,7 @@ class StyleAnalysis:
         
         if not TaskStyle.objects.filter(task = self.task).exists():
             system_prompt = AdaptiveSystemPrompt.objects.get(stages = "stage_1").prompt
+            task_instance = TaskStyle.objects.create(task=self.task)
 
             combined_text = ''
             combined_text_list = []
@@ -125,16 +123,17 @@ class StyleAnalysis:
 
                 try:
                     result_content_prompt,token = self.safe_request(messages = combined_text, system_instruction=system_prompt)
+                    task_instance.style_guide = result_content_prompt
+                    task_instance.style_output_token=token
+                    task_instance.save()
  
-                    TaskStyle.objects.create(task=self.task, style_guide = result_content_prompt, style_output_token=token)
                     logger.info("Adaptive style created")
-
-                    if result_content_prompt:
-                        #self.set_progress(stage = "stage_01" , stage_percent=100)
-                    
-                        return result_content_prompt
+                    print("result_content_prompt",result_content_prompt)
+                    return result_content_prompt
  
                 except Exception as e:
+                    self.task.adaptive_file_translate_status =AdaptiveFileTranslateStatus.FAILED
+                    self.task.save()
                     logger.error("Adaptive style failed and task marked as FAILED")
                     logger.exception(f"Exception occurred during style {e}")
         else:
@@ -159,19 +158,17 @@ class InitialTranslation(TranslationStage):
  
         self.total = len(self.all_stage_result_instance)
 
- 
         self.source_language = source_language
         self.target_language = target_language
         
         self.task_progress = task_progress 
         self.api_client = api_client
-        self.claude_client = LLMClient("anthropic")
+        self.claude_client = LLMClient(provider= "anthropic", style=False)
         self.user = user
         self.job_ins = self.task.job
 
         self.source_language_ins = self.job_ins.source_language
         self.target_language_ins = self.job_ins.target_language
-
 
         self.project_ins = self.job_ins.project
         self.user = self.project_ins.ai_user
@@ -242,9 +239,7 @@ class InitialTranslation(TranslationStage):
             stage_result_instance.glossary_text = gloss
  
             system_prompt += f"\n{self.gloss_prompt}\n{gloss}."
-
-            
-
+ 
 
         if stage_result_instance.stage_2:
             logging.info(f"Already processed: {stage_result_instance.id}")
@@ -281,8 +276,6 @@ class InitialTranslation(TranslationStage):
         if stage_result_instance.glossary_text:
             system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
         
-         
-
 
         try:
             response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
@@ -316,9 +309,12 @@ class InitialTranslation(TranslationStage):
             if stage_result_instance.glossary_text:
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
-             
+            messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} +\n\n{self.target_language} :+{messages} " 
+            print(system_prompt)
+            print("-------------")
+            print(messages)
 
-            response_text, total_count = self.safe_request(messages=messages ,system_instruction=system_prompt)
+            response_text, total_count = self.safe_request(messages= messages, system_instruction= system_prompt)
         
             if response_text:
                 stage_result_instance.stage_4 = response_text
@@ -336,10 +332,13 @@ class InitialTranslation(TranslationStage):
     def trans(self):
  
         system_prompt = self.get_prompt_by_stage(stage = "stage_2")
+ 
         if self.style_prompt:
             system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
         else:
+ 
             raise RuntimeError("no style")
+ 
     
  
         progress_counter = 1 
@@ -510,44 +509,41 @@ class InitialTranslation(TranslationStage):
 
  
 class AdaptiveSegmentTranslator(TranslationStage):
+    
     def __init__(self, provider, 
                  source_language, 
                  target_language, 
- 
                  task_progress, 
                  group_text_units=False, document=None):
         
-        self.client = LLMClient(provider)
+        from ai_workspace.models import TaskStyle
+        
+        self.client = LLMClient(provider = provider,style=False)
         self.source_language = source_language
         self.target_language = target_language
          
         self.task_progress = task_progress
         self.document = document
+        self.task_obj = self.document.task_obj
         self.group_text_units = group_text_units
         self.user = self.task_progress.project.ai_user
-        self.style_guideline = None
+        self.style_guideline = TaskStyle.objects.get(task=self.task_obj).style_guide 
+        print(self.style_guideline)
         
  
 
     def process_batch(self, segments, d_batches, batch_no):
-        from ai_workspace.models import TaskStageResults, AllStageResult,TaskStyle
+        from ai_workspace.models import TaskStageResults, AllStageResult
 
-        task_obj = self.document.task_obj
-        task_adaptive_instance = TaskStageResults.objects.filter(task=task_obj)
+        task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj)
  
         if not task_adaptive_instance:
             self.set_progress()
-            self.style_guideline =  TaskStyle.objects.filter(task=task_obj).last().style_guide
 
-            if self.style_guideline:
-                self.set_progress(stage = "stage_01" , stage_percent=100)
-                task_adaptive_instance = TaskStageResults.objects.create(task = task_obj,
+            self.set_progress(stage = "stage_01" , stage_percent=100)
+            task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj,
                                                                          group_text_units=self.group_text_units, celery_task_batch=batch_no)
                 
-            else:
-                raise RuntimeError("style not created")
-            
-
             if self.group_text_units:
                 segments = self.group_strings_max_words(segments, max_words=150)
                 all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
@@ -562,11 +558,11 @@ class AdaptiveSegmentTranslator(TranslationStage):
             logging.info("all_segments are created from created style")
         
             
-        self.initial_translation = InitialTranslation(user = self.user , api_client= self.client,
+        self.initial_translation = InitialTranslation(user= self.user , api_client= self.client,
                                                       task_adaptive_instance= task_adaptive_instance,
                                                       source_language = self.source_language,
                                                       target_language = self.target_language,
-                                                      task_progress = self.task_progress, style_prompt=self.style_guideline )
+                                                      task_progress = self.task_progress, style_prompt= self.style_guideline )
 
         self.initial_translation.trans()
         
@@ -579,9 +575,10 @@ class AdaptiveSegmentTranslator(TranslationStage):
             self.initial_translation.rewrite()
             logging.info("done stage 4")
         else:
+            self.initial_translation.rewrite()
             logging.info(f"done in first stage {self.target_language}")
-            self.style_analysis.set_progress(stage="stage_03", stage_percent=100)
-            self.style_analysis.set_progress(stage="stage_04", stage_percent=100)
+            self.set_progress(stage="stage_03", stage_percent=100)
+            self.set_progress(stage="stage_04", stage_percent=100)
 
 
         return None

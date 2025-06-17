@@ -1015,6 +1015,7 @@ class Task(models.Model):
             related_name="job_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
     adaptive_file_translate_status = models.CharField(max_length=20, choices=AdaptiveFileTranslateStatus.choices, default=AdaptiveFileTranslateStatus.NOT_INITIATED)
+ 
 
     class Meta:
         constraints = [

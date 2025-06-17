@@ -1463,8 +1463,6 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
         translator = AdaptiveSegmentTranslator(provider = ADAPTIVE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
                                             task_progress = batch_status, group_text_units=group_text_units, document=task.document)
         
- 
-        
         translator.process_batch(segments, d_batches, batch_no=batch_no)
         
         #all_translations = {}
@@ -1570,10 +1568,10 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
 
-        api_client = LLMClient("gemini")
+        api_client = LLMClient(provider = "anthropic",style=True)
         style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
         style_create.process(all_paragraph=batches[0])
-        print("len(batches)", len(batches))
+        
 
  
         for i, para in enumerate(batches):

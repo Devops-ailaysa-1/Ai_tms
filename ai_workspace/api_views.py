@@ -5271,7 +5271,7 @@ def contains_valid_words(sentence):
     return any(word.isalpha() for word in words)
     
 
-#### to get the number of insert and delete in a list of segments using task id
+ 
 
 def seg_diff_ins_del_calculation(task_ins):
     from ai_workspace.utils import number_of_words_delete,number_of_words_insert
@@ -5511,8 +5511,7 @@ def custom_proj_create(request):
 def get_glossary(request):
     from ai_glex.models import GlossarySelected,TermsModel,MyGlossary
     from ai_workspace_okapi.api_views import matching_word
-    from django.db.models import Value, CharField
-    from django.db.models import Q
+ 
     from ai_glex.api_views import job_lang_pair_check
 
     task_id = request.data.get('task_id')
