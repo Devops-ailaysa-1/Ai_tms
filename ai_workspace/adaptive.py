@@ -57,10 +57,20 @@ class TranslationStage(ABC):
         return res
     
  
-    def set_progress(self,stage=None,stage_percent=None):
-        stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
+    def set_progress(self,stage=None,stage_percent=None,no_of_stage=4):
+        
+
         data = self.get_progress()
+        if data != None:
+            no_of_stage = data["no_of_stages"]
+        else:
+            no_of_stage = no_of_stage
+        
         if data!=None:
+            if no_of_stage == 4 :
+                stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
+            else:
+                stage_weights = {"stage_01": 0.1, "stage_02": 0.5, "stage_04": 0.4}
             if stage_percent != None and stage != None:
                 data[stage] = stage_percent
                 data["total"] = int(sum(data[stage_key] * stage_weights[stage_key] for stage_key in stage_weights.keys())) 
@@ -68,7 +78,10 @@ class TranslationStage(ABC):
             else:
                  return None              
         else:
-            progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0}
+            if no_of_stage == 4:
+                progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0,"no_of_stages":4}
+            else:
+                progress={"stage_01": 0, "stage_02": 0, "stage_04": 0,"total": 0,"no_of_stages":3}
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
          
@@ -376,7 +389,7 @@ class InitialTranslation(TranslationStage):
                             )
 
                     logging.info("✅ Bulk updated all stage_02 results.")
- 
+                    self.update_progress_db()
      
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
@@ -431,8 +444,8 @@ class InitialTranslation(TranslationStage):
                             )
 
                     logging.info("✅ Bulk updated all stage_03 results.")
- 
-     
+                    self.update_progress_db()
+            
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
@@ -538,7 +551,10 @@ class AdaptiveSegmentTranslator(TranslationStage):
         task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj)
  
         if not task_adaptive_instance:
-            self.set_progress()
+            if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+                self.set_progress(no_of_stage=4)
+            else:
+                self.set_progress(no_of_stage=3)
 
             self.set_progress(stage = "stage_01" , stage_percent=100)
             task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj,
@@ -557,7 +573,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
                 
             logging.info("all_segments are created from created style")
         
-            
+        self.update_progress_db()
         self.initial_translation = InitialTranslation(user= self.user , api_client= self.client,
                                                       task_adaptive_instance= task_adaptive_instance,
                                                       source_language = self.source_language,
@@ -577,8 +593,8 @@ class AdaptiveSegmentTranslator(TranslationStage):
         else:
             self.initial_translation.rewrite()
             logging.info(f"done in first stage {self.target_language}")
-            self.set_progress(stage="stage_03", stage_percent=100)
-            self.set_progress(stage="stage_04", stage_percent=100)
+            # self.set_progress(stage="stage_03", stage_percent=100)
+            # self.set_progress(stage="stage_04", stage_percent=100)
 
 
         return None
