@@ -1453,12 +1453,15 @@ class DocumentToFile(views.APIView):
         doc_instance =  DBDocument.objects.get(id=document_id)
         task_instance = doc_instance.task_obj
         job_instance = doc_instance.job
-        tar_lang = job_instance 
+ 
+        stage = "stage_4"
+        #if tar_lang in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+        #    stage = "stage_4"
 
-        if tar_lang in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
-            stage = "stage_4"
-        else:
-            stage = "stage_2"
+        #else:
+        #    stage = "stage_2"
+        
+        print("stage ---->>>" ,stage)
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
 

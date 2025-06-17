@@ -5509,7 +5509,7 @@ def custom_proj_create(request):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def get_glossary(request):
-    from ai_glex.models import GlossarySelected,TermsModel,MyGlossary
+    from ai_glex.models import GlossarySelected,TermsModel
     from ai_workspace_okapi.api_views import matching_word
  
     from ai_glex.api_views import job_lang_pair_check
