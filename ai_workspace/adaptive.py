@@ -528,7 +528,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.group_text_units = group_text_units
         self.user = self.task_progress.project.ai_user
         self.style_guideline = TaskStyle.objects.get(task=self.task_obj).style_guide 
-        print(self.style_guideline)
+         
         
  
 
@@ -541,8 +541,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
             self.set_progress()
 
             self.set_progress(stage = "stage_01" , stage_percent=100)
-            task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj,
-                                                                         group_text_units=self.group_text_units, celery_task_batch=batch_no)
+            task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch=batch_no)
                 
             if self.group_text_units:
                 segments = self.group_strings_max_words(segments, max_words=150)

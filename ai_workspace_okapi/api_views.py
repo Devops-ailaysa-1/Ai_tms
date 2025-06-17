@@ -1446,7 +1446,7 @@ class DocumentToFile(views.APIView):
         from ai_workspace.models import TaskStageResults
         from ai_workspace_okapi.utils import download_simple_file
         from django.conf import settings
-        ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
+        #ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
         
 
         source_file_path = self.get_source_file_path(document_id)
@@ -1455,13 +1455,7 @@ class DocumentToFile(views.APIView):
         job_instance = doc_instance.job
  
         stage = "stage_4"
-        #if tar_lang in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
-        #    stage = "stage_4"
-
-        #else:
-        #    stage = "stage_2"
-        
-        print("stage ---->>>" ,stage)
+ 
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
 
