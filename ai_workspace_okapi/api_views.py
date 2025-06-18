@@ -1467,13 +1467,6 @@ class DocumentToFile(views.APIView):
 
  
 
-        # text_units = TextUnit.objects.filter(document=doc_instance).order_by('id')
-        
-        # all_text = [
-        #     merged.translated_para if (merged := MergedTextUnit.objects.filter(text_unit=text_unit).first()) else '\n\n'
-        #     for text_unit in text_units
-        # ]
-
         if all_text and source_file_path.endswith((".doc", ".docx")):
             document = Document()
  
