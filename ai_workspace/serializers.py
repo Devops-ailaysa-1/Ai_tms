@@ -747,6 +747,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					default_gloss_project.is_default_project_glossary = True
 					default_gloss_project.file_translate_glossary = project
 					default_gloss_project.save()
+					GlossarySelected.objects.filter(project=default_gloss_project.project.id).update(project=project)
 					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)
 
 		except ValidationError:
