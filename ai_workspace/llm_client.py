@@ -146,18 +146,18 @@ class LLMClient:
 
             generate_content_config = types.GenerateContentConfig(
                 max_output_tokens=65532,  
-                #response_mime_type="text/plain",
+                response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
-                response_mime_type="application/json",
+                #response_mime_type="application/json",
                 system_instruction = system_instruction,  
-                response_schema=genai.types.Schema(
-                    type = genai.types.Type.OBJECT,
-                    properties = {
-                        "data": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                        ),
-                    },
-                )
+                # response_schema=genai.types.Schema(
+                #     type = genai.types.Type.OBJECT,
+                #     properties = {
+                #         "data": genai.types.Schema(
+                #             type = genai.types.Type.STRING,
+                #         ),
+                #     },
+                # )
             )
 
             #try:
@@ -172,11 +172,9 @@ class LLMClient:
             #                                        model_name=ALTERNATE_GEMINI_MODEL, contents=contents,
             #                                        generate_content_config=generate_content_config)
 
-            stream_output_result = eval(stream_output_result)['data']
-            
-
-            total_tokens = client.models.count_tokens( model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
+            #stream_output_result = eval(stream_output_result)['data']
+            print(stream_output_result)
+            total_tokens = client.models.count_tokens(model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
             return stream_output_result , total_tokens.total_tokens
-            
         else:
             return None
