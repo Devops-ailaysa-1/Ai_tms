@@ -551,11 +551,11 @@ class AdaptiveSegmentTranslator(TranslationStage):
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
 
-        #task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj,celery_task_batch=batch_no)
-        #print("task_adaptive_instance",task_adaptive_instance)
+        print("batch_no",batch_no)
  
-        #if not task_adaptive_instance:
-            #logging.info("no task_adaptive_instance")
+ 
+        print("len of the text---->", len(segments))
+
         self.set_progress()
  
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
@@ -564,20 +564,17 @@ class AdaptiveSegmentTranslator(TranslationStage):
             self.set_progress(no_of_stage=3)
 
         self.set_progress(stage = "stage_01" , stage_percent=100)
-        task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch=batch_no)
+        task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no)
             
         
-        segments = self.split_paragraph_to_chunks(paragraph= segments, max_words=500)
-        all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
+        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
+        print("segment paragraph after split" ,len(splited_segment))
+
+        all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance) for i in splited_segment]
         AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
         
         logging.info("all_segments are created")
-        
-        # else:
  
-            # self.set_progress(stage = "stage_01" , stage_percent=100)
-                
-        #     logging.info("all_segments are created from created style")
         
         self.update_progress_db()
         self.initial_translation = InitialTranslation(user= self.user , api_client= self.client,
@@ -633,10 +630,11 @@ class AdaptiveSegmentTranslator(TranslationStage):
         return grouped
 
 
-    def split_paragraph_to_chunks(self,paragraph, max_words):
-        for para in paragraph:
+    def split_paragraph_to_chunks(self, paragraphs, max_words):
+        all_chunks = []
+
+        for para in paragraphs:
             words = para.split()
-            
             chunks = []
             current_chunk = []
 
@@ -649,4 +647,6 @@ class AdaptiveSegmentTranslator(TranslationStage):
             if current_chunk:
                 chunks.append(" ".join(current_chunk))
 
-        return chunks
+            all_chunks.extend(chunks)
+
+        return all_chunks
