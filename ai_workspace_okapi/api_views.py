@@ -3240,7 +3240,7 @@ def target_source_words(target_mt,task):
 from tqdm import tqdm
 from ai_workspace.models import Project
 from ai_workspace_okapi.models import Segment ,TranslationStatus
-tran_status_instance = TranslationStatus.objects.get(status_id=104)
+
 
 def contains_tag(sentence):
     pattern = r"<\d+>|</\d+>"
@@ -3358,6 +3358,7 @@ def get_all_segments_tag(request):
 @api_view(['GET',])
 def update_segment(request):
     segment_content = request.query_params.get('segment_content',None)
+    tran_status_instance = TranslationStatus.objects.get(status_id=104)
     seg_id = request.query_params.get('seg_id',None)
     segment_instance = Segment.objects.get(id=seg_id)
     if segment_content:
