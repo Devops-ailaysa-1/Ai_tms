@@ -631,7 +631,6 @@ class AdaptiveSegmentTranslator(TranslationStage):
             grouped.append("\n\n".join(temp))
 
         return grouped
-<<<<<<< HEAD
 
 
     def split_paragraph_to_chunks(self,paragraph, max_words):
@@ -651,5 +650,3 @@ class AdaptiveSegmentTranslator(TranslationStage):
                 chunks.append(" ".join(current_chunk))
 
         return chunks
-=======
->>>>>>> origin/stephen-adapt
