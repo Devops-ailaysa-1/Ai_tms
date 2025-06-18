@@ -740,13 +740,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 						word_count = word_count_find(get_task)
 						if word_count == 0:
 							raise serializers.ValidationError({"files": [{"file": ["The submitted file is empty."]}]})
-						if word_count > 10000:
-							raise serializers.ValidationError({"msg": "The uploaded file exceeds our 10,000-word maximum limit. Please upload a shorter file or split your content into multiple files."})
+						# if word_count > 10000:
+						# 	raise serializers.ValidationError({"msg": "The uploaded file exceeds our 10,000-word maximum limit. Please upload a shorter file or split your content into multiple files."})
 					
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
 					default_gloss_project.file_translate_glossary = project
 					default_gloss_project.save()
+					GlossarySelected.objects.filter(project=default_gloss_project.project.id).update(project=project)
 					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)
 
 		except ValidationError:
