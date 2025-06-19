@@ -196,20 +196,27 @@ class InitialTranslation(TranslationStage):
         from ai_workspace_okapi.api_views import matching_word
         from ai_glex.api_views import job_lang_pair_check
 
- 
-        glossary_selected = GlossarySelected.objects.filter(project=self.project_ins, glossary__project__project_type__id=3).values_list('glossary_id', flat=True)
-
-        if not glossary_selected:
+        gloss_selected = GlossarySelected.objects.filter(project=self.project_ins)
+        if not gloss_selected:
             return None
+        
+        gloss_projects = [gloss.glossary.project for gloss in gloss_selected] if gloss_selected else []
+        gloss_job_ins = []
+        for gp in gloss_projects:
+            is_pair = job_lang_pair_check(gp.project_jobs_set.all(), self.source_language_ins.id, self.target_language_ins.id)
+            if is_pair:
+                gloss_job_ins.append(is_pair)
 
-        # Get glossary job instance based on language pair
-        gloss_proj = self.task.proj_obj.individual_gloss_project.project
-        gloss_job_list = gloss_proj.project_jobs_set.all()
-        gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
- 
-        queryset = TermsModel.objects.filter(glossary_id__in=glossary_selected, job=gloss_job_ins)
+        # glossary_selected = GlossarySelected.objects.filter(project=self.project_ins, glossary__project__project_type__id=3).values_list('glossary_id', flat=True)
 
+        
+
+        # # Get glossary job instance based on language pair
+        # gloss_proj = self.task.proj_obj.individual_gloss_project.project
+        # gloss_job_list = gloss_proj.project_jobs_set.all()
+        # gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
  
+        queryset = TermsModel.objects.filter(glossary_id__in=gloss_selected, job=gloss_job_ins)
         matching_exact_queryset = matching_word(user_input=user_input, lang_code=self.source_code)
         filtered_terms = queryset.filter(matching_exact_queryset)
 
