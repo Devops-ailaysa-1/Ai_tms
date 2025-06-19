@@ -41,6 +41,7 @@ import requests,logging
 from django.http import Http404
 from django.db import transaction
 from rest_framework.decorators import action
+from collections import Counter
 
 logger = logging.getLogger('django')
 
@@ -357,6 +358,10 @@ class TermUploadView(viewsets.ModelViewSet):
         if edit_allow == False:
             return Response({"msg":"Already someone is working"},status = 400)
         
+        term_count = TermsModel.objects.filter(glossary=glossary).count()
+        if term_count >= 500:
+            return Response({'msg': "Term limit reached for this glossary (500 terms max)."}, status=400)
+        
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
             serializer.save()
@@ -648,6 +653,21 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         project = request.POST.get('project',None) 
         if not glossaries:
             return Response(data={"Message":"need gloss or proj to add"}, status=400)
+
+        # Check for term limit violations
+        proj_ins = Project.objects.get(id=project)
+        if hasattr(proj_ins, 'glossary_project'):
+            term_count = TermsModel.objects.filter(glossary=proj_ins.glossary_project.id).count()
+            gloss_selected_term_count = TermsModel.objects.filter(glossary__in=glossaries).count()
+            if term_count + gloss_selected_term_count > 500:
+                return Response(
+                    data={
+                        "msg": f"Glossary will exceed 500 terms limit. "
+                                f"Current terms: {term_count}, Trying to add: {gloss_selected_term_count}"
+                    },
+                    status=400
+                )
+        
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):
