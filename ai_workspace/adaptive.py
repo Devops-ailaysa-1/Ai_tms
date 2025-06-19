@@ -215,8 +215,8 @@ class InitialTranslation(TranslationStage):
         # gloss_proj = self.task.proj_obj.individual_gloss_project.project
         # gloss_job_list = gloss_proj.project_jobs_set.all()
         # gloss_job_ins = job_lang_pair_check(gloss_job_list, self.source_language_ins.id, self.target_language_ins.id)
- 
-        queryset = TermsModel.objects.filter(glossary_id__in=gloss_selected, job=gloss_job_ins)
+        gloss_selected = gloss_selected.values_list('glossary_id', flat=True)
+        queryset = TermsModel.objects.filter(glossary__in=gloss_selected, job__in=gloss_job_ins)
         matching_exact_queryset = matching_word(user_input=user_input, lang_code=self.source_code)
         filtered_terms = queryset.filter(matching_exact_queryset)
 
