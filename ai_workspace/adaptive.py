@@ -57,10 +57,20 @@ class TranslationStage(ABC):
         return res
     
  
-    def set_progress(self,stage=None,stage_percent=None):
-        stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
+    def set_progress(self,stage=None,stage_percent=None,no_of_stage=4):
+        
+
         data = self.get_progress()
+        if data != None:
+            no_of_stage = data["no_of_stages"]
+        else:
+            no_of_stage = no_of_stage
+        
         if data!=None:
+            if no_of_stage == 4 :
+                stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
+            else:
+                stage_weights = {"stage_01": 0.1, "stage_02": 0.5, "stage_04": 0.4}
             if stage_percent != None and stage != None:
                 data[stage] = stage_percent
                 data["total"] = int(sum(data[stage_key] * stage_weights[stage_key] for stage_key in stage_weights.keys())) 
@@ -68,7 +78,10 @@ class TranslationStage(ABC):
             else:
                  return None              
         else:
-            progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0}
+            if no_of_stage == 4:
+                progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0,"no_of_stages":4}
+            else:
+                progress={"stage_01": 0, "stage_02": 0, "stage_04": 0,"total": 0,"no_of_stages":3}
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
          
@@ -316,10 +329,7 @@ class InitialTranslation(TranslationStage):
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
             messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} +\n\n{self.target_language} :+{messages} " 
-            # print(system_prompt)
-            # print("-------------")
-            # print(messages)
-
+ 
             response_text, total_count = self.safe_request(messages= messages, system_instruction= system_prompt)
         
             if response_text:
@@ -382,7 +392,7 @@ class InitialTranslation(TranslationStage):
                             )
 
                     logging.info("✅ Bulk updated all stage_02 results.")
- 
+                    self.update_progress_db()
      
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
@@ -437,8 +447,8 @@ class InitialTranslation(TranslationStage):
                             )
 
                     logging.info("✅ Bulk updated all stage_03 results.")
- 
-     
+                    self.update_progress_db()
+            
         except Exception as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
@@ -541,28 +551,32 @@ class AdaptiveSegmentTranslator(TranslationStage):
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
 
-        task_adaptive_instance = TaskStageResults.objects.filter(task=self.task_obj,celery_task_batch=batch_no)
+        print("batch_no",batch_no)
  
-        if not task_adaptive_instance:
-            self.set_progress()
+ 
+        print("len of the text---->", len(segments))
 
-            self.set_progress(stage = "stage_01" , stage_percent=100)
-            task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch=batch_no)
-                
-            if self.group_text_units:
-                segments = self.group_strings_max_words(segments, max_words=150)
-                all_segment_obj = [AllStageResult(source_text=i,task_stage_result=task_adaptive_instance) for i in segments]
-                AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
-                
-                logging.info("all_segments are created")
-        
+        self.set_progress()
+ 
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            self.set_progress(no_of_stage=4)
         else:
-            #task_adaptive_instance = task_adaptive_instance.last()
-            self.set_progress(stage = "stage_01" , stage_percent=100)
-                
-            logging.info("all_segments are created from created style")
-        
+            self.set_progress(no_of_stage=3)
+
+        self.set_progress(stage = "stage_01" , stage_percent=100)
+        task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no)
             
+        
+        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
+        print("segment paragraph after split" ,len(splited_segment))
+
+        all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance) for i in splited_segment]
+        AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
+        
+        logging.info("all_segments are created")
+ 
+        
+        self.update_progress_db()
         self.initial_translation = InitialTranslation(user= self.user , api_client= self.client,
                                                       task_adaptive_instance= task_adaptive_instance,
                                                       source_language = self.source_language,
@@ -584,11 +598,9 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
         else:
             self.initial_translation.rewrite()
-            logging.info(f"done in trans stage and rewrite {self.target_language}")
- 
-        
-        self.set_progress(stage="stage_03", stage_percent=100)
-        self.set_progress(stage="stage_04", stage_percent=100)
+            logging.info(f"done in first stage {self.target_language}")
+            # self.set_progress(stage="stage_03", stage_percent=100)
+            # self.set_progress(stage="stage_04", stage_percent=100)
 
 
         return None
@@ -616,3 +628,25 @@ class AdaptiveSegmentTranslator(TranslationStage):
             grouped.append("\n\n".join(temp))
 
         return grouped
+
+
+    def split_paragraph_to_chunks(self, paragraphs, max_words):
+        all_chunks = []
+
+        for para in paragraphs:
+            words = para.split()
+            chunks = []
+            current_chunk = []
+
+            for word in words:
+                current_chunk.append(word)
+                if len(current_chunk) >= max_words:
+                    chunks.append(" ".join(current_chunk))
+                    current_chunk = []
+
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+
+            all_chunks.extend(chunks)
+
+        return all_chunks
