@@ -102,7 +102,7 @@ class GlossaryFileView(viewsets.ViewSet):
             if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None:
                 glossary = obj.project.glossary_project.id
                 term_count = TermsModel.objects.filter(glossary=glossary).count()
-                if (term_count+valid_count) >= 3:
+                if (term_count+valid_count) > 3:
                     return Response({'msg': "Term limit reached for this glossary (3 terms max)."}, status=400)
             data = [{"project": obj.project.id, "file": file, "job":job_id, "usage_type":8} for file in files]
 
