@@ -84,7 +84,7 @@ class TranslationStage(ABC):
                 progress={"stage_01": 0, "stage_02": 0, "stage_04": 0,"total": 0,"no_of_stages":3}
       
         cache_key = f"adaptive_progress_{self.task_progress.id}"
-         
+        logger.info(f"Setting progress for {cache_key} with data: {progress}")
         return cache.set(cache_key, progress, timeout=3600)         
       
     
@@ -189,6 +189,8 @@ class InitialTranslation(TranslationStage):
         self.source_code = self.source_language_ins.locale_code
 
         self.gloss_prompt = self.get_prompt_by_stage(stage = "gloss_adapt")
+
+
 
 
     def get_glossary(self, user_input):
@@ -522,8 +524,6 @@ class InitialTranslation(TranslationStage):
 
 
  
-
- 
 class AdaptiveSegmentTranslator(TranslationStage):
     
     def __init__(self, provider, 
@@ -546,17 +546,21 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.style_guideline = TaskStyle.objects.get(task=self.task_obj).style_guide 
          
         
- 
+    def deduct_credits_adaptive(self,segments):
+        from ai_workspace_okapi.api_views import MT_RawAndTM_View
+        from ai_workspace.api_views import UpdateTaskCreditStatus
+        consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(self.task_obj.document, None, segments)
+        if consumable_credits < self.user.credit_balance.get("total_left"):
+            UpdateTaskCreditStatus.update_credits(self.user, consumable_credits)
+        else:
+            logger.info("Insufficient credits for segment translation")
+            raise ValueError("Insufficient credits for segment translation")
 
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
 
-        print("batch_no",batch_no)
- 
- 
-        print("len of the text---->", len(segments))
-
-        self.set_progress()
+        logger.info("batch_no",batch_no)
+        logger.info("len of the text---->", len(segments))
  
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.set_progress(no_of_stage=4)
@@ -564,7 +568,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
             self.set_progress(no_of_stage=3)
 
         self.set_progress(stage = "stage_01" , stage_percent=100)
-        task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no)
+        task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
             
         
         splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
@@ -602,6 +606,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
             # self.set_progress(stage="stage_03", stage_percent=100)
             # self.set_progress(stage="stage_04", stage_percent=100)
 
+        self.deduct_credits_adaptive(segments=segments)
 
         return None
 
