@@ -257,7 +257,7 @@ class InitialTranslation(TranslationStage):
         if gloss:
             
             stage_result_instance.glossary_text = gloss
- 
+            stage_result_instance.save()
             system_prompt += f"\n{self.gloss_prompt}\n{gloss}."
  
 
