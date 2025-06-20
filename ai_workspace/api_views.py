@@ -5366,7 +5366,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
                     if progress_data!=None:
                         total += progress_data.get('total', 0)
                     else:
-                        total = batch.progress_percent
+                        total += batch.progress_percent
                     if task_result:
                         if batch.status == "COMPLETED":
                             status_counter["completed"] += 1

@@ -1431,8 +1431,6 @@ def proz_list_send_email(projectpost_id):
 
 
 
-
-
 # #### -------------------- Adaptive Translation ---------------------------- ####
 @task(queue='high-priority')
 def adaptive_segment_translation(segments, d_batches, source_lang, target_lang, 
@@ -1445,12 +1443,12 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
  
-    consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
-    if consumable_credits < user.credit_balance.get("total_left"):
-        UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-    else:
-        logger.info("Insufficient credits for segment translation")
-        raise ValueError("Insufficient credits for segment translation")
+    # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
+    # if consumable_credits < user.credit_balance.get("total_left"):
+    #     UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    # else:
+    #     logger.info("Insufficient credits for segment translation")
+    #     raise ValueError("Insufficient credits for segment translation")
     
     if failed_batch == True:
         batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
@@ -1584,7 +1582,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
                 },
                 queue='high-priority'
             )
-            TrackSegmentsBatchStatus.objects.create(
+            batch = TrackSegmentsBatchStatus.objects.create(
                 celery_task_id=translation_task.id,
                 status=BatchStatus.ONGOING,
                 document=task.document,
@@ -1593,11 +1591,11 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
                 project=project,
                 celery_task_batch = i+1
             )
-            print("Adaptive created")
-            print("Adaptive translation task created for batch:", i)
+            logger.info(f"Batch created for task {task_id}: batch {batch.id}")
+            # logger.info("Adaptive translation task created for batch:", i)
 
     except Exception as e:
-        logger.error(f'Error in batch task: {e}')
+        logger.error(f'Error in batch task-{task_id}: {e}')
 
 
 def get_glossary_for_task(project, task):

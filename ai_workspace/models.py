@@ -2025,6 +2025,7 @@ class TaskStyle(models.Model):
 
 class TaskStageResults(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
+    segment_batch = models.ForeignKey(TrackSegmentsBatchStatus, on_delete=models.CASCADE, related_name='task_result_batch',null=True, blank=True)
     #style_guide_stage_1 = models.TextField(null=True,blank=True)
     celery_task_batch = models.IntegerField()
     group_text_units = models.BooleanField(default=False)
@@ -2047,7 +2048,6 @@ class AllStageResult(models.Model):
 
     stage_4_input_token = models.CharField(max_length=20,blank=True, null=True)
     stage_4_output_token = models.CharField(max_length=20,blank=True, null=True)
-
 
     glossary_text = models.TextField(null=True,blank=True)
 
