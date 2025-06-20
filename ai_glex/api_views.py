@@ -88,10 +88,22 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'Upload failed. Download the template to upload the terms'}, status=400)
-        
+            
+            if 'Source language term' in df.columns:
+                valid_terms = df['Source language term'].dropna()
+                valid_terms = valid_terms[valid_terms.astype(str).str.strip() != '']
+                valid_count = len(valid_terms)
+                if valid_count > 3:
+                    return Response({'msg': f'Upload failed. The file contains {valid_count} valid terms. Please upload a file with 3 or fewer valid terms.'}, status=400)
+            
         if job_id: ## from gloss page with gloss project 
             # job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job_id)
+            if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None:
+                glossary = obj.project.glossary_project.id
+                term_count = TermsModel.objects.filter(glossary=glossary).count()
+                if (term_count+valid_count) >= 3:
+                    return Response({'msg': "Term limit reached for this glossary (3 terms max)."}, status=400)
             data = [{"project": obj.project.id, "file": file, "job":job_id, "usage_type":8} for file in files]
 
         elif task_id: ### from transeditor with translation project which is project's task id 
