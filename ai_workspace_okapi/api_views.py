@@ -1485,7 +1485,7 @@ class DocumentToFile(views.APIView):
             if not filtered_text:
                 raise ValueError("No valid content found to download.")
             
-            text_str = "\n".join(all_text)
+            text_str = "\n".join(filtered_text)
             target_stream = io.BytesIO()
             target_stream.write(text_str.encode("utf-8"))
             doc_bytes = target_stream.getvalue()    
