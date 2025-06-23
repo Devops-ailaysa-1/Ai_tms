@@ -115,6 +115,9 @@ class LLMClient:
         output_stream = output_stream.strip() 
         return output_stream ,usage
     
+
+    
+    
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def try_stream(self,client,model_name, contents, generate_content_config):
         stream_output = ""
@@ -174,6 +177,8 @@ class LLMClient:
 
             #stream_output_result = eval(stream_output_result)['data']
             print(stream_output_result)
+            if stream_output_result=='':
+                return None , None
             total_tokens = client.models.count_tokens(model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
             return stream_output_result , total_tokens.total_tokens
         else:
