@@ -93,8 +93,8 @@ class GlossaryFileView(viewsets.ViewSet):
                 valid_terms = df['Source language term'].dropna()
                 valid_terms = valid_terms[valid_terms.astype(str).str.strip() != '']
                 valid_count = len(valid_terms)
-                if valid_count > 3:
-                    return Response({'msg': f'Upload failed. The file contains {valid_count} valid terms. Please upload a file with 3 or fewer valid terms.'}, status=400)
+                if valid_count > 1000:
+                    return Response({'msg': 'Terms upload limit reached for this glossary (1000 terms max).'}, status=400)
             
         if job_id: ## from gloss page with gloss project 
             # job = json.loads(request.POST.get('job'))
@@ -102,8 +102,8 @@ class GlossaryFileView(viewsets.ViewSet):
             if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None:
                 glossary = obj.project.glossary_project.id
                 term_count = TermsModel.objects.filter(glossary=glossary).count()
-                if (term_count+valid_count) > 3:
-                    return Response({'msg': "Term limit reached for this glossary (3 terms max)."}, status=400)
+                if (term_count+valid_count) > 1000:
+                    return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
             data = [{"project": obj.project.id, "file": file, "job":job_id, "usage_type":8} for file in files]
 
         elif task_id: ### from transeditor with translation project which is project's task id 
@@ -371,8 +371,8 @@ class TermUploadView(viewsets.ModelViewSet):
             return Response({"msg":"Already someone is working"},status = 400)
         
         term_count = TermsModel.objects.filter(glossary=glossary).count()
-        if term_count >= 500:
-            return Response({'msg': "Term limit reached for this glossary (500 terms max)."}, status=400)
+        if term_count >= 1000:
+            return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
         
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
@@ -666,19 +666,14 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         if not glossaries:
             return Response(data={"Message":"need gloss or proj to add"}, status=400)
 
-        # Check for term limit violations
+        # Check for term limit violations in glossary selection
         proj_ins = Project.objects.get(id=project)
         if hasattr(proj_ins, 'glossary_project'):
             term_count = TermsModel.objects.filter(glossary=proj_ins.glossary_project.id).count()
             gloss_selected_term_count = TermsModel.objects.filter(glossary__in=glossaries).count()
-            if term_count + gloss_selected_term_count > 500:
-                return Response(
-                    data={
-                        "msg": f"Glossary will exceed 500 terms limit. "
-                                f"Current terms: {term_count}, Trying to add: {gloss_selected_term_count}"
-                    },
-                    status=400
-                )
+            if term_count + gloss_selected_term_count > 1000:
+                return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
+                
         
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
