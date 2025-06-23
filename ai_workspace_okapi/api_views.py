@@ -3248,15 +3248,11 @@ def remove_tags(sentence):
 
 @api_view(['GET',])
 def get_all_segments(request):
- 
     project_id = request.query_params.get('project_id',None)
-
     project_instance = Project.objects.get(id=project_id)
-
     from ai_workspace_okapi.api_views import DocumentViewByTask
     for i in project_instance.project_jobs_set.last().job_tasks_set.all():
         DocumentViewByTask.create_document_for_task_if_not_exists(i)
- 
     all_segments = []
     try:
         for job_instance in project_instance.project_jobs_set.all():
