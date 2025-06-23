@@ -3248,22 +3248,18 @@ def remove_tags(sentence):
 
 @api_view(['GET',])
 def get_all_segments(request):
- 
     project_id = request.query_params.get('project_id',None)
-
     project_instance = Project.objects.get(id=project_id)
-
     from ai_workspace_okapi.api_views import DocumentViewByTask
     for i in project_instance.project_jobs_set.last().job_tasks_set.all():
         DocumentViewByTask.create_document_for_task_if_not_exists(i)
- 
     all_segments = []
     try:
         for job_instance in project_instance.project_jobs_set.all():
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
-                        segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
+                        segment_data = {"id": seg.id, "seg": seg.tagged_source }
                         all_segments.append(segment_data)
         
         return JsonResponse({"result":all_segments},status=200 )
@@ -3290,7 +3286,7 @@ def get_not_translated_seg(request):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
                         if not seg.temp_target:
-                            segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) }
+                            segment_data = {"id": seg.id, "seg":seg.tagged_source }
                             all_segments.append(segment_data)
         
         return JsonResponse({"result":all_segments},status=200 )
@@ -3313,7 +3309,7 @@ def cross_check_segment(request):
             for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
                 for text_unit in doc_instance.document_text_unit_set.all():
                     for seg in text_unit.text_unit_segment_set.all():
-                        segment_data = {"id": seg.id, "seg": remove_tags(seg.tagged_source) ,  "trans_seg": seg.temp_target}
+                        segment_data = {"id": seg.id, "seg": seg.tagged_source,  "trans_seg": seg.temp_target}
                         all_segments.append(segment_data)
         
         return JsonResponse({"result":all_segments},status=200 )

@@ -269,18 +269,26 @@ class InitialTranslation(TranslationStage):
         try:
             response_text, total_count = self.safe_request(messages=messages, system_instruction= system_prompt)
             #credits_consum_adaptive(user=self.user,consumable_credits=total_count) ######## reducing the credit for stage 2 ######
- 
-        
+
+
             if response_text:
                 stage_result_instance.stage_2 = response_text
                 stage_result_instance.stage_2_output_token = total_count
                 return stage_result_instance
             else:
+                stage_result_instance.stage_2_error_type = "LLM_ERROR"
+                stage_result_instance.stage_2_error_message = "Response text is empty"
+                # stage_result_instance.save()
                 logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                return None
-        except:
-            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-            return None
+                return stage_result_instance
+                # raise ValueError("response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                
+                # return None
+        except BaseException as e:
+            stage_result_instance.stage_2_error_type = "OTHER"
+            stage_result_instance.stage_2_error_message = str(e)
+            logging.error(f"Error processing stage 2 for id {stage_result_instance.id}: {e}")
+            return stage_result_instance
 
 
     def process_stage_result_stage_3(self,stage_result_instance, system_prompt):
@@ -301,19 +309,25 @@ class InitialTranslation(TranslationStage):
 
         try:
             response_text, total_count = self.safe_request(messages=messages, system_instruction=system_prompt)
-            #credits_consum_adaptive(user=self.user,consumable_credits=total_count) ######## reducing the credit for stage 3 ######
-        
+        #credits_consum_adaptive(user=self.user,consumable_credits=total_count) ######## reducing the credit for stage 3 ######
+    
             if response_text:
                 stage_result_instance.stage_3 = response_text
                 stage_result_instance.stage_3_output_token = total_count
                 return stage_result_instance
         
             else:
+                stage_result_instance.stage_3_error_type = "LLM_ERROR"
+                stage_result_instance.stage_3_error_message = "Response text is empty"
+                # stage_result_instance.save()
                 logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                return None
-        except:
-            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-            return None
+                return stage_result_instance
+        except BaseException as e:
+            stage_result_instance.stage_4_error_type = "OTHER"
+            stage_result_instance.stage_4_error_message = str(e)
+            logging.error(f"Error processing stage 3 for id {stage_result_instance.id}: {e}")
+            return stage_result_instance
+
 
     
         
@@ -327,27 +341,36 @@ class InitialTranslation(TranslationStage):
             return None
         
         if stage_result_instance.stage_3:
-            messages = stage_result_instance.stage_3
-        
-            
+            messages = stage_result_instance.stage_3    
         else:
             messages = stage_result_instance.stage_2
             logging.info(f"stage_2 message is added in stage 4 process")
+
         if messages:
             if stage_result_instance.glossary_text:
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
             messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} +\n\n{self.target_language} :+{messages} " 
- 
-            response_text, total_count = self.safe_request(messages= messages, system_instruction= system_prompt)
-        
-            if response_text:
-                stage_result_instance.stage_4 = response_text
-                stage_result_instance.stage_4_output_token = total_count
-                return stage_result_instance
-            else:
-                logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                return None
+
+            try:
+    
+                response_text, total_count = self.safe_request(messages= messages, system_instruction= system_prompt)
+            
+                if response_text:
+                    stage_result_instance.stage_4 = response_text
+                    stage_result_instance.stage_4_output_token = total_count
+                    return stage_result_instance
+                else:
+                    stage_result_instance.stage_4_error_type = "LLM_ERROR"
+                    stage_result_instance.stage_4_error_message = "Response text is empty"
+                    # stage_result_instance.save()
+                    logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                    return stage_result_instance
+            except BaseException as e:
+                    stage_result_instance.stage_4_error_type = "OTHER"
+                    stage_result_instance.stage_4_error_message = str(e)
+                    return stage_result_instance
+
             
         else:
             logging.error(f"empty message")
@@ -397,17 +420,18 @@ class InitialTranslation(TranslationStage):
                     for i in range(0, len(updated_instances), BATCH_SIZE):
                             AllStageResult.objects.bulk_update(
                                 updated_instances[i:i + BATCH_SIZE],
-                                ['stage_2', 'stage_2_output_token']
+                                ['stage_2', 'stage_2_output_token', 'stage_2_error_type', 'stage_2_error_message']
                             )
 
                     logging.info("✅ Bulk updated all stage_02 results.")
                     self.update_progress_db()
      
-        except Exception as e:
+        except BaseException as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
-            self.task.save()
-
+            self.task.save()      
             self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.error_type = "OTHER"
+            self.task_progress.error_message = str(e)
             self.task_progress.save()
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
@@ -452,17 +476,19 @@ class InitialTranslation(TranslationStage):
                     for i in range(0, len(updated_instances), BATCH_SIZE):
                         AllStageResult.objects.bulk_update(
                                 updated_instances[i:i + BATCH_SIZE],
-                                ['stage_3', 'stage_3_output_token']
+                                ['stage_3', 'stage_3_output_token', 'stage_3_error_type', 'stage_3_error_message']
                             )
 
                     logging.info("✅ Bulk updated all stage_03 results.")
                     self.update_progress_db()
             
-        except Exception as e:
+        except BaseException as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
 
             self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.error_type = "OTHER"
+            self.task_progress.error_message = str(e)
             self.task_progress.save()
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
@@ -506,7 +532,7 @@ class InitialTranslation(TranslationStage):
                     for i in range(0, len(updated_instances), BATCH_SIZE):
                         AllStageResult.objects.bulk_update(
                                 updated_instances[i:i + BATCH_SIZE],
-                                ['stage_4', 'stage_4_output_token']
+                                ['stage_4', 'stage_4_output_token','stage_4_error_type', 'stage_4_error_message']
                             )
 
  
@@ -518,11 +544,13 @@ class InitialTranslation(TranslationStage):
             self.update_progress_db()
  
      
-        except Exception as e:
+        except BaseException as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
             self.task.save()
 
             self.task_progress.status = BatchStatus.FAILED
+            self.task_progress.error_type = "OTHER"
+            self.task_progress.error_message = str(e)
             self.task_progress.save()
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
@@ -566,22 +594,24 @@ class AdaptiveSegmentTranslator(TranslationStage):
     def process_batch(self, segments, d_batches, batch_no):
         from ai_workspace.models import TaskStageResults, AllStageResult
 
-        logger.info("batch_no",batch_no)
-        logger.info("len of the text---->", len(segments))
+        logger.info(f"batch_no {batch_no}")
+        logger.info(f"len of the text----> {len(segments)}")
  
         if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.set_progress(no_of_stage=4)
+            no_of_stage = 4
         else:
             self.set_progress(no_of_stage=3)
+            no_of_stage = 3
 
         self.set_progress(stage = "stage_01" , stage_percent=100)
         task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
             
         
         splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
-        print("segment paragraph after split" ,len(splited_segment))
+        logger.info(f"segment paragraph after split {len(splited_segment)}")
 
-        all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance) for i in splited_segment]
+        all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance,no_of_stages_used=no_of_stage) for i in splited_segment]
         AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
         
         logging.info("all_segments are created")

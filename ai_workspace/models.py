@@ -2002,6 +2002,7 @@ class TrackSegmentsBatchStatus(models.Model):
     progress_percent = models.IntegerField(default=0)
     segment_type = models.CharField(max_length=20, choices=SegmentType.choices, default=SegmentType.PARAGRAPH)
     error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    error_message = models.TextField(null=True,blank=True)
     celery_task_batch = models.IntegerField(default=1)
 
 
@@ -2036,21 +2037,73 @@ class TaskStageResults(models.Model):
 class AllStageResult(models.Model):
     task_stage_result = models.ForeignKey(TaskStageResults, on_delete=models.CASCADE, related_name='each_task_stage')
     source_text = models.TextField(null=True,blank=True)
+    no_of_stages_used = models.IntegerField(default=3)
     stage_2 = models.TextField(null=True,blank=True)
     stage_3 = models.TextField(null=True,blank=True)
     stage_4 = models.TextField(null=True,blank=True)
 
     stage_2_input_token = models.CharField(max_length=20,blank=True, null=True)
     stage_2_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_2_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_2_error_message = models.TextField(null=True,blank=True)
 
     stage_3_input_token = models.CharField(max_length=20,blank=True, null=True)
     stage_3_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_3_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_3_error_message = models.TextField(null=True,blank=True)
 
     stage_4_input_token = models.CharField(max_length=20,blank=True, null=True)
     stage_4_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_4_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_4_error_message = models.TextField(null=True,blank=True)
 
     glossary_text = models.TextField(null=True,blank=True)
 
 
  
 
+# class Stage(models.Model):
+#     """
+#     Represents a single processing stage (e.g., style, translate, refine, rewrite).
+#     """
+#     name = models.CharField(max_length=100, unique=True)
+#     prompt = models.TextField()
+#     class_path = models.CharField(max_length=255)  # e.g. 'ai_workspace.adaptive_2.StyleAnalysis'
+
+#     def __str__(self):
+#         return self.name
+
+# class Flow(models.Model):
+#     """
+#     Represents a sequence of stages (a flow).
+#     """
+#     name = models.CharField(max_length=100, unique=True)
+#     stages = models.ManyToManyField(Stage, through='FlowStage', related_name='flows')
+
+#     def __str__(self):
+#         return self.name
+
+# class FlowStage(models.Model):
+#     """
+#     Through model to order stages in a flow.
+#     """
+#     flow = models.ForeignKey(Flow, on_delete=models.CASCADE)
+#     stage = models.ForeignKey(Stage, on_delete=models.CASCADE)
+#     order = models.PositiveIntegerField()
+
+#     class Meta:
+#         unique_together = ('flow', 'stage')
+#         ordering = ['order']
+
+# class BatchResult(models.Model):
+#     """
+#     Stores the result of a batch processed through a flow.
+#     """
+#     flow = models.ForeignKey(Flow, on_delete=models.CASCADE)
+#     batch_id = models.CharField(max_length=100)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     status = models.CharField(max_length=50, default='PENDING')
+#     result_data = models.JSONField(null=True, blank=True)  # Store results per stage
+
+#     def __str__(self):
+#         return f"{self.flow.name} - {self.batch_id}"
