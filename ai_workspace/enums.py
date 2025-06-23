@@ -15,4 +15,5 @@ class BatchStatus(models.TextChoices):
 
 class ErrorStatus(models.TextChoices):
     INSUFFICIENT_CREDIT = "INSUFFICIENT_CREDIT", "INSUFFICIENT_CREDIT"
+    LLM_ERROR = "LLM_ERROR", "LLM_ERROR"
     OTHER = "OTHER", "OTHER"
