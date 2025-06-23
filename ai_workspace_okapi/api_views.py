@@ -1471,7 +1471,8 @@ class DocumentToFile(views.APIView):
             document = Document()
  
             for i in all_text:
-                document.add_paragraph(i)
+                if i and str(i).strip():
+                    document.add_paragraph(i)
                 #document.add_paragraph("\n")
             target_stream = io.BytesIO()
             document.save(target_stream)
@@ -1480,7 +1481,11 @@ class DocumentToFile(views.APIView):
             return download_simple_file(doc_bytes, source_file_path, output_lang)
 
         elif all_text and source_file_path.endswith(".txt"):
-            text_str = "\n".join(all_text)
+            filtered_text = [i for i in all_text if i and str(i).strip()]
+            if not filtered_text:
+                raise ValueError("No valid content found to download.")
+            
+            text_str = "\n".join(filtered_text)
             target_stream = io.BytesIO()
             target_stream.write(text_str.encode("utf-8"))
             doc_bytes = target_stream.getvalue()    
