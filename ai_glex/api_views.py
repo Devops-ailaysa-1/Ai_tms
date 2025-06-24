@@ -668,7 +668,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
 
         # Check for term limit violations in glossary selection
         proj_ins = Project.objects.get(id=project)
-        if hasattr(proj_ins, 'glossary_project'):
+        if hasattr(proj_ins, 'glossary_project') and proj_ins.adaptive_simple == True:
             term_count = TermsModel.objects.filter(glossary=proj_ins.glossary_project.id).count()
             gloss_selected_term_count = TermsModel.objects.filter(glossary__in=glossaries).count()
             if term_count + gloss_selected_term_count > 1000:
