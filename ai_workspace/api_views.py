@@ -5422,15 +5422,18 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
         if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
             return Response({'msg': 'Translation already in progress'}, status=400)
         if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.FAILED:
-            re_initiate_failed_batch(task, project)
-            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
-            task.save()
-            endpoint = f'workspace/adaptive_file_translate/{project.id}'
-            return Response({
-                'msg': 'Translation Re-Initialized. To get the status poll the endpoint below',
-                'endpoint': endpoint,
-                'status': 'success',
-            }, status=200)
+            failed_batches_re_initiation = re_initiate_failed_batch(task, project)
+            if failed_batches_re_initiation:
+                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+                task.save()
+                endpoint = f'workspace/adaptive_file_translate/{project.id}'
+                return Response({
+                    'msg': 'Translation Re-Initialized. To get the status poll the endpoint below',
+                    'endpoint': endpoint,
+                    'status': 'success',
+                }, status=200)
+            else:
+                return Response({'msg': 'Something went wrong in re-initiation, contact admin'}, status=400)
         
         data = TaskSerializer(task).data
         DocumentViewByTask.correct_fields(data)
