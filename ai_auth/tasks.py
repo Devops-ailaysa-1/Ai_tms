@@ -1450,10 +1450,10 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
     #     logger.info("Insufficient credits for segment translation")
     #     raise ValueError("Insufficient credits for segment translation")
     
-    if failed_batch == True:
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
-    else:
-        batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+    # if failed_batch == True:
+    #     batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
+    # else:
+    batch_status = TrackSegmentsBatchStatus.objects.get(celery_task_id= celery_task_id if celery_task_id else adaptive_segment_translation.request.id)
 
     try:
         # gemini
@@ -1461,8 +1461,10 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
         translator = AdaptiveSegmentTranslator(provider = ADAPTIVE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
                                             task_progress = batch_status, group_text_units=group_text_units, document=task.document)
         
-        translator.process_batch(segments, d_batches, batch_no=batch_no)
-        
+        if failed_batch == True:
+            translator.process_batch_retry(segments, d_batches, batch_no=batch_no)
+        else:
+            translator.process_batch(segments, d_batches, batch_no=batch_no)
         #all_translations = {}
 
         # if group_text_units:
@@ -1483,13 +1485,15 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
         # MergedTextUnit.objects.bulk_update(merged_instances, ['translated_para'])
 
 
-        batch_status.status = BatchStatus.COMPLETED
-        batch_status.save()
+        # batch_status.status = BatchStatus.COMPLETED
+        # batch_status.save()
 
-        logger.info("Adaptive segment translation was completed and saved to DB")
+        # logger.info("Adaptive segment translation was completed and saved to DB")
 
         # Mark overall task as completed if all batches are done
-        task = Task.objects.get(document=batch_status.document)
+        # task = Task.objects.get(document=batch_status.document)
+
+
         # if not TrackSegmentsBatchStatus.objects.filter(document=batch_status.document).exclude(status=BatchStatus.COMPLETED).exists():
             # task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
             # task.save()
@@ -1566,7 +1570,7 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
 
-        api_client = LLMClient(provider = "anthropic",style=True)
+        api_client = LLMClient(provider = settings.ADAPTIVE_LLM_MODEL,style=True)
         style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
         style_create.process(all_paragraph=batches[0])
         

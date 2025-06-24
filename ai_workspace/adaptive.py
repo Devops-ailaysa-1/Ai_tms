@@ -12,6 +12,7 @@ from ai_workspace.models import AllStageResult
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
 from django.conf import settings
+from django.db.models import Q
 
 
 ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
@@ -350,7 +351,7 @@ class InitialTranslation(TranslationStage):
             if stage_result_instance.glossary_text:
                 system_prompt += f"\n{self.gloss_prompt}\n{stage_result_instance.glossary_text}."
 
-            messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} +\n\n{self.target_language} :+{messages} " 
+            messages = f"\n\n{self.source_language} :{stage_result_instance.source_text} \n\n{self.target_language} :{messages} " 
 
             try:
     
@@ -377,6 +378,12 @@ class InitialTranslation(TranslationStage):
             return None
 
 
+    def check_for_error(self, batch, stage_name):
+        filter_kwargs={f"{stage_name}_error_type__isnull":False}
+        results = AllStageResult.objects.filter(task_stage_result__segment_batch=batch).filter(**filter_kwargs)
+        if results.exists():
+            raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
+        
     def trans(self):
  
         system_prompt = self.get_prompt_by_stage(stage = "stage_2")
@@ -414,6 +421,7 @@ class InitialTranslation(TranslationStage):
             
             logging.info("✅ Done inference. stage Trans")
 
+
             if updated_instances:
                 with transaction.atomic():
                     BATCH_SIZE = 3
@@ -424,6 +432,7 @@ class InitialTranslation(TranslationStage):
                             )
 
                     logging.info("✅ Bulk updated all stage_02 results.")
+                    self.check_for_error(stage_name='stage_2',batch=self.task_progress)
                     self.update_progress_db()
      
         except BaseException as e:
@@ -436,6 +445,7 @@ class InitialTranslation(TranslationStage):
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
+            raise ValueError(f"Exception occurred during translation stage_2 {e}")
 
  
     def refine(self):
@@ -469,7 +479,7 @@ class InitialTranslation(TranslationStage):
  
             
             logging.info("✅ Done inference. stage 3")
-
+            
             if updated_instances:
                 with transaction.atomic():
                     BATCH_SIZE = 3
@@ -481,6 +491,7 @@ class InitialTranslation(TranslationStage):
 
                     logging.info("✅ Bulk updated all stage_03 results.")
                     self.update_progress_db()
+                    self.check_for_error(stage_name='stage_3',batch=self.task_progress)
             
         except BaseException as e:
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
@@ -493,6 +504,7 @@ class InitialTranslation(TranslationStage):
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
+            raise ValueError(f"Exception occurred during translation stage_3 {e}")
 
 
 
@@ -526,6 +538,8 @@ class InitialTranslation(TranslationStage):
             
             logging.info("✅ Done inference. stage 4")
 
+            
+
             if updated_instances:
                 with transaction.atomic():
                     BATCH_SIZE = 3
@@ -537,11 +551,13 @@ class InitialTranslation(TranslationStage):
 
  
                     logging.info("✅ Bulk updated all stage_04 results.")
-            
+                self.check_for_error(stage_name='stage_4',batch=self.task_progress)
+                
             self.task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
             self.task.save()
             logger.info("✅ Done Adaptive segment translation")
             self.update_progress_db()
+            
  
      
         except BaseException as e:
@@ -555,6 +571,7 @@ class InitialTranslation(TranslationStage):
 
             logger.error("Adaptive segment translation failed and task marked as FAILED")
             logger.exception(f"Exception occurred during translation {e}")
+            raise ValueError(f"Exception occurred during translation stage_4 {e}")
     
 
 
@@ -645,8 +662,89 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
         self.deduct_credits_adaptive(segments=segments)
 
+
+        self.task_progress.status = BatchStatus.COMPLETED
+        self.task_progress.save()
+
+        logger.info("Adaptive segment translation was completed and saved to DB")
+
         return None
 
+
+
+    def process_batch_retry(self, segments, d_batches, batch_no):
+        from ai_workspace.models import TaskStageResults, AllStageResult
+
+        logger.info(f"batch_no {batch_no}")
+        logger.info(f"len of the text----> {len(segments)}")
+
+
+        # progress_data = self.get_progress()
+ 
+        # if progress_data ==None:
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            self.set_progress(no_of_stage=4)
+            no_of_stage = 4
+        else:
+            self.set_progress(no_of_stage=3)
+            no_of_stage = 3
+
+        self.set_progress(stage = "stage_01" , stage_percent=100)
+        # task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
+            
+        task_adaptive_instance = TaskStageResults.objects.get(task = self.task_obj,segment_batch= self.task_progress)
+
+
+
+        # splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
+
+        # logger.info(f"segment paragraph after split {len(splited_segment)}")
+
+        # all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance,no_of_stages_used=no_of_stage) for i in splited_segment]
+        # AllStageResult.objects.bulk_create(all_segment_obj, batch_size=3)
+
+        segment_results = task_adaptive_instance.each_task_stage.all()
+
+        error_results  = segment_results.filter(Q(stage_2_error_type__isnull=False) | Q(stage_3_error_type__isnull=False) | Q(stage_4_error_type__isnull=False))
+
+
+        self.all_stage_result_instance =  task_adaptive_instance.each_task_stage.all() 
+        self.total = len(self.all_stage_result_instance)
+                
+        self.update_progress_db()
+        self.initial_translation = InitialTranslation(user= self.user , api_client= self.client,
+                                                      task_adaptive_instance= task_adaptive_instance,
+                                                      source_language = self.source_language,
+                                                      target_language = self.target_language,
+                                                      task_progress = self.task_progress, style_prompt= self.style_guideline )
+
+        self.initial_translation.trans()
+        
+        logging.info("done stage 2")
+ 
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+            
+            self.initial_translation.refine()
+            logging.info(f"done stage 3 {self.target_language}")
+
+            self.initial_translation.rewrite()
+            logging.info(f"done stage 4 {self.target_language}")
+            
+
+        else:
+            self.initial_translation.rewrite()
+            logging.info(f"done in first stage {self.target_language}")
+            # self.set_progress(stage="stage_03", stage_percent=100)
+            # self.set_progress(stage="stage_04", stage_percent=100)
+
+        self.deduct_credits_adaptive(segments=segments)
+
+        self.task_progress.status = BatchStatus.COMPLETED
+        self.task_progress.save()
+
+        logger.info("Adaptive segment translation was completed and saved to DB")
+
+        return None
 
 
     def group_strings_max_words(self, segments, max_words):

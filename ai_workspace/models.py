@@ -2004,6 +2004,7 @@ class TrackSegmentsBatchStatus(models.Model):
     error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
     error_message = models.TextField(null=True,blank=True)
     celery_task_batch = models.IntegerField(default=1)
+    retry_count = models.IntegerField(default=0)
 
 
 class ProcessFile(models.Model):

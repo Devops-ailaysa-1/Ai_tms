@@ -386,7 +386,21 @@ def re_initiate_failed_batch(task, project):
         source_lang = task.job.source_language.language
         target_lang = task.job.target_language.language
 
+        retry_exceeded_batches = TrackSegmentsBatchStatus.objects.filter(
+            document=task.document,
+            status=BatchStatus.FAILED,
+            retry_count__gte=1
+        )
+
+        if retry_exceeded_batches.exists():
+            print(f"Skipping re-initiation for batches that have exceeded retry limit: {retry_exceeded_batches.values_list('id', flat=True)}")
+            return False
+        
         for failed_task_batch in failed_task_batches:
+            # check retry count
+            # if failed_task_batch.retry_count >= 1:
+            #     print(f"Batch {failed_task_batch.id} has reached maximum retry limit. Skipping re-initiation.")
+            # else:
             merged_text_units = MergedTextUnit.objects.filter(text_unit__id__range=(failed_task_batch.seg_start_id, failed_task_batch.seg_end_id))
             para = []
             metadata = {}
@@ -405,11 +419,14 @@ def re_initiate_failed_batch(task, project):
             )
             failed_task_batch.status = BatchStatus.ONGOING
             failed_task_batch.progress_percent = 0
+            failed_task_batch.retry_count += 1
             failed_task_batch.save()
             cache_key = f"adaptive_progress_{failed_task_batch.id}"
             cache.delete(cache_key)
+            return True
     except Exception as e:
         print("Error in re_initiate_failed_batch:", e)
+        return False
 
 
 
