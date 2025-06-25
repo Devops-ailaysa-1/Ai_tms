@@ -3,6 +3,7 @@ from google.genai import types
 from django.conf import settings
 import logging
 logger = logging.getLogger('django')
+from ai_workspace import exceptions
 
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
@@ -31,12 +32,12 @@ safety_settings=[
                 threshold="BLOCK_NONE",  
             ),
         ]
-
  
 class LLMClient:
-    def __init__(self, provider,style):
+    def __init__(self, provider,model,style):
         self.provider = provider.lower()
         self.style = style
+        self.model = model
  
 
         try:
@@ -85,7 +86,7 @@ class LLMClient:
         
         streamed_output = ""
         with self.client.messages.stream(
-            model= ANTHROPIC_MODEL_NAME,
+            model= self.model, #ANTHROPIC_MODEL_NAME,
             messages=[{"role": "user", "content": messages}],
             system=system_instruction,
             max_tokens=60_000
@@ -101,7 +102,7 @@ class LLMClient:
  
         usage = 0
         completion = self.client.ChatCompletion.create(
-        model= OPENAI_MODEL_NAME_ADAPT,
+        model= self.model,#OPENAI_MODEL_NAME_ADAPT,
         messages=[
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": messages}
@@ -118,21 +119,44 @@ class LLMClient:
 
     
     
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def try_stream(self,client,model_name, contents, generate_content_config):
+    @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
+    def gemini_stream(self,client,model_name, contents, generate_content_config):
         stream_output = ""
  
         for chunk in client.models.generate_content_stream(model = model_name,
                                                            contents = contents,
                                                            config = generate_content_config ):
             
+
+            logger.info(f"Chunk received: {chunk}")    
+            if chunk.text==None:
+                raise  exceptions.EmptyChunkFoundException("Empty chunk found in stream output")
+              
             stream_output+=chunk.text
+
+
         return stream_output
- 
+    
+
+    @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
+    def gemini_direct(self,client, model_name, contents, generate_content_config):
+        response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=generate_content_config,
+                ) 
+        logger.info(f"output response: {response}") 
+        if not response.candidates[0].content.parts != None:
+            output_text = response.candidates[0].content.parts[0].text
+        else:
+            logger.error("No content parts found in response candidates, input text is :{contents}")
+            raise exceptions.EmptyChunkFoundException("Empty chunk found in direct output")
+        
+        return output_text
  
  
 
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
     def _handle_genai(self, messages, system_instruction):
  
         if messages and system_instruction:
@@ -165,10 +189,21 @@ class LLMClient:
 
             #try:
  
-
-            stream_output_result = self.try_stream(client=client,
-                                                   model_name=GOOGLE_GEMINI_MODEL, contents=contents,
-                                                   generate_content_config=generate_content_config)
+            if settings.ADAPTIVE_RESPONSE_STREAM:
+                try:
+                    output_text = self.gemini_stream(client=client,
+                                                        model_name=self.model, contents=contents,
+                                                        generate_content_config=generate_content_config)
+            
+                except exceptions.EmptyChunkFoundException as e:
+                    logger.error(f"Empty chunk found in stream output: {e}")
+                    output_text = self.gemini_direct(client=client,
+                                                        model_name=self.model, contents=contents,
+                                                        generate_content_config=generate_content_config)
+            else:
+                output_text = self.gemini_direct(client=client,
+                                                    model_name=self.model, contents=contents,
+                                                    generate_content_config=generate_content_config)
             # except:
  
             #     stream_output_result = self.try_stream(client=client,
@@ -176,10 +211,10 @@ class LLMClient:
             #                                        generate_content_config=generate_content_config)
 
             #stream_output_result = eval(stream_output_result)['data']
-            print(stream_output_result)
-            if stream_output_result=='':
-                return None , None
-            total_tokens = client.models.count_tokens(model = GOOGLE_GEMINI_MODEL, contents=stream_output_result)
-            return stream_output_result , total_tokens.total_tokens
+            # print(output_text)
+            # if stream_output_result=='' or stream_output_result==None:
+            #     raise exceptions.EmptyChunkFoundException("Empty chunk found in stream output")     
+            total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
+            return output_text , total_tokens.total_tokens
         else:
             return None
