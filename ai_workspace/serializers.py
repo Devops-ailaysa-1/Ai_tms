@@ -746,6 +746,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				if default_gloss_project:
 					default_gloss_project.is_default_project_glossary = True
 					default_gloss_project.file_translate_glossary = project
+					project_ins = Project.objects.get(id=default_gloss_project.project.id)
+					project_ins.project_name = f"{project.project_name}_glossary"
+					project_ins.save()
 					default_gloss_project.save()
 					GlossarySelected.objects.filter(project=default_gloss_project.project.id).update(project=project)
 					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)

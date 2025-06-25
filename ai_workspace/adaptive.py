@@ -787,23 +787,22 @@ class AdaptiveSegmentTranslator(TranslationStage):
         return grouped
 
 
-    def split_paragraph_to_chunks(self, paragraphs, max_words):
-        all_chunks = []
+    def split_paragraph_to_chunks(self,paragraphs, max_words):
+        all_words = []
+        for text in paragraphs:
+            all_words.extend(text.split())   
 
-        for para in paragraphs:
-            words = para.split()
-            chunks = []
-            current_chunk = []
+        chunks = []
+        current_chunk = []
 
-            for word in words:
-                current_chunk.append(word)
-                if len(current_chunk) >= max_words:
-                    chunks.append(" ".join(current_chunk))
-                    current_chunk = []
-
-            if current_chunk:
+        for word in all_words:
+            current_chunk.append(word)
+            if len(current_chunk) >= max_words:
                 chunks.append(" ".join(current_chunk))
+                current_chunk = []
 
-            all_chunks.extend(chunks)
+    
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
 
-        return all_chunks
+        return chunks
