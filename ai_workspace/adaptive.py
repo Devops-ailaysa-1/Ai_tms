@@ -773,7 +773,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
     def split_paragraph_to_chunks(self,paragraphs, max_words):
         all_words = []
         for text in paragraphs:
-            all_words.extendparagraphs(text.split())   
+            all_words.extend(text.split())   
 
         chunks = []
         current_chunk = []
