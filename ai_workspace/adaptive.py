@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
 from django.conf import settings
 from django.db.models import Q
+from ai_workspace import exceptions
 
 
 ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
@@ -177,7 +178,7 @@ class InitialTranslation(TranslationStage):
         
         self.task_progress = task_progress 
         self.api_client = api_client
-        self.claude_client = LLMClient(provider= "anthropic", style=False)
+        self.claude_client = LLMClient(provider= "anthropic",model =settings.ANTHROPIC_MODEL_NAME , style=False)
         self.user = user
         self.job_ins = self.task.job
 
@@ -276,15 +277,22 @@ class InitialTranslation(TranslationStage):
                 stage_result_instance.stage_2 = response_text
                 stage_result_instance.stage_2_output_token = total_count
                 return stage_result_instance
-            else:
-                stage_result_instance.stage_2_error_type = "LLM_ERROR"
-                stage_result_instance.stage_2_error_message = "Response text is empty"
-                # stage_result_instance.save()
-                logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                return stage_result_instance
-                # raise ValueError("response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+            # else:
+            #     stage_result_instance.stage_2_error_type = "LLM_ERROR"
+            #     stage_result_instance.stage_2_error_message = "Response text is empty"
+            #     # stage_result_instance.save()
+            #     logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+            #     return stage_result_instance
+            #     # raise ValueError("response_text is empty for id from task_stage_results model {stage_result_instance.id}")
                 
                 # return None
+        except exceptions.EmptyChunkFoundException:
+            stage_result_instance.stage_2_error_type = "LLM_ERROR"
+            stage_result_instance.stage_2_error_message = "Response text is empty"
+            # stage_result_instance.save()
+            logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+            return stage_result_instance
+
         except BaseException as e:
             stage_result_instance.stage_2_error_type = "OTHER"
             stage_result_instance.stage_2_error_message = str(e)
@@ -316,8 +324,9 @@ class InitialTranslation(TranslationStage):
                 stage_result_instance.stage_3 = response_text
                 stage_result_instance.stage_3_output_token = total_count
                 return stage_result_instance
-        
-            else:
+
+
+        except exceptions.EmptyChunkFoundException:
                 stage_result_instance.stage_3_error_type = "LLM_ERROR"
                 stage_result_instance.stage_3_error_message = "Response text is empty"
                 # stage_result_instance.save()
@@ -361,7 +370,14 @@ class InitialTranslation(TranslationStage):
                     stage_result_instance.stage_4 = response_text
                     stage_result_instance.stage_4_output_token = total_count
                     return stage_result_instance
-                else:
+                # else:
+                #     stage_result_instance.stage_4_error_type = "LLM_ERROR"
+                #     stage_result_instance.stage_4_error_message = "Response text is empty"
+                #     # stage_result_instance.save()
+                #     logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
+                #     return stage_result_instance
+                
+            except exceptions.EmptyChunkFoundException:
                     stage_result_instance.stage_4_error_type = "LLM_ERROR"
                     stage_result_instance.stage_4_error_message = "Response text is empty"
                     # stage_result_instance.save()
@@ -578,7 +594,8 @@ class InitialTranslation(TranslationStage):
  
 class AdaptiveSegmentTranslator(TranslationStage):
     
-    def __init__(self, provider, 
+    def __init__(self, provider,
+                 model, 
                  source_language, 
                  target_language, 
                  task_progress, 
@@ -586,7 +603,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         
         from ai_workspace.models import TaskStyle
         
-        self.client = LLMClient(provider = provider,style=False)
+        self.client = LLMClient(provider = provider,model=model,style=False)
         self.source_language = source_language
         self.target_language = target_language
          
@@ -625,7 +642,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
             
         
-        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
+        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=settings.ADAPTIVE_SPLIT_INPUT_SIZE)
         logger.info(f"segment paragraph after split {len(splited_segment)}")
 
         all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance,no_of_stages_used=no_of_stage) for i in splited_segment]

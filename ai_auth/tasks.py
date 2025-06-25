@@ -1458,7 +1458,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
     try:
         # gemini
         # anthropic
-        translator = AdaptiveSegmentTranslator(provider = ADAPTIVE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
+        translator = AdaptiveSegmentTranslator(provider = settings.ADAPTIVE_TRANSLATE_LLM_PROVIDER, model = settings.ADAPTIVE_TRANSLATE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
                                             task_progress = batch_status, group_text_units=group_text_units, document=task.document)
         
         if failed_batch == True:
@@ -1570,11 +1570,17 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
 
-        api_client = LLMClient(provider = settings.ADAPTIVE_LLM_MODEL,style=True)
-        style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
-        style_create.process(all_paragraph=batches[0])
-        
-
+        try:
+            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+            style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
+            style_create.process(all_paragraph=batches[0])
+        except Exception as e:
+            logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
+            # style_create = None
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+            task.save()
+            return None
+            
  
         for i, para in enumerate(batches):
             metadata = d_batches[i]
