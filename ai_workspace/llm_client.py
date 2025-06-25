@@ -95,6 +95,7 @@ class LLMClient:
             for text in stream.text_stream:
                 streamed_output += text
         usage = stream.get_final_message().usage.output_tokens  
+        logger.info(f"Streamed output claude: {streamed_output}")
         return streamed_output , usage
  
 
@@ -144,14 +145,15 @@ class LLMClient:
                     model=model_name,
                     contents=contents,
                     config=generate_content_config,
-                ) 
+                )
+        logger.info(f"------------------------------------------------------------------------------")
         logger.info(f"output response: {response}") 
-        if not response.candidates[0].content.parts != None:
-            output_text = response.candidates[0].content.parts[0].text
-        else:
-            logger.error("No content parts found in response candidates, input text is :{contents}")
+        if  response.candidates[0].content.parts == None:
+            logger.error(f"No content parts found in response candidates, input text is :{contents}")
             raise exceptions.EmptyChunkFoundException("Empty chunk found in direct output")
-        
+        else:
+            output_text = response.candidates[0].content.parts[0].text
+            
         return output_text
  
  

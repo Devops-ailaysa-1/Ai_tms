@@ -397,8 +397,8 @@ class InitialTranslation(TranslationStage):
     def check_for_error(self, batch, stage_name):
         filter_kwargs={f"{stage_name}_error_type__isnull":False}
         results = AllStageResult.objects.filter(task_stage_result__segment_batch=batch).filter(**filter_kwargs)
-        # if results.exists():
-        #     raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
+        if results.exists():
+            raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
         
     def trans(self):
  
@@ -642,7 +642,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
             
         
-        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=500)
+        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=settings.ADAPTIVE_SPLIT_INPUT_SIZE)
         logger.info(f"segment paragraph after split {len(splited_segment)}")
 
         all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance,no_of_stages_used=no_of_stage) for i in splited_segment]
