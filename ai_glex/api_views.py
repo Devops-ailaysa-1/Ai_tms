@@ -99,7 +99,7 @@ class GlossaryFileView(viewsets.ViewSet):
         if job_id: ## from gloss page with gloss project 
             # job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job_id)
-            if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None:
+            if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None and obj.project.adaptive_simple == True:
                 glossary = obj.project.glossary_project.id
                 term_count = TermsModel.objects.filter(glossary=glossary).count()
                 if (term_count+valid_count) > 1000:
@@ -371,7 +371,7 @@ class TermUploadView(viewsets.ModelViewSet):
             return Response({"msg":"Already someone is working"},status = 400)
         
         term_count = TermsModel.objects.filter(glossary=glossary).count()
-        if term_count >= 1000:
+        if project.adaptive_simple == True and term_count >= 1000:
             return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
         
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
