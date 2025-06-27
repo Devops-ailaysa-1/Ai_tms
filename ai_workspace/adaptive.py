@@ -143,7 +143,6 @@ class StyleAnalysis:
                     task_instance.save()
  
                     logger.info("Adaptive style created")
-                    print("result_content_prompt",result_content_prompt)
                     return result_content_prompt
  
                 except Exception as e:
@@ -226,7 +225,6 @@ class InitialTranslation(TranslationStage):
 
         if filtered_terms.exists():
             all_gloss = "\n".join(f"{term.sl_term}  → {term.tl_term}" for term in filtered_terms)
-            print("all_gloss--->",all_gloss)
             return all_gloss
 
         return None

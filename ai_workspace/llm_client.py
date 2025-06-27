@@ -81,9 +81,6 @@ class LLMClient:
         
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_anthropic(self,messages, system_instruction):
-        
-        print("model",ANTHROPIC_MODEL_NAME)
-        
         streamed_output = ""
         with self.client.messages.stream(
             model= self.model, #ANTHROPIC_MODEL_NAME,
@@ -148,7 +145,8 @@ class LLMClient:
                 )
         logger.info(f"------------------------------------------------------------------------------")
         logger.info(f"output response: {response}")
-        if  response.candidates[0].content.parts == None:
+
+        if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
             logger.error(f"No content parts found in response candidates, input text is :{contents}")
             raise exceptions.EmptyChunkFoundException("Empty chunk found in direct output")
         else:
