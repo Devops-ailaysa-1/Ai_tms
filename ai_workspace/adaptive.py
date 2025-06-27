@@ -394,7 +394,7 @@ class InitialTranslation(TranslationStage):
 
     def check_for_error(self, batch, stage_name):
         filter_kwargs={f"{stage_name}_error_type__isnull":False}
-        results = AllStageResult.objects.filter(task_stage_result__segment_batch=batch).filter(**filter_kwargs)
+        results = AllStageResult.objects.filter(task_stage_result__segment_batch=batch).filter(**filter_kwargs).exclude(**{f"{stage_name}_error_type": "LLM_ERROR"})
         if results.exists():
             raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
         
