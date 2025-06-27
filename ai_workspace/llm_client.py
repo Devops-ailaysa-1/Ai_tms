@@ -147,14 +147,20 @@ class LLMClient:
                     config=generate_content_config,
                 )
         logger.info(f"------------------------------------------------------------------------------")
-        logger.info(f"output response: {response}") 
+        logger.info(f"output response: {response}")
         if  response.candidates[0].content.parts == None:
             logger.error(f"No content parts found in response candidates, input text is :{contents}")
             raise exceptions.EmptyChunkFoundException("Empty chunk found in direct output")
         else:
             output_text = response.candidates[0].content.parts[0].text
-            
-        return output_text
+        
+        total_token_usage = response.usage_metadata.total_token_count
+
+        logger.info(f"Prompt tokens: {response.usage_metadata.prompt_token_count}, Candidates tokens (output): {response.usage_metadata.candidates_token_count}  \
+            Total tokens: {response.usage_metadata.total_token_count}")
+
+
+        return output_text, total_token_usage
  
  
 
@@ -174,6 +180,7 @@ class LLMClient:
             ]
 
             generate_content_config = types.GenerateContentConfig(
+                #  thinking_config=types.ThinkingConfig(thinking_budget=0),
                 max_output_tokens=65532,  
                 response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
@@ -196,14 +203,16 @@ class LLMClient:
                     output_text = self.gemini_stream(client=client,
                                                         model_name=self.model, contents=contents,
                                                         generate_content_config=generate_content_config)
+                
+                    total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
             
                 except exceptions.EmptyChunkFoundException as e:
                     logger.error(f"Empty chunk found in stream output: {e}")
-                    output_text = self.gemini_direct(client=client,
+                    output_text,total_tokens = self.gemini_direct(client=client,
                                                         model_name=self.model, contents=contents,
                                                         generate_content_config=generate_content_config)
             else:
-                output_text = self.gemini_direct(client=client,
+                output_text,total_tokens = self.gemini_direct(client=client,
                                                     model_name=self.model, contents=contents,
                                                     generate_content_config=generate_content_config)
             # except:
@@ -216,7 +225,7 @@ class LLMClient:
             # print(output_text)
             # if stream_output_result=='' or stream_output_result==None:
             #     raise exceptions.EmptyChunkFoundException("Empty chunk found in stream output")     
-            total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
-            return output_text , total_tokens.total_tokens
+            # total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
+            return output_text , total_tokens
         else:
             return None

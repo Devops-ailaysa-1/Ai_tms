@@ -8,7 +8,8 @@ from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,D
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+
+from langchain_community.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
 import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
