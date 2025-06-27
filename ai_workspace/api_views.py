@@ -5475,7 +5475,7 @@ class AdaptiveFileTranslate(viewsets.ViewSet):
             }, status=200)
 
         except Exception as e:
-            print(e)
+            # print(e)
             return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
 
 
@@ -5562,7 +5562,7 @@ def get_glossary(request):
                 all_gloss += f"{sl_term}  → {tl_term}"
                 all_gloss +="\n"
 
-            print("all_gloss",all_gloss)
+            # print("all_gloss",all_gloss)
             return Response({'msg': all_gloss}, status=200)
         else:
             return Response({'msg': "no queryset_final "}, status=200)
