@@ -787,7 +787,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         return grouped
 
 
-    def split_paragraph_to_chunks(self,paragraphs, max_words):
+    def split_paragraph_to_chunks(self,paragraphs, max_words, min_last_chunk=150):
         all_words = []
         for text in paragraphs:
             all_words.extend(text.split())   
@@ -803,6 +803,9 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
     
         if current_chunk:
-            chunks.append(" ".join(current_chunk))
+            if len(current_chunk) < min_last_chunk and chunks:
+                chunks[-1] += ' ' + " ".join(current_chunk)
+            else:
+                chunks.append(" ".join(current_chunk))
 
         return chunks
