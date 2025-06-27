@@ -92,7 +92,7 @@ class LLMClient:
             for text in stream.text_stream:
                 streamed_output += text
         usage = stream.get_final_message().usage.output_tokens  
-        logger.info(f"Streamed output claude: {streamed_output}")
+        # logger.info(f"Streamed output claude: {streamed_output}")
         return streamed_output , usage
  
 
@@ -126,7 +126,7 @@ class LLMClient:
                                                            config = generate_content_config ):
             
 
-            logger.info(f"Chunk received: {chunk}")    
+            # logger.info(f"Chunk received: {chunk}")    
             if chunk.text==None:
                 raise  exceptions.EmptyChunkFoundException("Empty chunk found in stream output")
               
@@ -143,8 +143,8 @@ class LLMClient:
                     contents=contents,
                     config=generate_content_config,
                 )
-        logger.info(f"------------------------------------------------------------------------------")
-        logger.info(f"output response: {response}")
+        # logger.info(f"------------------------------------------------------------------------------")
+        # logger.info(f"output response: {response}")
 
         if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
             logger.error(f"No content parts found in response candidates, input text is :{contents}")
