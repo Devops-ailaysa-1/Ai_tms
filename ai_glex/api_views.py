@@ -40,6 +40,8 @@ from celery.decorators import task
 import requests,logging
 from django.http import Http404
 from django.db import transaction
+from rest_framework.decorators import action
+from collections import Counter
 
 logger = logging.getLogger('django')
 
@@ -65,7 +67,7 @@ class GlossaryFileView(viewsets.ViewSet):
         # if task_id:
         #     job_ins = Task.objects.get(id=task_id).job
         #     queryset=GlossaryFiles.objects.filter(job=job_ins)
-        # else:
+        # else:GlossaryFiles
         queryset=GlossaryFiles.objects.filter(job_id=job)
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
@@ -86,10 +88,22 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'Upload failed. Download the template to upload the terms'}, status=400)
-        
+            
+            if 'Source language term' in df.columns:
+                valid_terms = df['Source language term'].dropna()
+                valid_terms = valid_terms[valid_terms.astype(str).str.strip() != '']
+                valid_count = len(valid_terms)
+                if valid_count > 1000:
+                    return Response({'msg': 'Terms upload limit reached for this glossary (1000 terms max).'}, status=400)
+            
         if job_id: ## from gloss page with gloss project 
             # job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job_id)
+            if hasattr(obj.project, 'glossary_project') and obj.project.glossary_project is not None and obj.project.adaptive_simple == True:
+                glossary = obj.project.glossary_project.id
+                term_count = TermsModel.objects.filter(glossary=glossary).count()
+                if (term_count+valid_count) > 1000:
+                    return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
             data = [{"project": obj.project.id, "file": file, "job":job_id, "usage_type":8} for file in files]
 
         elif task_id: ### from transeditor with translation project which is project's task id 
@@ -356,6 +370,10 @@ class TermUploadView(viewsets.ModelViewSet):
         if edit_allow == False:
             return Response({"msg":"Already someone is working"},status = 400)
         
+        term_count = TermsModel.objects.filter(glossary=glossary).count()
+        if project.adaptive_simple == True and term_count >= 1000:
+            return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
+        
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
             serializer.save()
@@ -395,6 +413,60 @@ class TermUploadView(viewsets.ModelViewSet):
         delete_list = term_delete_ids.split(',')
         TermsModel.objects.filter(id__in=delete_list).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'], url_path='bulk')
+    def bulk_upload(self, request):
+        # This function is to upload multiple terms at once , using raw json data.
+        user = request.user
+        task_id = request.data.get('task')
+
+        if not task_id:
+            return Response({'msg': 'Task id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            task = Task.objects.get(id=task_id)
+        except Task.DoesNotExist:
+            return Response({'msg': 'No Task found or task is deleted'}, status=400)
+
+        job = task.job
+        project = job.project
+        glossary = job.project.glossary_project.id
+
+        if not self.edit_allowed_check(job):
+            return Response({"msg": "Already someone is working"}, status=400)
+
+        terms_payload = request.data.get('pairs')
+        if not isinstance(terms_payload, list):
+            return Response({"msg": "Expected a list of term objects under 'pairs'"}, status=400)
+
+        created_terms = []
+        errors = []
+
+        for idx, term in enumerate(terms_payload):
+            term_data = {
+                "sl_term": term.get('sl_term'),
+                "tl_term": term.get('tl_term'),
+                "pos": term.get('pos'),
+                "job": job.id,
+                "glossary": glossary,
+            }
+            serializer = TermsSerializer(data=term_data)
+            if serializer.is_valid():
+                serializer.save()
+                created_terms.append(serializer.data)
+            else:
+                errors.append({f'item_{idx}': serializer.errors})
+
+        self.update_task_assign(job, user)
+
+        if errors:
+            return Response({
+                "msg": "Some items failed",
+                "created terms": created_terms,
+                "errors": errors
+            }, status=status.HTTP_207_MULTI_STATUS)
+
+        return Response({"terms": created_terms}, status=status.HTTP_201_CREATED)
 
 
 ########################GlossaryTemplateDownload###################################
@@ -593,6 +665,16 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         project = request.POST.get('project',None) 
         if not glossaries:
             return Response(data={"Message":"need gloss or proj to add"}, status=400)
+
+        # Check for term limit violations in glossary selection
+        proj_ins = Project.objects.get(id=project)
+        if hasattr(proj_ins, 'glossary_project') and proj_ins.adaptive_simple == True:
+            term_count = TermsModel.objects.filter(glossary=proj_ins.glossary_project.id).count()
+            gloss_selected_term_count = TermsModel.objects.filter(glossary__in=glossaries).count()
+            if term_count + gloss_selected_term_count > 1000:
+                return Response({'msg': "Terms upload limit reached for this glossary (1000 terms max)."}, status=400)
+                
+        
         data = [{"project":project, "glossary": glossary} for glossary in glossaries]
         serializer = GlossarySelectedSerializer(data=data,many=True)
         if serializer.is_valid(raise_exception=True):
@@ -608,7 +690,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-from ai_workspace_okapi.api_views import matching_word
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def glossary_search(request):
@@ -618,6 +700,7 @@ def glossary_search(request):
     and returns the match if any.
     '''
     from ai_qa.api_views import remove_tags
+    from ai_workspace_okapi.api_views import matching_word
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
@@ -1327,12 +1410,21 @@ def segment_term_pos_identify(sentence,word,lang_code=None):
 
 ### finding lemma
 
-def identify_lemma(word,language=None):
-    IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
-    payload = {'word':word,'language':language}
+def identify_lemma(word, language=None,gloss=False):
+    if gloss:
+        IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA_GLOSS
+        payload = {'sentence':word,'language':language}
+    else:
+        IDENTIFY_LEMMA_URL = settings.IDENTIFY_LEMMA
+        payload = {'word':word,'language':language}
+        
+    print("IDENTIFY_LEMMA_URL",IDENTIFY_LEMMA_URL)
+    
     response = requests.request("POST", IDENTIFY_LEMMA_URL, headers={}, data=payload, files=[])
     if response.status_code == 200:
-        return response.json()['lemma']
+        lemma = response.json()
+ 
+        return lemma['lemma']
     else:
         return None
 

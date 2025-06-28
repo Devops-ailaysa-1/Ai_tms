@@ -40,7 +40,7 @@ from ai_imagetranslation.models import ImageInpaintCreation
 from itertools import repeat
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
 from ai_workspace.utils import federal_json_translate
-from concurrent.futures import ThreadPoolExecutor
+from rest_framework.exceptions import ValidationError
 logger = logging.getLogger('django')
 
 # class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -384,7 +384,8 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 		read_only_fields = ("id","project",)
 
 
-
+from ai_glex.models import Glossary, GlossarySelected
+from .utils import word_count_find
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
@@ -416,6 +417,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	file_translate = serializers.BooleanField(required=False, allow_null=True)
 	# glossary_id = serializers.ReadOnlyField(source = 'glossary_project.id')
 	isAdaptiveTranslation = serializers.BooleanField(required=False, allow_null=True)
+	default_gloss_project_id = serializers.PrimaryKeyRelatedField(queryset=Glossary.objects.all(),required=False,allow_null=True,write_only=True)
+	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
+	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
+	individual_gloss_project_id = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Project
@@ -424,8 +429,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate', 'isAdaptiveTranslation')
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple", "individual_gloss_project_id")
 
+	def get_individual_gloss_project_id(self, obj):
+		if hasattr(obj, 'individual_gloss_project') and obj.individual_gloss_project:
+			return obj.individual_gloss_project.project.id
+		return None
+		
 	def run_validation(self, data):
 
 		if self.context.get("request") is not None and self.context['request']._request.method == 'POST':
@@ -449,16 +459,19 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
+		data["default_gloss_project_id"] = data.get("default_gloss_project_id", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
 		#data['get_mt_by_page'] = data.get('get_mt_by_page',['true'])[0]
 		data['file_translate'] =data.get('file_translate',['false'])[0]
-
+		data['adaptive_file_translate'] = data.get('adaptive_file_translate',['false'])[0]
+		data['adaptive_simple'] = data.get('adaptive_simple',['false'])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		data['team_exist'] = data.get('team',[None])[0]
+		data["glossary_job_update"] = data.get("glossary_job_update",[False])[0]
 
 		if data.get('subjects'):
 			data["subjects"] = [{"subject":sub} for sub in data.get('subjects',[])]
@@ -663,6 +676,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
 		project_jobs_set = validated_data.get("project_jobs_set",None)
+		default_gloss_project = validated_data.pop('default_gloss_project_id', None)
+		glossary_job_update = validated_data.pop('glossary_job_update', None)
+		adaptive_simple = validated_data.get('adaptive_simple', None)
+
+
 		try:
 			with transaction.atomic():
 				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
@@ -713,9 +731,30 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							
 				if project_type == 5:
 					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-
+					
 				task_assign = TaskAssign.objects.assign_task(project=project)
 
+				if project_type == 1:
+					get_task = project.get_tasks[0]
+					if adaptive_simple:
+						word_count = word_count_find(get_task)
+						if word_count == 0:
+							raise serializers.ValidationError({"files": [{"file": ["The submitted file is empty."]}]})
+						if word_count > 10000:
+							raise serializers.ValidationError({"msg": "The uploaded file exceeds our 10,000-word maximum limit. Please upload a shorter file or split your content into multiple files."})
+					
+				if default_gloss_project:
+					default_gloss_project.is_default_project_glossary = True
+					default_gloss_project.file_translate_glossary = project
+					project_ins = Project.objects.get(id=default_gloss_project.project.id)
+					project_ins.project_name = f"{project.project_name}_glossary"
+					project_ins.save()
+					default_gloss_project.save()
+					GlossarySelected.objects.filter(project=default_gloss_project.project.id).update(project=project)
+					GlossarySelected.objects.create(project=project,glossary=default_gloss_project)
+
+		except ValidationError:
+			raise
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
@@ -780,12 +819,25 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.isAdaptiveTranslation = validated_data.get("isAdaptiveTranslation",\
 									instance.isAdaptiveTranslation)
 			instance.save()
+   
+		if 'adaptive_file_translate' in validated_data:
+			instance.adaptive_file_translate = validated_data.get("adaptive_file_translate",\
+									instance.adaptive_file_translate)
+			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
 		project_type = instance.project_type_id
 
 		with transaction.atomic():
+
+			if validated_data.get("glossary_job_update",False):
+				jobs = instance.project_jobs_set.all()
+				tasks = Task.objects.filter(job__project=instance)
+				tasks.delete()
+				jobs.delete()
+
+
 			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
 									files_data, jobs_data, f_klass=File, j_klass=Job)
 			try:
@@ -990,15 +1042,15 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	design_project = serializers.SerializerMethodField()
 	news_detail = serializers.SerializerMethodField()
 	push_detail = serializers.SerializerMethodField()
-
-	
+	adaptive_file_translate = serializers.CharField(read_only=True, source="file.project.adaptive_file_translate")
+	adaptive_simple = serializers.CharField(read_only=True, source="file.project.adaptive_simple")
 
 	class Meta:
 		model = Task
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id',)
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id','adaptive_file_translate', 'adaptive_file_translate_status', 'adaptive_simple')
 		
 
 	def get_push_detail(self,obj):

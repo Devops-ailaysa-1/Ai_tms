@@ -36,13 +36,20 @@ def replace_punctuation(text):
         text = text.replace(punctuation_mark, "")
     return text
 
-detector = Translator()
+import asyncio
+from ai_workspace.utils import detect_lang
 def lang_detector(user_text):
-    lang = detector.detect(user_text).lang
-    if isinstance(lang,list):
-        lang = lang[0]
+    try:
+        lang = asyncio.run(detect_lang(user_text)).lang
+        if isinstance(lang, list):
+            lang = lang[0]
+    except Exception as e:
+        logger.error(f"error: {str(e)}")
+    # lang = detector.detect(user_text).lang
+    # if isinstance(lang,list):
+    #     lang = lang[0]
     return lang
-
+ 
 
 def news_file_read(file_path):
     if file_path.endswith("txt"):
@@ -359,10 +366,16 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         request_user=self.context['request'].user
         user = request_user.team.owner if request_user.team else request_user
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
-        detector = Translator()
-        lang = detector.detect(inst.prompt).lang
-        if isinstance(lang,list):
-            lang = lang[0]
+        try:
+            lang = asyncio.run(detect_lang(inst.prompt)).lang
+            if isinstance(lang, list):
+                lang = lang[0]
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+        # detector = Translator()
+        # lang = detector.detect(inst.prompt).lang
+        # if isinstance(lang,list):
+        #     lang = lang[0]
         lang = get_lang_code(lang)
         initial_credit = user.credit_balance.get("total_left")
         image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )

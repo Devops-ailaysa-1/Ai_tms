@@ -56,7 +56,8 @@ from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File
 from ai_workspace.models import Project
-from ai_workspace.models import Task, TaskAssign
+from ai_workspace.enums import BatchStatus
+from ai_workspace.models import Task, TaskAssign,TrackSegmentsBatchStatus
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from ai_workspace.serializers import TaskTranscriptDetailSerializer
 from ai_workspace.utils import get_consumable_credits_for_text_to_speech
@@ -237,7 +238,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
+                if not task.job.project.adaptive_simple:
+                    write_segments_to_db.apply_async((task_write_data, document.id), queue='high-priority')
+                else:
+                    write_segments_to_db(task_write_data, document.id)
         else:
             try:
  
@@ -562,6 +566,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
         document = self.get_object(document_id=document_id)
         task = Task.objects.get(document=document)
+        user = task.job.project.ai_user
         segments = document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
@@ -578,6 +583,40 @@ class SegmentsView(views.APIView, PageNumberPagination):
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
         return res
+
+        # if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
+        #     mt_raw_update(task.id, page_segments) # to pretranslate segments in that page
+        # elif (page_segments) and (task.job.project.get_mt_by_page) and (task.job.project.adaptive_file_translate):
+        #     track_seg = TrackSegmentsBatchStatus.objects.filter(
+        #         document=task.document,
+        #         project=task.job.project ,
+        #         seg_start_id__lte=page_segments[0].id,
+        #         seg_end_id__gte=page_segments[-1].id
+        #     ).first()
+        #     if track_seg:
+        #         if track_seg.status == BatchStatus.COMPLETED:
+        #             pass  # No need to trigger translation, it's already done
+        #         elif track_seg.status == BatchStatus.ONGOING:
+        #             return Response({"response": "Adaptive translation is already in progress. Please wait."})
+        #         elif track_seg.status == BatchStatus.FAILED:
+        #             return Response({"response": "Oops! Something went wrong. Please reach out to support for help."})
+        #     else:
+        #         consumable_credits = 0
+        #         for seg in page_segments:
+        #             if not seg.temp_target:
+        #                 consumable_credits += MT_RawAndTM_View.get_adaptive_consumable_credits(task.document, seg.id, None)
+        #         initial_credit = user.credit_balance.get("total_left")
+        #         if initial_credit < consumable_credits:
+        #             return  Response({'msg':'Insufficient Credits'}, status=400)
+        #         # No record found, so initiate a new translation task
+        #         if any(seg.temp_target is None or seg.temp_target == '' for seg in page_segments):
+        #             page_segments_serialized = [{"id": seg.id} for seg in page_segments]
+        #             adaptive_translate.apply_async((task.id, page_segments_serialized), queue="high-priority") 
+        #             return Response({"response": "Adaptive translation is already in progress. Please wait."}) 
+        # segments_ser = SegmentSerializer(page_segments, many=True)
+        # [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
+        # res = self.get_paginated_response(segments_ser.data)
+        # return res
 
 class MergeSegmentView(viewsets.ModelViewSet):
     serializer_class = MergeSegmentSerializer
@@ -913,6 +952,57 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
                 return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+            
+    @staticmethod
+    def get_adaptive_consumable_credits(doc, segment_id, seg):
+
+        if seg:
+            return MT_RawAndTM_View.get_word_count(seg, doc)
+
+        elif segment_id:
+            if split_check(segment_id):
+                segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                segment_source = segment.source #if segment!= None else seg
+                seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
+                return seg_count
+
+            # For split segment
+            else:
+                split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+                return split_seg_count
+            
+    @staticmethod
+    def get_adaptive_consumable_credits_multiple_segments(doc, segment_ids, seg,seg_type='para'):
+        all_segments_source = ""
+
+
+        if seg_type == 'para':
+            if isinstance(seg, list):
+                all_segments_source=' '.join(seg)
+            elif isinstance(seg, str):
+                all_segments_source+=seg
+        else:
+
+            for segment_id in segment_ids:
+                if seg:
+                    all_segments_source+=seg
+
+                elif segment_id:
+                    if split_check(segment_id):
+                        segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                        all_segments_source+=segment.source #if segment!= None else seg
+                        # seg_count = MT_RawAndTM_View.get_word_count(segment_source, doc)
+                        # return seg_count
+
+                    # For split segment
+                    else:
+                        split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                        all_segments_source+=split_seg_source
+                        # split_seg_count = MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+                        # return split_seg_count
+        seg_count = MT_RawAndTM_View.get_word_count(all_segments_source, doc)
+        return seg_count
 
     @staticmethod
     def get_task_assign_mt_engine(segment_id):
@@ -1349,6 +1439,61 @@ class DocumentToFile(views.APIView):
         document = get_object_or_404(qs, id=document_id)
         return  document
 
+    def download_simple_file_response(self, document_id):
+        import io
+        from docx import Document 
+        from ai_workspace_okapi.models import Document as DBDocument
+        from ai_workspace.models import TaskStageResults
+        from ai_workspace_okapi.utils import download_simple_file
+        from django.conf import settings
+        #ADAPTIVE_INDIAN_LANGUAGE =  settings.ADAPTIVE_INDIAN_LANGUAGE
+        
+
+        source_file_path = self.get_source_file_path(document_id)
+        doc_instance =  DBDocument.objects.get(id=document_id)
+        task_instance = doc_instance.task_obj
+        job_instance = doc_instance.job
+ 
+        stage = "stage_4"
+ 
+
+        output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
+
+        task_stage_res = TaskStageResults.objects.filter(task=task_instance).order_by("celery_task_batch")
+        all_text = []
+
+        for task_stage_res_ins in task_stage_res:
+            all_text.extend(task_stage_res_ins.each_task_stage.all().order_by("id").values_list(stage, flat=True))
+
+ 
+
+        if all_text and source_file_path.endswith((".doc", ".docx")):
+            document = Document()
+ 
+            for i in all_text:
+                if i and str(i).strip():
+                    document.add_paragraph(i)
+                #document.add_paragraph("\n")
+            target_stream = io.BytesIO()
+            document.save(target_stream)
+            target_stream.seek(0)
+            doc_bytes = target_stream.read()
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
+
+        elif all_text and source_file_path.endswith(".txt"):
+            filtered_text = [i for i in all_text if i and str(i).strip()]
+            if not filtered_text:
+                raise ValueError("No valid content found to download.")
+            
+            text_str = "\n".join(filtered_text)
+            target_stream = io.BytesIO()
+            target_stream.write(text_str.encode("utf-8"))
+            doc_bytes = target_stream.getvalue()    
+            return download_simple_file(doc_bytes, source_file_path, output_lang)
+
+        else:
+            raise ValueError("Unsupported file type or empty content.")
+        
     def get_file_response(self, file_path,pandas_dataframe=False,filename=None):
         if pandas_dataframe:
              
@@ -1551,6 +1696,8 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
+            if output_type == 'SIMPLE':
+                return self.download_simple_file_response(document_id)
 
             # For Downloading Audio File
             if output_type == "AUDIO":
@@ -1585,9 +1732,11 @@ class DocumentToFile(views.APIView):
 
     @staticmethod
     def document_data_to_file(request, document_id,mt_raw=None):
+        from ai_workspace_okapi.utils import save_simple_file
         output_type = request.GET.get("output_type", "")
         document = DocumentToFile.get_object(document_id)
-
+        is_simple = document.job.project.adaptive_simple
+        print("is_simple",is_simple)
         if mt_raw == True:
             # This extra_context is to get the MT_raw of segments with the get_mt_raw_target_if_have() property 
             doc_serlzr = DocumentSerializerV3(document,extra_context={'mt_raw':True})
@@ -1621,12 +1770,18 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
-        res = requests.post(
-            f'http://{spring_host}:8080/getTranslatedAsFile/',
-            data={
-                'document-json-dump': json.dumps(data),
-                "doc_req_res_params": json.dumps(res_paths),
-                "doc_req_params": json.dumps(params_data),})
+        if is_simple:
+            http_response = DocumentToFile().download_simple_file_response(document_id)
+            res = save_simple_file(http_response, task_data["output_file_path"])
+            print("Saved simple file at:", res)
+        else:
+            res = requests.post(
+                f'http://{spring_host}:8080/getTranslatedAsFile/',
+                data={
+                    'document-json-dump': json.dumps(data),
+                    "doc_req_res_params": json.dumps(res_paths),
+                    "doc_req_params": json.dumps(params_data),})
+                    
 
         if settings.USE_SPACES:
 
@@ -2393,13 +2548,13 @@ def paraphrasing_for_non_english(request):
         project = doc_obj.job.project
         user = doc_obj.doc_credit_debit_user
         task_obj = Task.objects.get(document=doc_obj)
-        isAdaptiveTranslation = doc_obj.job.project.isAdaptiveTranslation
+        isAdaptiveTranslation = doc_obj.job.project.adaptive_file_translate
 
     if task_id:
         task_obj = Task.objects.get(id=task_id)
         project = task_obj.job.project
         user = task_obj.job.project.ai_user
-        isAdaptiveTranslation = task_obj.job.project.isAdaptiveTranslation
+        isAdaptiveTranslation = task_obj.job.project.adaptive_file_translate
 
     target_lang = Languages.objects.get(id=target_lang_id).locale.first().locale_code
     
@@ -2964,40 +3119,48 @@ def term_model_source_translate(selected_term_model_list,src_lang,tar_lang,user)
 
 
 
-def matching_word(user_input,lang_code):
-    from ai_workspace_okapi.utils import nltk_lemma
-    from ai_glex.api_views import identify_lemma_it
-    user_words = user_input.split()
-    query = Q()
-    # if lang_code == "it":
-    #     word_lemma_user_input = identify_lemma_it(user_input)
-    #     for word in word_lemma_user_input:
-    #         if word:
-    #             word = word.lower()
-    #             query |= (Q(root_word__exact=word) |Q(sl_term__exact=word)   ) #|Q(sl_term__icontains=word)
+# def matching_word(user_input,lang_code):
+#     from ai_workspace_okapi.utils import nltk_lemma
+ 
+#     user_words = user_input.split()
+#     query = Q()
+ 
 
-    for word in user_words:
-        if word:
-            word_lower = word.lower()
-            word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
-            word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
-            # if lang_code == "it":
-            #     query |= (
-            #                     Q(root_word__exact=word_lemma_v) |
-            #                     Q(sl_term__exact=word_lemma_v) )
-            # else:
-                 # Combine multiple conditions with one query operation using OR
+#     for word in user_words:
+#         if word:
+#             word_lower = word.lower()
+#             word_lemma_v = nltk_lemma(word, pos='v',language=lang_code).lower()  # Verb lemma
+#             word_lemma_n = nltk_lemma(word, pos='n',language=lang_code).lower()  # Noun lemma
+ 
+#             query |= (
+#                 Q(root_word__exact=word_lemma_v) |
+#                 Q(sl_term__exact=word_lemma_v) |
+#                 Q(sl_term__exact=word_lower) |
+#                 Q(root_word__exact=word_lemma_n) |
+#                 Q(sl_term__icontains=word_lemma_v) |
+#                 Q(sl_term__icontains=word_lower)
+#             )
+#     return query
+
+def matching_word(user_input,lang_code):
+ 
+    from ai_workspace_okapi.utils import nltk_lemma
+    lemma_res = nltk_lemma(word = user_input, language="en", gloss=True)
+ 
+    query = Q()
+    for lemma in lemma_res:
+        if lemma:
             query |= (
-                Q(root_word__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lemma_v) |
-                Q(sl_term__exact=word_lower) |
-                Q(root_word__exact=word_lemma_n) |
-                Q(sl_term__icontains=word_lemma_v) |
-                Q(sl_term__icontains=word_lower)
+                Q(root_word__exact=lemma) |
+                Q(root_word__icontains=lemma) |
+                #Q(sl_term__exact=lemma) |
+                Q(sl_term__icontains=lemma) 
             )
+ 
     return query
 
-    
+
+
 def check_source_words(user_input, task):
 
     '''
@@ -3070,6 +3233,142 @@ def target_source_words(target_mt,task):
 
 
 
+######### lerma ######################################
+
+from tqdm import tqdm
+from ai_workspace.models import Project
+from ai_workspace_okapi.models import Segment ,TranslationStatus
+
+
+def contains_tag(sentence):
+    pattern = r"<\d+>|</\d+>"
+    return bool(re.search(pattern, sentence))
+
+
+def remove_tags(sentence):
+    pattern = r"</?\d+>"
+    cleaned_sentence = re.sub(pattern, "", sentence)
+    return cleaned_sentence
+
+
+@api_view(['GET',])
+def get_all_segments(request):
+    project_id = request.query_params.get('project_id',None)
+    project_instance = Project.objects.get(id=project_id)
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
+                        segment_data = {"id": seg.id, "seg": seg.tagged_source }
+                        all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+
+
+
+@api_view(['GET',])  ########## get the segments if not translated
+def get_not_translated_seg(request):
+ 
+    project_id = request.query_params.get('project_id',None)
+
+    project_instance = Project.objects.get(id=project_id)
+
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
+                        if not seg.temp_target:
+                            segment_data = {"id": seg.id, "seg":seg.tagged_source }
+                            all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+
+
+@api_view(['GET',]) 
+def cross_check_segment(request):
+
+    project_id = request.query_params.get('project_id',None)
+    project_instance = Project.objects.get(id=project_id)
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
+                        segment_data = {"id": seg.id, "seg": seg.tagged_source,  "trans_seg": seg.temp_target}
+                        all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+
+
+@api_view(['GET',])
+def get_all_segments_tag(request):
+    project_id = request.query_params.get('project_id',None)
+    project_instance = Project.objects.get(id=project_id)
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    for i in project_instance.project_jobs_set.last().job_tasks_set.all():
+        DocumentViewByTask.create_document_for_task_if_not_exists(i)
+ 
+    all_segments = []
+    try:
+        for job_instance in project_instance.project_jobs_set.all():
+            for doc_instance in tqdm(job_instance.file_job_set.all(), desc=f"Processing Job {job_instance.id}"):
+                for text_unit in doc_instance.document_text_unit_set.all():
+                    for seg in text_unit.text_unit_segment_set.all():
+                        if contains_tag(seg.tagged_source):
+                            segment_data = {"id": seg.id, "seg": seg.tagged_source,
+                                                "trans_seg": seg.temp_target, "ref_tag": seg.target_tags}
+                                                                                     
+                            all_segments.append(segment_data)
+        
+        return JsonResponse({"result":all_segments},status=200 )
+    except:
+        return JsonResponse({"result":"some_thing_went_wrong"},status=400 )
+
+
+
+
+@api_view(['GET',])
+def update_segment(request):
+    segment_content = request.query_params.get('segment_content',None)
+    tran_status_instance = TranslationStatus.objects.get(status_id=104)
+    seg_id = request.query_params.get('seg_id',None)
+    segment_instance = Segment.objects.get(id=seg_id)
+    if segment_content:
+        segment_content = segment_content.strip()
+    source_sentence = segment_instance.source
+
+    if source_sentence.endswith(" "):
+        segment_content = segment_content+" "
+    if source_sentence.startswith(" "):
+        segment_content = " "+segment_content
+    segment_instance.temp_target = segment_content
+
+    segment_instance.status = tran_status_instance
+    segment_instance.save()
+    return JsonResponse({"result":"updated"},status=200 )
+ 
 
 
 

@@ -347,7 +347,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-        translate = client.translate(source_string,target_language=target_lang_code,
+        translate = client.translate(source_string,target_language=target_lang_code,source_language=source_lang_code,
                                 format_=format_).get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
@@ -403,7 +403,16 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     file_obj = DJFile(f2)
     return file_obj,f2
 
-
+def download_simple_file(data,filename,output_lang=None):
+    base, ext = os.path.splitext(os.path.basename(filename))
+    file_name = f"{base}_out{output_lang}{ext}"
+    mime_type, _ = mimetypes.guess_type(file_name)
+    response = HttpResponse(data, content_type=mime_type)
+    encoded_filename = urllib.parse.quote(file_name, encoding='utf-8')
+    response['Content-Disposition'] = f"attachment;filename*=UTF-8''{encoded_filename}"
+    response['X-Suggested-Filename'] = encoded_filename
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    return response
 
 def get_res_path(source_lang):
 
@@ -758,14 +767,49 @@ def get_consumption_of_file_translate(task):
 
 
 
-def nltk_lemma(word,pos="v",language=None):
+def nltk_lemma(word,pos="v",language=None,gloss=False):
     from ai_glex.api_views import identify_lemma
     if language and word:
-        result = identify_lemma(word,language=language)
+ 
+        result = identify_lemma(word,language=language,gloss=gloss)
         return result
     elif word:
         return lemmatizer.lemmatize(word.strip(), pos=pos)
     else:
         return None
 
-    
+
+
+def get_total_doc_word_count(task_id):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.api_views import get_json_file_path
+    try:
+        task = Task.objects.get(id=task_id)
+        file_path = get_json_file_path(task)
+        doc_data = json.load(open(file_path))
+        if type(doc_data) == str:
+            doc_data = json.loads(doc_data)
+        raw_total = doc_data.get('total_word_count')
+    except:
+        raise ValueError("word count not found")
+    return raw_total
+
+
+def get_credit_count(task_type,word_count):
+    #
+    if task_type == "document_translation":
+        return 1*word_count
+    elif task_type == "document_translation_ocr":
+        return 2*word_count
+    elif task_type == "document_translation_adaptive":
+        return 1*word_count
+
+def save_simple_file(http_response, output_file_path):
+    directory = os.path.dirname(output_file_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    with open(output_file_path, 'wb') as f:
+        f.write(http_response.content)
+
+    return os.path.abspath(output_file_path)

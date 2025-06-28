@@ -11,7 +11,6 @@ from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
-from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
 from django.db.models import Func, F, CharField
@@ -50,7 +49,14 @@ class SegmentSerializer(serializers.ModelSerializer):
             # "id",
             "parent_segment": {"read_only": True},
         }
-
+    # def get_is_adaptive_translation_complete(self, obj):
+    #     project = Project.objects.get(id=obj.text_unit.document.project)
+    #     if (project.adaptive_file_translate):
+    #         if obj.target == '':
+    #             return "Ongoing" 
+    #         else:
+    #             return "Success"
+    #     return None
 
     def to_internal_value(self, data):
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
@@ -776,3 +782,9 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
+class AdaptiveSegmentSerializer(serializers.ModelSerializer):
+    segment_id = serializers.IntegerField(source='id')
+
+    class Meta:
+        model = Segment
+        fields = ["segment_id", "source", "tagged_source"]

@@ -2,6 +2,7 @@ import os
 import random
 import re
 import string
+import uuid
 from django.db.models import Prefetch
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
@@ -53,7 +54,8 @@ from django.db.models.functions import Cast
 from django.db.models import CharField
 from django.core.cache import cache
 import functools
-
+from django_celery_results.models import TaskResult
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -219,6 +221,8 @@ class Project(models.Model):
     copy_paste_enable = models.BooleanField(default=True)
     get_mt_by_page = models.BooleanField(default=True) # Used to show translations pagewise in Transeditor
     file_translate = models.BooleanField(default=False) # Use for default glossary
+    adaptive_file_translate = models.BooleanField(default=False)
+    adaptive_simple = models.BooleanField(default=False)
     isAdaptiveTranslation = models.BooleanField(default=False) # Used to have adaptive translation or not
 
 
@@ -657,7 +661,8 @@ class Project(models.Model):
                 else:
                     celery_task = project_analysis_property.apply_async((self.id,), queue='high-priority')
                     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
-            except:
+            except Exception as e:
+                print(e)
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]}
 
@@ -1009,6 +1014,8 @@ class Task(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
+    adaptive_file_translate_status = models.CharField(max_length=20, choices=AdaptiveFileTranslateStatus.choices, default=AdaptiveFileTranslateStatus.NOT_INITIATED)
+ 
 
     class Meta:
         constraints = [
@@ -1976,3 +1983,128 @@ class FileTermExtracted(models.Model):
 
     class Meta:
         unique_together = ("task", "file")
+
+
+class TrackSegmentsBatchStatus(models.Model):
+    class SegmentType(models.TextChoices):
+        SENTENCE = "sentence", "Sentence"
+        PARAGRAPH = "paragraph", "Paragraph"
+        
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="track_batch_segment_status")
+    seg_start_id = models.IntegerField()
+    seg_end_id = models.IntegerField()
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    status = models.CharField(max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    progress_percent = models.IntegerField(default=0)
+    segment_type = models.CharField(max_length=20, choices=SegmentType.choices, default=SegmentType.PARAGRAPH)
+    error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    error_message = models.TextField(null=True,blank=True)
+    celery_task_batch = models.IntegerField(default=1)
+    retry_count = models.IntegerField(default=0)
+
+
+class ProcessFile(models.Model):
+    uid = models.UUIDField(unique=True,default=uuid.uuid4, editable=False)
+    task = models.OneToOneField(Task, on_delete=models.CASCADE,related_name="process_file")
+    style_text = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class TaskStyle(models.Model):
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_style")
+    style_guide = models.TextField(null=True,blank=True)
+    status = models.TextField(null=True,blank=True)
+
+    style_input_token = models.CharField(max_length=20,blank=True, null=True)
+    style_output_token = models.CharField(max_length=20,blank=True, null=True)
+
+
+class TaskStageResults(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
+    segment_batch = models.ForeignKey(TrackSegmentsBatchStatus, on_delete=models.CASCADE, related_name='task_result_batch',null=True, blank=True)
+    #style_guide_stage_1 = models.TextField(null=True,blank=True)
+    celery_task_batch = models.IntegerField()
+    group_text_units = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class AllStageResult(models.Model):
+    task_stage_result = models.ForeignKey(TaskStageResults, on_delete=models.CASCADE, related_name='each_task_stage')
+    source_text = models.TextField(null=True,blank=True)
+    no_of_stages_used = models.IntegerField(default=3)
+    stage_2 = models.TextField(null=True,blank=True)
+    stage_3 = models.TextField(null=True,blank=True)
+    stage_4 = models.TextField(null=True,blank=True)
+
+    stage_2_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_2_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_2_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_2_error_message = models.TextField(null=True,blank=True)
+
+    stage_3_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_3_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_3_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_3_error_message = models.TextField(null=True,blank=True)
+
+    stage_4_input_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_4_output_token = models.CharField(max_length=20,blank=True, null=True)
+    stage_4_error_type = models.CharField(max_length=30,choices=ErrorStatus.choices, blank=True, null=True,default=None)
+    stage_4_error_message = models.TextField(null=True,blank=True)
+
+    glossary_text = models.TextField(null=True,blank=True)
+
+
+ 
+
+# class Stage(models.Model):
+#     """
+#     Represents a single processing stage (e.g., style, translate, refine, rewrite).
+#     """
+#     name = models.CharField(max_length=100, unique=True)
+#     prompt = models.TextField()
+#     class_path = models.CharField(max_length=255)  # e.g. 'ai_workspace.adaptive_2.StyleAnalysis'
+
+#     def __str__(self):
+#         return self.name
+
+# class Flow(models.Model):
+#     """
+#     Represents a sequence of stages (a flow).
+#     """
+#     name = models.CharField(max_length=100, unique=True)
+#     stages = models.ManyToManyField(Stage, through='FlowStage', related_name='flows')
+
+#     def __str__(self):
+#         return self.name
+
+# class FlowStage(models.Model):
+#     """
+#     Through model to order stages in a flow.
+#     """
+#     flow = models.ForeignKey(Flow, on_delete=models.CASCADE)
+#     stage = models.ForeignKey(Stage, on_delete=models.CASCADE)
+#     order = models.PositiveIntegerField()
+
+#     class Meta:
+#         unique_together = ('flow', 'stage')
+#         ordering = ['order']
+
+# class BatchResult(models.Model):
+#     """
+#     Stores the result of a batch processed through a flow.
+#     """
+#     flow = models.ForeignKey(Flow, on_delete=models.CASCADE)
+#     batch_id = models.CharField(max_length=100)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     status = models.CharField(max_length=50, default='PENDING')
+#     result_data = models.JSONField(null=True, blank=True)  # Store results per stage
+
+#     def __str__(self):
+#         return f"{self.flow.name} - {self.batch_id}"

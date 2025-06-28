@@ -52,7 +52,7 @@ from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
-from ai_auth.tasks import write_doc_json_file,record_api_usage
+from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
@@ -62,7 +62,7 @@ from ai_workspace import forms as ws_forms
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
-from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.models import Document, Segment, TextUnit
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
 from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
@@ -106,8 +106,11 @@ from .utils import merge_dict,split_file_by_size
 from ai_auth.access_policies import IsEnterpriseUser
 from datetime import date
 import spacy, time
-
-
+from django_celery_results.models import TaskResult
+from os.path import exists
+from ai_workspace_okapi.utils import get_credit_count
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from django.core.cache import cache
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -422,7 +425,13 @@ class Files_Jobs_List(APIView):
                 if file_extracted_term_ins:
                     file_ins_dict['done_extraction']= True
                 else:
-                    file_ins_dict['done_extraction']= False        
+                    file_ins_dict['done_extraction']= False
+        
+        if hasattr(project, 'individual_gloss_project') and project.individual_gloss_project:
+            individual_gloss_project_id = project.individual_gloss_project.project.id
+        else:
+            individual_gloss_project_id = None
+
         glossary_selected = True if project.project.filter(glossary__project__project_type_id = 3).exists() else False 
         glossary = GlossarySerializer(gloss).data if gloss else None
         glossary_files = GlossaryFileSerializer(glossary_files,many=True)
@@ -434,7 +443,7 @@ class Files_Jobs_List(APIView):
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,"get_mt_by_page":project.get_mt_by_page,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit, \
-                            "glossary_selected":glossary_selected, "id":project.id, "isAdaptive":isAdaptive}, status=200)
+                            "glossary_selected":glossary_selected, "id":project.id, "isAdaptive":isAdaptive, "individual_gloss_project_id": individual_gloss_project_id}, status=200)
 
 
 
@@ -744,7 +753,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-        
+        #asdfadsfasdfasdfasdf
     def list(self, request, *args, **kwargs):
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
@@ -808,8 +817,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         
         # normal create
         else:
+            files = request.FILES.getlist("files")
+            adaptive_simple = request.POST.get('adaptive_simple',None)
+            if adaptive_simple and len(files) > 1:
+                return Response({"error": "Only one file is allowed."}, status=400)
             serlzr = ser(data=\
-            {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request,'user_1':user_1})
+            {**request.data, "files": files,"audio_file":audio_file},context={"request": request,'user_1':user_1})
         
             
         if serlzr.is_valid(raise_exception=True):
@@ -832,6 +845,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         target_languages = request.POST.get('target_languages',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
+        glossary_job_update = request.POST.get('glossary_job_update',None)
 
         user_1 = self.get_user()
 
@@ -5257,7 +5271,7 @@ def contains_valid_words(sentence):
     return any(word.isalpha() for word in words)
     
 
-#### to get the number of insert and delete in a list of segments using task id
+ 
 
 def seg_diff_ins_del_calculation(task_ins):
     from ai_workspace.utils import number_of_words_delete,number_of_words_insert
@@ -5300,3 +5314,258 @@ def get_task_segment_diff(request):
     else:
         return Response({'msg':'need task or proj id'})
     return Response(result_cal,status=200)
+
+
+
+
+class AdaptiveFileTranslate(viewsets.ViewSet):
+    def get_progress(self,task_progress):
+        cache_key = f"adaptive_progress_{task_progress.id}"
+        return cache.get(cache_key, None)
+    
+    def retrieve(self, request, pk=None):
+        from ai_workspace.models import TrackSegmentsBatchStatus
+
+        project = get_object_or_404(Project, id=pk)
+        tasks = project.get_tasks
+
+        if project.ai_user != request.user:
+            return Response({"msg": "You do not have permission to access this project."}, status=403)
+        
+        batch_status_summary = []
+
+        for task in tasks:
+            if task.adaptive_file_translate_status != AdaptiveFileTranslateStatus.NOT_INITIATED:
+                if (not task.document) and (task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING):
+                    batch_status_summary.append({
+                    "task_id": task.id,
+                    "total_batches": 0,
+                    "completed_batches": 0,
+                    "completed_percentage": 0,
+                    "status": "in_progress"
+                })
+                    continue
+
+                batches = TrackSegmentsBatchStatus.objects.filter(document=task.document)
+                total = 0
+                # get_progress = self.get_progress(batches)
+                # total = TrackSegmentsBatchStatus.objects.filter(document=task.document).aggregate(Sum('progress_percent'))
+                # total_percentage = total.get('progress_percent__sum', 0) / batches.count()
+                total_batches = batches.count()
+
+                status_counter = {
+                    "completed": 0,
+                    "in_progress": 0,
+                    "failed": 0
+                }
+
+                for batch in batches:
+                    task_result = TaskResult.objects.filter(task_id=batch.celery_task_id).first()
+                    progress_data = self.get_progress(batch)
+                    
+                    if progress_data!=None:
+                        total += progress_data.get('total', 0)
+                    else:
+                        total += batch.progress_percent
+                    if task_result:
+                        if batch.status == "COMPLETED":
+                            status_counter["completed"] += 1
+                        elif batch.status == "FAILED":
+                            status_counter["failed"] += 1
+                    else:
+                        status_counter["in_progress"] += 1
+                
+                completed_percentage = (
+                    (total / total_batches) if total_batches > 0 else 0
+                )
+                    
+                batch_status = {
+                    "task_id": task.id,
+                    "total_batches": total_batches,
+                    "completed_batches": status_counter["completed"],
+                    "completed_percentage": int(completed_percentage),
+                    "failed_batches": status_counter["failed"],
+                    "status": "completed" if status_counter["completed"] == total_batches and total_batches > 0  else "in_progress"
+                }
+                if status_counter['failed'] > 0:
+                    if task.adaptive_file_translate_status != AdaptiveFileTranslateStatus.FAILED:
+                        task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+                        task.save()
+                    batch_status["status"] = "failed"
+
+                if status_counter["completed"] == total_batches and total_batches > 0:
+                    batch_status["download_file"] = f"workspace_okapi/document/to/file/{task.document.id}?output_type=SIMPLE"
+
+                batch_status_summary.append(batch_status)
+
+        return Response({
+            "project_id": project.id,
+            "batch_status": batch_status_summary
+        }, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        from ai_workspace_okapi.api_views import DocumentViewByTask
+        from ai_workspace.utils import re_initiate_failed_batch
+        task_id = request.data.get('task')
+        if not task_id:
+            return Response({'msg': 'Task id required'}, status=400)
+
+        task = get_object_or_404(Task, id=task_id)
+        project = task.job.project
+        user = project.ai_user
+
+        if user != request.user:
+            return Response({"msg": "Unauthorized access"}, status=403)
+
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.COMPLETED:
+            return Response({'msg': 'Translation already completed'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.ONGOING:
+            return Response({'msg': 'Translation already in progress'}, status=400)
+        if task.adaptive_file_translate_status == AdaptiveFileTranslateStatus.FAILED:
+            failed_batches_re_initiation = re_initiate_failed_batch(task, project)
+            if failed_batches_re_initiation:
+                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+                task.save()
+                endpoint = f'workspace/adaptive_file_translate/{project.id}'
+                return Response({
+                    'msg': 'Translation Re-Initialized. To get the status poll the endpoint below',
+                    'endpoint': endpoint,
+                    'status': 'success',
+                }, status=200)
+            else:
+                return Response({'msg': 'Something went wrong in re-initiation, contact admin'}, status=400)
+        
+        data = TaskSerializer(task).data
+        DocumentViewByTask.correct_fields(data)
+        params_data = {**data, "output_type": None}
+
+        res_paths = get_res_path(params_data["source_language"])
+        json_file_path = DocumentViewByTask.get_json_file_path(task)
+        if exists(json_file_path):
+            with open(json_file_path, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                data = json.loads(data)
+                total_word_count = data.get('total_word_count')
+                if total_word_count == 0:
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
+            
+        else:
+            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                "doc_req_params": json.dumps(params_data),
+                "doc_req_res_params": json.dumps(res_paths)
+            })
+            if doc.status_code == 200:
+                doc_data = doc.json()
+                total_word_count = doc_data.get('total_word_count')
+                if total_word_count == 0:
+                    return Response({"files": [{"file": ["The submitted file is empty."]}]}, status=400)
+                elif get_credit_count('document_translation_adaptive',total_word_count) > user.credit_balance.get("total_left"):
+                    return Response({'msg': 'Insufficient Credits'}, status=400)
+                            
+        try:
+            create_doc_and_write_seg_to_db.apply_async((task.id,total_word_count,), queue='high-priority')
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
+            task.save()
+            endpoint = f'workspace/adaptive_file_translate/{project.id}'
+    
+            return Response({
+                'msg': 'Translation Ongoing Please wait. To get the status poll the endpoint below',
+                'endpoint': endpoint,
+                'status': 'success',
+            }, status=200)
+
+        except Exception as e:
+            # print(e)
+            return Response({'msg': 'Document Translation failed', 'status': 'failed',}, status=400)
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def custom_proj_create(request):
+    # This function is to create a project for glossary and returning task id, Instead of frontend calling multiple apis , we provide one api to create project and task.
+    user_1 = request.user
+    payload = {
+        "project_name": ["Glossary"],
+        "project_type": ["3"],
+        "steps": ["1"],
+        "mt_engine": ["1"],
+        "source_language": [request.data.get("source_languages")],
+        "target_languages": [request.data.get("target_languages")],
+        "usage_permission": ["Private"],
+        "mt_enable": 'true',
+        "get_mt_by_page": 'true'
+    }
+    serializer = GlossarySetupSerializer(data=payload, context={"request": request, 'user_1': user_1})
+    if serializer.is_valid():
+        project = serializer.save()
+        tasks = project.get_tasks
+        return Response({
+            'id': project.id,
+            'gloss_proj_id': project.glossary_project.id,
+            'tasks': [task.id for task in tasks]
+        }, status=201)
+    else:
+        return Response(serializer.errors, status=400)
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def get_glossary(request):
+    from ai_glex.models import GlossarySelected,TermsModel
+    from ai_workspace_okapi.api_views import matching_word
+ 
+    from ai_glex.api_views import job_lang_pair_check
+
+    task_id = request.data.get('task_id')
+    user_input = request.data.get('user_input')
+
+    task_ins = Task.objects.get(id = task_id)
+    job = task_ins.job
+    gloss_proj = task_ins.proj_obj.individual_gloss_project.project
+    gloss_job_list = gloss_proj.project_jobs_set.all()
+
+    target_language = job.target_language
+    source_language = job.source_language
+    source_code =  job.source_language.locale_code
+
+    gloss_job_ins = job_lang_pair_check(gloss_job_list,source_language.id,target_language.id)
+
+
+    #project_ins = gloss_job_ins.proj_obj
+    project_ins = task_ins.proj_obj #### standard translation project and gloss job ins
+    user = project_ins.ai_user
+ 
+    glossary_selected = GlossarySelected.objects.filter(project = project_ins ,glossary__project__project_type__id=3).values('glossary_id')
+
+    #print("glossary_selected--->",glossary_selected)
+ 
+    if glossary_selected:
+        queryset = TermsModel.objects.filter(glossary__in=glossary_selected).filter(job  = gloss_job_ins) 
+ 
+        matching_exact_queryset = matching_word(user_input, source_code)
+        all_sorted_query = queryset.filter(matching_exact_queryset)
+        #print("all_sorted_query",all_sorted_query)
+ 
+        # queryset1 = MyGlossary.objects.filter(Q(tl_language__language=  target_language)& Q(user= user)& Q(sl_language__language= source_language))\
+        #             .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+        #                 params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
+
+        #queryset_final = queryset1.union(all_sorted_query)
+
+        all_gloss = ""
+        if all_sorted_query:
+ 
+            for data in all_sorted_query:
+                sl_term = data.sl_term
+                tl_term = data.tl_term
+                all_gloss += f"{sl_term}  → {tl_term}"
+                all_gloss +="\n"
+
+            # print("all_gloss",all_gloss)
+            return Response({'msg': all_gloss}, status=200)
+        else:
+            return Response({'msg': "no queryset_final "}, status=200)
+
+    else:
+        return Response({'msg': "no glossary_selected"}, status=200)

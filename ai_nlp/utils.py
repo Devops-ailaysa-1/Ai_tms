@@ -8,7 +8,8 @@ from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,D
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+
+from langchain_community.vectorstores import Chroma
 from langchain.embeddings.cohere import CohereEmbeddings
 import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
@@ -157,7 +158,7 @@ def load_embedding_vector(instance,query)->RetrievalQA:
     embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
-    compressor = CohereRerank(user_agent="langchain")
+    compressor = CohereRerank(user_agent="langchain", model=settings.COHERE_MODEL)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
     compressed_docs = compression_retriever.get_relevant_documents(query=query)
     memory = load_chat_history(instance)

@@ -18,7 +18,9 @@ RUN apt-get clean \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libxslt-dev libxml2-dev libpam-dev libedit-dev libhunspell-dev ffmpeg\
-    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice
+    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice libgl1-mesa-glx \
+    libglib2.0-0
+
 
 WORKDIR /ai_home
 COPY pyproject.toml poetry.lock /ai_home/

@@ -1,13 +1,23 @@
-import os
-import random
+
+
+import os,sys,random
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO, BytesIO
-import sys
-import string
-import re
 from indicnlp.tokenize.sentence_tokenize import sentence_split
-import nltk
+import nltk, re ,logging ,json,os,string
+from django.core.cache import cache
+ 
+ 
+ 
+logger = logging.getLogger('django')
 
+
+ 
+
+async def detect_lang(text):
+    from googletrans import Translator
+    detector = Translator()
+    return await detector.detect(text)
 
 class DjRestUtils:
 
@@ -310,16 +320,168 @@ def number_of_words_delete(segment):
         len_words_deletes=len_words_deletes+ len(j.split(" "))		
     return len_words_deletes
 
-# import time
-# from functools import wraps
+ 
 
-# def time_decorator(func):
-#     @wraps(func)
-#     def wrapper(*args, **kwargs):
-#         start_time = time.time()
-#         result = func(*args, **kwargs)
-#         end_time = time.time()
-#         execution_time = end_time - start_time
-#         print(f"Function '{func.__name__}' executed in {execution_time:.6f} seconds")
-#         return result
-#     return wrapper
+
+def word_count_find(task):
+    import requests
+    from .serializers import TaskSerializer
+    from ai_workspace_okapi.api_views import DocumentViewByTask  
+    from ai_workspace_okapi.utils import get_res_path
+    from os.path import exists
+
+
+    spring_host = os.environ.get("SPRING_HOST")
+    data = TaskSerializer(task).data
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+
+    res_paths = get_res_path(params_data["source_language"])
+
+    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+        "doc_req_params": json.dumps(params_data),
+        "doc_req_res_params": json.dumps(res_paths)
+    })
+    if doc.status_code == 200:
+        doc_data = doc.json()
+        return doc_data.get('total_word_count')
+
+
+def merge_source_text_by_text_unit(document_id):
+    from ai_workspace_okapi.models import MergedTextUnit
+    from ai_workspace_okapi.models import TextUnit, Segment
+    text_units = TextUnit.objects.filter(document_id=document_id)
+
+    for text_unit in text_units:
+        source_paragraph = ""
+        
+        segments = text_unit.text_unit_segment_set.all()
+        
+        if not segments:
+            continue  
+
+        for seg in segments:
+            if seg.source:
+                source_paragraph += seg.source + " "
+
+        MergedTextUnit.objects.create(
+            text_unit=text_unit,
+            source_para=source_paragraph.strip(),
+        )
+
+
+def re_initiate_failed_batch(task, project):
+    from ai_workspace.models import TrackSegmentsBatchStatus
+    from ai_workspace_okapi.models import MergedTextUnit
+    from ai_workspace.enums import BatchStatus
+    from ai_workspace.models import Task
+     
+    from ai_auth.tasks import adaptive_segment_translation
+
+    try:
+        task_id = task.id
+        #get_terms_for_task = get_glossary_for_task(project, task)
+        failed_task_batches = TrackSegmentsBatchStatus.objects.filter(document=task.document, status=BatchStatus.FAILED)
+        task = Task.objects.select_related('job__source_language', 'job__target_language').get(id=task.id)
+        source_lang = task.job.source_language.language
+        target_lang = task.job.target_language.language
+
+        retry_exceeded_batches = TrackSegmentsBatchStatus.objects.filter(
+            document=task.document,
+            status=BatchStatus.FAILED,
+            retry_count__gte=1
+        )
+
+        if retry_exceeded_batches.exists():
+            print(f"Skipping re-initiation for batches that have exceeded retry limit: {retry_exceeded_batches.values_list('id', flat=True)}")
+            return False
+        
+        for failed_task_batch in failed_task_batches:
+            # check retry count
+            # if failed_task_batch.retry_count >= 1:
+            #     print(f"Batch {failed_task_batch.id} has reached maximum retry limit. Skipping re-initiation.")
+            # else:
+            merged_text_units = MergedTextUnit.objects.filter(text_unit__id__range=(failed_task_batch.seg_start_id, failed_task_batch.seg_end_id))
+            para = []
+            metadata = {}
+            for text_unit in merged_text_units:
+                para.append(text_unit.source_para)
+                metadata[text_unit.text_unit.id] = text_unit.source_para
+            
+            adaptive_segment_translation.apply_async(
+                args=(para, metadata, source_lang, target_lang, task_id, True,),
+                kwargs={
+                    'failed_batch': True,
+                    'celery_task_id': failed_task_batch.celery_task_id,
+                    'batch_no': failed_task_batch.celery_task_batch
+                },
+                queue='high-priority'
+            )
+            failed_task_batch.status = BatchStatus.ONGOING
+            failed_task_batch.progress_percent = 0
+            failed_task_batch.retry_count += 1
+            failed_task_batch.save()
+            cache_key = f"adaptive_progress_{failed_task_batch.id}"
+            cache.delete(cache_key)
+            return True
+    except Exception as e:
+        print("Error in re_initiate_failed_batch:", e)
+        return False
+
+
+
+import os
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
+from zipfile import BadZipFile
+
+
+def write_stage_response_in_excel(
+    project_id,
+    task_id,
+    batch_no,
+    system_prompt,
+    user_message,
+    translated_result,
+    stage,
+    base_dir="Translation_Results",
+    input_token=0,
+    output_token=0
+):
+    os.makedirs(base_dir, exist_ok=True)
+
+    project_task_folder = os.path.join(base_dir, f"{project_id}_{task_id}")
+    os.makedirs(project_task_folder, exist_ok=True)
+
+    file_path = os.path.join(project_task_folder, f"batch_{batch_no}.xlsx")
+
+    try:
+        if os.path.exists(file_path):
+            wb = load_workbook(file_path)
+        else:
+            wb = Workbook()
+    except BadZipFile:
+        print(f"Warning: {file_path} is not a valid Excel file. Recreating.")
+        wb = Workbook()
+
+    if "Sheet" in wb.sheetnames and wb["Sheet"].max_row == 1:
+        wb.remove(wb["Sheet"])
+
+    sheet_name = f"batch_{batch_no}"
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+    else:
+        ws = wb.create_sheet(title=sheet_name)
+        ws.append(["Result", "User_Message", "System_Message", "Stage", "Input_Token", "Output_Token"])
+
+    ws.append([translated_result, user_message, system_prompt, stage, input_token, output_token])
+
+    for column_cells in ws.columns:
+        max_length = max(len(str(cell.value)) for cell in column_cells if cell.value)
+        col_letter = get_column_letter(column_cells[0].column)
+        ws.column_dimensions[col_letter].width = max_length + 2
+
+    wb.save(file_path)
+    print(f"Data written to: {file_path}")
+
+

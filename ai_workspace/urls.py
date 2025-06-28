@@ -31,12 +31,13 @@ router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
 router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
 router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
-
+router.register(r'adaptive_file_translate',api_views.AdaptiveFileTranslate,basename='adaptive_file')
 urlpatterns = router.urls
 
 # api_views urls
 urlpatterns += [
     # path("get_task/<int:pk>/",api_views.TaskViewDetail.as_view(),name="get_task_ins"),
+    path("custom_proj_create/", api_views.custom_proj_create, name='create-gloss-proj'),
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("tasks/<int:id>/",api_views.TaskView.as_view(),name="delete_tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(),\
@@ -114,6 +115,7 @@ urlpatterns += [
 	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
 	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+    path("gloss",api_views.get_glossary ,name="check_gloss")
     
 
 	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here
