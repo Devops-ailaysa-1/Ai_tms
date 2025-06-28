@@ -291,44 +291,45 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         tar_json_copy['background']="rgba(231,232,234,0)"
         
         for tar_lang in inpaint_creation_target_lang:
-            lang_dict={'source_language':src_lang,'target_language':tar_lang}            
+            lang_dict={'source_language':src_lang,'target_language':tar_lang}
+            if src_lang != tar_lang:          
 
-            ##############job__creations#############
-            total_sentence =" ".join(dict_rec_json(tar_json_copy))            
-            initial_credit = instance.user.credit_balance.get("total_left")            
-            # initial_credit = 200
-            consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
-            if initial_credit < consumed_credit: 
-                # obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers}) 
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
-            tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
-                                                         target_language=tar_lang.locale.first()) 
-            img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
- 
-            tar_bbox.job=img_trans_jobs[0][0]
-            ########## job__creation #####
-            
-            tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
-                                            "page":1,'projId':instance.id,'projectType':'image-translate'}
-            for i in tar_json_copy['objects']:
-                if 'text' in i.keys():
+                ##############job__creations#############
+                total_sentence =" ".join(dict_rec_json(tar_json_copy))            
+                initial_credit = instance.user.credit_balance.get("total_left")            
+                # initial_credit = 200
+                consumed_credit = get_consumable_credits_for_text(total_sentence,instance.source_language.locale_code,tar_lang.locale.first().locale_code)
+                if initial_credit < consumed_credit: 
+                    # obj_inst = ImageTranslateSerializer(instance,context={"user":user,"managers":pr_managers}) 
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
+                tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,source_language=src_lang.locale.first(),
+                                                            target_language=tar_lang.locale.first()) 
+                img_trans_jobs,img_trans_tasks=create_design_jobs_and_tasks([lang_dict], instance.project)
+    
+                tar_bbox.job=img_trans_jobs[0][0]
+                ########## job__creation #####
+                
+                tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
+                                                "page":1,'projId':instance.id,'projectType':'image-translate'}
+                for i in tar_json_copy['objects']:
+                    if 'text' in i.keys():
 
-                    # if instance.source_language.locale_code == tar_lang.locale.first().locale_code:
-                    #     i['text']=i['text']
-                    #     i['mt_text']=i['text']
-                    # else:
-                    translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
-                                                target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)               
-                    i['text']=translate_bbox
-                    i['mt_text']=translate_bbox
-                if i['name'] == "Background-static":
-                    i['name']='Background-current'
-            tar_bbox.target_canvas_json=tar_json_copy
-            tar_bbox.save()
-            thumb_image=thumbnail_create(tar_bbox.target_canvas_json,formats='png')
-            thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
-            tar_bbox.thumbnail=thumb_image
-            tar_bbox.save()
+                        # if instance.source_language.locale_code == tar_lang.locale.first().locale_code:
+                        #     i['text']=i['text']
+                        #     i['mt_text']=i['text']
+                        # else:
+                        translate_bbox=get_translation(1,source_string=i['text'],source_lang_code=instance.source_language.locale_code,
+                                                    target_lang_code=tar_lang.locale.first().locale_code,user_id=instance.user.id)               
+                        i['text']=translate_bbox
+                        i['mt_text']=translate_bbox
+                    if i['name'] == "Background-static":
+                        i['name']='Background-current'
+                tar_bbox.target_canvas_json=tar_json_copy
+                tar_bbox.save()
+                thumb_image=thumbnail_create(tar_bbox.target_canvas_json,formats='png')
+                thumb_image=core.files.File(core.files.base.ContentFile(thumb_image),'thumb_image.png')
+                tar_bbox.thumbnail=thumb_image
+                tar_bbox.save()
 
     def update(self, instance, validated_data):
         src_lang = validated_data.get('source_language' ,None)
