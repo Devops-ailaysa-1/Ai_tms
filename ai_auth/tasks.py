@@ -1365,6 +1365,14 @@ def sync_user_details_bi(test=False,is_vendor=False):
         data.update({
             "project_types":project_types,
         })
+     
+        langpairs = rep.get_language_pair_used(user)
+        data.update({
+        "langugae_pairs":",".join(rep.get_language_pair_used(user)),
+        })
+
+
+
         objs = AiUserDetails.objects.using("bi").filter(email=data["email"])
         if objs.count() != 0:
             objs.using("bi").update(**data)
@@ -1372,17 +1380,17 @@ def sync_user_details_bi(test=False,is_vendor=False):
             user_det = AiUserDetails(**data)
             user_det.save(using="bi")
 
-        user_det = AiUserDetails.objects.using("bi").get(email=data["email"])
-        lang_pairs = rep.get_language_pair_used(user)
-        if len(lang_pairs) != 0:
-            for lang in lang_pairs:
-                data2['user_detail'] = user_det
-                pairs = lang.split('->')
-                data2['source_lang'] = pairs[0]
-                if len(pairs)!=1:
-                    data2['target_lang'] = pairs[1]
-                user_lang = UsedLangPairs(**data2)
-                user_lang.save(using="bi")
+        # user_det = AiUserDetails.objects.using("bi").get(email=data["email"])
+        # lang_pairs = rep.get_language_pair_used(user)
+        # if len(lang_pairs) != 0:
+        #     for lang in lang_pairs:
+        #         data2['user_detail'] = user_det
+        #         pairs = lang.split('->')
+        #         data2['source_lang'] = pairs[0]
+        #         if len(pairs)!=1:
+        #             data2['target_lang'] = pairs[1]
+        #         user_lang = UsedLangPairs(**data2)
+        #         user_lang.save(using="bi")
 
 
 def proz_list_send_email(projectpost_id):
