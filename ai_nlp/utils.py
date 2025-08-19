@@ -155,7 +155,7 @@ def load_chat_history(instance):
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     llm = ChatOpenAI(model_name=OPEN_AI_GPT_MODEL_CHAT, temperature=0)  
-    embed = OpenAIEmbeddings(model="text-embedding-3-large") #model="text-embedding-3-large"        
+    embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
     #compressor = CohereRerank(user_agent="langchain", model=settings.COHERE_MODEL)
