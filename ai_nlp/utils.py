@@ -198,17 +198,6 @@ def load_embedding_vector(instance,query)->RetrievalQA:
 def prompt_temp_context_question(context,question):
     prompt_template = """
     
-        **System Instruction:**
-    You are a helpful assistant. Your task is to answer the user’s question based **only on the provided context** from the retrieved documents.
-
-    * If the context contains the answer, respond concisely and clearly.
-    * If the context does **not** contain the answer, say:
-    **"The answer is not available in the provided content."**
-    * Do **not** use prior knowledge outside of the retrieved context.
-    * When possible, cite or briefly reference the specific part of the context that supports your answer.
-    * Do not hallucinate or make assumptions beyond what is provided.
-    
-    
     Text: {context}
 
     Question: {question}
