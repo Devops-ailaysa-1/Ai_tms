@@ -23,7 +23,13 @@ def user_directory_path_pdf_thumbnail(instance, filename):
 #     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
 #     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
 
+class EmbeddingModel(models.Model):
+    embed_model_name = models.CharField(max_length=200,null=True,blank=True)
+    provider_name = models.CharField(max_length=200,null=True,blank=True)
 
+    def __str__(self) -> str:
+        if self.embed_model_name and self.provider_name:
+            return str(self.embed_model_name)+'----'+str(self.provider_name) 
 
 class PdffileUpload(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
@@ -41,8 +47,7 @@ class PdffileUpload(models.Model):
     status = models.CharField(max_length=200,null=True,blank=True)
     text_file =  models.FileField(upload_to=user_directory_path_pdf_upload,null=True,blank=True)
     website = models.TextField(null=True,blank=True)
-    
-    # embedding_name = models.ForeignKey(ChatEmbeddingLLMModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
+    embedding_model = models.ForeignKey(EmbeddingModel,on_delete=models.CASCADE,related_name="pdf_embed_chat",null=True,blank=True)
 
 
 

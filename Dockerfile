@@ -18,7 +18,7 @@ RUN apt-get clean \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libxslt-dev libxml2-dev libpam-dev libedit-dev libhunspell-dev ffmpeg\
-    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice libgl1-mesa-glx \
+    libpoppler-cpp-dev pkg-config poppler-utils pandoc libreoffice libgl1 \
     libglib2.0-0
 
 
