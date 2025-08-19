@@ -167,11 +167,11 @@ def load_embedding_vector(instance,query)->RetrievalQA:
                                                return_source_documents=True)
     
     page_numbers = []
-    for i in retriever:
-        if 'page' in i.metadata:
-            page_numbers.append(i.metadata['page']+1)
-    page_numbers = list(set(page_numbers))
-    # result = qa.run(query=query)
+    # for i in retriever:
+    #     if 'page' in i.metadata:
+    #         page_numbers.append(i.metadata['page']+1)
+    # page_numbers = list(set(page_numbers))
+ 
     result = qa(query) 
  
     return result['answer'] ,page_numbers
