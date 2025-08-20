@@ -1,7 +1,7 @@
 from django import core
 from django.conf import settings
 import openai ,os,pdf2image,io
-from langchain.llms import OpenAI
+from langchain.llms import OpenAI, Cohere
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
 from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
@@ -14,19 +14,20 @@ from langchain.embeddings.cohere import CohereEmbeddings
 import random,re,uuid 
 from langchain.chat_models import ChatOpenAI
 
-from langchain.chains import ConversationChain
+from langchain.chains import ConversationChain ,ConversationalRetrievalChain,RetrievalQA
+from langchain.chains.question_answering import load_qa_chain
 from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
+ 
 
 # from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA 
-from ai_nlp.models import PdffileUpload ,PdfQustion
-from langchain.chains.question_answering import load_qa_chain
-from langchain.callbacks import get_openai_callback
+ 
+from ai_nlp.models import PdffileUpload ,PdfQustion ,EmbeddingModel
+
+ 
 from bs4 import BeautifulSoup
 from bs4.element import Comment
 from celery.decorators import task
-from langchain.llms import Cohere
+ 
 from langchain.prompts import PromptTemplate
 from zipfile import ZipFile 
 openai.api_key = OPENAI_API_KEY
@@ -42,7 +43,7 @@ from ai_openai.utils import mistral_chat_api
 nlp = spacy.load('en_core_web_sm')
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CohereRerank
-# llm = ChatOpenAI(model_name='gpt-4')
+ 
 OPEN_AI_GPT_MODEL_CHAT =  settings.OPEN_AI_GPT_MODEL_CHAT 
 emb_model = "sentence-transformers/all-MiniLM-L6-v2"
 logger = logging.getLogger("django") 
@@ -108,7 +109,15 @@ def loader(file_id) -> None:
     data = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0, separators=[" ", ",", "\n"])
     texts = text_splitter.split_documents(data)
-    embeddings = OpenAIEmbeddings()  #model="text-embedding-3-large"
+
+    embedding_instance = EmbeddingModel.objects.filter(embed_model_name = "text-embedding-3-small")
+
+    if embedding_instance:
+        embedding_instance = embedding_instance.last()
+        instance.embedding_model =  embedding_instance
+        instance.save()
+        embeddings = OpenAIEmbeddings(model= embedding_instance.embed_model_name)  #model="text-embedding-3-large"
+        print("embedding_instance.embed_model_name")
     try:
         save_prest(texts, embeddings, persistent_dir,instance)
         instance.vector_embedding_path = persistent_dir
@@ -155,33 +164,45 @@ def load_chat_history(instance):
 def load_embedding_vector(instance,query)->RetrievalQA:
     vector_path = instance.vector_embedding_path
     llm = ChatOpenAI(model_name=OPEN_AI_GPT_MODEL_CHAT, temperature=0)  
-    embed = OpenAIEmbeddings() #model="text-embedding-3-large"        
+
+    embedding_instance = instance.embedding_model
+    if embedding_instance:
+        embed = OpenAIEmbeddings(model=embedding_instance.embed_model_name) #model="text-embedding-3-large" 
+    else:
+        embed = OpenAIEmbeddings()
+        print("no embedding")
+
+
+           
     vector_db = Chroma(persist_directory=vector_path,embedding_function=embed)
     retriever = vector_db.as_retriever(search_kwargs={"k": 9})
-    compressor = CohereRerank(user_agent="langchain", model=settings.COHERE_MODEL)
-    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
-    compressed_docs = compression_retriever.get_relevant_documents(query=query)
+    #compressor = CohereRerank(user_agent="langchain", model=settings.COHERE_MODEL)
+    #compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)    
+    #compressed_docs = compression_retriever.get_relevant_documents(query=query)
     memory = load_chat_history(instance)
     qa = ConversationalRetrievalChain.from_llm(llm=llm,memory=memory,
-                                               retriever=compression_retriever, return_source_documents=True)
+                                               retriever=retriever,  ## changing from compressor retriever to retriever  
+                                               return_source_documents=True)
     
     page_numbers = []
-    for i in compressed_docs:
-        if 'page' in i.metadata:
-            page_numbers.append(i.metadata['page']+1)
-    page_numbers = list(set(page_numbers))
-    # result = qa.run(query=query)
+    # for i in retriever:
+    #     if 'page' in i.metadata:
+    #         page_numbers.append(i.metadata['page']+1)
+    # page_numbers = list(set(page_numbers))
+ 
     result = qa(query) 
  
     return result['answer'] ,page_numbers
 
 
 def prompt_temp_context_question(context,question):
-    prompt_template = """Text: {context}
+    prompt_template = """
+    
+    Text: {context}
 
-        Question: {question}
+    Question: {question}
 
-        Answer the Question based on the text provided . If the text doesn't contain the answer, reply that the answer is not available. """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
+    Answer the Question based on the text or content or book content provided . If the text doesn't contain the answer, reply that the answer is not available. """.format(context=context,question=question) #If the context doesn't contain the answer, reply that the answer is not available.
     return prompt_template
 
 
