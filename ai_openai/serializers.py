@@ -42,14 +42,13 @@ def lang_detector(user_text):
     try:
         lang = asyncio.run(detect_lang(user_text)).lang
         if isinstance(lang, list):
-            lang = lang[0]
+            return lang[0]
+        else:
+            return None
+
     except Exception as e:
         logger.error(f"error: {str(e)}")
-    # lang = detector.detect(user_text).lang
-    # if isinstance(lang,list):
-    #     lang = lang[0]
-    return lang
- 
+   
 
 def news_file_read(file_path):
     if file_path.endswith("txt"):

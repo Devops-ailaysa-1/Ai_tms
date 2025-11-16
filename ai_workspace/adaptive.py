@@ -604,7 +604,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.client = LLMClient(provider = provider,model=model,style=False)
         self.source_language = source_language
         self.target_language = target_language
-         
+        print("this is adaptive")
         self.task_progress = task_progress
         self.document = document
         self.task_obj = self.document.task_obj
