@@ -1437,6 +1437,29 @@ def proz_list_send_email(projectpost_id):
 
 
 
+def check_user_type(user):
+    if user.is_pib==True:
+        return "pib"
+    else:
+        return "general"
+
+def check_pib_supported_languages(language):
+    lang_list = [
+        "Tamil",
+        "Telugu",
+        "Kannada",
+        "Malayalam",
+        "Hindi",
+        "Punjabi",
+        "Urdu",
+        "Marathi",
+        "Gujarati",
+        "Bengali",
+        "Assamese",
+        "Odia",
+    ]
+    return language in lang_list
+    
 
 
 # #### -------------------- Adaptive Translation ---------------------------- ####
@@ -1450,6 +1473,7 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
 
     task = Task.objects.get(id=task_id)
     user = task.job.project.ai_user
+    user_type = check_user_type(user)
  
     # consumable_credits = MT_RawAndTM_View.get_adaptive_consumable_credits_multiple_segments(task.document, None, segments)
     # if consumable_credits < user.credit_balance.get("total_left"):
@@ -1466,8 +1490,16 @@ def adaptive_segment_translation(segments, d_batches, source_lang, target_lang,
     try:
         # gemini
         # anthropic
-        translator = AdaptiveSegmentTranslator(provider = settings.ADAPTIVE_TRANSLATE_LLM_PROVIDER, model = settings.ADAPTIVE_TRANSLATE_LLM_MODEL, source_language = source_lang, target_language = target_lang,
-                                            task_progress = batch_status, group_text_units=group_text_units, document=task.document)
+        if user_type == "pib" and check_pib_supported_languages(target_lang):
+            
+            provider = os.getenv('ADAPTIVE_TRANSLATE_LLM_PROVIDER_PIB')
+            model = os.getenv('ADAPTIVE_TRANSLATE_LLM_MODEL_PIB')
+        else:
+            provider = settings.ADAPTIVE_TRANSLATE_LLM_PROVIDER
+            model = settings.ADAPTIVE_TRANSLATE_LLM_MODEL
+        
+        translator = AdaptiveSegmentTranslator(provider = provider, model = model , source_language = source_lang, target_language = target_lang,
+                                            task_progress = batch_status, group_text_units=group_text_units, document=task.document,user_type=user_type)
         
         if failed_batch == True:
             translator.process_batch_retry(segments, d_batches, batch_no=batch_no)
@@ -1565,7 +1597,9 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
  
         project = task.job.project
         user = project.ai_user
+        user_type = check_user_type(user)
 
+         # Create Document if not exists
         document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
         merge_source_text_by_text_unit(document.id)
 
@@ -1578,16 +1612,19 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.ONGOING
         task.save()
 
-        try:
-            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
-            style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
-            style_create.process(all_paragraph=batches[0])
-        except Exception as e:
-            logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
-            # style_create = None
-            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
-            task.save()
-            return None
+        if user_type == "pib":
+            pass
+        else:
+            try:
+                api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+                style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
+                style_create.process(all_paragraph=batches[0])
+            except Exception as e:
+                logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
+                # style_create = None
+                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+                task.save()
+                return None
             
  
         for i, para in enumerate(batches):

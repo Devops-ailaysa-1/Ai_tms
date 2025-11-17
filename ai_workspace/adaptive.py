@@ -597,7 +597,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
                  source_language, 
                  target_language, 
                  task_progress, 
-                 group_text_units=False, document=None):
+                 group_text_units=False, document=None,user_type='general'):
         
         from ai_workspace.models import TaskStyle
         
@@ -610,9 +610,19 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.task_obj = self.document.task_obj
         self.group_text_units = group_text_units
         self.user = self.task_progress.project.ai_user
-        self.style_guideline = TaskStyle.objects.get(task=self.task_obj).style_guide 
+        self.user_type = user_type
+        self.style_guideline = self.get_style_guideline()
          
-        
+
+    def get_style_guideline(self):
+        from ai_workspace.models import TaskStyle,PredefinedStyleGuide
+        if self.user_type == 'pib':
+            style_instance = PredefinedStyleGuide.objects.get(name='PIB_Style_Guide')
+            return style_instance.style_guide_content
+        else:
+            style_instance = TaskStyle.objects.get(task=self.task_obj)
+            return style_instance.style_guide
+
     def deduct_credits_adaptive(self,segments):
         from ai_workspace_okapi.api_views import MT_RawAndTM_View
         from ai_workspace.api_views import UpdateTaskCreditStatus
