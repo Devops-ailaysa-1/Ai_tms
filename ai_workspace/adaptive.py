@@ -71,6 +71,8 @@ class TranslationStage(ABC):
         if data!=None:
             if no_of_stage == 4 :
                 stage_weights = {"stage_01": 0.1, "stage_02": 0.4, "stage_03": 0.25, "stage_04": 0.25}
+            elif no_of_stage ==2:
+                stage_weights = {"stage_01": 0.2, "stage_02": 0.8}
             else:
                 stage_weights = {"stage_01": 0.1, "stage_02": 0.5, "stage_04": 0.4}
             if stage_percent != None and stage != None:
@@ -82,6 +84,8 @@ class TranslationStage(ABC):
         else:
             if no_of_stage == 4:
                 progress={"stage_01": 0, "stage_02": 0, "stage_03": 0, "stage_04": 0,"total": 0,"no_of_stages":4}
+            elif no_of_stage ==2:
+                progress={"stage_01": 0, "stage_02": 0,"total": 0,"no_of_stages":2}
             else:
                 progress={"stage_01": 0, "stage_02": 0, "stage_04": 0,"total": 0,"no_of_stages":3}
       
@@ -399,14 +403,17 @@ class InitialTranslation(TranslationStage):
             raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
         
     def trans(self):
- 
-        system_prompt = self.get_prompt_by_stage(stage = "stage_2")
- 
-        if self.style_prompt:
-            system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
+        if self.user.is_pib == True:
+            system_prompt = self.get_prompt_by_stage(stage = "stage_2_pib")
+            system_prompt = system_prompt.format(target_language= self.target_language, source_language=self.source_language)
         else:
+            system_prompt = self.get_prompt_by_stage(stage = "stage_2")
+            if self.style_prompt:
+                system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
+            else:
+                raise RuntimeError("no style")
  
-            raise RuntimeError("no style")
+
  
     
  
@@ -597,7 +604,7 @@ class AdaptiveSegmentTranslator(TranslationStage):
                  source_language, 
                  target_language, 
                  task_progress, 
-                 group_text_units=False, document=None):
+                 group_text_units=False, document=None,user_type='general'):
         
         from ai_workspace.models import TaskStyle
         
@@ -610,9 +617,19 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.task_obj = self.document.task_obj
         self.group_text_units = group_text_units
         self.user = self.task_progress.project.ai_user
-        self.style_guideline = TaskStyle.objects.get(task=self.task_obj).style_guide 
+        self.user_type = user_type
+        self.style_guideline = self.get_style_guideline()
          
-        
+
+    def get_style_guideline(self):
+        from ai_workspace.models import TaskStyle,PredefinedStyleGuide
+        if self.user_type == 'pib':
+            style_instance = PredefinedStyleGuide.objects.get(name='PIB_Style_Guide')
+            return style_instance.style_guide_content
+        else:
+            style_instance = TaskStyle.objects.get(task=self.task_obj)
+            return style_instance.style_guide
+
     def deduct_credits_adaptive(self,segments):
         from ai_workspace_okapi.api_views import MT_RawAndTM_View
         from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -628,8 +645,11 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
         logger.info(f"batch_no {batch_no}")
         logger.info(f"len of the text----> {len(segments)}")
- 
-        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+
+        if self.user_type == 'pib':
+            self.set_progress(no_of_stage=2)
+            no_of_stage = 2
+        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.set_progress(no_of_stage=4)
             no_of_stage = 4
         else:
@@ -659,8 +679,14 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.initial_translation.trans()
         
         logging.info("done stage 2")
- 
-        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+
+        if self.user_type == 'pib':
+            self.task_obj.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+            self.task_obj.save()
+            logger.info("✅ Done Adaptive segment translation")
+            self.update_progress_db()
+
+        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             
             self.initial_translation.refine()
             logging.info(f"done stage 3 {self.target_language}")
@@ -696,8 +722,11 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
         # progress_data = self.get_progress()
  
-        # if progress_data ==None:
-        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+
+        if self.user_type == 'pib':
+            self.set_progress(no_of_stage=2)
+            no_of_stage = 2
+        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.set_progress(no_of_stage=4)
             no_of_stage = 4
         else:
@@ -736,8 +765,14 @@ class AdaptiveSegmentTranslator(TranslationStage):
         self.initial_translation.trans()
         
         logging.info("done stage 2")
+
+        if self.user_type == 'pib':
+            self.task_obj.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+            self.task_obj.save()
+            logger.info("✅ Done Adaptive segment translation")
+            self.update_progress_db()
  
-        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             
             self.initial_translation.refine()
             logging.info(f"done stage 3 {self.target_language}")

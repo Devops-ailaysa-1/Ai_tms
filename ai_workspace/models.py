@@ -2025,6 +2025,15 @@ class TaskStyle(models.Model):
     style_output_token = models.CharField(max_length=20,blank=True, null=True)
 
 
+class PredefinedStyleGuide(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(null=True, blank=True)
+    style_guide_content = models.TextField()
+
+    def __str__(self):
+        return self.name
+
+
 class TaskStageResults(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
     segment_batch = models.ForeignKey(TrackSegmentsBatchStatus, on_delete=models.CASCADE, related_name='task_result_batch',null=True, blank=True)
