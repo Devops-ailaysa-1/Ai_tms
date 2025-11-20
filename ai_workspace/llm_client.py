@@ -2,6 +2,8 @@ import backoff
 from google.genai import types
 from django.conf import settings
 import logging
+import requests
+import os
 logger = logging.getLogger('django')
 from ai_workspace import exceptions
 
@@ -13,6 +15,8 @@ OPENAI_MODEL_NAME_ADAPT = settings.OPENAI_MODEL_NAME_ADAPT
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
 ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
+NEBIUS_API_KEY = os.getenv('NEBIUS_API_KEY')
+NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
 
 safety_settings=[
             types.SafetySetting(
@@ -47,7 +51,7 @@ class LLMClient:
 
             elif self.provider == "openai":
                 import openai
-                openai.api_key = OPENAI_API_KEY 
+                openai.api_key = OPENAI_API_KEY
                 self.client = openai
 
             elif self.provider == "gemini":
@@ -56,9 +60,13 @@ class LLMClient:
                 client = genai.Client(api_key=GOOGLE_GEMINI_API)
                 self.client = client
 
+            elif self.provider == "nebius":
+                # Nebius uses requests library, no specific client initialization needed
+                self.client = None
+
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
-            
+
         except ImportError as e:
             raise ImportError(f"Missing required package for {provider}: {e}")
 
@@ -69,13 +77,16 @@ class LLMClient:
 
         if self.provider == "anthropic":
             return self._handle_anthropic(messages,system_instruction)
-        
+
         elif self.provider == "openai":
             return self._handle_openai(messages, system_instruction)
-        
+
         elif self.provider == "gemini":
             return self._handle_genai(messages,system_instruction)
-        
+
+        elif self.provider == "nebius":
+            return self._handle_nebius(messages, system_instruction, max_tokens)
+
         else:
             raise ValueError("Unknown provider")
         
@@ -97,7 +108,7 @@ class LLMClient:
  
 
     def _handle_openai(self, messages, system_instruction):
- 
+
         usage = 0
         completion = self.client.ChatCompletion.create(
         model= self.model,#OPENAI_MODEL_NAME_ADAPT,
@@ -111,11 +122,60 @@ class LLMClient:
                 output_stream = output_stream + chunk.choices[0].delta.content
             else:
                 output_stream = output_stream + " "
-        output_stream = output_stream.strip() 
+        output_stream = output_stream.strip()
         return output_stream ,usage
-    
 
-    
+    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    def _handle_nebius(self, messages, system_instruction, max_tokens=60000):
+        """
+        Handle Nebius API requests using the meta-llama/Llama-3.3-70B-Instruct-fast-LoRa model
+        """
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+            "Authorization": f"Bearer {NEBIUS_API_KEY}",
+        }
+
+        data = {
+            "model": self.model,  # Use the model specified in the constructor
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": messages}
+                    ]
+                }
+            ],
+            "max_tokens": max_tokens
+        }
+
+        try:
+            response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=60)
+            response.raise_for_status()
+
+            response_data = response.json()
+
+            # Extract the generated text from the response
+            if 'choices' in response_data and len(response_data['choices']) > 0:
+                output_text = response_data['choices'][0]['message']['content']
+            else:
+                raise ValueError("No response content found in Nebius API response")
+
+            # Extract usage information if available
+            usage = response_data.get('usage', {}).get('completion_tokens', 0)
+
+            logger.info(f"Nebius API response status: {response.status_code}")
+            return output_text, usage
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Nebius API request failed: {e}")
+            raise RuntimeError(f"Failed to get response from Nebius API: {e}")
+        except (KeyError, ValueError) as e:
+            logger.error(f"Failed to parse Nebius API response: {e}")
+            raise RuntimeError(f"Invalid response format from Nebius API: {e}")
+
+
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
     def gemini_stream(self,client,model_name, contents, generate_content_config):
