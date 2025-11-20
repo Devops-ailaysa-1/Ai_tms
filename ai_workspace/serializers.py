@@ -868,7 +868,17 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		task_assign = TaskAssign.objects.assign_task(project=project)
 		return  project
 
-
+class DinamalarProjectListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "project_name",
+            "progress",
+            "tasks_count",
+            "created_at",
+            "get_project_type",
+        ]
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
 	instruction_file = serializers.FileField(allow_null=True,validators=[file_size])
