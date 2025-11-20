@@ -23,7 +23,7 @@ import subprocess
 import io
 import logging
 import deepl
-from rest_framework import serializers
+ 
 logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')

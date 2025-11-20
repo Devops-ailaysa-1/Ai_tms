@@ -368,12 +368,7 @@ class InitialTranslation(TranslationStage):
                     stage_result_instance.stage_4 = response_text
                     stage_result_instance.stage_4_output_token = total_count
                     return stage_result_instance
-                # else:
-                #     stage_result_instance.stage_4_error_type = "LLM_ERROR"
-                #     stage_result_instance.stage_4_error_message = "Response text is empty"
-                #     # stage_result_instance.save()
-                #     logging.error(f"response_text is empty for id from task_stage_results model {stage_result_instance.id}")
-                #     return stage_result_instance
+ 
                 
             except exceptions.EmptyChunkFoundException:
                     stage_result_instance.stage_4_error_type = "LLM_ERROR"
