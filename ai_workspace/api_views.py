@@ -684,11 +684,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     serializer_class = ProjectQuickSetupSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['project_name','team__name','id']
-    filterset_class = ProjectFilter
+    #filterset_class = ProjectFilter
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
-    paginator.page_size = 20
+    paginator.page_size = 10
 
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
@@ -712,57 +712,23 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return self.filter_queryset(self.queryset)
 
     #@cached(timeout=60 * 15)
-    # def get_queryset(self):
-    #     from ai_auth.models import InternalMember
-    #     pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
-    #     user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and \
-    #         self.request.user in pr_managers else self.request.user
-
-    #     # Checking for team access and indivual user access
-        
-    #     queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
-    #                 |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
-    #                 |Q(ai_user = self.request.user)
-    #                 |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        
-    #     return queryset
-
-
     def get_queryset(self):
-        user = self.request.user
-        team = user.team
+        from ai_auth.models import InternalMember
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and \
+            self.request.user in pr_managers else self.request.user
 
-        # Determine effective user
-        if team and team.owner.is_agency:
-            pr_managers = team.get_project_manager or []
-            effective_user = team.owner if user in pr_managers else user
-        else:
-            effective_user = user
-
-        # Pre-fetch internal members only once
-        internal_member_ids = user.internal_member.filter(role=1).values_list("id", flat=True)
-
-        # Build Q objects
-        q_assigned_to_effective = Q(
-            project_jobs_set__job_tasks_set__task_info__assign_to=effective_user
-        ) & ~Q(ai_user=effective_user)
-
-        q_assigned_direct = Q(
-            project_jobs_set__job_tasks_set__task_info__assign_to=user
-        )
-
-        q_ai_user = Q(ai_user=user)
-
-        q_team_access = Q(team__internal_member_team_info__in=internal_member_ids)
-
-        queryset = (
-            Project.objects.filter(
-                q_assigned_to_effective | q_assigned_direct | q_ai_user | q_team_access
-            )
-            .distinct()
-        )
-
+        # Checking for team access and indivual user access
+        
+        queryset = Project.objects.filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+                    |Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+                    |Q(ai_user = self.request.user)
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        
         return queryset
+
+
+ 
 
 
 
