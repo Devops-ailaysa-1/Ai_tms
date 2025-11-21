@@ -957,9 +957,50 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
 
+# class VendorDashBoardFilter(django_filters.FilterSet):
+#     status = django_filters.CharFilter(method='filter_status')
+   
+#     class Meta:
+#         model = Task
+#         fields = ('status',)
+
+#     def filter_status(self, queryset, name, value):
+#         assign_filter = self.request.query_params.get('assign_to')
+#         users = assign_filter.split(',') if assign_filter else None
+#         queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
+        
+#         if value == 'inprogress':
+#             # it filters the task which is in status inprogress,yet_to_start,return_request
+#             # and client_response in rework
+#             if users:
+#                 # it is for editors filter
+#                 tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
+#                             distinct().values_list('id',flat=True)
+#         elif value == 'submitted':
+#             # it filters the task which is in status completed exclude the client_response approved
+#             if users:
+#                 tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
+#                             distinct().values_list('id',flat=True)
+#         elif value =='approved':
+#             # it filters the task in which client_response is approved
+#             if users:
+#                 tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
+#         queryset = queryset.filter(id__in=tsk_ids)
+#         return queryset
+    
+
 class VendorDashBoardFilter(django_filters.FilterSet):
     status = django_filters.CharFilter(method='filter_status')
-   
+
     class Meta:
         model = Task
         fields = ('status',)
@@ -967,36 +1008,49 @@ class VendorDashBoardFilter(django_filters.FilterSet):
     def filter_status(self, queryset, name, value):
         assign_filter = self.request.query_params.get('assign_to')
         users = assign_filter.split(',') if assign_filter else None
-        queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
-        
+
+        # Prefetch because task_info is reverse FK
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                'task_info',
+                queryset=TaskAssign.objects.select_related(
+                    'assign_to'
+                )
+            )
+        )
+
+        # Only tasks which have assignment
+        queryset = queryset.filter(task_info__isnull=False)
+
+        # Build user condition
+        if users:
+            queryset = queryset.filter(task_info__assign_to__in=users)
+
         if value == 'inprogress':
-            # it filters the task which is in status inprogress,yet_to_start,return_request
-            # and client_response in rework
-            if users:
-                # it is for editors filter
-                tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
-                            distinct().values_list('id',flat=True)
+            queryset = queryset.filter(
+                Q(task_info__status__in=[1, 2, 4]) |
+                Q(task_info__client_response=2)
+            )
+
         elif value == 'submitted':
-            # it filters the task which is in status completed exclude the client_response approved
-            if users:
-                tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
-                            distinct().values_list('id',flat=True)
-        elif value =='approved':
-            # it filters the task in which client_response is approved
-            if users:
-                tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
-        queryset = queryset.filter(id__in=tsk_ids)
-        return queryset
-    
+            queryset = queryset.filter(
+                task_info__status=3
+            ).exclude(
+                task_info__client_response=1
+            )
+
+        elif value == 'approved':
+            queryset = queryset.filter(
+                task_info__client_response=1
+            )
+
+        return queryset.distinct()
+
+
+
+
+
+
 
 
 
