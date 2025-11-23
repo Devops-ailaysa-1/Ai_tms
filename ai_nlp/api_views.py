@@ -111,7 +111,7 @@ class PdffileUploadViewset(viewsets.ViewSet,PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors)
+        return Response(serializer.errors)  
     
     def list(self, request):
         user = request.user.team.owner if request.user.team else request.user
