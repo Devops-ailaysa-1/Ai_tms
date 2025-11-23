@@ -56,6 +56,7 @@ from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
+from django.conf import settings
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -1966,6 +1967,15 @@ class TaskNewsDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class TaskPibDetails(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    pib_story = models.ForeignKey('PIBStory', on_delete=models.CASCADE, related_name='tasks')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="pib_task")
+    source_json = models.JSONField(blank=True, null=True)
+    target_json = models.JSONField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 class TaskNewsMT(models.Model):
     task = models.ForeignKey(TaskNewsDetails, on_delete=models.CASCADE,related_name="tasknews")
     mt_raw_json = models.JSONField()
@@ -2070,6 +2080,48 @@ class AllStageResult(models.Model):
     glossary_text = models.TextField(null=True,blank=True)
 
 
+class PIBStory(models.Model):
+    uid = models.UUIDField(default = uuid.uuid4, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='pib_stories')
+    headline = models.CharField(max_length=500)
+    body = models.TextField()
+    ministry_department = models.ForeignKey('MinistryName', null=True, blank=True, to_field='uid', on_delete=models.SET_NULL)
+    dateline = models.CharField(max_length=255, blank=True, null=True)
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.headline[:50]
+
+
+class MinistryName(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False, unique=True)
+    name = models.TextField()
+    location = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+    
+    
+class MinistryTranslateName(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False, unique=True)
+    translate_name = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    languages_id = models.ForeignKey(Languages,on_delete=models.SET_NULL,related_name='ministry_languages', null=True, blank=True)
+    ministry_name_id = models.ForeignKey(MinistryName,on_delete=models.CASCADE,related_name='ministry_languages', null=True, blank=True)
+    
+    class Meta:
+        ordering = ['translate_name']
+        indexes = [
+            models.Index(fields=['translate_name']),
+        ]
  
 
 # class Stage(models.Model):

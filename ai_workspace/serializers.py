@@ -8,7 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,TaskTransla
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
-		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory#,TaskAssignRateInfo
+		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory, MinistryName, MinistryTranslateName #,TaskAssignRateInfo
 import json,os,time
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -38,7 +38,7 @@ from django.core.cache import cache
 from ai_canvas.models import CanvasTranslatedJson
 from ai_imagetranslation.models import ImageInpaintCreation
 from itertools import repeat
-from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT,PIBStory
 from ai_workspace.utils import federal_json_translate
 from rest_framework.exceptions import ValidationError
 logger = logging.getLogger('django')
@@ -421,7 +421,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
 	individual_gloss_project_id = serializers.SerializerMethodField()
-
+	
 	class Meta:
 		model = Project
 		fields = ("id","book_project_id", "project_name","assigned", "jobs","clone_available","assign_enable","files",
@@ -1054,13 +1054,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	push_detail = serializers.SerializerMethodField()
 	adaptive_file_translate = serializers.CharField(read_only=True, source="file.project.adaptive_file_translate")
 	adaptive_simple = serializers.CharField(read_only=True, source="file.project.adaptive_simple")
+	pib_story_details = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Task
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id','adaptive_file_translate', 'adaptive_file_translate_status', 'adaptive_simple')
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id','adaptive_file_translate', 'adaptive_file_translate_status', 'adaptive_simple','pib_story_details')
 		
 
 	def get_push_detail(self,obj):
@@ -1068,6 +1069,29 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			try:return obj.news_task.first().pushed
 			except:return None
 		return None
+
+	def get_pib_story_details(self, obj):
+		if obj.job.project.project_type_id != 8:
+			return None
+
+		pib_task_details = obj.pib_task.first() 
+		if not pib_task_details:
+			return None
+
+		pib = pib_task_details.pib_story
+
+		return {
+			"uid": str(pib.uid),
+			"headline": pib.headline,
+			# "body": pib.body,
+			"ministry_department": getattr(pib.ministry_department, "name", None),
+			"dateline": pib.dateline,
+			"created_at": pib.created_at,
+			# "source_json": pib_task_details.source_json,
+			# "target_json": pib_task_details.target_json,
+		}
+
+
 
 	def get_design_project(self,obj):
 		res = None
@@ -1888,3 +1912,36 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
+	
+class PIBStorySerializer(serializers.ModelSerializer):
+    project_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PIBStory
+        fields = [
+            "uid",
+            "headline",
+            "ministry_department",
+            "dateline",
+			"body",
+            "project_details",
+        ]
+
+    def get_project_details(self, obj):
+        if obj.project:
+            return ProjectQuickSetupSerializer(obj.project).data
+        return None
+
+
+class MinistryNameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MinistryName
+        fields = ["uid", 'name', "location"]
+
+
+class MinistryTranslateNameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MinistryTranslateName
+        fields = ["uid","translate_name", "ministry_name_id", "languages_id"]

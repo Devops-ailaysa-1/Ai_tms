@@ -35,6 +35,14 @@ class IsEnterpriseUser(BasePermission):
         user = request.user.team.owner if request.user.team else request.user
         return user.is_enterprise
 
+class IsPIBEnterpriseUser(BasePermission):
+    """
+    Allows access only to PIB Enterprise users.
+    """
+    def has_permission(self, request, view):
+        user = request.user.team.owner if request.user.team else request.user
+        return user.user_enterprise.subscription_name == "Enterprise - PIB"
+
 
 # class InternalTeamAccess(AccessPolicy):
 #     statements = [

@@ -68,12 +68,12 @@ from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
-    ExpressProjectDetail
+    ExpressProjectDetail, TaskPibDetails
 from .models import Task
 from cacheops import cached
 from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile, MinistryName, MinistryTranslateName
 from .serializers import (ProjectContentTypeSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -86,7 +86,7 @@ from .serializers import (ProjectContentTypeSerializer, \
                           StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,\
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew) #ProjectCreationSerializer
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew, PIBStorySerializer, MinistryNameSerializer, MinistryTranslateNameSerializer) #ProjectCreationSerializer
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
@@ -4903,6 +4903,107 @@ def push_translated_story(request):
     
     return Response({'msg': "something went wrong with CMS"}, status=400)
 
+class PIBStoriesViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsEnterpriseUser]
+    serializer_class = PIBStorySerializer
+    PROJECT_TYPE_ID = 8
+
+    def pr_check(self, src_lang, tar_langs, user):
+        today_date = date.today()
+        project_name = today_date.strftime("%b %d, %Y")
+
+        query = Project.objects.filter(ai_user=user)\
+            .filter(project_type_id=self.PROJECT_TYPE_ID)\
+            .filter(project_name__icontains=project_name)\
+            .filter(project_jobs_set__source_language_id=src_lang)\
+            .filter(project_jobs_set__target_language_id__in=tar_langs)
+
+        return query.last() if query else None
+
+    @staticmethod
+    def check_user_pib(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        try:
+            return user.user_enterprise.subscription_name == 'Enterprise - PIB'
+        except:
+            return False
+
+    def get_file(self,text_data,name):
+        name = f"{name}.txt"
+        im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        return im_file
+    
+    def list(self, request):
+        try:
+            queryset = MinistryName.objects.all()
+            filter_result = self.filter_queryset(queryset)
+            serializer = MinistryNameSerializer(filter_result, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
+        if not self.check_user_pib(request.user):
+            return Response({"detail": "You do not have permission."}, status=403)
+        pib_serializer = PIBStorySerializer(data=request.data)
+        pib_serializer.is_valid(raise_exception=True)
+        pib = pib_serializer.save(created_by=request.user)
+        pib_data = PIBStorySerializer(pib).data
+
+        src_lang = request.data.get("source_language")
+        tar_langs = request.data.getlist("target_languages")
+
+        if not src_lang or not tar_langs:
+            return Response({"error": "Source and target languages required"}, status=400)
+        
+        today_date = date.today()
+        project_name = today_date.strftime("%b %d, %Y")
+        text_content = pib_data['body']
+        user = request.user
+        owner = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+
+        # Project Check
+        # pr = self.pr_check(src_lang, tar_langs, owner)
+        # task_count = pr.get_tasks.count() if pr else 1
+        # name = f"{pr.project_name if pr else project_name} - {str(task_count).zfill(3)}"
+        # Convert PIB text to .txt file
+
+        file_obj = self.get_file(text_content, project_name)
+        files = [file_obj]
+
+        # # Prepare serializer data
+        # if pr:
+        #     data = request.POST.dict()
+        #     data.pop("target_languages")
+        #     serializer = ProjectQuickSetupSerializer(
+        #         pr,
+        #         data={**data, "files": files, "project_type": [str(self.PROJECT_TYPE_ID)]},
+        #         context={"request": request, "user_1": owner}
+        #     )
+        # else:
+
+        serializer = ProjectQuickSetupSerializer(
+            data={**request.data, "files": files, "project_type": [str(self.PROJECT_TYPE_ID)], "project_name": [project_name]},
+            context={"request": request, "user_1": owner}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        pr = Project.objects.get(id=serializer.data.get("id"))
+        pib.project = pr
+        pib.save()
+        self._create_task_pib_details(pr, pib)
+        ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
+        authorize(request,resource=pr,action="create",actor=self.request.user)
+        return Response(serializer.data, status=201)
+
+    @staticmethod
+    def _create_task_pib_details(pr, pib):
+        tasks = pr.get_tasks
+        for t in tasks:
+            TaskPibDetails.objects.get_or_create(task=t, pib_story=pib)
+
+
 
 
 class AddStoriesView(viewsets.ModelViewSet):
@@ -5630,3 +5731,116 @@ def get_glossary(request):
 
     else:
         return Response({'msg': "no glossary_selected"}, status=200)
+    
+
+class MinistryNameViewSet(viewsets.ModelViewSet):
+    # filterset_class = MinistryNameFilter
+ 
+    def list(self, request):
+        try:
+            queryset = MinistryName.objects.all()
+            filter_result = self.filter_queryset(queryset)
+            serializer = MinistryNameSerializer(filter_result, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        try:
+            queryset = MinistryName.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            serializer = MinistryNameSerializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            name = request.data.get("name", None)
+            if name and MinistryName.objects.filter(name=name).exists():
+                return Response({"error": "Ministry with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = MinistryNameSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk=None):
+        try:
+            item = get_object_or_404(MinistryName.objects.all(), pk=pk)
+            serializer = MinistryNameSerializer(item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def destroy(self, request,pk=None):
+        try:
+            item = get_object_or_404(MinistryName.objects.all(), pk=pk)
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class MinistryTranslateNameViewSet(viewsets.ModelViewSet):
+    # filterset_class = MinistryTranslateNameFilter
+ 
+    def list(self, request):
+        try:
+            queryset = MinistryTranslateName.objects.all()
+            filter_result = self.filter_queryset(queryset)
+            serializer = MinistryTranslateNameSerializer(filter_result, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        try:
+            queryset = MinistryTranslateName.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            serializer = MinistryTranslateNameSerializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            translate_name = request.data.get("translate_name", None)
+            ministry_name_id = request.data.get("ministry_name_id", None)
+            if translate_name and ministry_name_id and MinistryTranslateName.objects.filter(translate_name=translate_name, ministry_name_id=ministry_name_id).exists():
+                return Response({"error": "Ministry Translate Name with this name and ministry already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = MinistryTranslateNameSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def update(self, request, pk=None):
+        try:
+            item = get_object_or_404(MinistryTranslateName.objects.all(), pk=pk)
+            serializer = MinistryTranslateNameSerializer(item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def destroy(self, request,pk=None):
+        try:
+            item = get_object_or_404(MinistryTranslateName.objects.all(), pk=pk)
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
