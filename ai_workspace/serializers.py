@@ -843,10 +843,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			try:
 				if instance.voice_proj_detail.project_type_sub_category_id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
 						tasks = Task.objects.create_tasks_of_audio_files_by_project(project=project)
-			except:
-				tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
-					project=project)
-
+			except Exception as e:
+				print(e)
+				print("Got into except")
+				if project_type != 8:
+					tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+						project=project)
 		contents_data = validated_data.pop("proj_content_type",[])
 		subjects_data = validated_data.pop("proj_subject",[])
 		steps_data = validated_data.pop("proj_steps",[])
@@ -856,8 +858,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
 		if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
+			print("got into 8")
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
+			print(tasks)
 		if project_type in [3,10]:
 			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
 			        project = instance)
@@ -866,6 +870,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
+		print(task_assign)
 		return  project
 
 class DinamalarProjectListSerializer(serializers.ModelSerializer):
