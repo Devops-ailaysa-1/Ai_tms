@@ -73,7 +73,7 @@ from .models import Task
 from cacheops import cached
 from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile, MinistryName, MinistryTranslateName
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile, MinistryName, MinistryTranslateName, TaskPibDetails
 from .serializers import (ProjectContentTypeSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -111,6 +111,7 @@ from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 from django.core.cache import cache
+import uuid
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -929,7 +930,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             # checks for project_type and create extra info needed for it
             if pr.project_type_id == 8:
-                NewsProjectSetupView.create_news_detail(pr)
+                if user_1.user_enterprise.subscription_name == 'Enterprise - PIB':
+                    NewsProjectSetupView.create_pib_news_detail(pr)
+                else:
+                    NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
             #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -4705,6 +4709,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
     @staticmethod
     def create_news_detail(pr):
+        print(pr, "Project")
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4713,8 +4718,16 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             newsID = json_data.get('news')[0].get('newsId')
             obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
+    @staticmethod
+    def create_pib_news_detail(pr):
+        print(pr, "Project")
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
 
-        
     def create(self, request):
         '''
         It will get list of news_id and source language to fetch news from respective CMS.
@@ -4750,6 +4763,18 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
 from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+# class TaskPibDetailsViewSet(viewsets.ViewSet):
+#     '''
+#     This view is to list,create,update and delete TaskNewsDetail in Federal flow. 
+#     '''
+#     permission_classes = [IsAuthenticated, IsEnterpriseUser]
+
+#     def create(self,request):
+#         serializer = TaskPibDetailsSerializer(data=request.data,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
     '''
@@ -4908,18 +4933,14 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     serializer_class = PIBStorySerializer
     PROJECT_TYPE_ID = 8
 
-    def pr_check(self, src_lang, tar_langs, user):
-        today_date = date.today()
-        project_name = today_date.strftime("%b %d, %Y")
-
+    def pr_check_pib(self, user):
+        today = date.today()
         query = Project.objects.filter(ai_user=user)\
-            .filter(project_type_id=self.PROJECT_TYPE_ID)\
-            .filter(project_name__icontains=project_name)\
-            .filter(project_jobs_set__source_language_id=src_lang)\
-            .filter(project_jobs_set__target_language_id__in=tar_langs)
+                .filter(project_type_id=self.PROJECT_TYPE_ID)\
+                .filter(created_at__date=today)
 
         return query.last() if query else None
-
+    
     @staticmethod
     def check_user_pib(request_user):
         user = request_user.team.owner if request_user.team else request_user
@@ -4928,80 +4949,84 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         except:
             return False
 
-    def get_file(self,text_data,name):
-        name = f"{name}.txt"
-        im_file = DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+    @staticmethod
+    def get_pib_json_file(heading, body):
+        file_data = {
+            "heading": heading,
+            "story": body,
+        }
+        name = f"{uuid.uuid4()}.json"
+
+        json_content = json.dumps(file_data, ensure_ascii=False, indent=2)
+        im_file = DJFile(ContentFile(json_content), name=name)
+
         return im_file
     
-    def list(self, request):
-        try:
-            queryset = MinistryName.objects.all()
-            filter_result = self.filter_queryset(queryset)
-            serializer = MinistryNameSerializer(filter_result, many=True)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    @staticmethod
+    def create_pib_news_detail(pr, pib):
+        print(pr, "Project")
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
+
         if not self.check_user_pib(request.user):
             return Response({"detail": "You do not have permission."}, status=403)
-        pib_serializer = PIBStorySerializer(data=request.data)
-        pib_serializer.is_valid(raise_exception=True)
-        pib = pib_serializer.save(created_by=request.user)
-        pib_data = PIBStorySerializer(pib).data
 
         src_lang = request.data.get("source_language")
         tar_langs = request.data.getlist("target_languages")
 
         if not src_lang or not tar_langs:
             return Response({"error": "Source and target languages required"}, status=400)
-        
-        today_date = date.today()
-        project_name = today_date.strftime("%b %d, %Y")
-        text_content = pib_data['body']
+
         user = request.user
-        owner = user.team.owner if user.team and (user in user.team.get_project_manager) else user
+        user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
 
-        # Project Check
-        # pr = self.pr_check(src_lang, tar_langs, owner)
-        # task_count = pr.get_tasks.count() if pr else 1
-        # name = f"{pr.project_name if pr else project_name} - {str(task_count).zfill(3)}"
-        # Convert PIB text to .txt file
+        # Create PIB Story
+        pib_serializer = PIBStorySerializer(data=request.data)
+        pib_serializer.is_valid(raise_exception=True)
+        pib = pib_serializer.save(created_by=request.user)
 
-        file_obj = self.get_file(text_content, project_name)
-        files = [file_obj]
+        # PIB Data (already validated)
+        pib_data = PIBStorySerializer(pib).data
+        heading = pib_data["headline"]
+        body = pib_data["body"]
 
-        # # Prepare serializer data
-        # if pr:
-        #     data = request.POST.dict()
-        #     data.pop("target_languages")
-        #     serializer = ProjectQuickSetupSerializer(
-        #         pr,
-        #         data={**data, "files": files, "project_type": [str(self.PROJECT_TYPE_ID)]},
-        #         context={"request": request, "user_1": owner}
-        #     )
-        # else:
+        # Create JSON file for this PIB Story
+        pib_json_file = self.get_pib_json_file(heading, body)
+        files = [pib_json_file]   # add more if needed
 
+        # Create the project
         serializer = ProjectQuickSetupSerializer(
-            data={**request.data, "files": files, "project_type": [str(self.PROJECT_TYPE_ID)], "project_name": [project_name]},
-            context={"request": request, "user_1": owner}
+            data={
+                **request.data,
+                "files": files,
+                "project_type": ["8"],
+            },
+            context={"request": request, "user_1": user_1}
         )
+
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
         pr = Project.objects.get(id=serializer.data.get("id"))
         pib.project = pr
         pib.save()
-        self._create_task_pib_details(pr, pib)
-        ProjectFilesCreateType.objects.filter(project=pr).update(file_create_type=ProjectFilesCreateType.FileType.from_stories)
-        authorize(request,resource=pr,action="create",actor=self.request.user)
+        self.create_pib_news_detail(pr, pib)
+        # Create task-pib details
+        # Update file-create type
+        ProjectFilesCreateType.objects.filter(project=pr).update(
+            file_create_type=ProjectFilesCreateType.FileType.from_stories
+        )
+
+        authorize(request, resource=pr, action="create", actor=self.request.user)
         return Response(serializer.data, status=201)
 
-    @staticmethod
-    def _create_task_pib_details(pr, pib):
-        tasks = pr.get_tasks
-        for t in tasks:
-            TaskPibDetails.objects.get_or_create(task=t, pib_story=pib)
 
 
 
@@ -5073,6 +5098,7 @@ class AddStoriesView(viewsets.ModelViewSet):
                 serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
             else:
                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+            
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 pr = Project.objects.get(id=serializer.data.get('id'))
