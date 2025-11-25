@@ -1943,6 +1943,7 @@ from ai_workspace.models import TaskPibDetails
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):
     task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+    source_json = serializers.JSONField(required=False, read_only=True)
     target_json = serializers.JSONField(required=False)
 
     class Meta:
@@ -1950,10 +1951,20 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
         fields = (
             "uid",
             "task",
+            "source_json",
             "target_json",
         )
+        read_only_fields = ("source_json",)
 
-    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        request = self.context.get("request")
+        if request and request.method in ("PUT", "PATCH"):
+            data.pop("source_json", None)
+
+        return data
+
     def create(self, validated_data):
         task = validated_data.get("task")
 
@@ -1989,7 +2000,6 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
 
         return instance
 
-   
     def update(self, instance, validated_data):
         target_json = validated_data.get("target_json")
 
@@ -1998,9 +2008,6 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
             instance.save()
 
         return instance
-
-	
-	
 
 
 class MinistryNameSerializer(serializers.ModelSerializer):
