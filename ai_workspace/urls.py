@@ -35,6 +35,7 @@ router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='
 # router.register(r'pib_translate',api_views.TaskPibDetailsViewSet,basename='pib_trans')
 router.register(r'adaptive_file_translate',api_views.AdaptiveFileTranslate,basename='adaptive_file')
 router.register(r'ministry_names',api_views.MinistryNameViewSet,basename="ministry-names")
+router.register(r'pib_translate',api_views.TaskPibDetailsViewSet,basename='translate_name')
 urlpatterns = router.urls
 
 # api_views urls

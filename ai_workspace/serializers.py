@@ -1897,6 +1897,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 
 
+
 class ProjectSimpleSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
 	assign_enable = serializers.SerializerMethodField(method_name='get_assign_enable')
@@ -1936,6 +1937,75 @@ class PIBStorySerializer(serializers.ModelSerializer):
         if obj.project:
             return ProjectQuickSetupSerializer(obj.project).data
         return None
+	
+from ai_workspace.models import TaskPibDetails
+
+
+class TaskPibDetailsSerializer(serializers.ModelSerializer):
+    task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+    source_json = serializers.JSONField(required=False)
+    target_json = serializers.JSONField(required=False)
+
+    class Meta:
+        model = TaskPibDetails
+        fields = (
+            "id",
+            "task",
+            "source_json",
+            "target_json",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("source_json", "created_at", "updated_at")
+
+    
+    def create(self, validated_data):
+        task = validated_data.get("task")
+
+        
+        file_path = task.file.file.path
+        with open(file_path, "r") as fp:
+            json_data = json.load(fp)
+
+        
+        instance, created = TaskPibDetails.objects.get_or_create(
+            task=task,
+            defaults={"source_json": json_data}
+        )
+
+       
+        if not created:
+            return instance
+
+       
+        from ai_staff.models import AdaptiveSystemPrompt
+        from ai_auth.tasks import task_create_and_update_pib_news_detail
+
+        prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
+        if prompt_obj:
+            new_prompt = prompt_obj.prompt.format(
+                source_language=task.job.source_language,
+                target_language=task.job.target_language
+            )
+
+            task_create_and_update_pib_news_detail.apply_async(
+                (str(instance.uid), new_prompt, json_data)
+            )
+
+        return instance
+
+   
+    def update(self, instance, validated_data):
+        target_json = validated_data.get("target_json")
+
+        if target_json:
+            instance.target_json = target_json
+            instance.save()
+
+        return instance
+
+	
+	
 
 
 class MinistryNameSerializer(serializers.ModelSerializer):

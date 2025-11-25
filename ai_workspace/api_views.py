@@ -5026,7 +5026,43 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         authorize(request, resource=pr, action="create", actor=self.request.user)
         return Response(serializer.data, status=201)
+        
+from ai_workspace.serializers import TaskPibDetailsSerializer
 
+class TaskPibDetailsViewSet(viewsets.ViewSet):
+    
+    permission_classes = [IsAuthenticated, IsEnterpriseUser]
+
+    def list(self, request):
+        user = request.user
+        objs = TaskPibDetails.objects.filter(task__file__project__ai_user=user)
+        serializer = TaskPibDetailsSerializer(objs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = TaskPibDetailsSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def update(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, id=pk)
+        serializer = TaskPibDetailsSerializer(obj, data=request.data, context={'request': request}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def retrieve(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, id=pk)
+        serializer = TaskPibDetailsSerializer(obj, context={'request': request})
+        return Response(serializer.data)
+
+    def delete(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, id=pk)
+        obj.delete()
+        return Response(status=204)
 
 
 
