@@ -279,6 +279,8 @@ def generate_pib_docx(heading: str, story: str, base_filename: str):
     if heading:
         h = doc.add_heading(heading, level=2)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        spacer = doc.add_paragraph()
+        spacer.add_run("") 
 
     # Split story into paragraphs
     if story:
