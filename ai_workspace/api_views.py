@@ -4991,8 +4991,9 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             if PIB_system_prompt and created:
                 new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
                 print("called celery task on creation")
-                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
-            
+                do_translate = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
+                logger.info(f'Successfully sent the task to celery: project-task-id : {i.id} and celery-task-id : {do_translate.id}')
+
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
 
