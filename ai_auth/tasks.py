@@ -1613,18 +1613,19 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.save()
 
         if user_type == "pib":
-            pass
+            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER_PIB,model=settings.ADAPTIVE_STYLE_LLM_MODEL_PIB,style=True)
         else:
-            try:
-                api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
-                style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
-                style_create.process(all_paragraph=batches[0])
-            except Exception as e:
-                logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
-                # style_create = None
-                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
-                task.save()
-                return None
+            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+        try:
+            # api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+            style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
+            style_create.process(all_paragraph=batches[0])
+        except Exception as e:
+            logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
+            # style_create = None
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+            task.save()
+            return None
             
  
         for i, para in enumerate(batches):
