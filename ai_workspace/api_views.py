@@ -4978,15 +4978,6 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         return im_file
     
-    # @staticmethod
-    # def create_pib_news_detail(pr, pib):
-    #     print(pr, "Project")
-    #     tasks = pr.get_tasks
-    #     for i in tasks:
-    #         file_path = i.file.file.path
-    #         with open(file_path, 'r') as fp:
-    #             json_data = json.load(fp)
-    #         obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
@@ -4999,6 +4990,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
             if PIB_system_prompt and created:
                 new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                print("called celery task on creation")
                 task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
             
     def create(self, request):
