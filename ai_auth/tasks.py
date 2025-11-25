@@ -1695,3 +1695,21 @@ def get_glossary_for_task(project, task):
 
     except Exception as e:
         logger.info(f'Error in getting glossary for task: {e}')
+
+from ai_workspace.llm_client import LLMClient
+from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
+
+@task(queue='high-priority')
+def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt, json_data):
+    llm_client_obj = LLMClient("nebius", "meta-llama/Llama-3.3-70B-Instruct-fast", "") 
+    usage = 0
+    target_json = {}
+    obj = TaskPibDetails.objects.get(uid=task_details_id)
+    for key, message in json_data.items():
+        result_of_nebius, usage = llm_client_obj._handle_nebius(messages=message, system_instruction=new_PIB_system_prompt)
+        target_json[key] = result_of_nebius
+        usage += usage
+    
+    print("Total usage:", usage)
+    obj.target_json = target_json
+    obj.save()

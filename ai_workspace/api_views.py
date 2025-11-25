@@ -112,6 +112,7 @@ from ai_workspace_okapi.utils import get_credit_count
 from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 from django.core.cache import cache
 import uuid
+from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -4718,15 +4719,30 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             newsID = json_data.get('news')[0].get('newsId')
             obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
+    # @staticmethod
+    # def create_pib_news_detail(pr):
+    #     print(pr, "Project")
+    #     tasks = pr.get_tasks
+    #     for i in tasks:
+    #         file_path = i.file.file.path
+    #         with open(file_path, 'r') as fp:
+    #             json_data = json.load(fp)
+    #         obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+
     @staticmethod
     def create_pib_news_detail(pr):
-        print(pr, "Project")
+        from ai_staff.models import AdaptiveSystemPrompt
+        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            
+            if PIB_system_prompt and created:
+                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data)) 
 
     def create(self, request):
         '''
@@ -4962,16 +4978,29 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         return im_file
     
+    # @staticmethod
+    # def create_pib_news_detail(pr, pib):
+    #     print(pr, "Project")
+    #     tasks = pr.get_tasks
+    #     for i in tasks:
+    #         file_path = i.file.file.path
+    #         with open(file_path, 'r') as fp:
+    #             json_data = json.load(fp)
+    #         obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
     @staticmethod
     def create_pib_news_detail(pr, pib):
-        print(pr, "Project")
+        from ai_staff.models import AdaptiveSystemPrompt
+        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
-
+            if PIB_system_prompt and created:
+                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
+            
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
 
