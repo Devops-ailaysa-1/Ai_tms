@@ -2866,6 +2866,71 @@ def download_federal(request):
                         status=409)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_pib(request):
+
+    from ai_workspace.utils import split_dict_pib
+    from ai_workspace_okapi.api_views import DocumentToFile
+    from ai_workspace.utils import generate_pib_docx
+
+    task_id = request.query_params.get('task_id')
+    output_type = request.query_params.get('output_type', 'ORIGINAL')
+
+    obj = Task.objects.get(id=task_id)
+
+    if output_type == "ORIGINAL":
+
+        target_json = obj.pib_task.last().target_json
+        data = split_dict_pib(target_json)
+
+        heading = data.get("heading", "")
+        story = data.get("story", "")
+
+        # base filename from serializer output info
+        base_filename = obj.file.filename.split(".")[0]
+
+        # generate DOCX
+        docx_path = generate_pib_docx(
+            heading=heading,
+            story=story,
+            base_filename=base_filename
+        )
+
+        # return the file
+        document_to_file = DocumentToFile()
+        return document_to_file.get_file_response(docx_path)
+
+    elif output_type == "BILINGUAL":
+        # untouched
+        source_json = obj.pib_task.last().source_json
+        target_json = obj.pib_task.last().target_json
+
+        document_to_file = DocumentToFile()
+        csv_data = json_bilingual(
+            src_json=source_json,
+            tar_json=target_json,
+            split_dict=split_dict_pib,
+            document_to_file=document_to_file,
+            language_pair=[
+                obj.job.source_language.language,
+                obj.job.target_language.language
+            ]
+        )
+
+        filename = obj.file.filename.split(".")[0] + ".xlsx"
+        response = document_to_file.get_file_response(
+            csv_data,
+            pandas_dataframe=True,
+            filename=filename
+        )
+        return response
+
+    return JsonResponse(
+        {"msg": "Invalid output type."},
+        status=400
+    )
+
 
 
 
