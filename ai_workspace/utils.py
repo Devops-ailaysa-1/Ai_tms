@@ -211,7 +211,17 @@ def split_dict(single_data):
             trans_keys_dict[key] = trans_list
     return trans_keys_dict
 
-
+def split_dict_pib(single_data):
+    print(single_data, "single data", type(single_data))
+    trans_keys = ["heading","story"]
+    trans_keys_dict = {}
+    json_data = single_data
+    for key,value in  json_data.items():
+        if key in trans_keys:
+            trans_keys_dict[key] = value
+    
+    print(trans_keys_dict, "Trans key dict", type(trans_keys_dict))
+    return trans_keys_dict
 
 def merge_dict(translated_json,raw_json):
 	raw_json_trans = copy.deepcopy(raw_json)
@@ -252,6 +262,39 @@ def add_additional_content_to_docx(docx_filename, additional_content):
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
+import tempfile
+import os
+
+def generate_pib_docx(heading: str, story: str, base_filename: str):
+    """
+    Generates PIB DOCX with formatting and returns the file path.
+    """
+
+    doc = Document()
+
+    # Heading centered (H2)
+    if heading:
+        h = doc.add_heading(heading, level=2)
+        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Split story into paragraphs
+    if story:
+        for block in story.split("\n\n"):
+            para = doc.add_paragraph()
+            run = para.add_run(block.strip())
+            para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(12)
+
+    # Save to temp location
+    filename = f"{base_filename}.docx"
+    tmp_path = os.path.join(tempfile.gettempdir(), filename)
+    doc.save(tmp_path)
+
+    return tmp_path
 
 ############################# Project Filter #################################################
 

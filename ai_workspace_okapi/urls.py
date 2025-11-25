@@ -60,7 +60,8 @@ urlpatterns+=[
     path('download_audio_file/',api_views.download_audio_output_file),
     path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
-    path("download_federal_file/",api_views.download_federal)
+    path("download_federal_file/",api_views.download_federal),
+    path("download_pib_file/",api_views.download_pib)
 
 ]
 urlpatterns+=[
