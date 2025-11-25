@@ -1949,7 +1949,7 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskPibDetails
         fields = (
-            "id",
+            "uid",
             "task",
             "source_json",
             "target_json",

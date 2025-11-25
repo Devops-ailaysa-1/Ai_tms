@@ -5069,7 +5069,7 @@ class TaskPibDetailsViewSet(viewsets.ViewSet):
         return Response(serializer.errors, status=400)
 
     def update(self, request, pk=None):
-        obj = get_object_or_404(TaskPibDetails, id=pk)
+        obj = get_object_or_404(TaskPibDetails, uid=pk)
         serializer = TaskPibDetailsSerializer(obj, data=request.data, context={'request': request}, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -5077,7 +5077,7 @@ class TaskPibDetailsViewSet(viewsets.ViewSet):
         return Response(serializer.errors, status=400)
 
     def retrieve(self, request, pk=None):
-        obj = get_object_or_404(TaskPibDetails, id=pk)
+        obj = get_object_or_404(TaskPibDetails, task__id=pk)
         serializer = TaskPibDetailsSerializer(obj, context={'request': request})
         return Response(serializer.data)
 
