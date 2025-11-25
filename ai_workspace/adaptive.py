@@ -384,7 +384,6 @@ class InitialTranslation(TranslationStage):
                     stage_result_instance.stage_4_error_type = "OTHER"
                     stage_result_instance.stage_4_error_message = str(e)
                     return stage_result_instance
-
             
         else:
             logging.error(f"empty message")
@@ -398,19 +397,16 @@ class InitialTranslation(TranslationStage):
             raise ValueError(f"Errors found in {stage_name} stage for batch {batch.id}")
         
     def trans(self):
-        if self.user.is_pib == True:
-            system_prompt = self.get_prompt_by_stage(stage = "stage_2_pib")
-            system_prompt = system_prompt.format(target_language= self.target_language, source_language=self.source_language)
+        # if self.user.is_pib == True:
+        #     system_prompt = self.get_prompt_by_stage(stage = "stage_2_pib")
+        #     system_prompt = system_prompt.format(target_language= self.target_language, source_language=self.source_language)
+        # else:
+        system_prompt = self.get_prompt_by_stage(stage = "stage_2")
+        if self.style_prompt:
+            system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
         else:
-            system_prompt = self.get_prompt_by_stage(stage = "stage_2")
-            if self.style_prompt:
-                system_prompt = system_prompt.format(style_prompt= self.style_prompt, target_language= self.target_language, source_language=self.source_language)
-            else:
-                raise RuntimeError("no style")
- 
+            raise RuntimeError("no style")
 
- 
-    
  
         progress_counter = 1 
         updated_instances = []
@@ -618,12 +614,12 @@ class AdaptiveSegmentTranslator(TranslationStage):
 
     def get_style_guideline(self):
         from ai_workspace.models import TaskStyle,PredefinedStyleGuide
-        if self.user_type == 'pib':
-            style_instance = PredefinedStyleGuide.objects.get(name='PIB_Style_Guide')
-            return style_instance.style_guide_content
-        else:
-            style_instance = TaskStyle.objects.get(task=self.task_obj)
-            return style_instance.style_guide
+        # if self.user_type == 'pib':
+        #     style_instance = PredefinedStyleGuide.objects.get(name='PIB_Style_Guide')
+        #     return style_instance.style_guide_content
+        # else:
+        style_instance = TaskStyle.objects.get(task=self.task_obj)
+        return style_instance.style_guide
 
     def deduct_credits_adaptive(self,segments):
         from ai_workspace_okapi.api_views import MT_RawAndTM_View
@@ -641,10 +637,10 @@ class AdaptiveSegmentTranslator(TranslationStage):
         logger.info(f"batch_no {batch_no}")
         logger.info(f"len of the text----> {len(segments)}")
 
-        if self.user_type == 'pib':
-            self.set_progress(no_of_stage=2)
-            no_of_stage = 2
-        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+        # if self.user_type == 'pib':
+        #     self.set_progress(no_of_stage=2)
+        #     no_of_stage = 2
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             self.set_progress(no_of_stage=4)
             no_of_stage = 4
         else:
@@ -655,7 +651,12 @@ class AdaptiveSegmentTranslator(TranslationStage):
         task_adaptive_instance = TaskStageResults.objects.create(task = self.task_obj, group_text_units=self.group_text_units, celery_task_batch = batch_no,segment_batch= self.task_progress)
             
         
-        splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=settings.ADAPTIVE_SPLIT_INPUT_SIZE)
+        if self.user_type == 'pib':
+            splited_segment = self.chunk_by_newline_paragraphs(paragraphs = segments)
+        else:
+            splited_segment = self.split_paragraph_to_chunks(paragraphs = segments, max_words=settings.ADAPTIVE_SPLIT_INPUT_SIZE)
+
+        
         logger.info(f"segment paragraph after split {len(splited_segment)}")
 
         all_segment_obj = [AllStageResult(source_text=i, task_stage_result= task_adaptive_instance,no_of_stages_used=no_of_stage) for i in splited_segment]
@@ -675,13 +676,13 @@ class AdaptiveSegmentTranslator(TranslationStage):
         
         logging.info("done stage 2")
 
-        if self.user_type == 'pib':
-            self.task_obj.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
-            self.task_obj.save()
-            logger.info("✅ Done Adaptive segment translation")
-            self.update_progress_db()
+        # if self.user_type == 'pib':
+        #     self.task_obj.adaptive_file_translate_status = AdaptiveFileTranslateStatus.COMPLETED
+        #     self.task_obj.save()
+        #     logger.info("✅ Done Adaptive segment translation")
+        #     self.update_progress_db()
 
-        elif self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
+        if self.target_language in ADAPTIVE_INDIAN_LANGUAGE.split(" "):
             
             self.initial_translation.refine()
             logging.info(f"done stage 3 {self.target_language}")
@@ -835,5 +836,54 @@ class AdaptiveSegmentTranslator(TranslationStage):
                 chunks[-1] += ' ' + " ".join(current_chunk)
             else:
                 chunks.append(" ".join(current_chunk))
+
+        return chunks
+
+
+    def chunk_by_newline_paragraphs(self, paragraphs):
+        """
+        Simple newline-based chunking where each paragraph becomes exactly one chunk.
+        No word limits, no merging - pure 1:1 mapping of paragraphs to chunks.
+
+        This is the simplest chunking strategy:
+        - Each paragraph (separated by \\n) = one chunk
+        - No size limits or constraints
+        - Complete preservation of original paragraph structure
+        - Empty paragraphs are filtered out
+
+        Args:
+            paragraphs: List of text paragraphs to chunk
+
+        Returns:
+            List of text chunks where each chunk is exactly one paragraph
+
+        Example:
+            Input: [
+                "First paragraph with any number of words.",
+                "Second paragraph could be very long or short.",
+                "",
+                "Third paragraph after empty line."
+            ]
+            Output:
+                - Chunk 1: "First paragraph with any number of words."
+                - Chunk 2: "Second paragraph could be very long or short."
+                - Chunk 3: "Third paragraph after empty line."
+
+        Use Case:
+            - When each paragraph should be translated independently
+            - When paragraph size doesn't matter for your LLM
+            - When you want to maintain exact 1:1 paragraph-to-chunk mapping
+            - For simple document structures where paragraphs are already optimally sized
+        """
+        chunks = []
+
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            # Skip empty paragraphs
+            if not paragraph:
+                continue
+
+            # Each non-empty paragraph becomes one chunk
+            chunks.append(paragraph)
 
         return chunks
