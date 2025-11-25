@@ -1943,7 +1943,6 @@ from ai_workspace.models import TaskPibDetails
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):
     task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
-    source_json = serializers.JSONField(required=False)
     target_json = serializers.JSONField(required=False)
 
     class Meta:
@@ -1951,12 +1950,8 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
         fields = (
             "uid",
             "task",
-            "source_json",
             "target_json",
-            "created_at",
-            "updated_at",
         )
-        read_only_fields = ("source_json", "created_at", "updated_at")
 
     
     def create(self, validated_data):
