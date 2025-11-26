@@ -1698,7 +1698,7 @@ def get_glossary_for_task(project, task):
         logger.info(f'Error in getting glossary for task: {e}')
 
 from ai_workspace.llm_client import LLMClient
-from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
+from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
 
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt, json_data):
@@ -1706,15 +1706,20 @@ def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt
         llm_client_obj = LLMClient("nebius", "meta-llama/Llama-3.3-70B-Instruct-fast", "") 
         usage = 0
         target_json = {}
-        obj = TaskPibDetails.objects.get(uid=task_details_id)
+        task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
         for key, message in json_data.items():
             result_of_nebius, usage = llm_client_obj._handle_nebius(messages=message, system_instruction=new_PIB_system_prompt)
             target_json[key] = result_of_nebius
             usage += usage
         
         print("Total usage:", usage)
-        obj.target_json = target_json
-        obj.save()
+        task_pib_details_instance.target_json = target_json
+        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
+        task_news_pib_mt_instance.mt_raw_json = target_json
+        
+
+        task_pib_details_instance.save()
+        task_news_pib_mt_instance.save()
     except Exception as e:
         print(e)
         logger.error(f'Error in translation pib story: {e}')

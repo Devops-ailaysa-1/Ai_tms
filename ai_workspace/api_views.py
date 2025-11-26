@@ -68,7 +68,7 @@ from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
-    ExpressProjectDetail, TaskPibDetails
+    ExpressProjectDetail, TaskPibDetails, TaskNewsPIBMT
 from .models import Task
 from cacheops import cached
 from operator import attrgetter
@@ -4719,20 +4719,13 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             newsID = json_data.get('news')[0].get('newsId')
             obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
-    # @staticmethod
-    # def create_pib_news_detail(pr):
-    #     print(pr, "Project")
-    #     tasks = pr.get_tasks
-    #     for i in tasks:
-    #         file_path = i.file.file.path
-    #         with open(file_path, 'r') as fp:
-    #             json_data = json.load(fp)
-    #         obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+ 
 
     @staticmethod
     def create_pib_news_detail(pr):
         from ai_staff.models import AdaptiveSystemPrompt
         PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        print("PIB_system_prompt",PIB_system_prompt)
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4779,18 +4772,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
 from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
-# class TaskPibDetailsViewSet(viewsets.ViewSet):
-#     '''
-#     This view is to list,create,update and delete TaskNewsDetail in Federal flow. 
-#     '''
-#     permission_classes = [IsAuthenticated, IsEnterpriseUser]
-
-#     def create(self,request):
-#         serializer = TaskPibDetailsSerializer(data=request.data,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
+ 
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
     '''
@@ -4981,18 +4963,28 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+
+        if not pib_system_prompt:
+            raise ValueError("no translation_pib prompt")
+        
         tasks = pr.get_tasks
-        for i in tasks:
-            file_path = i.file.file.path
+        for task in tasks:
+            file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
-            if PIB_system_prompt and created:
-                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                print("called celery task on creation")
-                do_translate = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
-                logger.info(f'Successfully sent the task to celery: project-task-id : {i.id} and celery-task-id : {do_translate.id}')
+
+            instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib)
+            mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=4)
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
+
+            #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
+            
+            new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
+            print("called celery task on creation")
+
+            do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), new_pib_system_prompt, json_data))
+            logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
@@ -5011,11 +5003,13 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         # Create PIB Story
         pib_serializer = PIBStorySerializer(data=request.data)
+        print("pib_serializer",pib_serializer)
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
 
         # PIB Data (already validated)
         pib_data = PIBStorySerializer(pib).data
+        print("pib_data",pib_data)
         heading = pib_data["headline"]
         body = pib_data["body"]
 
