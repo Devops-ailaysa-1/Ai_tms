@@ -1945,12 +1945,22 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
     task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
     source_json = serializers.JSONField(required=False, read_only=True)
     target_json = serializers.JSONField(required=False)
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+    target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+    source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+    target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
 
     class Meta:
         model = TaskPibDetails
         fields = (
             "uid",
             "task",
+            "project",
+            "source_language_id",
+            "target_language_id",
+            "source_language",
+            "target_language",
             "source_json",
             "target_json",
         )
