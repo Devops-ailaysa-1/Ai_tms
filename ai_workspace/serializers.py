@@ -1945,11 +1945,15 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
     task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
     source_json = serializers.JSONField(required=False, read_only=True)
     target_json = serializers.JSONField(required=False)
+    edit_allowed = serializers.SerializerMethodField()
     project = serializers.ReadOnlyField(source='task.job.project.id')
     source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
     target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
     source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
     target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+    target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+    updated_download = serializers.SerializerMethodField()
+    
 
     class Meta:
         model = TaskPibDetails
@@ -1957,14 +1961,32 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
             "uid",
             "task",
             "project",
+            "edit_allowed",
             "source_language_id",
             "target_language_id",
             "source_language",
             "target_language",
+            "target_language_script",
+            "updated_download",
             "source_json",
             "target_json",
         )
         read_only_fields = ("source_json",)
+    
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+    
+    def get_updated_download(self,obj):
+        user = self.context.get('request').user
+        managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+        if (user == obj.task.job.project.ai_user) or (user in managers):
+            return 'enable'
+        else:
+            return 'disable'
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
