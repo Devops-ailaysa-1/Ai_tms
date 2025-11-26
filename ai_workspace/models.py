@@ -1976,6 +1976,14 @@ class TaskPibDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class TaskNewsPIBMT(models.Model):
+    task_pib_detail = models.ForeignKey(TaskPibDetails, on_delete=models.CASCADE,related_name="tasknewspibdetail")
+    mt_raw_json = models.JSONField(null=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_news_pib_mt")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
 class TaskNewsMT(models.Model):
     task = models.ForeignKey(TaskNewsDetails, on_delete=models.CASCADE,related_name="tasknews")
     mt_raw_json = models.JSONField()

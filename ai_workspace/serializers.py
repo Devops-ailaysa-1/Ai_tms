@@ -1938,86 +1938,92 @@ class PIBStorySerializer(serializers.ModelSerializer):
             return ProjectQuickSetupSerializer(obj.project).data
         return None
 	
-from ai_workspace.models import TaskPibDetails
+from ai_workspace.models import TaskPibDetails , TaskNewsPIBMT
+
+class TaskNewsPIBMTSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskNewsPIBMT
+		fields = ('id','mt_raw_json')
+
 
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):
-    task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
-    source_json = serializers.JSONField(required=False, read_only=True)
-    target_json = serializers.JSONField(required=False)
-    project = serializers.ReadOnlyField(source='task.job.project.id')
-    source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
-    target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
-    source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
-    target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+	mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
+	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+	edit_allowed = serializers.SerializerMethodField()
+	updated_download = serializers.SerializerMethodField()
 
-    class Meta:
-        model = TaskPibDetails
-        fields = (
-            "uid",
-            "task",
-            "project",
-            "source_language_id",
-            "target_language_id",
-            "source_language",
-            "target_language",
-            "source_json",
-            "target_json",
-        )
-        read_only_fields = ("source_json",)
+	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+	source_json = serializers.JSONField(required=False, read_only=True)
+	target_json = serializers.JSONField(required=False)
+	project = serializers.ReadOnlyField(source='task.job.project.id')
+	source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+	target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
+	class Meta:
+		model = TaskPibDetails
+		fields = ( "uid", "task","edit_allowed","mt_json","target_language_script", "updated_download",
+				"project", "source_language_id","target_language_id","source_language", "target_language","source_json","target_json",)
+         
+	def get_edit_allowed(self,obj):
+		request_obj = self.context.get('request')
+		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+		doc_view_instance = DocumentViewByDocumentId(request_obj)
+		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+		return edit_allowed
 
-        request = self.context.get("request")
-        if request and request.method in ("PUT", "PATCH"):
-            data.pop("source_json", None)
 
-        return data
+	def get_updated_download(self,obj):
 
-    def create(self, validated_data):
-        task = validated_data.get("task")
+		user = self.context.get('request').user
+		managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+		if (user == obj.task.job.project.ai_user) or (user in managers):
+			return 'enable'
+		else:
+			return 'disable'
+
+	def create(self, validated_data):
+		pass
+
+		# from ai_staff.models import AdaptiveSystemPrompt
+		# from ai_auth.tasks import task_create_and_update_pib_news_detail
+
+		# task = validated_data.get("task")
+
+		# file_path = task.file.file.path
+
+		# with open(file_path, "r") as fp:
+		# 	json_data = json.load(fp)
 
         
-        file_path = task.file.file.path
-        with open(file_path, "r") as fp:
-            json_data = json.load(fp)
+		# instance_pib = TaskPibDetails.objects.create(task=task,source_json=json_data)
 
-        
-        instance, created = TaskPibDetails.objects.get_or_create(
-            task=task,
-            defaults={"source_json": json_data}
-        )
+		# prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
 
-       
-        if not created:
-            return instance
+		# if prompt_obj:
 
-       
-        from ai_staff.models import AdaptiveSystemPrompt
-        from ai_auth.tasks import task_create_and_update_pib_news_detail
+		# 	mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=4)
+		# 	print("mt_engine---->", mt_engine)
 
-        prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
-        if prompt_obj:
-            new_prompt = prompt_obj.prompt.format(
-                source_language=task.job.source_language,
-                target_language=task.job.target_language
-            )
+		# 	task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib,mt_engine=mt_engine)
+		# 	print("task_news_pib_mt_instance",task_news_pib_mt_instance)
 
-            task_create_and_update_pib_news_detail.apply_async(
-                (str(instance.uid), new_prompt, json_data)
-            )
+		# 	new_prompt = prompt_obj.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
 
-        return instance
+		# 	task_create_and_update_pib_news_detail.apply_async((str(instance_pib.uid), new_prompt, json_data,task_news_pib_mt_instance))
 
-    def update(self, instance, validated_data):
-        target_json = validated_data.get("target_json")
+		# 	return instance_pib
 
-        if target_json:
-            instance.target_json = target_json
-            instance.save()
+	def update(self, instance, validated_data):
+		target_json = validated_data.get("target_json")
 
-        return instance
+		if target_json:
+			instance.target_json = target_json
+			instance.save()
+
+		return instance
 
 
 class MinistryNameSerializer(serializers.ModelSerializer):
