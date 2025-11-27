@@ -2876,7 +2876,7 @@ def download_pib(request):
 
     task_id = request.query_params.get('task_id')
     output_type = request.query_params.get('output_type', 'ORIGINAL')
-
+    print(output_type, "File Download output type")
     obj = Task.objects.get(id=task_id)
 
     if output_type == "ORIGINAL":
