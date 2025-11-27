@@ -4735,7 +4735,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             
             if PIB_system_prompt and created:
                 new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data)) 
+                pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), json_data)) 
                 obj.status = PibTranslateStatusChoices.in_progress
                 obj.celery_task_id = pib_celery_task.id
                 obj.save()
