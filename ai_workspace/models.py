@@ -30,7 +30,6 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
     Currencies, ProjectTypeDetail,AiRoles,AiCustomize,LanguageMetaDetails
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
-from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \

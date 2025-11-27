@@ -4724,8 +4724,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr):
         from ai_staff.models import AdaptiveSystemPrompt
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
-        print("PIB_system_prompt",PIB_system_prompt)
+        #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        #print("PIB_system_prompt",PIB_system_prompt)
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4733,12 +4733,12 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 json_data = json.load(fp)
             obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             
-            if PIB_system_prompt and created:
-                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data)) 
-                obj.status = PibTranslateStatusChoices.in_progress
-                obj.celery_task_id = pib_celery_task.id
-                obj.save()
+            #if PIB_system_prompt and created:
+            #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+            pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), json_data)) 
+            obj.status = PibTranslateStatusChoices.in_progress
+            obj.celery_task_id = pib_celery_task.id
+            obj.save()
 
     def create(self, request):
         '''
@@ -4966,10 +4966,8 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
-        pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
-
-        if not pib_system_prompt:
-            raise ValueError("no translation_pib prompt")
+        #pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+ 
         
         tasks = pr.get_tasks
         for task in tasks:
@@ -4983,10 +4981,10 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
             #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
             
-            new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
+            #new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
 
             try:
-                do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), new_pib_system_prompt, json_data))
+                do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), json_data))
                 instance_pib_details.celery_task_id = do_translate.id
                 instance_pib_details.status = PibTranslateStatusChoices.in_progress
                 instance_pib_details.save()

@@ -1997,34 +1997,7 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
 	def create(self, validated_data):
 		pass
 
-		# from ai_staff.models import AdaptiveSystemPrompt
-		# from ai_auth.tasks import task_create_and_update_pib_news_detail
-
-		# task = validated_data.get("task")
-
-		# file_path = task.file.file.path
-
-		# with open(file_path, "r") as fp:
-		# 	json_data = json.load(fp)
-
-        
-		# instance_pib = TaskPibDetails.objects.create(task=task,source_json=json_data)
-
-		# prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
-
-		# if prompt_obj:
-
-		# 	mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=4)
-		# 	print("mt_engine---->", mt_engine)
-
-		# 	task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib,mt_engine=mt_engine)
-		# 	print("task_news_pib_mt_instance",task_news_pib_mt_instance)
-
-		# 	new_prompt = prompt_obj.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
-
-		# 	task_create_and_update_pib_news_detail.apply_async((str(instance_pib.uid), new_prompt, json_data,task_news_pib_mt_instance))
-
-		# 	return instance_pib
+		 
 
 	def update(self, instance, validated_data):
 		target_json = validated_data.get("target_json")
