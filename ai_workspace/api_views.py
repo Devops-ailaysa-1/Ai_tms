@@ -5563,6 +5563,57 @@ def get_task_segment_diff(request):
         return Response({'msg':'need task or proj id'})
     return Response(result_cal,status=200)
 
+import uuid
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
+
+
+@api_view(['GET'])
+def pib_check_status(request):
+    # Read comma-separated IDs
+    raw_ids = request.query_params.get("task_ids", "")
+
+    # Validate empty
+    if not raw_ids.strip():
+        return Response(
+            {"error": "task_ids query param required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    task_ids = [tid.strip() for tid in raw_ids.split(",") if tid.strip()]
+
+    results = {}
+
+    for tid in task_ids:
+
+        # -----------------------------
+        # 1️⃣ Validate UUID format
+        # -----------------------------
+        try:
+            uuid.UUID(str(tid))
+        except ValueError:
+            results[tid] = {
+                "status": "INVALID_UUID"
+            }
+            continue
+
+        # -----------------------------
+        # 2️⃣ Fetch task safely
+        # -----------------------------
+        try:
+            task = TaskPibDetails.objects.get(uid=tid)
+            results[tid] = {
+                "status": task.status,
+            }
+        except TaskPibDetails.DoesNotExist:
+            results[tid] = {
+                "status": "NOT_FOUND"
+            }
+
+    return Response({"tasks_status": results})
+
 
 
 

@@ -252,7 +252,7 @@ def html_to_docx(html_content, docx_filename):
     # Convert HTML to DOCX using pypandoc
 	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
    
-
+    
 
 def add_additional_content_to_docx(docx_filename, additional_content):
     doc = Document(docx_filename)
