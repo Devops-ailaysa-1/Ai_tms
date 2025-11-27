@@ -17,3 +17,9 @@ class ErrorStatus(models.TextChoices):
     INSUFFICIENT_CREDIT = "INSUFFICIENT_CREDIT", "INSUFFICIENT_CREDIT"
     LLM_ERROR = "LLM_ERROR", "LLM_ERROR"
     OTHER = "OTHER", "OTHER"
+
+class PibTranslateStatusChoices(models.TextChoices):
+    yet_to_start = "YET_TO_START", "yet_to_start"
+    in_progress = "In_Progress", "in_progress"
+    completed = "COMPLETED", "completed"
+    failed = "FAILED", "failed"
