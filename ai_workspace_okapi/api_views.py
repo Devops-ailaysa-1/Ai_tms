@@ -2876,19 +2876,17 @@ def download_pib(request):
 
     task_id = request.query_params.get('task_id')
     output_type = request.query_params.get('output_type', 'ORIGINAL')
-    print(output_type, "File Download output type")
     obj = Task.objects.get(id=task_id)
+    ser = TaskSerializer(obj)
+    task_data = ser.data
+    res_text = task_data['output_file_path']
 
     if output_type == "ORIGINAL" or output_type == 'MTRAW':
-        target_json = obj.pib_task.last().target_json
-        data = split_dict_pib(target_json)
-
+        data = obj.pib_task.last().target_json        #dict type
         heading = data.get("heading", "")
         story = data.get("story", "")
-
-        # base filename from serializer output info
+        
         base_filename = obj.file.filename.split(".")[0]
-
         # generate DOCX
         docx_path = generate_pib_docx(
             heading=heading,
@@ -2899,10 +2897,6 @@ def download_pib(request):
         # return the file
         document_to_file = DocumentToFile()
         return document_to_file.get_file_response(docx_path)
-
-    # elif output_type == "MTRAW":
-    #     target_json = obj.pib_task.last().tasknewspibdetail.last().mt_raw_json
-    #     target_json = split_dict_pib(target_json)
 
     elif output_type == "BILINGUAL":
         # untouched

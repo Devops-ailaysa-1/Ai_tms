@@ -1092,6 +1092,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"ministry_department": getattr(pib.ministry_department, "name", None),
 			"dateline": pib.dateline,
 			"created_at": pib.created_at,
+			"pib_task_uid": str(pib_task_details.uid),
 			"status": pib_task_details.status
 			# "source_json": pib_task_details.source_json,
 			# "target_json": pib_task_details.target_json,
