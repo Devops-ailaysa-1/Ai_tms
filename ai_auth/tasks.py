@@ -1698,41 +1698,59 @@ def get_glossary_for_task(project, task):
         logger.info(f'Error in getting glossary for task: {e}')
 
 from ai_workspace.llm_client import LLMClient
-from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
-from tqdm import tqdm
+from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
+def nedius_translation(pib_news_list,style_prompt_result,llm_client_obj,stage_1_prompt,stage_2_prompt):
+    
+    result = []
+    for count, news_para in enumerate(pib_news_list):
+        if news_para:
+            
+            translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=news_para,
+                                                system_instruction=stage_1_prompt.replace("{style_promt}",style_prompt_result))
+            if count != 0:
+                trns_text  = f"""previous_paragraph: {pib_news_list[count-1]}\n\nsource_text: {news_para}\n\ntarget_text: {translation_stage_1}"""
+            else:
+                trns_text  = f"""source_text: {news_para}\n\ntarget_text: {translation_stage_1}"""
+                
+    
+            translation_stage_2 = llm_client_obj.PIB_handle_nebius(messages=trns_text,  system_instruction=stage_2_prompt)
+            
+            result.append(translation_stage_2)
+        
+    return result
+
 
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id, style_prompt, stage_1_prompt, stage_2_prompt, json_data):
     try:
         llm_client_obj = LLMClient("pib_nebius", os.environ.get("AI_MODEL_NAME"), "") 
-        target_json = {}
-        obj = TaskPibDetails.objects.get(uid=task_details_id)
+                
+        heading = json_data['heading']
+        story = json_data['story']
         
-        for key, pib_field_value in json_data.items():
-            result = []
-            pib_news_list = pib_field_value.split("\n\n")
-            style_prompt_result = llm_client_obj.PIB_handle_nebius(messages=pib_field_value, system_instruction=style_prompt)
-            for count, i in tqdm(enumerate(pib_news_list)):
-                if i:
-                    
-                    translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=i,
-                                                        system_instruction=stage_1_prompt.replace("{style_promt}",style_prompt_result))
-                    if count != 0:
-                        trns_text  = f"""previous_paragraph: {pib_news_list[count-1]}\n\nsource_text: {i}\n\ntarget_text: {translation_stage_1}"""
-                    else:
-                        trns_text  = f"""source_text: {i}\n\ntarget_text: {translation_stage_1}"""
-                        
-            
-                    translation_stage_2 = llm_client_obj.PIB_handle_nebius(messages=trns_text, 
-                                                        system_instruction=stage_2_prompt)
-                    
-                    result.append(translation_stage_2)
-            
-            target_json[key] = "\n\n".join(result)
+        style_prompt_result = llm_client_obj.PIB_handle_nebius(messages=story, system_instruction=style_prompt)
         
-        print("Target Json:", target_json)
-        obj.target_json = target_json
-        obj.save()
+        trans_heading = nedius_translation(pib_news_list = heading.split("\n\n"),
+                           style_prompt_result=style_prompt_result,llm_client_obj=llm_client_obj,
+                           stage_1_prompt=stage_1_prompt,stage_2_prompt=stage_2_prompt)
+        
+        
+        trans_story = nedius_translation(pib_news_list = story.split("\n\n"),
+                           style_prompt_result=style_prompt_result,llm_client_obj=llm_client_obj,
+                           stage_1_prompt=stage_1_prompt,stage_2_prompt=stage_2_prompt)
+        
+
+        target_json = {
+            "heading": "\n\n".join(trans_heading),
+            "story": "\n\n".join(trans_story)
+        }
+        
+        task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        task_pib_details_instance.target_json = target_json
+        task_pib_details_instance.save()
+        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
+        task_news_pib_mt_instance.mt_raw_json = target_json
+        task_news_pib_mt_instance.save()
     except Exception as e:
         print(e)
         logger.error(f'Error in translation pib story: {e}')

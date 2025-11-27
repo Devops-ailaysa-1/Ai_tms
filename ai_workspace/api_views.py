@@ -68,7 +68,7 @@ from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
-    ExpressProjectDetail, TaskPibDetails
+    ExpressProjectDetail, TaskPibDetails, TaskNewsPIBMT
 from .models import Task
 from cacheops import cached
 from operator import attrgetter
@@ -4719,15 +4719,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             newsID = json_data.get('news')[0].get('newsId')
             obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
-    # @staticmethod
-    # def create_pib_news_detail(pr):
-    #     print(pr, "Project")
-    #     tasks = pr.get_tasks
-    #     for i in tasks:
-    #         file_path = i.file.file.path
-    #         with open(file_path, 'r') as fp:
-    #             json_data = json.load(fp)
-    #         obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+ 
 
     @staticmethod
     def create_pib_news_detail(pr):
@@ -4740,19 +4732,19 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
         predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
         tasks = pr.get_tasks
-        for i in tasks:
-            file_path = i.file.file.path
+        for task in tasks:
+            file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            instance_pib,created = TaskPibDetails.objects.get_or_create(task=task, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             
             if PIB_system_prompt and created and predefine_style_obj:
                 
-                style_prompt = predefine_style_obj.style_guide_content.format(target_language=i.job.target_language)
-                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=i.job.source_language, target_language=i.job.target_language)
-                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                style_prompt = predefine_style_obj.style_guide_content.format(target_language=task.job.target_language)
+                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=task.job.source_language, target_language=task.job.target_language)
+                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
                 
-                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data)) 
+                task_create_and_update_pib_news_detail.apply_async((str(instance_pib.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data)) 
 
     def create(self, request):
         '''
@@ -4789,18 +4781,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
 from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
-# class TaskPibDetailsViewSet(viewsets.ViewSet):
-#     '''
-#     This view is to list,create,update and delete TaskNewsDetail in Federal flow. 
-#     '''
-#     permission_classes = [IsAuthenticated, IsEnterpriseUser]
-
-#     def create(self,request):
-#         serializer = TaskPibDetailsSerializer(data=request.data,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
+ 
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
     '''
@@ -4999,19 +4980,22 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
         predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
         tasks = pr.get_tasks
-        for i in tasks:
-            file_path = i.file.file.path
+        for task in tasks:
+            file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
+            instance_pib_details, created = TaskPibDetails.objects.get_or_create(task=task,pib_story=pib, defaults={'source_json':json_data})
             if PIB_system_prompt and created and predefine_style_obj:
                 
-                style_prompt = predefine_style_obj.style_guide_content.format(target_language=i.job.target_language)
-                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=i.job.source_language, target_language=i.job.target_language)
-                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                style_prompt = predefine_style_obj.style_guide_content.format(target_language=task.job.target_language)
+                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=task.job.source_language, target_language=task.job.target_language)
+                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
                 
-                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data))
+                task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data))
 
+            mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=4)
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
+        
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
 
