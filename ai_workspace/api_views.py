@@ -5572,10 +5572,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 @api_view(['GET'])
 def pib_check_status(request):
-    # Read comma-separated IDs
     raw_ids = request.query_params.get("task_ids", "")
 
-    # Validate empty
     if not raw_ids.strip():
         return Response(
             {"error": "task_ids query param required"},
@@ -5583,38 +5581,34 @@ def pib_check_status(request):
         )
 
     task_ids = [tid.strip() for tid in raw_ids.split(",") if tid.strip()]
-
-    results = {}
+    results = []
 
     for tid in task_ids:
 
-        # -----------------------------
-        # 1️⃣ Validate UUID format
-        # -----------------------------
+        # Validate UUID format
         try:
             uuid.UUID(str(tid))
         except ValueError:
-            results[tid] = {
+            results.append({
+                "pib_task_uid": tid,
                 "status": "INVALID_UUID"
-            }
+            })
             continue
 
-        # -----------------------------
-        # 2️⃣ Fetch task safely
-        # -----------------------------
+        # Fetch object safely
         try:
             task = TaskPibDetails.objects.get(uid=tid)
-            results[tid] = {
-                "status": task.status,
-            }
+            results.append({
+                "pib_task_uid": str(task.uid),
+                "status": task.status
+            })
         except TaskPibDetails.DoesNotExist:
-            results[tid] = {
+            results.append({
+                "pib_task_uid": tid,
                 "status": "NOT_FOUND"
-            }
+            })
 
-    return Response({"tasks_status": results})
-
-
+    return Response(results)
 
 
 class AdaptiveFileTranslate(viewsets.ViewSet):
