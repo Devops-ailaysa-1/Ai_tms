@@ -43,7 +43,7 @@ from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 import time
 from django.db.models.functions import Lower
 from ai_workspace.adaptive import AdaptiveSegmentTranslator
-from ai_tms.celery import app
+ 
 import traceback
 ADAPTIVE_LLM_MODEL = settings.ADAPTIVE_LLM_MODEL
 extend_mail_sent= 0
@@ -1700,19 +1700,66 @@ def get_glossary_for_task(project, task):
 from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
 
+
+
+
+
 @task(queue='high-priority')
-def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt, json_data):
+def task_create_and_update_pib_news_detail(task_details_id, json_data):
+    from ai_staff.models import AdaptiveSystemPrompt
+    ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
+    from tqdm import tqdm
     try:
-        llm_client_obj = LLMClient("nebius", "meta-llama/Llama-3.3-70B-Instruct-fast", "") 
-        usage = 0
+        nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
+ 
         target_json = {}
+
+        heading = json_data['heading']
+        story = json_data['story']
+
         task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
+        pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
+        pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
+
+        source_language = task_pib_details_instance.task.job.source_language.language
+        target_language = task_pib_details_instance.task.job.target_language.language
+        style_prompt = style_prompt.format(target_language = target_language)
+
+        style_guidnce ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+ 
+        trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+                                                    messages = heading)
+
+        result = []
+        target_json = {}
+
         for key, message in json_data.items():
-            result_of_nebius, usage = llm_client_obj._handle_nebius(messages=message, system_instruction=new_PIB_system_prompt)
-            target_json[key] = result_of_nebius
-            usage += usage
-        
-        print("Total usage:", usage)
+            
+            story_list = message.split("\n\n")
+            usage_story = 0
+            for count, story_para in tqdm(enumerate(story_list)):
+                if story_para.strip():
+                    translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+                                                                         messages = story_para )
+                    usage_story = usage_story+usage
+                    if count != 0:
+                        trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
+                    else:
+                        trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
+                    
+                    trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+                                                                         messages = trns_text )
+                    usage_story = usage_story+usage
+                    
+                    result.append(trns_2_resp)
+
+            trans_story = "\n\n".join(result)
+
+            target_json[key] = trans_story
+  
+        print("Total usage:", usage_story+usage_heading+usage_style)
+
         task_pib_details_instance.target_json = target_json
         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
         task_news_pib_mt_instance.mt_raw_json = target_json
@@ -1720,6 +1767,7 @@ def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt
 
         task_pib_details_instance.save()
         task_news_pib_mt_instance.save()
+
     except Exception as e:
         print(e)
         logger.error(f'Error in translation pib story: {e}')

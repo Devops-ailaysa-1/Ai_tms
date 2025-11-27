@@ -4725,7 +4725,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     def create_pib_news_detail(pr):
         from ai_staff.models import AdaptiveSystemPrompt
         PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
-        print("PIB_system_prompt",PIB_system_prompt)
+        #print("PIB_system_prompt",PIB_system_prompt)
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4735,7 +4735,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             
             if PIB_system_prompt and created:
                 new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data)) 
+                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), json_data)) 
 
     def create(self, request):
         '''
@@ -4963,10 +4963,8 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
-        pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
-
-        if not pib_system_prompt:
-            raise ValueError("no translation_pib prompt")
+        #pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+ 
         
         tasks = pr.get_tasks
         for task in tasks:
@@ -4980,10 +4978,11 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
             #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
             
-            new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
-            print("called celery task on creation")
+            #new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
+            
+ 
 
-            do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), new_pib_system_prompt, json_data))
+            do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), json_data))
             logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
 
     def create(self, request):
