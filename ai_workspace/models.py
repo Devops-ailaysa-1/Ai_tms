@@ -55,7 +55,7 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus, PibTranslateStatusChoices
 from django.conf import settings
 
 def set_pentm_dir(instance):
@@ -1973,6 +1973,8 @@ class TaskPibDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="pib_task")
     source_json = models.JSONField(blank=True, null=True)
     target_json = models.JSONField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=PibTranslateStatusChoices.choices, default=PibTranslateStatusChoices.yet_to_start, null=False, blank=False)
+    celery_task_id = models.CharField(max_length=255,null=True,blank=True,help_text="Celery async task ID")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 

@@ -20,7 +20,7 @@ from contextlib import closing
 from django.db import connection
 from django.db.models import Q
 from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
-from ai_workspace.enums import BatchStatus
+from ai_workspace.enums import BatchStatus, PibTranslateStatusChoices
 from ai_auth.api_views import resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
@@ -1714,12 +1714,13 @@ def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt
         
         print("Total usage:", usage)
         task_pib_details_instance.target_json = target_json
+        task_pib_details_instance.status = PibTranslateStatusChoices.completed
         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
         task_news_pib_mt_instance.mt_raw_json = target_json
         
-
         task_pib_details_instance.save()
         task_news_pib_mt_instance.save()
+        print(task_pib_details_instance.status, "Status of the pib task")
     except Exception as e:
         print(e)
         logger.error(f'Error in translation pib story: {e}')
