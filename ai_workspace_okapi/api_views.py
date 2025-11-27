@@ -2879,8 +2879,7 @@ def download_pib(request):
     print(output_type, "File Download output type")
     obj = Task.objects.get(id=task_id)
 
-    if output_type == "ORIGINAL":
-
+    if output_type == "ORIGINAL" or output_type == 'MTRAW':
         target_json = obj.pib_task.last().target_json
         data = split_dict_pib(target_json)
 
@@ -2901,9 +2900,9 @@ def download_pib(request):
         document_to_file = DocumentToFile()
         return document_to_file.get_file_response(docx_path)
 
-    elif output_type == "MTRAW":
-        target_json = obj.pib_task.last().tasknewspibdetail.last().mt_raw_json
-        target_json = split_dict_pib(target_json)
+    # elif output_type == "MTRAW":
+    #     target_json = obj.pib_task.last().tasknewspibdetail.last().mt_raw_json
+    #     target_json = split_dict_pib(target_json)
 
     elif output_type == "BILINGUAL":
         # untouched
