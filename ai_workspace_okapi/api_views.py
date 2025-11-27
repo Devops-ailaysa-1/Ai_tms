@@ -2882,7 +2882,7 @@ def download_pib(request):
     res_text = task_data['output_file_path']
 
     if output_type == "ORIGINAL" or output_type == 'MTRAW':
-        data = obj.pib_task.last().target_json        #dict type
+        data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
         heading = data.get("heading", "")
         story = data.get("story", "")
         
