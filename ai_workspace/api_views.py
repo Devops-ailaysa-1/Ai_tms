@@ -4732,7 +4732,13 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr):
         from ai_staff.models import AdaptiveSystemPrompt
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        from ai_workspace.models import PredefinedStyleGuide
+        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
+        stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
+        stage_2_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_2")
+        stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
+        stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
+        predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4740,9 +4746,13 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 json_data = json.load(fp)
             obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             
-            if PIB_system_prompt and created:
-                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data)) 
+            if PIB_system_prompt and created and predefine_style_obj:
+                
+                style_prompt = predefine_style_obj.style_guide_content.format(target_language=i.job.target_language)
+                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=i.job.source_language, target_language=i.job.target_language)
+                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                
+                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data)) 
 
     def create(self, request):
         '''
@@ -4981,18 +4991,26 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        from ai_workspace.models import PredefinedStyleGuide
+        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
+        stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
+        stage_2_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_2")
+        stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
+        stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
+        predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
-            if PIB_system_prompt and created:
-                new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                print("called celery task on creation")
-                do_translate = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), new_PIB_system_prompt, json_data))
-                logger.info(f'Successfully sent the task to celery: project-task-id : {i.id} and celery-task-id : {do_translate.id}')
+            if PIB_system_prompt and created and predefine_style_obj:
+                
+                style_prompt = predefine_style_obj.style_guide_content.format(target_language=i.job.target_language)
+                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=i.job.source_language, target_language=i.job.target_language)
+                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                
+                task_create_and_update_pib_news_detail.apply_async((str(obj.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data))
 
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType

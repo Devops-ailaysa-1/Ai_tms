@@ -1,3 +1,4 @@
+from ai_workspace.llm_client import LLMClient
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
 import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib,difflib
@@ -364,6 +365,10 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = lingvanex(source_string, source_lang_code, target_lang_code)
     
+    elif mt_engine_id == 5:
+        if user and user.is_enterprise and user.user_enterprise.subscription_name == 'Enterprise - PIB':
+            record_api_usage.apply_async(("Ailaysa","Machine Translation",uid,email,len(source_string)), queue='low-priority')
+            translate = standard_project_create_and_update_pib_news_details(source_string, source_lang_code, target_lang_code)
 
     if mt_called == True and from_open_ai == None:
         if user:
@@ -813,3 +818,43 @@ def save_simple_file(http_response, output_file_path):
         f.write(http_response.content)
 
     return os.path.abspath(output_file_path)
+
+def standard_project_create_and_update_pib_news_details(source_string, source_language, target_language):
+    from ai_staff.models import AdaptiveSystemPrompt
+    from ai_workspace.models import PredefinedStyleGuide
+    from tqdm import tqdm
+    
+    PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
+    stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
+    stage_2_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_2")
+    stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
+    stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
+    predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
+    
+    if PIB_system_prompt and predefine_style_obj:
+        llm_client_obj = LLMClient("nebius", "meta-llama/Llama-3.3-70B-Instruct-fast", "")
+        style_prompt = predefine_style_obj.style_guide_content.format(target_language=target_language)
+        formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
+        formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=source_language, target_language=target_language)
+        
+        result = []
+        pib_news_list = source_string.split("\n\n")
+        style_prompt_result = llm_client_obj.PIB_handle_nebius(messages=source_string, system_instruction=style_prompt)
+        
+        for count, i in tqdm(enumerate(pib_news_list)):
+            if i:
+                
+                translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=i,
+                                                    system_instruction=formated_stage_1_prompt.replace("{style_promt}",style_prompt_result))
+                if count != 0:
+                    trns_text  = f"""previous_paragraph: {pib_news_list[count-1]}\n\nsource_text: {i}\n\ntarget_text: {translation_stage_1}"""
+                else:
+                    trns_text  = f"""source_text: {i}\n\ntarget_text: {translation_stage_1}"""
+                    
+        
+                translation_stage_2 = llm_client_obj.PIB_handle_nebius(messages=trns_text, 
+                                                    system_instruction=formated_stage_2_prompt)
+                
+                result.append(translation_stage_2)
+        
+    return "\n\n".join(result)

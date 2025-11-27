@@ -1699,20 +1699,38 @@ def get_glossary_for_task(project, task):
 
 from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
+from tqdm import tqdm
 
 @task(queue='high-priority')
-def task_create_and_update_pib_news_detail(task_details_id,new_PIB_system_prompt, json_data):
+def task_create_and_update_pib_news_detail(task_details_id, style_prompt, stage_1_prompt, stage_2_prompt, json_data):
     try:
-        llm_client_obj = LLMClient("nebius", "meta-llama/Llama-3.3-70B-Instruct-fast", "") 
-        usage = 0
+        llm_client_obj = LLMClient("pib_nebius", os.environ.get("AI_MODEL_NAME"), "") 
         target_json = {}
         obj = TaskPibDetails.objects.get(uid=task_details_id)
-        for key, message in json_data.items():
-            result_of_nebius, usage = llm_client_obj._handle_nebius(messages=message, system_instruction=new_PIB_system_prompt)
-            target_json[key] = result_of_nebius
-            usage += usage
         
-        print("Total usage:", usage)
+        for key, pib_field_value in json_data.items():
+            result = []
+            pib_news_list = pib_field_value.split("\n\n")
+            style_prompt_result = llm_client_obj.PIB_handle_nebius(messages=pib_field_value, system_instruction=style_prompt)
+            for count, i in tqdm(enumerate(pib_news_list)):
+                if i:
+                    
+                    translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=i,
+                                                        system_instruction=stage_1_prompt.replace("{style_promt}",style_prompt_result))
+                    if count != 0:
+                        trns_text  = f"""previous_paragraph: {pib_news_list[count-1]}\n\nsource_text: {i}\n\ntarget_text: {translation_stage_1}"""
+                    else:
+                        trns_text  = f"""source_text: {i}\n\ntarget_text: {translation_stage_1}"""
+                        
+            
+                    translation_stage_2 = llm_client_obj.PIB_handle_nebius(messages=trns_text, 
+                                                        system_instruction=stage_2_prompt)
+                    
+                    result.append(translation_stage_2)
+            
+            target_json[key] = "\n\n".join(result)
+        
+        print("Target Json:", target_json)
         obj.target_json = target_json
         obj.save()
     except Exception as e:
