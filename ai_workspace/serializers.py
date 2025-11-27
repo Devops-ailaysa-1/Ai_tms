@@ -1973,16 +1973,24 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
 		doc_view_instance = DocumentViewByDocumentId(request_obj)
 		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
 		return edit_allowed
-
-
+	
+# task_pib_details_instance.target_json = target_json
 	def get_updated_download(self,obj):
-
-		user = self.context.get('request').user
-		managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
-		if (user == obj.task.job.project.ai_user) or (user in managers):
+		if obj.target_json:
 			return 'enable'
 		else:
 			return 'disable'
+
+ 
+
+	# def get_updated_download(self,obj):
+
+	# 	user = self.context.get('request').user
+	# 	managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+	# 	if (user == obj.task.job.project.ai_user) or (user in managers):
+	# 		return 'enable'
+	# 	else:
+	# 		return 'disable'
 
 	def create(self, validated_data):
 		pass
