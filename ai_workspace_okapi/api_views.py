@@ -2892,7 +2892,7 @@ def download_pib(request):
         source_json = obj.pib_task.last().source_json
         file_cont = source_json.get('heading')
         filename = "_".join(file_cont.split())[:50]
-        filename += f" ({obj.job.source_language_code}->{obj.job.target_language_code})"
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})"
 
 
         # generate DOCX
@@ -2924,8 +2924,8 @@ def download_pib(request):
         )
 
         file_cont = source_json.get('heading')
-        filename = "_".join(file_cont.split())[:50] + ".xlsx"
-        filename += f" ({obj.job.source_language_code}->{obj.job.target_language_code})"
+        filename = "_".join(file_cont.split())[:50]
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})" + ".xlsx"
         response = document_to_file.get_file_response(
             csv_data,
             pandas_dataframe=True,
