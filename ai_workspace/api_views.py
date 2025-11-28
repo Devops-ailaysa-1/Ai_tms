@@ -4726,12 +4726,14 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         from ai_staff.models import AdaptiveSystemPrompt
         #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
         #print("PIB_system_prompt",PIB_system_prompt)
+        mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
             
             if created:
                 #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
