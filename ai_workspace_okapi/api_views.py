@@ -1082,12 +1082,12 @@ class MT_RawAndTM_View(views.APIView):
 
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                 else:
 
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                     
                     translation = replace_with_gloss(seg.source,translation_original,task)
 
@@ -1158,12 +1158,12 @@ class MT_RawAndTM_View(views.APIView):
                 if not doc.job.project.isAdaptiveTranslation:
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation_original = translation
                 else:
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                     translation = replace_with_gloss(split_seg.source, translation_original,task)
                 
                 # Updating existing record of MtRawSplitSegment with new Task MT engine
@@ -1177,12 +1177,12 @@ class MT_RawAndTM_View(views.APIView):
                 if not doc.job.project.isAdaptiveTranslation:
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation_original = translation
                 else:
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation = replace_with_gloss(split_seg.source, translation_original, task)
 
                 MtRawSplitSegment.objects.create(**{"mt_raw":translation, "mt_only":translation_original, "split_segment_id" : segment_id})
@@ -2876,20 +2876,17 @@ def download_pib(request):
 
     task_id = request.query_params.get('task_id')
     output_type = request.query_params.get('output_type', 'ORIGINAL')
-
     obj = Task.objects.get(id=task_id)
+    ser = TaskSerializer(obj)
+    task_data = ser.data
+    res_text = task_data['output_file_path']
 
-    if output_type == "ORIGINAL":
-
-        target_json = obj.pib_task.last().target_json
-        data = split_dict_pib(target_json)
-
+    if output_type == "ORIGINAL" or output_type == 'MTRAW':
+        data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
         heading = data.get("heading", "")
         story = data.get("story", "")
-
-        # base filename from serializer output info
+        
         base_filename = obj.file.filename.split(".")[0]
-
         # generate DOCX
         docx_path = generate_pib_docx(
             heading=heading,

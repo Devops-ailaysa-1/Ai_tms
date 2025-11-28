@@ -1092,6 +1092,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"ministry_department": getattr(pib.ministry_department, "name", None),
 			"dateline": pib.dateline,
 			"created_at": pib.created_at,
+			"pib_task_uid": str(pib_task_details.uid),
+			"status": pib_task_details.status
 			# "source_json": pib_task_details.source_json,
 			# "target_json": pib_task_details.target_json,
 		}
@@ -1938,7 +1940,13 @@ class PIBStorySerializer(serializers.ModelSerializer):
             return ProjectQuickSetupSerializer(obj.project).data
         return None
 	
-from ai_workspace.models import TaskPibDetails
+from ai_workspace.models import TaskPibDetails , TaskNewsPIBMT
+
+class TaskNewsPIBMTSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskNewsPIBMT
+		fields = ('id','mt_raw_json')
+
 
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):

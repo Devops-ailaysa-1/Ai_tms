@@ -158,7 +158,7 @@ class LLMClient:
 
         try:
             response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
+            
 
             response_data = response.json()
 

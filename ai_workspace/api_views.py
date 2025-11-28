@@ -109,7 +109,7 @@ import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, PibTranslateStatusChoices
 from django.core.cache import cache
 import uuid
 from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
@@ -4724,13 +4724,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr):
         from ai_staff.models import AdaptiveSystemPrompt
-        from ai_workspace.models import PredefinedStyleGuide
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
-        stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
-        stage_2_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_2")
-        stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
-        stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
-        predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
+        #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        #print("PIB_system_prompt",PIB_system_prompt)
         tasks = pr.get_tasks
         for task in tasks:
             file_path = task.file.file.path
@@ -4738,13 +4733,12 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
                 json_data = json.load(fp)
             instance_pib,created = TaskPibDetails.objects.get_or_create(task=task, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             
-            if PIB_system_prompt and created and predefine_style_obj:
-                
-                style_prompt = predefine_style_obj.style_guide_content.format(target_language=task.job.target_language)
-                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=task.job.source_language, target_language=task.job.target_language)
-                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
-                
-                task_create_and_update_pib_news_detail.apply_async((str(instance_pib.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data)) 
+            #if PIB_system_prompt and created:
+            #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+            pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(task.uid), json_data)) 
+            instance_pib.status = PibTranslateStatusChoices.in_progress
+            instance_pib.celery_task_id = pib_celery_task.id
+            instance_pib.save()
 
     def create(self, request):
         '''
@@ -4972,30 +4966,32 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_pib_news_detail(pr, pib):
         from ai_staff.models import AdaptiveSystemPrompt
-        from ai_workspace.models import PredefinedStyleGuide
-        PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
-        stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
-        stage_2_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_2")
-        stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
-        stage_2_prompt = stage_2_prompt_obj[0] if stage_2_prompt_obj.exists() else None
-        predefine_style_obj = PredefinedStyleGuide.objects.filter(name="translation_pib").first()
+        #pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+ 
+        
         tasks = pr.get_tasks
         for task in tasks:
             file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            instance_pib_details, created = TaskPibDetails.objects.get_or_create(task=task,pib_story=pib, defaults={'source_json':json_data})
-            if PIB_system_prompt and created and predefine_style_obj:
-                
-                style_prompt = predefine_style_obj.style_guide_content.format(target_language=task.job.target_language)
-                formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=task.job.source_language, target_language=task.job.target_language)
-                formated_stage_2_prompt = stage_2_prompt.prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
-                
-                task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), style_prompt ,formated_stage_1_prompt, formated_stage_2_prompt, json_data))
 
-            mt_engine = AilaysaSupportedMtpeEngines.objects.get(id=4)
+            instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=PibTranslateStatusChoices.yet_to_start)
+            mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
             task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
-        
+
+            #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
+            
+            #new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
+
+            try:
+                do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), json_data))
+                instance_pib_details.celery_task_id = do_translate.id
+                instance_pib_details.status = PibTranslateStatusChoices.in_progress
+                instance_pib_details.save()
+                logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
+            except Exception as e:
+                print(e)
+
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
 
@@ -5563,7 +5559,52 @@ def get_task_segment_diff(request):
         return Response({'msg':'need task or proj id'})
     return Response(result_cal,status=200)
 
+import uuid
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
 
+
+@api_view(['GET'])
+def pib_check_status(request):
+    raw_ids = request.query_params.get("task_ids", "")
+
+    if not raw_ids.strip():
+        return Response(
+            {"error": "task_ids query param required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    task_ids = [tid.strip() for tid in raw_ids.split(",") if tid.strip()]
+    results = []
+
+    for tid in task_ids:
+
+        # Validate UUID format
+        try:
+            uuid.UUID(str(tid))
+        except ValueError:
+            results.append({
+                "pib_task_uid": tid,
+                "status": "INVALID_UUID"
+            })
+            continue
+
+        # Fetch object safely
+        try:
+            task = TaskPibDetails.objects.get(uid=tid)
+            results.append({
+                "pib_task_uid": str(task.uid),
+                "status": task.status
+            })
+        except TaskPibDetails.DoesNotExist:
+            results.append({
+                "pib_task_uid": tid,
+                "status": "NOT_FOUND"
+            })
+
+    return Response(results)
 
 
 class AdaptiveFileTranslate(viewsets.ViewSet):

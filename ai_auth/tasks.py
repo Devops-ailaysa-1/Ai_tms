@@ -20,7 +20,7 @@ from contextlib import closing
 from django.db import connection
 from django.db.models import Q
 from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
-from ai_workspace.enums import BatchStatus
+from ai_workspace.enums import BatchStatus, PibTranslateStatusChoices
 from ai_auth.api_views import resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
@@ -43,7 +43,7 @@ from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 import time
 from django.db.models.functions import Lower
 from ai_workspace.adaptive import AdaptiveSegmentTranslator
-from ai_tms.celery import app
+ 
 import traceback
 ADAPTIVE_LLM_MODEL = settings.ADAPTIVE_LLM_MODEL
 extend_mail_sent= 0
@@ -1699,58 +1699,73 @@ def get_glossary_for_task(project, task):
 
 from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
-def nedius_translation(pib_news_list,style_prompt_result,llm_client_obj,stage_1_prompt,stage_2_prompt):
-    
-    result = []
-    for count, news_para in enumerate(pib_news_list):
-        if news_para:
-            
-            translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=news_para,
-                                                system_instruction=stage_1_prompt.replace("{style_promt}",style_prompt_result))
-            if count != 0:
-                trns_text  = f"""previous_paragraph: {pib_news_list[count-1]}\n\nsource_text: {news_para}\n\ntarget_text: {translation_stage_1}"""
-            else:
-                trns_text  = f"""source_text: {news_para}\n\ntarget_text: {translation_stage_1}"""
-                
-    
-            translation_stage_2 = llm_client_obj.PIB_handle_nebius(messages=trns_text,  system_instruction=stage_2_prompt)
-            
-            result.append(translation_stage_2)
-        
-    return result
-
 
 @task(queue='high-priority')
-def task_create_and_update_pib_news_detail(task_details_id, style_prompt, stage_1_prompt, stage_2_prompt, json_data):
+def task_create_and_update_pib_news_detail(task_details_id, json_data):
+    from ai_staff.models import AdaptiveSystemPrompt
+    ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
+    from tqdm import tqdm
     try:
-        llm_client_obj = LLMClient("pib_nebius", os.environ.get("AI_MODEL_NAME"), "") 
-                
+        nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
+ 
+        target_json = {}
+
         heading = json_data['heading']
         story = json_data['story']
-        
-        style_prompt_result = llm_client_obj.PIB_handle_nebius(messages=story, system_instruction=style_prompt)
-        
-        trans_heading = nedius_translation(pib_news_list = heading.split("\n\n"),
-                           style_prompt_result=style_prompt_result,llm_client_obj=llm_client_obj,
-                           stage_1_prompt=stage_1_prompt,stage_2_prompt=stage_2_prompt)
-        
-        
-        trans_story = nedius_translation(pib_news_list = story.split("\n\n"),
-                           style_prompt_result=style_prompt_result,llm_client_obj=llm_client_obj,
-                           stage_1_prompt=stage_1_prompt,stage_2_prompt=stage_2_prompt)
-        
 
-        target_json = {
-            "heading": "\n\n".join(trans_heading),
-            "story": "\n\n".join(trans_story)
-        }
-        
         task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
+        pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
+        pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
+
+        source_language = task_pib_details_instance.task.job.source_language.language
+        target_language = task_pib_details_instance.task.job.target_language.language
+        style_prompt = style_prompt.format(target_language = target_language)
+
+        style_guidnce ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+ 
+        trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+                                                    messages = heading)
+
+        result = []
+        target_json = {}
+
+        for key, message in json_data.items():
+            
+            story_list = message.split("\n\n")
+            usage_story = 0
+            for count, story_para in tqdm(enumerate(story_list)):
+                if story_para.strip():
+                    translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+                                                                         messages = story_para )
+                    usage_story = usage_story+usage
+                    if count != 0:
+                        trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
+                    else:
+                        trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
+                    
+                    trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+                                                                         messages = trns_text )
+                    usage_story = usage_story+usage
+                    
+                    result.append(trns_2_resp)
+
+            trans_story = "\n\n".join(result)
+
+            target_json[key] = trans_story
+  
+        print("Total usage:", usage_story+usage_heading+usage_style)
+
         task_pib_details_instance.target_json = target_json
+        task_pib_details_instance.status = PibTranslateStatusChoices.completed
+        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
+        task_news_pib_mt_instance.mt_raw_json = target_json
+        
         task_pib_details_instance.save()
         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
         task_news_pib_mt_instance.mt_raw_json = target_json
         task_news_pib_mt_instance.save()
+        print(task_pib_details_instance.status, "Status of the pib task")
     except Exception as e:
         print(e)
         logger.error(f'Error in translation pib story: {e}')

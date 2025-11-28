@@ -30,7 +30,6 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
     Currencies, ProjectTypeDetail,AiRoles,AiCustomize,LanguageMetaDetails
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
-from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
@@ -55,7 +54,7 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus, PibTranslateStatusChoices
 from django.conf import settings
 
 def set_pentm_dir(instance):
@@ -1973,8 +1972,18 @@ class TaskPibDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="pib_task")
     source_json = models.JSONField(blank=True, null=True)
     target_json = models.JSONField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=PibTranslateStatusChoices.choices, default=PibTranslateStatusChoices.yet_to_start, null=False, blank=False)
+    celery_task_id = models.CharField(max_length=255,null=True,blank=True,help_text="Celery async task ID")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class TaskNewsPIBMT(models.Model):
+    task_pib_detail = models.ForeignKey(TaskPibDetails, on_delete=models.CASCADE,related_name="tasknewspibdetail")
+    mt_raw_json = models.JSONField(null=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_news_pib_mt")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 class TaskNewsMT(models.Model):
     task = models.ForeignKey(TaskNewsDetails, on_delete=models.CASCADE,related_name="tasknews")

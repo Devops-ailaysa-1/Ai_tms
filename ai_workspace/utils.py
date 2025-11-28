@@ -252,7 +252,7 @@ def html_to_docx(html_content, docx_filename):
     # Convert HTML to DOCX using pypandoc
 	pypandoc.convert_text(html_content, 'docx', format='html',outputfile=docx_filename)
    
-
+    
 
 def add_additional_content_to_docx(docx_filename, additional_content):
     doc = Document(docx_filename)
@@ -268,30 +268,61 @@ from docx.shared import Pt
 import tempfile
 import os
 
+# def generate_pib_docx(heading: str, story: str, base_filename: str):
+#     """
+#     Generates PIB DOCX with formatting and returns the file path.
+#     """
+
+#     doc = Document()
+
+#     # Heading centered (H2)
+#     if heading:
+#         h = doc.add_heading(heading, level=2)
+#         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#         spacer = doc.add_paragraph()
+#         spacer.add_run("") 
+
+#     # Split story into paragraphs
+#     if story:
+#         for block in story.split("\n\n"):
+#             para = doc.add_paragraph()
+#             run = para.add_run(block.strip())
+#             para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+#             run.font.name = "Times New Roman"
+#             run.font.size = Pt(12)
+
+#     # Save to temp location
+#     filename = f"{base_filename}.docx"
+#     tmp_path = os.path.join(tempfile.gettempdir(), filename)
+#     doc.save(tmp_path)
+
+#     return tmp_path
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
+from htmldocx import HtmlToDocx
+import tempfile, os
+
 def generate_pib_docx(heading: str, story: str, base_filename: str):
     """
-    Generates PIB DOCX with formatting and returns the file path.
+    Generates PIB DOCX with proper HTML rendering.
     """
 
     doc = Document()
 
-    # Heading centered (H2)
+    # Add heading normally
     if heading:
         h = doc.add_heading(heading, level=2)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        spacer = doc.add_paragraph()
-        spacer.add_run("") 
+        doc.add_paragraph("")   # spacer
 
-    # Split story into paragraphs
+    # Convert HTML story → DOCX blocks
     if story:
-        for block in story.split("\n\n"):
-            para = doc.add_paragraph()
-            run = para.add_run(block.strip())
-            para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            run.font.name = "Times New Roman"
-            run.font.size = Pt(12)
+        html_parser = HtmlToDocx()
+        html_parser.add_html_to_document(story, doc)
 
-    # Save to temp location
+    # Save file
     filename = f"{base_filename}.docx"
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
     doc.save(tmp_path)
