@@ -339,3 +339,4 @@ EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
 EXPORT_IMAGE_URL = '/temp_download/'
  
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = os.getenv('ADAPTIVE_TRANSLATE_LLM_MODEL_PIB')

@@ -30,8 +30,12 @@ router.register(r'steps',api_views.StepsView,basename='steps')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
 router.register(r'add_stories',api_views.AddStoriesView,basename='add-story')
+router.register(r'stories_pib',api_views.PIBStoriesViewSet,basename='stories_pib')
 router.register(r'federal_translate',api_views.TaskNewsDetailsViewSet,basename='fed_trans')
+# router.register(r'pib_translate',api_views.TaskPibDetailsViewSet,basename='pib_trans')
 router.register(r'adaptive_file_translate',api_views.AdaptiveFileTranslate,basename='adaptive_file')
+router.register(r'ministry_names',api_views.MinistryNameViewSet,basename="ministry-names")
+router.register(r'pib_translate',api_views.TaskPibDetailsViewSet,basename='translate_name')
 urlpatterns = router.urls
 
 # api_views urls
@@ -106,7 +110,8 @@ urlpatterns += [
 	path('task_report/',api_views.get_task_count_report),
 	path('ner/',api_views.get_ner),
     path('doc2docx/',api_views.doc2docx,name="doc-2-docx"),
-    path('task_segment_diff',api_views.get_task_segment_diff,name='task-seg-diff')
+    path('task_segment_diff',api_views.get_task_segment_diff,name='task-seg-diff'),
+    path("poll_pib_tasks/", api_views.pib_check_status, name='pib_check_status')
 ]
 # views urls adding for local testing
 urlpatterns += [

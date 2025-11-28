@@ -68,12 +68,12 @@ from ai_workspace_okapi.utils import get_translation, file_translate
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
-    ExpressProjectDetail
+    ExpressProjectDetail, TaskPibDetails, TaskNewsPIBMT
 from .models import Task
 from cacheops import cached
 from operator import attrgetter
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory, TaskTranslatedFile, MinistryName, MinistryTranslateName, TaskPibDetails
 from .serializers import (ProjectContentTypeSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -86,7 +86,7 @@ from .serializers import (ProjectContentTypeSerializer, \
                           StepsSerializer, WorkflowsSerializer, ProjectSimpleSerializer,\
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,\
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew) #ProjectCreationSerializer
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew, PIBStorySerializer, MinistryNameSerializer, MinistryTranslateNameSerializer) #ProjectCreationSerializer
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech,\
@@ -109,8 +109,11 @@ import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, PibTranslateStatusChoices
 from django.core.cache import cache
+import uuid
+from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
+from ai_workspace.filters import ProjectTypeSearchFilter
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -682,13 +685,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
-    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
+    filter_backends = [DjangoFilterBackend,CaseInsensitiveOrderingFilter, ProjectTypeSearchFilter]
     ordering_fields = ['project_name','team__name','id']
     filterset_class = ProjectFilter
-    search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
-                    'project_jobs_set__target_language__language']
+    # search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
+    #                 'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
-    paginator.page_size = 20
+    paginator.page_size = 10
 
     def get_serializer_class(self):
         #if project_type is glossary, then it will return glossarysetupserializer
@@ -726,6 +729,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         
         return queryset
+
+
+ 
+
+
+
  
     def get_user(self):
         # returns main account holder 
@@ -753,8 +762,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     #     et_time = time.time()
     #     print("Time taken for list------------------>",et_time-st_time)
     #     return Response(serializer.data)
-        #asdfadsfasdfasdfasdf
+ 
     def list(self, request, *args, **kwargs):
+         
         # filter the projects. Now assign_status filter is used only for Dinamalar flow 
         queryset = self.get_queryset()
         user_1 = self.get_user()
@@ -922,7 +932,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             # checks for project_type and create extra info needed for it
             if pr.project_type_id == 8:
-                NewsProjectSetupView.create_news_detail(pr)
+                if user_1.user_enterprise.subscription_name == 'Enterprise - PIB':
+                    NewsProjectSetupView.create_pib_news_detail(pr)
+                else:
+                    NewsProjectSetupView.create_news_detail(pr)
             # if instance.pre_translate == True:
             #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -950,9 +963,50 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
 
+# class VendorDashBoardFilter(django_filters.FilterSet):
+#     status = django_filters.CharFilter(method='filter_status')
+   
+#     class Meta:
+#         model = Task
+#         fields = ('status',)
+
+#     def filter_status(self, queryset, name, value):
+#         assign_filter = self.request.query_params.get('assign_to')
+#         users = assign_filter.split(',') if assign_filter else None
+#         queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
+        
+#         if value == 'inprogress':
+#             # it filters the task which is in status inprogress,yet_to_start,return_request
+#             # and client_response in rework
+#             if users:
+#                 # it is for editors filter
+#                 tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
+#                             distinct().values_list('id',flat=True)
+#         elif value == 'submitted':
+#             # it filters the task which is in status completed exclude the client_response approved
+#             if users:
+#                 tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
+#                             distinct().values_list('id',flat=True)
+#         elif value =='approved':
+#             # it filters the task in which client_response is approved
+#             if users:
+#                 tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
+#                             distinct().values_list('id',flat=True)
+#             else:
+#                 tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
+#         queryset = queryset.filter(id__in=tsk_ids)
+#         return queryset
+    
+
 class VendorDashBoardFilter(django_filters.FilterSet):
     status = django_filters.CharFilter(method='filter_status')
-   
+
     class Meta:
         model = Task
         fields = ('status',)
@@ -960,36 +1014,49 @@ class VendorDashBoardFilter(django_filters.FilterSet):
     def filter_status(self, queryset, name, value):
         assign_filter = self.request.query_params.get('assign_to')
         users = assign_filter.split(',') if assign_filter else None
-        queryset_1 = queryset.filter(task_info__task_assign_info__isnull = False)
-        
+
+        # Prefetch because task_info is reverse FK
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                'task_info',
+                queryset=TaskAssign.objects.select_related(
+                    'assign_to'
+                )
+            )
+        )
+
+        # Only tasks which have assignment
+        queryset = queryset.filter(task_info__isnull=False)
+
+        # Build user condition
+        if users:
+            queryset = queryset.filter(task_info__assign_to__in=users)
+
         if value == 'inprogress':
-            # it filters the task which is in status inprogress,yet_to_start,return_request
-            # and client_response in rework
-            if users:
-                # it is for editors filter
-                tsk_ids = queryset_1.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2),Q(task_info__assign_to__in=users)).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(Q(task_info__status__in=[1,2,4])|Q(task_info__client_response = 2)).\
-                            distinct().values_list('id',flat=True)
+            queryset = queryset.filter(
+                Q(task_info__status__in=[1, 2, 4]) |
+                Q(task_info__client_response=2)
+            )
+
         elif value == 'submitted':
-            # it filters the task which is in status completed exclude the client_response approved
-            if users:
-                tsk_ids = queryset_1.filter(task_info__status = 3,task_info__assign_to__in=users).exclude(task_info__client_response=1).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(task_info__status = 3).exclude(task_info__client_response=1).\
-                            distinct().values_list('id',flat=True)
-        elif value =='approved':
-            # it filters the task in which client_response is approved
-            if users:
-                tsk_ids = queryset_1.filter(Q(task_info__client_response = 1),Q(task_info__assign_to__in=users)).\
-                            distinct().values_list('id',flat=True)
-            else:
-                tsk_ids = queryset.filter(Q(task_info__client_response = 1)).distinct().values_list('id',flat=True)
-        queryset = queryset.filter(id__in=tsk_ids)
-        return queryset
-    
+            queryset = queryset.filter(
+                task_info__status=3
+            ).exclude(
+                task_info__client_response=1
+            )
+
+        elif value == 'approved':
+            queryset = queryset.filter(
+                task_info__client_response=1
+            )
+
+        return queryset.distinct()
+
+
+
+
+
+
 
 
 
@@ -1420,7 +1487,9 @@ class TaskView(APIView):
                     task.file.delete()
             if task.document:
                 task.document.delete()
-            
+            if task.job:
+                task.job.delete()
+                
             # Checking if the task is a task of a Glossary
             from ai_glex.models import Glossary
             if Glossary.objects.filter(project=task.job.project).exists():
@@ -4644,6 +4713,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
     @staticmethod
     def create_news_detail(pr):
+        print(pr, "Project")
         tasks = pr.get_tasks
         for i in tasks:
             file_path = i.file.file.path
@@ -4652,8 +4722,29 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             newsID = json_data.get('news')[0].get('newsId')
             obj,created = TaskNewsDetails.objects.get_or_create(task=i,news_id=newsID,defaults = {'source_json':json_data})
 
+ 
 
-        
+    @staticmethod
+    def create_pib_news_detail(pr):
+        from ai_staff.models import AdaptiveSystemPrompt
+        #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+        #print("PIB_system_prompt",PIB_system_prompt)
+        mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
+        tasks = pr.get_tasks
+        for i in tasks:
+            file_path = i.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+            obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
+            
+            if created:
+                #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                pib_celery_task = task_create_and_update_pib_news_detail.apply_async(args=[str(obj.uid), json_data],kwargs={"update": True})
+                obj.status = PibTranslateStatusChoices.in_progress
+                obj.celery_task_id = pib_celery_task.id
+                obj.save()
+
     def create(self, request):
         '''
         It will get list of news_id and source language to fetch news from respective CMS.
@@ -4689,6 +4780,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
 from ai_workspace.serializers import TaskNewsDetailsSerializer
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+ 
 
 class TaskNewsDetailsViewSet(viewsets.ViewSet):
     '''
@@ -4842,6 +4934,164 @@ def push_translated_story(request):
     
     return Response({'msg': "something went wrong with CMS"}, status=400)
 
+class PIBStoriesViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsEnterpriseUser]
+    serializer_class = PIBStorySerializer
+    PROJECT_TYPE_ID = 8
+
+    def pr_check_pib(self, user):
+        today = date.today()
+        query = Project.objects.filter(ai_user=user)\
+                .filter(project_type_id=self.PROJECT_TYPE_ID)\
+                .filter(created_at__date=today)
+
+        return query.last() if query else None
+    
+    @staticmethod
+    def check_user_pib(request_user):
+        user = request_user.team.owner if request_user.team else request_user
+        try:
+            return user.user_enterprise.subscription_name == 'Enterprise - PIB'
+        except:
+            return False
+
+    @staticmethod
+    def get_pib_json_file(heading, body):
+        file_data = {
+            "heading": heading,
+            "story": body,
+        }
+        name = f"{uuid.uuid4()}.json"
+
+        json_content = json.dumps(file_data, ensure_ascii=False, indent=2)
+        im_file = DJFile(ContentFile(json_content), name=name)
+
+        return im_file
+    
+    @staticmethod
+    def create_pib_news_detail(pr, pib):
+        from ai_staff.models import AdaptiveSystemPrompt
+        #pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
+ 
+        
+        tasks = pr.get_tasks
+        for task in tasks:
+            file_path = task.file.file.path
+            with open(file_path, 'r') as fp:
+                json_data = json.load(fp)
+
+            instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=PibTranslateStatusChoices.yet_to_start)
+            mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
+
+            #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
+            
+            #new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
+
+            try:
+                do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), json_data))
+                instance_pib_details.celery_task_id = do_translate.id
+                instance_pib_details.status = PibTranslateStatusChoices.in_progress
+                instance_pib_details.save()
+                logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
+            except Exception as e:
+                print(e)
+
+    def create(self, request):
+        from ai_workspace.models import ProjectFilesCreateType
+
+        if not self.check_user_pib(request.user):
+            return Response({"detail": "You do not have permission."}, status=403)
+
+        src_lang = request.data.get("source_language")
+        tar_langs = request.data.getlist("target_languages")
+
+        if not src_lang or not tar_langs:
+            return Response({"error": "Source and target languages required"}, status=400)
+
+        user = request.user
+        user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
+
+        # Create PIB Story
+        pib_serializer = PIBStorySerializer(data=request.data)
+        print("pib_serializer",pib_serializer)
+        pib_serializer.is_valid(raise_exception=True)
+        pib = pib_serializer.save(created_by=request.user)
+
+        # PIB Data (already validated)
+        pib_data = PIBStorySerializer(pib).data
+        print("pib_data",pib_data)
+        heading = pib_data["headline"]
+        body = pib_data["body"]
+
+        # Create JSON file for this PIB Story
+        pib_json_file = self.get_pib_json_file(heading, body)
+        files = [pib_json_file]   # add more if needed
+
+        # Create the project
+        serializer = ProjectQuickSetupSerializer(
+            data={
+                **request.data,
+                "files": files,
+                "project_type": ["8"],
+            },
+            context={"request": request, "user_1": user_1}
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        pr = Project.objects.get(id=serializer.data.get("id"))
+        pib.project = pr
+        pib.save()
+        self.create_pib_news_detail(pr, pib)
+        # Create task-pib details
+        # Update file-create type
+        ProjectFilesCreateType.objects.filter(project=pr).update(
+            file_create_type=ProjectFilesCreateType.FileType.from_stories
+        )
+
+        authorize(request, resource=pr, action="create", actor=self.request.user)
+        return Response(serializer.data, status=201)
+        
+from ai_workspace.serializers import TaskPibDetailsSerializer
+
+class TaskPibDetailsViewSet(viewsets.ViewSet):
+    
+    permission_classes = [IsAuthenticated, IsEnterpriseUser]
+
+    def list(self, request):
+        user = request.user
+        objs = TaskPibDetails.objects.filter(task__file__project__ai_user=user)
+        serializer = TaskPibDetailsSerializer(objs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = TaskPibDetailsSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def update(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, uid=pk)
+        serializer = TaskPibDetailsSerializer(obj, data=request.data, context={'request': request}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def retrieve(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, task__id=pk)
+        serializer = TaskPibDetailsSerializer(obj, context={'request': request})
+        return Response(serializer.data)
+
+    def delete(self, request, pk=None):
+        obj = get_object_or_404(TaskPibDetails, id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
 
 
 class AddStoriesView(viewsets.ModelViewSet):
@@ -4911,6 +5161,7 @@ class AddStoriesView(viewsets.ModelViewSet):
                 serializer =ProjectQuickSetupSerializer(pr,data={**data,"files":files,"project_type":['8']},context={"request": request,'user_1':user_1})
             else:
                 serializer =ProjectQuickSetupSerializer(data={**request.data,"files":files,"project_type":['8'],"project_name":[project_name]},context={"request": request,'user_1':user_1})
+            
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 pr = Project.objects.get(id=serializer.data.get('id'))
@@ -5315,7 +5566,52 @@ def get_task_segment_diff(request):
         return Response({'msg':'need task or proj id'})
     return Response(result_cal,status=200)
 
+import uuid
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
 
+
+@api_view(['GET'])
+def pib_check_status(request):
+    raw_ids = request.query_params.get("task_ids", "")
+
+    if not raw_ids.strip():
+        return Response(
+            {"error": "task_ids query param required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    task_ids = [tid.strip() for tid in raw_ids.split(",") if tid.strip()]
+    results = []
+
+    for tid in task_ids:
+
+        # Validate UUID format
+        try:
+            uuid.UUID(str(tid))
+        except ValueError:
+            results.append({
+                "pib_task_uid": tid,
+                "status": "INVALID_UUID"
+            })
+            continue
+
+        # Fetch object safely
+        try:
+            task = TaskPibDetails.objects.get(uid=tid)
+            results.append({
+                "pib_task_uid": str(task.uid),
+                "status": task.status
+            })
+        except TaskPibDetails.DoesNotExist:
+            results.append({
+                "pib_task_uid": tid,
+                "status": "NOT_FOUND"
+            })
+
+    return Response(results)
 
 
 class AdaptiveFileTranslate(viewsets.ViewSet):
@@ -5569,3 +5865,116 @@ def get_glossary(request):
 
     else:
         return Response({'msg': "no glossary_selected"}, status=200)
+    
+
+class MinistryNameViewSet(viewsets.ModelViewSet):
+    # filterset_class = MinistryNameFilter
+ 
+    def list(self, request):
+        try:
+            queryset = MinistryName.objects.all()
+            filter_result = self.filter_queryset(queryset)
+            serializer = MinistryNameSerializer(filter_result, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        try:
+            queryset = MinistryName.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            serializer = MinistryNameSerializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            name = request.data.get("name", None)
+            if name and MinistryName.objects.filter(name=name).exists():
+                return Response({"error": "Ministry with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = MinistryNameSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk=None):
+        try:
+            item = get_object_or_404(MinistryName.objects.all(), pk=pk)
+            serializer = MinistryNameSerializer(item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def destroy(self, request,pk=None):
+        try:
+            item = get_object_or_404(MinistryName.objects.all(), pk=pk)
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class MinistryTranslateNameViewSet(viewsets.ModelViewSet):
+    # filterset_class = MinistryTranslateNameFilter
+ 
+    def list(self, request):
+        try:
+            queryset = MinistryTranslateName.objects.all()
+            filter_result = self.filter_queryset(queryset)
+            serializer = MinistryTranslateNameSerializer(filter_result, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        try:
+            queryset = MinistryTranslateName.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            serializer = MinistryTranslateNameSerializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            translate_name = request.data.get("translate_name", None)
+            ministry_name_id = request.data.get("ministry_name_id", None)
+            if translate_name and ministry_name_id and MinistryTranslateName.objects.filter(translate_name=translate_name, ministry_name_id=ministry_name_id).exists():
+                return Response({"error": "Ministry Translate Name with this name and ministry already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = MinistryTranslateNameSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def update(self, request, pk=None):
+        try:
+            item = get_object_or_404(MinistryTranslateName.objects.all(), pk=pk)
+            serializer = MinistryTranslateNameSerializer(item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    def destroy(self, request,pk=None):
+        try:
+            item = get_object_or_404(MinistryTranslateName.objects.all(), pk=pk)
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

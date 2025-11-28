@@ -152,9 +152,9 @@ class LLMClient:
 
         try:
             response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
+             
 
-            response_data = response.json()
+            response_data = response.json()             
 
             # Extract the generated text from the response
             if 'choices' in response_data and len(response_data['choices']) > 0:
@@ -181,9 +181,7 @@ class LLMClient:
     def gemini_stream(self,client,model_name, contents, generate_content_config):
         stream_output = ""
  
-        for chunk in client.models.generate_content_stream(model = model_name,
-                                                           contents = contents,
-                                                           config = generate_content_config ):
+        for chunk in client.models.generate_content_stream(model = model_name,  contents = contents, config = generate_content_config ):
             
 
             # logger.info(f"Chunk received: {chunk}")    
@@ -198,6 +196,7 @@ class LLMClient:
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=2, jitter=backoff.full_jitter)
     def gemini_direct(self,client, model_name, contents, generate_content_config):
+        
         response = client.models.generate_content(
                     model=model_name,
                     contents=contents,
@@ -238,29 +237,18 @@ class LLMClient:
             ]
 
             generate_content_config = types.GenerateContentConfig(
-                #  thinking_config=types.ThinkingConfig(thinking_budget=0),
-                max_output_tokens=65532,  
+                 thinking_config=types.ThinkingConfig(thinking_budget=100),
+                 
                 response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
                 #response_mime_type="application/json",
-                system_instruction = system_instruction,  
-                # response_schema=genai.types.Schema(
-                #     type = genai.types.Type.OBJECT,
-                #     properties = {
-                #         "data": genai.types.Schema(
-                #             type = genai.types.Type.STRING,
-                #         ),
-                #     },
-                # )
-            )
+                system_instruction = system_instruction)
 
-            #try:
+ 
  
             if settings.ADAPTIVE_RESPONSE_STREAM:
                 try:
-                    output_text = self.gemini_stream(client=client,
-                                                        model_name=self.model, contents=contents,
-                                                        generate_content_config=generate_content_config)
+                    output_text = self.gemini_stream(client=client,  model_name=self.model, contents=contents, generate_content_config=generate_content_config)
                 
                     total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
             
@@ -273,17 +261,7 @@ class LLMClient:
                 output_text,total_tokens = self.gemini_direct(client=client,
                                                     model_name=self.model, contents=contents,
                                                     generate_content_config=generate_content_config)
-            # except:
  
-            #     stream_output_result = self.try_stream(client=client,
-            #                                        model_name=ALTERNATE_GEMINI_MODEL, contents=contents,
-            #                                        generate_content_config=generate_content_config)
-
-            #stream_output_result = eval(stream_output_result)['data']
-            # print(output_text)
-            # if stream_output_result=='' or stream_output_result==None:
-            #     raise exceptions.EmptyChunkFoundException("Empty chunk found in stream output")     
-            # total_tokens = client.models.count_tokens(model = self.model, contents=output_text)
             return output_text , total_tokens
         else:
             return None

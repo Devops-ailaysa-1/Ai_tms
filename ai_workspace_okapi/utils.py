@@ -23,7 +23,7 @@ import subprocess
 import io
 import logging
 import deepl
-from rest_framework import serializers
+ 
 logger = logging.getLogger('django')
 spring_host = os.environ.get("SPRING_HOST")
 GOOGLE_TRANSLATION_API_PROJECT_ID= os.getenv('GOOGLE_TRANSLATION_API_PROJECT_ID')
@@ -300,7 +300,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     # get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
 
 
-    from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
+    from ai_workspace.api_views import get_consumable_credits_for_text, UpdateTaskCreditStatus
     from ai_auth.tasks import record_api_usage
     deepl_tar_code_list = ["es","de","fr"]
     deepl_src_code_list = ["en"]

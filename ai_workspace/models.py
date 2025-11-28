@@ -30,7 +30,6 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
     Currencies, ProjectTypeDetail,AiRoles,AiCustomize,LanguageMetaDetails
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
-from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
@@ -55,7 +54,8 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus, PibTranslateStatusChoices
+from django.conf import settings
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -1966,6 +1966,25 @@ class TaskNewsDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class TaskPibDetails(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    pib_story = models.ForeignKey('PIBStory', on_delete=models.CASCADE, related_name='tasks')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="pib_task")
+    source_json = models.JSONField(blank=True, null=True)
+    target_json = models.JSONField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=PibTranslateStatusChoices.choices, default=PibTranslateStatusChoices.yet_to_start, null=False, blank=False)
+    celery_task_id = models.CharField(max_length=255,null=True,blank=True,help_text="Celery async task ID")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class TaskNewsPIBMT(models.Model):
+    task_pib_detail = models.ForeignKey(TaskPibDetails, on_delete=models.CASCADE,related_name="tasknewspibdetail")
+    mt_raw_json = models.JSONField(null=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="task_news_pib_mt")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
 class TaskNewsMT(models.Model):
     task = models.ForeignKey(TaskNewsDetails, on_delete=models.CASCADE,related_name="tasknews")
     mt_raw_json = models.JSONField()
@@ -2029,10 +2048,14 @@ class PredefinedStyleGuide(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(null=True, blank=True)
     style_guide_content = models.TextField()
-
     def __str__(self):
         return self.name
 
+class PibStyleGuide(models.Model):
+    style_guide_content = models.TextField(null=True, blank=True)
+    project = models.OneToOneField(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='pib_style_guide')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class TaskStageResults(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")
@@ -2070,6 +2093,48 @@ class AllStageResult(models.Model):
     glossary_text = models.TextField(null=True,blank=True)
 
 
+class PIBStory(models.Model):
+    uid = models.UUIDField(default = uuid.uuid4, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='pib_stories')
+    headline = models.CharField(max_length=500)
+    body = models.TextField()
+    ministry_department = models.ForeignKey('MinistryName', null=True, blank=True, to_field='uid', on_delete=models.SET_NULL)
+    dateline = models.CharField(max_length=255, blank=True, null=True)
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.headline[:50]
+
+
+class MinistryName(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False, unique=True)
+    name = models.TextField()
+    location = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+    
+    
+class MinistryTranslateName(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False, unique=True)
+    translate_name = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    languages_id = models.ForeignKey(Languages,on_delete=models.SET_NULL,related_name='ministry_languages', null=True, blank=True)
+    ministry_name_id = models.ForeignKey(MinistryName,on_delete=models.CASCADE,related_name='ministry_languages', null=True, blank=True)
+    
+    class Meta:
+        ordering = ['translate_name']
+        indexes = [
+            models.Index(fields=['translate_name']),
+        ]
  
 
 # class Stage(models.Model):

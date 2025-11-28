@@ -1453,10 +1453,10 @@ class DocumentToFile(views.APIView):
         doc_instance =  DBDocument.objects.get(id=document_id)
         task_instance = doc_instance.task_obj
         job_instance = doc_instance.job
-        if job_instance.project.ai_user.is_pib == True:
-            stage ='stage_2'
-        else:
-            stage = "stage_4"
+        # if job_instance.project.ai_user.is_pib == True:
+        #     stage ='stage_2'
+        # else:
+        stage = "stage_4"
  
 
         output_lang = f"({job_instance.source_language_code}-{job_instance.target_language_code})"
@@ -2307,7 +2307,10 @@ def wikipedia_ws(code,codesrc,user_input):
         "llprop": "url",
         "lllang": code,
     }
-    R = requests.get(url=URL, params=PARAMS)
+    headers = {
+        "User-Agent": "Ailaysa-Translation-Service/1.0 (contact: support@ailaysa.com)"
+    }
+    R = requests.get(url=URL, params=PARAMS, headers=headers)
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
@@ -2865,6 +2868,75 @@ def download_federal(request):
     return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_pib(request):
+
+    from ai_workspace.utils import split_dict_pib
+    from ai_workspace_okapi.api_views import DocumentToFile
+    from ai_workspace.utils import generate_pib_docx
+
+    task_id = request.query_params.get('task_id')
+    output_type = request.query_params.get('output_type', 'ORIGINAL')
+    obj = Task.objects.get(id=task_id)
+    ser = TaskSerializer(obj)
+    task_data = ser.data
+    res_text = task_data['output_file_path']
+
+    if output_type == "ORIGINAL" or output_type == 'MTRAW':
+        data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
+        heading = data.get("heading", "")
+        story = data.get("story", "")
+        
+        source_json = obj.pib_task.last().source_json
+        file_cont = source_json.get('heading')
+        filename = "_".join(file_cont.split())[:50]
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})"
+
+
+        # generate DOCX
+        docx_path = generate_pib_docx(
+            heading=heading,
+            story=story,
+            base_filename=filename[:50]
+        )
+
+        # return the file
+        document_to_file = DocumentToFile()
+        return document_to_file.get_file_response(docx_path)
+
+    elif output_type == "BILINGUAL":
+        # untouched
+        source_json = obj.pib_task.last().source_json
+        target_json = obj.pib_task.last().target_json
+
+        document_to_file = DocumentToFile()
+        csv_data = json_bilingual(
+            src_json=source_json,
+            tar_json=target_json,
+            split_dict=split_dict_pib,
+            document_to_file=document_to_file,
+            language_pair=[
+                obj.job.source_language.language,
+                obj.job.target_language.language
+            ]
+        )
+
+        file_cont = source_json.get('heading')
+        filename = "_".join(file_cont.split())[:50]
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})" + ".xlsx"
+        response = document_to_file.get_file_response(
+            csv_data,
+            pandas_dataframe=True,
+            filename=filename
+        )
+        return response
+
+    return JsonResponse(
+        {"msg": "Invalid output type."},
+        status=400
+    )
 
 
 

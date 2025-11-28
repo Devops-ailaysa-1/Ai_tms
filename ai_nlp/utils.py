@@ -1,18 +1,19 @@
 from django import core
 from django.conf import settings
 import openai ,os,pdf2image,io
-from langchain.llms import OpenAI, Cohere
+from langchain_community.llms import OpenAI, Cohere
 from ai_tms.settings import EMBEDDING_MODEL ,OPENAI_API_KEY 
-from langchain.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
+from langchain_community.document_loaders import (UnstructuredPDFLoader ,PDFMinerLoader ,Docx2txtLoader ,
                                         WebBaseLoader ,BSHTMLLoader ,TextLoader,UnstructuredEPubLoader)
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.embeddings.openai import OpenAIEmbeddings
+#from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter ,RecursiveCharacterTextSplitter
 
 from langchain_community.vectorstores import Chroma
-from langchain.embeddings.cohere import CohereEmbeddings
+#from langchain_community.embeddings import CohereEmbeddings
 import random,re,uuid 
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 
 from langchain.chains import ConversationChain ,ConversationalRetrievalChain,RetrievalQA
 from langchain.chains.question_answering import load_qa_chain

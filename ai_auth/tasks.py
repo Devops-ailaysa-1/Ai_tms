@@ -19,8 +19,8 @@ import requests, re
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
-from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
-from ai_workspace.enums import BatchStatus
+from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, PibStyleGuide
+from ai_workspace.enums import BatchStatus, PibTranslateStatusChoices
 from ai_auth.api_views import resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
@@ -43,7 +43,7 @@ from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus
 import time
 from django.db.models.functions import Lower
 from ai_workspace.adaptive import AdaptiveSegmentTranslator
-from ai_tms.celery import app
+ 
 import traceback
 ADAPTIVE_LLM_MODEL = settings.ADAPTIVE_LLM_MODEL
 extend_mail_sent= 0
@@ -1613,18 +1613,19 @@ def create_doc_and_write_seg_to_db(task_id, total_word_count):
         task.save()
 
         if user_type == "pib":
-            pass
+            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER_PIB,model=settings.ADAPTIVE_STYLE_LLM_MODEL_PIB,style=True)
         else:
-            try:
-                api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
-                style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
-                style_create.process(all_paragraph=batches[0])
-            except Exception as e:
-                logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
-                # style_create = None
-                task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
-                task.save()
-                return None
+            api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+        try:
+            # api_client = LLMClient(provider = settings.ADAPTIVE_STYLE_LLM_PROVIDER,model=settings.ADAPTIVE_STYLE_LLM_MODEL,style=True)
+            style_create = StyleAnalysis(user=user,task=task,api_client=api_client)
+            style_create.process(all_paragraph=batches[0])
+        except Exception as e:
+            logger.error(f"Error in style analysis for task {task_id}: {e}",exc_info=True)
+            # style_create = None
+            task.adaptive_file_translate_status = AdaptiveFileTranslateStatus.FAILED
+            task.save()
+            return None
             
  
         for i, para in enumerate(batches):
@@ -1695,3 +1696,84 @@ def get_glossary_for_task(project, task):
 
     except Exception as e:
         logger.info(f'Error in getting glossary for task: {e}')
+
+from ai_workspace.llm_client import LLMClient
+from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
+
+
+print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
+
+
+@task(queue='high-priority')
+def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
+    from ai_staff.models import AdaptiveSystemPrompt
+    ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
+    print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
+    from tqdm import tqdm
+    try:
+        nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
+ 
+        target_json = {}
+
+        heading = json_data['heading']
+        story = json_data['story']
+
+        task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        proj_ins = task_pib_details_instance.task.proj_obj
+
+        style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
+        pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
+        pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
+
+        source_language = task_pib_details_instance.task.job.source_language.language
+        target_language = task_pib_details_instance.task.job.target_language.language
+        style_prompt = style_prompt.format(target_language = target_language)
+
+        # if not update:
+        style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+            # PibStyleGuide.objects.create(project=proj_ins, style_guide_content=style_guidence)
+        # else:
+            # style_guidence = PibStyleGuide.objects.get(project=proj_ins).style_guide_content
+
+        trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+                                                    messages = heading)
+
+        result = []
+        target_json = {}
+
+        for key, message in json_data.items():
+            
+            story_list = message.split("\n\n")
+            usage_story = 0
+            for count, story_para in tqdm(enumerate(story_list)):
+                if story_para.strip():
+                    translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+                                                                         messages = story_para )
+                    usage_story = usage_story+usage
+                    if count != 0:
+                        trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
+                    else:
+                        trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
+                    
+                    trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+                                                                         messages = trns_text )
+                    usage_story = usage_story+usage
+                    
+                    result.append(trns_2_resp)
+
+            trans_story = "\n\n".join(result)
+
+            target_json[key] = trans_story
+  
+        print("Total usage:", usage_story+usage_heading+usage_style)
+
+        task_pib_details_instance.target_json = target_json
+        task_pib_details_instance.status = PibTranslateStatusChoices.completed
+        task_pib_details_instance.save()
+        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
+        task_news_pib_mt_instance.mt_raw_json = target_json
+        task_news_pib_mt_instance.save()
+        print(task_pib_details_instance.status, "Status of the pib task")
+    except Exception as e:
+        print(e)
+        logger.error(f'Error in translation pib story: {e}')

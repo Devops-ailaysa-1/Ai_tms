@@ -8,7 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,TaskTransla
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
-		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory#,TaskAssignRateInfo
+		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory, MinistryName, MinistryTranslateName #,TaskAssignRateInfo
 import json,os,time
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -38,7 +38,7 @@ from django.core.cache import cache
 from ai_canvas.models import CanvasTranslatedJson
 from ai_imagetranslation.models import ImageInpaintCreation
 from itertools import repeat
-from ai_workspace.models import TaskNewsDetails ,TaskNewsMT
+from ai_workspace.models import TaskNewsDetails ,TaskNewsMT,PIBStory
 from ai_workspace.utils import federal_json_translate
 from rest_framework.exceptions import ValidationError
 logger = logging.getLogger('django')
@@ -421,7 +421,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
 	individual_gloss_project_id = serializers.SerializerMethodField()
-
+	
 	class Meta:
 		model = Project
 		fields = ("id","book_project_id", "project_name","assigned", "jobs","clone_available","assign_enable","files",
@@ -843,10 +843,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			try:
 				if instance.voice_proj_detail.project_type_sub_category_id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
 						tasks = Task.objects.create_tasks_of_audio_files_by_project(project=project)
-			except:
-				tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
-					project=project)
-
+			except Exception as e:
+				print(e)
+				print("Got into except")
+				if project_type != 8:
+					tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+						project=project)
 		contents_data = validated_data.pop("proj_content_type",[])
 		subjects_data = validated_data.pop("proj_subject",[])
 		steps_data = validated_data.pop("proj_steps",[])
@@ -856,8 +858,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
 		if project_type in [1,2,5,9,8]: #Add project_type here to create normal tasks 
+			print("got into 8")
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
+			print(tasks)
 		if project_type in [3,10]:
 			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
 			        project = instance)
@@ -866,9 +870,20 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
+		print(task_assign)
 		return  project
 
-
+class DinamalarProjectListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "project_name",
+            "progress",
+            "tasks_count",
+            "created_at",
+            "get_project_type",
+        ]
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
 	instruction_file = serializers.FileField(allow_null=True,validators=[file_size])
@@ -1044,13 +1059,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	push_detail = serializers.SerializerMethodField()
 	adaptive_file_translate = serializers.CharField(read_only=True, source="file.project.adaptive_file_translate")
 	adaptive_simple = serializers.CharField(read_only=True, source="file.project.adaptive_simple")
+	pib_story_details = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Task
 		fields = \
 			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',
-			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id','adaptive_file_translate', 'adaptive_file_translate_status', 'adaptive_simple')
+			"converted_audio_file_exists","download_audio_output_file",'design_project','file_translate_done','news_detail',"push_detail",'feed_id','adaptive_file_translate', 'adaptive_file_translate_status', 'adaptive_simple','pib_story_details')
 		
 
 	def get_push_detail(self,obj):
@@ -1058,6 +1074,31 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			try:return obj.news_task.first().pushed
 			except:return None
 		return None
+
+	def get_pib_story_details(self, obj):
+		if obj.job.project.project_type_id != 8:
+			return None
+
+		pib_task_details = obj.pib_task.first() 
+		if not pib_task_details:
+			return None
+
+		pib = pib_task_details.pib_story
+
+		return {
+			"uid": str(pib.uid),
+			"headline": pib.headline,
+			# "body": pib.body,
+			"ministry_department": getattr(pib.ministry_department, "name", None),
+			"dateline": pib.dateline,
+			"created_at": pib.created_at,
+			"pib_task_uid": str(pib_task_details.uid),
+			"status": pib_task_details.status
+			# "source_json": pib_task_details.source_json,
+			# "target_json": pib_task_details.target_json,
+		}
+
+
 
 	def get_design_project(self,obj):
 		res = None
@@ -1858,6 +1899,7 @@ class TaskNewsDetailsSerializer(serializers.ModelSerializer):
 	
 
 
+
 class ProjectSimpleSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
 	assign_enable = serializers.SerializerMethodField(method_name='get_assign_enable')
@@ -1878,3 +1920,104 @@ class ProjectSimpleSerializer(serializers.ModelSerializer):
 		serializer_task = ProjectQuickSetupSerializer(context=self.context)  # Create an instance of ProjectQuickSetupSerializer
 		result = serializer_task.get_project_analysis(obj)  # Call the method from ProjectQuickSetupSerializer
 		return result
+	
+class PIBStorySerializer(serializers.ModelSerializer):
+    project_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PIBStory
+        fields = [
+            "uid",
+            "headline",
+            "ministry_department",
+            "dateline",
+			"body",
+            "project_details",
+        ]
+
+    def get_project_details(self, obj):
+        if obj.project:
+            return ProjectQuickSetupSerializer(obj.project).data
+        return None
+	
+from ai_workspace.models import TaskPibDetails , TaskNewsPIBMT
+
+class TaskNewsPIBMTSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TaskNewsPIBMT
+		fields = ('id','mt_raw_json')
+
+
+
+class TaskPibDetailsSerializer(serializers.ModelSerializer):
+	mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
+	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+	edit_allowed = serializers.SerializerMethodField()
+	updated_download = serializers.SerializerMethodField()
+
+	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+	source_json = serializers.JSONField(required=False, read_only=True)
+	target_json = serializers.JSONField(required=False)
+	project = serializers.ReadOnlyField(source='task.job.project.id')
+	source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+	target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+
+	class Meta:
+		model = TaskPibDetails
+		fields = ( "uid", "task","edit_allowed","mt_json","target_language_script", "updated_download",
+				"project", "source_language_id","target_language_id","source_language", "target_language","source_json","target_json",)
+         
+	def get_edit_allowed(self,obj):
+		request_obj = self.context.get('request')
+		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+		doc_view_instance = DocumentViewByDocumentId(request_obj)
+		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+		return edit_allowed
+	
+# task_pib_details_instance.target_json = target_json
+	def get_updated_download(self,obj):
+		if obj.target_json:
+			return 'enable'
+		else:
+			return 'disable'
+
+ 
+
+	# def get_updated_download(self,obj):
+
+	# 	user = self.context.get('request').user
+	# 	managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+	# 	if (user == obj.task.job.project.ai_user) or (user in managers):
+	# 		return 'enable'
+	# 	else:
+	# 		return 'disable'
+
+	def create(self, validated_data):
+		pass
+
+		 
+
+	def update(self, instance, validated_data):
+		target_json = validated_data.get("target_json")
+
+		if target_json:
+			instance.target_json = target_json
+			instance.save()
+
+		return instance
+
+
+class MinistryNameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MinistryName
+        fields = ["uid", 'name', "location"]
+
+
+class MinistryTranslateNameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MinistryTranslateName
+        fields = ["uid","translate_name", "ministry_name_id", "languages_id"]
