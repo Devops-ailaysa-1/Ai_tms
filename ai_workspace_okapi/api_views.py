@@ -2307,7 +2307,10 @@ def wikipedia_ws(code,codesrc,user_input):
         "llprop": "url",
         "lllang": code,
     }
-    R = requests.get(url=URL, params=PARAMS)
+    headers = {
+        "User-Agent": "Ailaysa-Translation-Service/1.0 (contact: support@ailaysa.com)"
+    }
+    R = requests.get(url=URL, params=PARAMS, headers=headers)
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
