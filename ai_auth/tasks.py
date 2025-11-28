@@ -1729,12 +1729,12 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         target_language = task_pib_details_instance.task.job.target_language.language
         style_prompt = style_prompt.format(target_language = target_language)
 
-        if not update:
-            style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
-            PibStyleGuide.objects.create(project=proj_ins, style_guide_content=style_guidence)
-        else:
-            style_guidence = PibStyleGuide.objects.get(project=proj_ins).style_guide_content
-            
+        # if not update:
+        style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+            # PibStyleGuide.objects.create(project=proj_ins, style_guide_content=style_guidence)
+        # else:
+            # style_guidence = PibStyleGuide.objects.get(project=proj_ins).style_guide_content
+
         trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                     messages = heading)
 
