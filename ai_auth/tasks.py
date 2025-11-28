@@ -1763,10 +1763,9 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data):
 
         task_pib_details_instance.target_json = target_json
         task_pib_details_instance.status = PibTranslateStatusChoices.completed
+        task_pib_details_instance.save()
         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
         task_news_pib_mt_instance.mt_raw_json = target_json
-        
-        task_pib_details_instance.save()
         task_news_pib_mt_instance.save()
         print(task_pib_details_instance.status, "Status of the pib task")
     except Exception as e:
