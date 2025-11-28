@@ -1700,10 +1700,15 @@ def get_glossary_for_task(project, task):
 from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
 
+
+print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
+
+
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id, json_data):
     from ai_staff.models import AdaptiveSystemPrompt
     ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
+    print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
     from tqdm import tqdm
     try:
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
@@ -1758,9 +1763,6 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data):
 
         task_pib_details_instance.target_json = target_json
         task_pib_details_instance.status = PibTranslateStatusChoices.completed
-        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
-        task_news_pib_mt_instance.mt_raw_json = target_json
-        
         task_pib_details_instance.save()
         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
         task_news_pib_mt_instance.mt_raw_json = target_json

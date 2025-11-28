@@ -4726,19 +4726,21 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         from ai_staff.models import AdaptiveSystemPrompt
         #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
         #print("PIB_system_prompt",PIB_system_prompt)
+        mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         tasks = pr.get_tasks
         for task in tasks:
             file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            instance_pib,created = TaskPibDetails.objects.get_or_create(task=task, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
+            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
             
-            #if PIB_system_prompt and created:
-            #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-            pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(task.uid), json_data)) 
-            instance_pib.status = PibTranslateStatusChoices.in_progress
-            instance_pib.celery_task_id = pib_celery_task.id
-            instance_pib.save()
+            if created:
+                #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
+                pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), json_data)) 
+                obj.status = PibTranslateStatusChoices.in_progress
+                obj.celery_task_id = pib_celery_task.id
+                obj.save()
 
     def create(self, request):
         '''
