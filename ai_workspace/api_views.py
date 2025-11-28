@@ -687,7 +687,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     serializer_class = ProjectQuickSetupSerializer
     filter_backends = [DjangoFilterBackend,CaseInsensitiveOrderingFilter, ProjectTypeSearchFilter]
     ordering_fields = ['project_name','team__name','id']
-    #filterset_class = ProjectFilter
+    filterset_class = ProjectFilter
     # search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
     #                 'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
