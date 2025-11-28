@@ -19,7 +19,7 @@ import requests, re
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
-from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus
+from ai_workspace.models import Task, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, PibStyleGuide
 from ai_workspace.enums import BatchStatus, PibTranslateStatusChoices
 from ai_auth.api_views import resync_instances
 import os, json
@@ -1705,7 +1705,7 @@ print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_P
 
 
 @task(queue='high-priority')
-def task_create_and_update_pib_news_detail(task_details_id, json_data):
+def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
     from ai_staff.models import AdaptiveSystemPrompt
     ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
     print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
@@ -1719,6 +1719,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data):
         story = json_data['story']
 
         task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        proj_ins = task_pib_details_instance.task.proj_obj
+
         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
         pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
@@ -1727,9 +1729,13 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data):
         target_language = task_pib_details_instance.task.job.target_language.language
         style_prompt = style_prompt.format(target_language = target_language)
 
-        style_guidnce ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
- 
-        trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+        # if not update:
+        style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+            # PibStyleGuide.objects.create(project=proj_ins, style_guide_content=style_guidence)
+        # else:
+            # style_guidence = PibStyleGuide.objects.get(project=proj_ins).style_guide_content
+
+        trans_heading ,usage_heading= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                     messages = heading)
 
         result = []
@@ -1741,7 +1747,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data):
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
-                    translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidnce),
+                    translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                                          messages = story_para )
                     usage_story = usage_story+usage
                     if count != 0:

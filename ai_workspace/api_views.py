@@ -113,6 +113,7 @@ from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, PibTran
 from django.core.cache import cache
 import uuid
 from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
+from ai_workspace.filters import ProjectTypeSearchFilter
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -684,11 +685,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
-    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
+    filter_backends = [DjangoFilterBackend,CaseInsensitiveOrderingFilter, ProjectTypeSearchFilter]
     ordering_fields = ['project_name','team__name','id']
     #filterset_class = ProjectFilter
-    search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
-                    'project_jobs_set__target_language__language']
+    # search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
+    #                 'project_jobs_set__target_language__language']
     ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
     paginator.page_size = 10
 
@@ -4737,7 +4738,7 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
             
             if created:
                 #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                pib_celery_task = task_create_and_update_pib_news_detail.apply_async((str(obj.uid), json_data)) 
+                pib_celery_task = task_create_and_update_pib_news_detail.apply_async(args=[str(obj.uid), json_data],kwargs={"update": True})
                 obj.status = PibTranslateStatusChoices.in_progress
                 obj.celery_task_id = pib_celery_task.id
                 obj.save()
