@@ -2889,12 +2889,13 @@ def download_pib(request):
         heading = data.get("heading", "")
         story = data.get("story", "")
         
-        base_filename = obj.file.filename.split(".")[0]
+        base_filename = "_".join(heading.split())
+
         # generate DOCX
         docx_path = generate_pib_docx(
             heading=heading,
             story=story,
-            base_filename=base_filename
+            base_filename=base_filename[:50]
         )
 
         # return the file
@@ -2918,7 +2919,8 @@ def download_pib(request):
             ]
         )
 
-        filename = obj.file.filename.split(".")[0] + ".xlsx"
+        file_cont = source_json.get('heading')
+        filename = "_".join(file_cont.split())[:50] + ".xlsx"
         response = document_to_file.get_file_response(
             csv_data,
             pandas_dataframe=True,

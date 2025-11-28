@@ -1487,7 +1487,9 @@ class TaskView(APIView):
                     task.file.delete()
             if task.document:
                 task.document.delete()
-            
+            if task.job:
+                task.job.delete()
+                
             # Checking if the task is a task of a Glossary
             from ai_glex.models import Glossary
             if Glossary.objects.filter(project=task.job.project).exists():
