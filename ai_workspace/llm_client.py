@@ -237,7 +237,7 @@ class LLMClient:
             ]
 
             generate_content_config = types.GenerateContentConfig(
-                 thinking_config=types.ThinkingConfig(thinking_budget=100),
+                 thinking_config=types.ThinkingConfig(thinking_budget=200),
                  
                 response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
