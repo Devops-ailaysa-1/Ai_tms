@@ -243,7 +243,7 @@ class LLMClient:
             ]
 
             generate_content_config = types.GenerateContentConfig(
-                 thinking_config=types.ThinkingConfig(thinking_budget=100),
+                 thinking_config=types.ThinkingConfig(thinking_budget=200),
                  
                 response_mime_type="text/plain",
                 candidate_count=1, safety_settings = safety_settings,
@@ -271,52 +271,3 @@ class LLMClient:
             return output_text , total_tokens
         else:
             return None
-    
-    
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def PIB_handle_nebius(self, messages, system_instruction, max_tokens=60000):
-        """
-        Handle PIB Nebius API requests using the specified model
-        """
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "*/*",
-            "Authorization": f"Bearer {NEBIUS_API_KEY}",
-        }
-        data = {
-            "model": self.model,  # Use the model specified in the constructor
-            "messages": [
-                {"role": "system", "content": system_instruction},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": messages}
-                    ]
-                }
-            ],
-            "max_tokens": max_tokens
-        }
-
-        try:
-            response = requests.post(PIB_NEBIUS_API_URL, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
-
-            response_data = response.json()
-
-            # Extract the generated text from the response
-            if 'choices' in response_data and len(response_data['choices']) > 0:
-                output_text = response_data['choices'][0]['message']['content']
-            else:
-                raise ValueError("No response content found in Nebius API response")
-
-            # Extract usage information if available
-            usage = response_data.get('usage', {}).get('completion_tokens', 0)
-
-            logger.info(f"Nebius API response status: {response.status_code}")
-            return output_text
-        except requests.exceptions.RequestException as e:
-            logger.error(f"PIB Nebius API request failed: {e}")
-            raise RuntimeError(f"Failed to get response from PIB Nebius API: {e}")
-        except (KeyError, ValueError) as e:
-            logger.error(f"Failed to parse PIB Nebius API response: {e}")
-            raise RuntimeError(f"Invalid response format from PIB Nebius API: {e}")

@@ -2048,10 +2048,14 @@ class PredefinedStyleGuide(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(null=True, blank=True)
     style_guide_content = models.TextField()
-
     def __str__(self):
         return self.name
 
+class PibStyleGuide(models.Model):
+    style_guide_content = models.TextField(null=True, blank=True)
+    project = models.OneToOneField(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='pib_style_guide')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class TaskStageResults(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="task_stage_results")

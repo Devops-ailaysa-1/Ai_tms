@@ -2307,7 +2307,10 @@ def wikipedia_ws(code,codesrc,user_input):
         "llprop": "url",
         "lllang": code,
     }
-    R = requests.get(url=URL, params=PARAMS)
+    headers = {
+        "User-Agent": "Ailaysa-Translation-Service/1.0 (contact: support@ailaysa.com)"
+    }
+    R = requests.get(url=URL, params=PARAMS, headers=headers)
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
@@ -2886,12 +2889,17 @@ def download_pib(request):
         heading = data.get("heading", "")
         story = data.get("story", "")
         
-        base_filename = obj.file.filename.split(".")[0]
+        source_json = obj.pib_task.last().source_json
+        file_cont = source_json.get('heading')
+        filename = "_".join(file_cont.split())[:50]
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})"
+
+
         # generate DOCX
         docx_path = generate_pib_docx(
             heading=heading,
             story=story,
-            base_filename=base_filename
+            base_filename=filename[:50]
         )
 
         # return the file
@@ -2915,7 +2923,9 @@ def download_pib(request):
             ]
         )
 
-        filename = obj.file.filename.split(".")[0] + ".xlsx"
+        file_cont = source_json.get('heading')
+        filename = "_".join(file_cont.split())[:50]
+        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})" + ".xlsx"
         response = document_to_file.get_file_response(
             csv_data,
             pandas_dataframe=True,
