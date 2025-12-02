@@ -524,12 +524,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
         data["mt_engine"] = proj_mt_engine_id
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
-        data['task_instance'] = task_mt_engine_id_instance.task
+        self.context['task_instance'] = task_mt_engine_id_instance.task
         return super().to_internal_value(data=data)
 
 
     def create(self, validated_data):
-        
         segment = validated_data["segment"]
         active_segment = segment.get_active_object()
         mt_engine= validated_data["mt_engine"]
@@ -559,14 +558,14 @@ class MT_RawSerializer(serializers.ModelSerializer):
                 if not doc.job.project.isAdaptiveTranslation:
 
                     # If translation is not adaptive
-                    validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=validated_data['task_instance'])    
+                    validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=self.context['task_instance'])    
                     validated_data["mt_only"] = validated_data["mt_raw"]
                     # translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)    
                     # validated_data["mt_raw"] = replace_with_gloss(active_segment.source,translation_original,task)
 
                 else:
                     # If translation is adaptive
-                    translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=validated_data['task_instance'])
+                    translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=self.context['task_instance'])
                     validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)
                     validated_data["mt_only"] = translation_original
 
@@ -574,12 +573,12 @@ class MT_RawSerializer(serializers.ModelSerializer):
             
             # If translation is normal, not adaptive
             if not doc.job.project.isAdaptiveTranslation:
-                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=validated_data['task_instance'])    
+                validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=self.context['task_instance'])    
                 validated_data["mt_only"] = validated_data["mt_raw"]
             
             else:                
                 # If translation is adaptive
-                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=validated_data['task_instance'])
+                translation_original = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code, user_id=doc.owner_pk, task=self.context['task_instance'])
                 validated_data["mt_raw"] = replace_with_gloss(active_segment.source, translation_original, task)        
                 validated_data["mt_only"] = translation_original
 
