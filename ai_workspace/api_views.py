@@ -4731,8 +4731,8 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
         #print("PIB_system_prompt",PIB_system_prompt)
         mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         tasks = pr.get_tasks
-        for i in tasks:
-            file_path = i.file.file.path
+        for task in tasks:
+            file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
             obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
@@ -5014,13 +5014,11 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         # Create PIB Story
         pib_serializer = PIBStorySerializer(data=request.data)
-        print("pib_serializer",pib_serializer)
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
 
         # PIB Data (already validated)
         pib_data = PIBStorySerializer(pib).data
-        print("pib_data",pib_data)
         heading = pib_data["headline"]
         body = pib_data["body"]
 

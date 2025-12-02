@@ -1,3 +1,4 @@
+import json
 import backoff
 from google.genai import types
 from django.conf import settings
@@ -17,6 +18,8 @@ ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
 ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
 NEBIUS_API_KEY = os.getenv('NEBIUS_API_KEY')
 NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
+PIB_NEBIUS_API_KEY = os.getenv('PIB_NEBIUS_API_KEY')
+PIB_NEBIUS_API_URL = os.getenv('PIB_NEBIUS_API_URL')
 
 safety_settings=[
             types.SafetySetting(
@@ -61,6 +64,9 @@ class LLMClient:
                 self.client = client
 
             elif self.provider == "nebius":
+                # Nebius uses requests library, no specific client initialization needed
+                self.client = None
+            elif self.provider == "pib_nebius":
                 # Nebius uses requests library, no specific client initialization needed
                 self.client = None
 
@@ -152,9 +158,9 @@ class LLMClient:
 
         try:
             response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=60)
-             
+            
 
-            response_data = response.json()             
+            response_data = response.json()
 
             # Extract the generated text from the response
             if 'choices' in response_data and len(response_data['choices']) > 0:

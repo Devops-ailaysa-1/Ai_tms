@@ -1,3 +1,4 @@
+from ai_workspace.llm_client import LLMClient
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
 import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib,difflib
@@ -12,7 +13,7 @@ from PyPDF2.errors import FileNotDecryptedError
 from pptx import Presentation
 import string
 import backoff
-from ai_staff.models import InternalFlowPrompts
+from ai_staff.models import InternalFlowPrompts, AdaptiveSystemPrompt
 from nltk.stem import WordNetLemmatizer
 from rest_framework import serializers
 from django.conf import settings as django_settin
@@ -292,10 +293,40 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
+def standard_project_create_and_update_pib_news_details(user, task,source_string, source_language, target_language, stage_1_prompt):
+    from tqdm import tqdm
+    from ai_workspace.adaptive import PIBStyleAnalysis
+    from ai_workspace.models import TaskStyle
+    api_client = LLMClient(provider = "nebius",model=os.getenv("AI_MODEL_NAME"),style=True)
+    
+    try:
+        
+        style_create = PIBStyleAnalysis(user=user,task=task,api_client=api_client, target_language=target_language)
+        style_create.process(all_paragraph=source_string)
+    except Exception as e:
+        logger.error(f"Error in style analysis for task {task.id}: {e}",exc_info=True)
+        task.adaptive_file_translate_status = "FAILED"
+        task.save()
+    
+    task_style_prompt = TaskStyle.objects.get(task = task)
+    if task_style_prompt:
+        llm_client_obj = LLMClient("pib_nebius", os.getenv("AI_MODEL_NAME"), "")
+        formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
+        
+        result = []
+        pib_news_list = source_string.split("\n\n")
+        
+        for count, text_para in tqdm(enumerate(pib_news_list)):
+            if text_para:
+                translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=text_para,
+                                                    system_instruction=formated_stage_1_prompt.replace("{style_promt}",task_style_prompt.style_guide))
+                result.append(translation_stage_1)
+        
+    return "\n\n".join(result)
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text'):
+                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text', task=None):
     
     # get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
 
@@ -364,6 +395,13 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)), queue='low-priority')
         translate = lingvanex(source_string, source_lang_code, target_lang_code)
     
+    elif mt_engine_id == 5:
+        if user and user.is_enterprise and user.user_enterprise.subscription_name == 'Enterprise - PIB':
+            PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
+            stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
+            stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
+            record_api_usage.apply_async(("Ailaysa","Machine Translation",uid,email,len(source_string)), queue='low-priority')
+            translate = standard_project_create_and_update_pib_news_details(user,task,source_string, source_lang_code, target_lang_code, stage_1_prompt)
 
     if mt_called == True and from_open_ai == None:
         if user:
@@ -813,3 +851,4 @@ def save_simple_file(http_response, output_file_path):
         f.write(http_response.content)
 
     return os.path.abspath(output_file_path)
+
