@@ -114,6 +114,7 @@ from django.core.cache import cache
 import uuid
 from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
 from ai_workspace.filters import ProjectTypeSearchFilter
+from rest_framework.decorators import action
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -4726,24 +4727,16 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
 
     @staticmethod
     def create_pib_news_detail(pr):
-        from ai_staff.models import AdaptiveSystemPrompt
-        #PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
-        #print("PIB_system_prompt",PIB_system_prompt)
         mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         tasks = pr.get_tasks
         for task in tasks:
             file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
-            obj,created = TaskPibDetails.objects.get_or_create(task=i, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
-            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
-            
+            obj,created = TaskPibDetails.objects.get_or_create(task=task, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             if created:
-                #new_PIB_system_prompt = PIB_system_prompt.format(source_language=i.job.source_language, target_language=i.job.target_language)
-                pib_celery_task = task_create_and_update_pib_news_detail.apply_async(args=[str(obj.uid), json_data],kwargs={"update": True})
-                obj.status = PibTranslateStatusChoices.in_progress
-                obj.celery_task_id = pib_celery_task.id
-                obj.save()
+                TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
+
 
     def create(self, request):
         '''
@@ -4970,33 +4963,45 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
     
     @staticmethod
     def create_pib_news_detail(pr, pib):
-        from ai_staff.models import AdaptiveSystemPrompt
-        #pib_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first().prompt
- 
-        
         tasks = pr.get_tasks
+        mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         for task in tasks:
             file_path = task.file.file.path
             with open(file_path, 'r') as fp:
                 json_data = json.load(fp)
 
             instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=PibTranslateStatusChoices.yet_to_start)
-            mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
-            task_news_pib_mt_instance = TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
+            TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
 
-            #obj, created = TaskPibDetails.objects.get_or_create(task=i,pib_story=pib, defaults={'source_json':json_data})
-            
-            #new_pib_system_prompt = pib_system_prompt.format(source_language=task.job.source_language, target_language=task.job.target_language)
 
-            try:
-                do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), json_data))
-                instance_pib_details.celery_task_id = do_translate.id
-                instance_pib_details.status = PibTranslateStatusChoices.in_progress
-                instance_pib_details.save()
-                logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
-            except Exception as e:
-                print(e)
+    @action(detail=False, methods=["post"], url_path="translate")
+    def start_translation(self, request):
+        pib_task_id = request.data.get("pib_task_id")
 
+        if not pib_task_id:
+            return Response({"error": "pib_task_id required"}, status=400)
+        
+        task = get_object_or_404(Task, id=pib_task_id)
+        instance_pib_details = TaskPibDetails.objects.filter(task=task).first()
+
+        if instance_pib_details.status == PibTranslateStatusChoices.in_progress:
+            return Response({"detail": "Translation already in progress"}, status=400)
+
+        try:
+            do_translate = task_create_and_update_pib_news_detail.apply_async((str(instance_pib_details.uid), instance_pib_details.source_json))
+            instance_pib_details.celery_task_id = do_translate.id
+            instance_pib_details.status = PibTranslateStatusChoices.in_progress
+            instance_pib_details.save()
+            logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
+        except Exception as e:
+            print(e)
+            return Response({"error": str(e)}, status=500)
+
+        return Response({
+            "detail": "Translation started",
+            "task_uid": instance_pib_details.uid
+        }, status=200)
+        
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
 
@@ -5053,7 +5058,6 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=201)
         
 from ai_workspace.serializers import TaskPibDetailsSerializer
-
 class TaskPibDetailsViewSet(viewsets.ViewSet):
     
     permission_classes = [IsAuthenticated, IsEnterpriseUser]
