@@ -1950,63 +1950,104 @@ class TaskNewsPIBMTSerializer(serializers.ModelSerializer):
 
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):
-	mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
-	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
-	edit_allowed = serializers.SerializerMethodField()
-	updated_download = serializers.SerializerMethodField()
+    task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+    source_json = serializers.JSONField(required=False, read_only=True)
+    target_json = serializers.JSONField(required=False)
+    edit_allowed = serializers.SerializerMethodField()
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+    target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+    source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+    target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+    target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+    updated_download = serializers.SerializerMethodField()
+    
 
-	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
-	source_json = serializers.JSONField(required=False, read_only=True)
-	target_json = serializers.JSONField(required=False)
-	project = serializers.ReadOnlyField(source='task.job.project.id')
-	source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
-	target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
-	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
-	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+    class Meta:
+        model = TaskPibDetails
+        fields = (
+            "uid",
+            "task",
+            "project",
+            "edit_allowed",
+            "source_language_id",
+            "target_language_id",
+            "source_language",
+            "target_language",
+            "target_language_script",
+            "updated_download",
+            "source_json",
+            "target_json",
+        )
+        read_only_fields = ("source_json",)
+    
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
+    
+    def get_updated_download(self,obj):
+        user = self.context.get('request').user
+        managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+        if (user == obj.task.job.project.ai_user) or (user in managers):
+            return 'enable'
+        else:
+            return 'disable'
 
-	class Meta:
-		model = TaskPibDetails
-		fields = ( "uid", "task","edit_allowed","mt_json","target_language_script", "updated_download",
-				"project", "source_language_id","target_language_id","source_language", "target_language","source_json","target_json",)
-         
-	def get_edit_allowed(self,obj):
-		request_obj = self.context.get('request')
-		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
-		doc_view_instance = DocumentViewByDocumentId(request_obj)
-		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
-		return edit_allowed
-	
-# task_pib_details_instance.target_json = target_json
-	def get_updated_download(self,obj):
-		if obj.target_json:
-			return 'enable'
-		else:
-			return 'disable'
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
 
- 
+        request = self.context.get("request")
+        if request and request.method in ("PUT", "PATCH"):
+            data.pop("source_json", None)
 
-	# def get_updated_download(self,obj):
+        return data
 
-	# 	user = self.context.get('request').user
-	# 	managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
-	# 	if (user == obj.task.job.project.ai_user) or (user in managers):
-	# 		return 'enable'
-	# 	else:
-	# 		return 'disable'
+    def create(self, validated_data):
+        task = validated_data.get("task")
 
-	def create(self, validated_data):
-		pass
+        
+        file_path = task.file.file.path
+        with open(file_path, "r") as fp:
+            json_data = json.load(fp)
 
-		 
+        
+        instance, created = TaskPibDetails.objects.get_or_create(
+            task=task,
+            defaults={"source_json": json_data}
+        )
 
-	def update(self, instance, validated_data):
-		target_json = validated_data.get("target_json")
+       
+        if not created:
+            return instance
 
-		if target_json:
-			instance.target_json = target_json
-			instance.save()
+       
+        from ai_staff.models import AdaptiveSystemPrompt
+        from ai_auth.tasks import task_create_and_update_pib_news_detail
 
-		return instance
+        prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
+        if prompt_obj:
+            new_prompt = prompt_obj.prompt.format(
+                source_language=task.job.source_language,
+                target_language=task.job.target_language
+            )
+
+            task_create_and_update_pib_news_detail.apply_async(
+                (str(instance.uid), new_prompt, json_data)
+            )
+
+        return instance
+
+    def update(self, instance, validated_data):
+        target_json = validated_data.get("target_json")
+
+        if target_json:
+            instance.target_json = target_json
+            instance.save()
+
+        return instance
 
 
 class MinistryNameSerializer(serializers.ModelSerializer):
