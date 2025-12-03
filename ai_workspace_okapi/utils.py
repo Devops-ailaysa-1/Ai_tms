@@ -297,7 +297,7 @@ def standard_project_create_and_update_pib_news_details(user, task,source_string
     from tqdm import tqdm
     from ai_workspace.adaptive import PIBStyleAnalysis
     from ai_workspace.models import TaskStyle
-    api_client = LLMClient(provider = "nebius",model=os.getenv("AI_MODEL_NAME"),style=True)
+    api_client = LLMClient(provider = "nebius",model=settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB,style="")
     
     try:
         
