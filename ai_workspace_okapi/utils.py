@@ -297,7 +297,7 @@ def standard_project_create_and_update_pib_news_details(user, task,source_string
     from tqdm import tqdm
     from ai_workspace.adaptive import PIBStyleAnalysis
     from ai_workspace.models import TaskStyle
-    api_client = LLMClient(provider = "nebius",model=os.getenv("AI_MODEL_NAME"),style=True)
+    api_client = LLMClient(provider = "nebius",model=settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB,style="")
     
     try:
         
@@ -310,7 +310,7 @@ def standard_project_create_and_update_pib_news_details(user, task,source_string
     
     task_style_prompt = TaskStyle.objects.get(task = task)
     if task_style_prompt:
-        llm_client_obj = LLMClient("pib_nebius", os.getenv("AI_MODEL_NAME"), "")
+        llm_client_obj = LLMClient("pib_nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
         formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
         
         result = []
@@ -318,7 +318,7 @@ def standard_project_create_and_update_pib_news_details(user, task,source_string
         
         for count, text_para in tqdm(enumerate(pib_news_list)):
             if text_para:
-                translation_stage_1 = llm_client_obj.PIB_handle_nebius(messages=text_para,
+                translation_stage_1, usage = llm_client_obj._handle_nebius(messages=text_para,
                                                     system_instruction=formated_stage_1_prompt.replace("{style_promt}",task_style_prompt.style_guide))
                 result.append(translation_stage_1)
         
