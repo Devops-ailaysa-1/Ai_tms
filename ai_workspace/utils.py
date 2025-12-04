@@ -307,28 +307,34 @@ import tempfile, os
 def generate_pib_docx(heading: str, story: str, base_filename: str):
     doc = Document()
 
-    # Add heading
     if heading:
-        h = doc.add_heading(heading, level=2)
+        h = doc.add_heading(heading.strip(), level=2)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        doc.add_paragraph("")
-    print(heading, type(heading))
-    # Add story text (paragraph-wise)
-    if story:
-        print(story, type(story))
-        paragraphs = [p.strip() for p in story.split("\n\n") if p.strip()]
+        doc.add_paragraph("")  # spacing
+
+    story = story.strip()
+
+    has_html = any(tag in story.lower() for tag in ["<p", "<b", "<i", "<u", "<strong", "<em"])
+
+    html_parser = HtmlToDocx()
+
+    if has_html:
+        html_parser.add_html_to_document(story, doc)
+
+    else:
+        paragraphs = story.split("\n\n")
 
         for block in paragraphs:
-            p = doc.add_paragraph(block)
-            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            doc.add_paragraph("")   # spacing
+            block = block.strip().replace("\n", " ")
+            para = doc.add_paragraph(block)
+            para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
-    # Save file
     filename = f"{base_filename}.docx"
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
     doc.save(tmp_path)
 
     return tmp_path
+
 
 ############################# Project Filter #################################################
 
