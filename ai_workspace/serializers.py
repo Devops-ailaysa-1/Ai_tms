@@ -1961,13 +1961,14 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
     target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
     target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
     updated_download = serializers.SerializerMethodField()
-    
+    mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
 
     class Meta:
         model = TaskPibDetails
         fields = (
             "uid",
             "task",
+			"mt_json",
             "project",
             "edit_allowed",
             "source_language_id",
@@ -1987,6 +1988,7 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
         doc_view_instance = DocumentViewByDocumentId(request_obj)
         edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
         return edit_allowed
+	
     
     def get_updated_download(self,obj):
         user = self.context.get('request').user
@@ -1996,6 +1998,7 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
         else:
             return 'disable'
 
+	
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
