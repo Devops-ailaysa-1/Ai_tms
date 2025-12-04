@@ -1712,8 +1712,6 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
     from tqdm import tqdm
     try:
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
- 
-        target_json = {}
 
         #heading = json_data['heading']
         story = json_data['story']
@@ -1738,6 +1736,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         target_json = {}
 
         for key, message in json_data.items():
+            print(key, "This is key")
             result = []
             story_list = message.split("\n\n")
             usage_story = 0
@@ -1745,6 +1744,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                 if story_para.strip():
                     translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                                          messages = story_para )
+                    print(translation, "This is translation")
                     usage_story = usage_story+usage
                     if count != 0:
                         trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
@@ -1770,6 +1770,9 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         task_news_pib_mt_instance.mt_raw_json = target_json
         task_news_pib_mt_instance.save()
         print(task_pib_details_instance.status, "Status of the pib task")
+        
     except Exception as e:
         print(e)
+        task_pib_details_instance.status = PibTranslateStatusChoices.failed
+        task_pib_details_instance.save()
         logger.error(f'Error in translation pib story: {e}')

@@ -629,9 +629,12 @@ class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
     def list(self,request):
         user = request.user
         if user and user.is_enterprise and user.user_enterprise.subscription_name == 'Enterprise - PIB':
-            queryset = self.get_queryset()
+            queryset = self.get_queryset().filter(name='PIB_Translator')
         else:
-            queryset = self.get_queryset().exclude(name="Ailaysa_Translate")
+            queryset = self.get_queryset().exclude(name__in=[
+                "Ailaysa_Translate",
+                "PIB_Translator"
+            ])
         
         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
         return Response(serializer.data)
