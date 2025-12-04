@@ -312,9 +312,10 @@ def generate_pib_docx(heading: str, story: str, base_filename: str):
         h = doc.add_heading(heading, level=2)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph("")
-
+    print(heading, type(heading))
     # Add story text (paragraph-wise)
     if story:
+        print(story, type(story))
         paragraphs = [p.strip() for p in story.split("\n\n") if p.strip()]
 
         for block in paragraphs:
