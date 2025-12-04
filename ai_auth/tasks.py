@@ -1770,7 +1770,6 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         task_news_pib_mt_instance.mt_raw_json = target_json
         task_news_pib_mt_instance.save()
         print(task_pib_details_instance.status, "Status of the pib task")
-        
     except Exception as e:
         print(e)
         task_pib_details_instance.status = PibTranslateStatusChoices.failed
