@@ -2901,7 +2901,7 @@ def download_pib(request):
         docx_path = generate_pib_docx(
             heading=heading,
             story=story,
-            base_filename=filename[:50],
+            base_filename=filename,
             language = target_language_code
         )
 
