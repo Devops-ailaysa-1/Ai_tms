@@ -2789,13 +2789,31 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     target_data = split_dict(tar_json)
     source_data.pop('newsId',None)
     target_data.pop('newsId',None)
+
     if source_data.get('media'):
         source_data['media'] = document_to_file.clean_text(source_data.get('media', [{}])[0].get('caption'))
         target_data['media'] = document_to_file.clean_text(target_data.get('media', [{}])[0].get('caption'))
     if source_data.get('story'):
         source_data['story'] =  document_to_file.clean_text(source_data.get('story'))
         target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
-    flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
+    
+    print(source_data, "source data in json_bilingual")
+    ordered_keys = []
+    if "heading" in source_data:
+        ordered_keys.append("heading")
+
+    if "story" in source_data:
+        ordered_keys.append("story")
+
+    for k in source_data.keys():
+        if k not in ordered_keys:
+            ordered_keys.append(k)
+
+    flattened_data = {
+        key: [source_data[key], target_data[key]]
+        for key in ordered_keys
+    }
+
     flattened_data = pd.DataFrame(flattened_data).transpose()
     flattened_data.columns = language_pair
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
@@ -2894,7 +2912,7 @@ def download_pib(request):
         source_json = obj.pib_task.last().source_json
         file_cont = source_json.get('heading')
         filename = "_".join(file_cont.split())[:50]
-        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})"
+        filename += f"({obj.job.source_language_code}_{obj.job.target_language_code})"
 
 
         # generate DOCX
@@ -2910,7 +2928,6 @@ def download_pib(request):
         return document_to_file.get_file_response(docx_path)
 
     elif output_type == "BILINGUAL":
-        # untouched
         source_json = obj.pib_task.last().source_json
         target_json = obj.pib_task.last().target_json
 
@@ -2928,7 +2945,7 @@ def download_pib(request):
 
         file_cont = source_json.get('heading')
         filename = "_".join(file_cont.split())[:50]
-        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})" + ".xlsx"
+        filename += f"({obj.job.source_language_code}_{obj.job.target_language_code})" + ".xlsx"
         response = document_to_file.get_file_response(
             csv_data,
             pandas_dataframe=True,
